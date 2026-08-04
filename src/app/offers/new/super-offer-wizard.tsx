@@ -64,6 +64,7 @@ type Copy = {
   newChoiceDescription: string;
   existingChoice: string;
   existingChoiceDescription: string;
+  continueChoice: string;
   provider: string;
   providerPersonal: string;
   providerAvatar: string;
@@ -114,6 +115,7 @@ const COPY: Record<LocaleCode, Copy> = {
     existingChoice: "Choose an existing product or service",
     existingChoiceDescription:
       "Search all products and services belonging to your profiles, avatars and enterprises.",
+    continueChoice: "Continue",
     provider: "Provider",
     providerPersonal: "Personal profile",
     providerAvatar: "Avatar",
@@ -163,6 +165,7 @@ const COPY: Record<LocaleCode, Copy> = {
     existingChoice: "Wybierz istniejący produkt lub usługę",
     existingChoiceDescription:
       "Przeszukaj produkty i usługi swoich profili, awatarów oraz przedsiębiorstw.",
+    continueChoice: "Kontynuuj",
     provider: "Dostawca",
     providerPersonal: "Profil osobisty",
     providerAvatar: "Awatar",
@@ -212,6 +215,7 @@ const COPY: Record<LocaleCode, Copy> = {
     existingChoice: "Выбрать ранее созданный товар или услугу",
     existingChoiceDescription:
       "Найдите товары и услуги ваших профилей, аватаров и предприятий.",
+    continueChoice: "Продолжить",
     provider: "Предоставляющий",
     providerPersonal: "Личный профиль",
     providerAvatar: "Аватар",
@@ -261,6 +265,7 @@ const COPY: Record<LocaleCode, Copy> = {
     existingChoice: "Вибрати створений раніше товар або послугу",
     existingChoiceDescription:
       "Знайдіть товари й послуги ваших профілів, аватарів і підприємств.",
+    continueChoice: "Продовжити",
     provider: "Надавач",
     providerPersonal: "Особистий профіль",
     providerAvatar: "Аватар",
@@ -310,6 +315,7 @@ const COPY: Record<LocaleCode, Copy> = {
     existingChoice: "Vorhandenes Produkt oder Dienstleistung wählen",
     existingChoiceDescription:
       "Durchsuchen Sie Produkte und Dienstleistungen Ihrer Profile, Avatare und Unternehmen.",
+    continueChoice: "Weiter",
     provider: "Anbieter",
     providerPersonal: "Persönliches Profil",
     providerAvatar: "Avatar",
@@ -359,6 +365,7 @@ const COPY: Record<LocaleCode, Copy> = {
     existingChoice: "Elegir un producto o servicio existente",
     existingChoiceDescription:
       "Busque productos y servicios de sus perfiles, avatares y empresas.",
+    continueChoice: "Continuar",
     provider: "Proveedor",
     providerPersonal: "Perfil personal",
     providerAvatar: "Avatar",
@@ -408,6 +415,7 @@ const COPY: Record<LocaleCode, Copy> = {
     existingChoice: "Vybrat existující produkt nebo službu",
     existingChoiceDescription:
       "Prohledejte produkty a služby svých profilů, avatarů a podniků.",
+    continueChoice: "Pokračovat",
     provider: "Poskytovatel",
     providerPersonal: "Osobní profil",
     providerAvatar: "Avatar",
@@ -888,7 +896,7 @@ export function SuperOfferWizard({
             <button
               type="button"
               onClick={() => setMode("new")}
-              className="min-h-44 rounded-[24px] border border-black/[0.07] bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#b9c8ff] hover:shadow-md"
+              className="flex min-h-44 flex-col rounded-[24px] border border-black/[0.07] bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#b9c8ff] hover:shadow-md"
             >
               <div className="text-[18px] font-bold text-[#111827]">
                 {copy.newChoice}
@@ -896,12 +904,15 @@ export function SuperOfferWizard({
               <p className="mt-3 text-[13px] leading-6 text-[#5a5f7a]">
                 {copy.newChoiceDescription}
               </p>
+              <span className="mt-6 inline-flex min-h-10 w-full items-center justify-center rounded-full bg-[#3b6ef8] px-4 py-2 text-[12px] font-bold text-white shadow-[0_8px_20px_rgba(59,110,248,0.18)]">
+                {copy.continueChoice}
+              </span>
             </button>
 
             <button
               type="button"
               onClick={() => setMode("existing")}
-              className="min-h-44 rounded-[24px] border border-black/[0.07] bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#b9c8ff] hover:shadow-md"
+              className="flex min-h-44 flex-col rounded-[24px] border border-black/[0.07] bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#b9c8ff] hover:shadow-md"
             >
               <div className="text-[18px] font-bold text-[#111827]">
                 {copy.existingChoice}
@@ -909,6 +920,9 @@ export function SuperOfferWizard({
               <p className="mt-3 text-[13px] leading-6 text-[#5a5f7a]">
                 {copy.existingChoiceDescription}
               </p>
+              <span className="mt-6 inline-flex min-h-10 w-full items-center justify-center rounded-full bg-[#3b6ef8] px-4 py-2 text-[12px] font-bold text-white shadow-[0_8px_20px_rgba(59,110,248,0.18)]">
+                {copy.continueChoice}
+              </span>
             </button>
           </section>
         ) : null}

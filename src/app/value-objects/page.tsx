@@ -2,13 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ActualValueObjectsList } from "@/components/workspace/value-objects/actual-value-objects-list";
-import { ValueObjectsPanel } from "@/components/workspace/value-objects/value-objects-panel";
 import { getLocaleSearchParam } from "@/i18n";
 
 export const metadata: Metadata = {
   title: "Observation objects | AI Navigator",
-  description:
-    "Observation object list, tree, cloud, and detail preview.",
+  description: "Observation objects owned by the current active profile.",
 };
 
 type ValueObjectsPageProps = {
@@ -46,17 +44,6 @@ const CREATE_ROOT_LABELS: Record<string, string> = {
   cs: "Vytvořit kořenový objekt pozorování",
 };
 
-const LEGACY_CREATE_LABELS: Record<string, string> = {
-  en: "Legacy Value Object selector",
-  pl: "Stary selektor Value Object",
-  ru: "Старый селектор Value Object",
-  uk: "Старий селектор Value Object",
-  de: "Alter Value-Object-Selektor",
-  es: "Selector Value Object anterior",
-  cs: "Starší selektor Value Object",
-};
-
-
 const CREATE_SUPER_OFFER_LABELS: Record<string, string> = {
   en: "Add super offer",
   pl: "Dodaj superofertę",
@@ -80,41 +67,28 @@ export default async function ValueObjectsPage({
     locale,
   );
   const superOfferHref = buildLocaleAwareHref("/offers/new", locale);
-  const legacyCreateHref = buildLocaleAwareHref("/value-objects/new", locale);
 
   return (
-    <div className="min-h-0">
-      <div className="min-w-0">
-        <div className="min-h-screen bg-slate-50">
-          <div className="mx-auto flex max-w-7xl flex-wrap justify-end gap-2 px-6 pt-6">
-            <Link
-              href={legacyCreateHref}
-              className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-            >
-              {LEGACY_CREATE_LABELS[locale] ?? LEGACY_CREATE_LABELS.en}
-            </Link>
-            <Link
-              href={createRootHref}
-              className="rounded-full border border-[#c9d5ff] bg-[#f7f9ff] px-4 py-2 text-sm font-semibold text-[#3b6ef8] hover:bg-[#eef2ff]"
-            >
-              {CREATE_ROOT_LABELS[locale] ?? CREATE_ROOT_LABELS.en}
-            </Link>
-            <Link
-              href={superOfferHref}
-              className="rounded-full bg-[#3b6ef8] px-5 py-2 text-sm font-bold text-white shadow-[0_8px_20px_rgba(59,110,248,0.22)] hover:bg-[#315fdc]"
-            >
-              {CREATE_SUPER_OFFER_LABELS[locale] ??
-                CREATE_SUPER_OFFER_LABELS.en}
-            </Link>
-          </div>
-
-          <div className="mx-auto max-w-7xl px-6 pt-6">
-            <ActualValueObjectsList />
-          </div>
-
-          <ValueObjectsPanel />
+    <main className="min-h-screen bg-[#f5f6fb] px-5 py-5 text-[#1a1d2e]">
+      <div className="mx-auto grid w-full max-w-[1280px] gap-5">
+        <div className="flex flex-wrap justify-end gap-2">
+          <Link
+            href={createRootHref}
+            className="rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"
+          >
+            {CREATE_ROOT_LABELS[locale] ?? CREATE_ROOT_LABELS.en}
+          </Link>
+          <Link
+            href={superOfferHref}
+            className="rounded-full bg-[#3b6ef8] px-5 py-2 text-[12px] font-bold text-white shadow-[0_8px_20px_rgba(59,110,248,0.22)] transition hover:bg-[#315fdc]"
+          >
+            {CREATE_SUPER_OFFER_LABELS[locale] ??
+              CREATE_SUPER_OFFER_LABELS.en}
+          </Link>
         </div>
+
+        <ActualValueObjectsList />
       </div>
-    </div>
+    </main>
   );
 }

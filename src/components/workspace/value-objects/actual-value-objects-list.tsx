@@ -13,34 +13,16 @@ import {
 type OrganizationPayload = {
   id?: string;
   organization_name?: string | null;
-  organization_type?: string | null;
-  status?: string | null;
 };
 
 type ActualValueObjectPayload = {
   id?: string | null;
-  owner_actor_id?: string | null;
-  created_by_actor_id?: string | null;
-  actor_id?: string | null;
-  app_user_id?: string | null;
-  owner_user_id?: string | null;
   organization_id?: string | null;
   usage_scope?: string | null;
-  value_type?: string | null;
   title?: string | null;
   description?: string | null;
-  unit_type?: string | null;
-  default_price?: number | null;
-  default_currency?: string | null;
-  default_duration_minutes?: number | null;
-  is_marketplace_sellable?: boolean | null;
-  is_free_possible?: boolean | null;
-  commercial_usage?: string | null;
-  visibility?: string | null;
-  source?: string | null;
   status?: string | null;
   created_at?: string | null;
-  updated_at?: string | null;
   organizations?: OrganizationPayload | null;
 };
 
@@ -58,25 +40,117 @@ type ActualListStatus =
   | "forbidden"
   | "error";
 
+type LocalCopy = {
+  eyebrow: string;
+  title: string;
+  description: string;
+  status: string;
+  context: string;
+  created: string;
+  personal: string;
+  commercial: string;
+  draft: string;
+  active: string;
+};
+
+const COPY: Record<LocaleCode, LocalCopy> = {
+  en: {
+    eyebrow: "Observation objects",
+    title: "My observation objects",
+    description:
+      "Root, intermediate and leaf objects belonging to the current active profile.",
+    status: "Status",
+    context: "Context",
+    created: "Created",
+    personal: "Personal",
+    commercial: "Commercial",
+    draft: "Draft",
+    active: "Active",
+  },
+  pl: {
+    eyebrow: "Obiekty obserwacji",
+    title: "Moje obiekty obserwacji",
+    description:
+      "Obiekty korzeniowe, pośrednie i liściowe aktualnie aktywnego profilu.",
+    status: "Status",
+    context: "Kontekst",
+    created: "Utworzono",
+    personal: "Osobisty",
+    commercial: "Komercyjny",
+    draft: "Szkic",
+    active: "Aktywny",
+  },
+  ru: {
+    eyebrow: "Объекты наблюдения",
+    title: "Мои объекты наблюдения",
+    description:
+      "Корневые, промежуточные и листовые объекты текущего активного профиля.",
+    status: "Состояние",
+    context: "Контекст",
+    created: "Создано",
+    personal: "Личный",
+    commercial: "Коммерческий",
+    draft: "Черновик",
+    active: "Активен",
+  },
+  uk: {
+    eyebrow: "Об’єкти спостереження",
+    title: "Мої об’єкти спостереження",
+    description:
+      "Кореневі, проміжні та листові об’єкти поточного активного профілю.",
+    status: "Стан",
+    context: "Контекст",
+    created: "Створено",
+    personal: "Особистий",
+    commercial: "Комерційний",
+    draft: "Чернетка",
+    active: "Активний",
+  },
+  de: {
+    eyebrow: "Beobachtungsobjekte",
+    title: "Meine Beobachtungsobjekte",
+    description:
+      "Wurzel-, Zwischen- und Blattobjekte des aktuell aktiven Profils.",
+    status: "Status",
+    context: "Kontext",
+    created: "Erstellt",
+    personal: "Persönlich",
+    commercial: "Kommerziell",
+    draft: "Entwurf",
+    active: "Aktiv",
+  },
+  es: {
+    eyebrow: "Objetos de observación",
+    title: "Mis objetos de observación",
+    description:
+      "Objetos raíz, intermedios y hoja del perfil activo actual.",
+    status: "Estado",
+    context: "Contexto",
+    created: "Creado",
+    personal: "Personal",
+    commercial: "Comercial",
+    draft: "Borrador",
+    active: "Activo",
+  },
+  cs: {
+    eyebrow: "Objekty pozorování",
+    title: "Moje objekty pozorování",
+    description:
+      "Kořenové, mezilehlé a listové objekty aktuálně aktivního profilu.",
+    status: "Stav",
+    context: "Kontext",
+    created: "Vytvořeno",
+    personal: "Osobní",
+    commercial: "Komerční",
+    draft: "Koncept",
+    active: "Aktivní",
+  },
+};
+
 const SECTION_CLASSES =
-  "rounded-[18px] border border-[#dfe6ff] bg-white p-5 shadow-[0_8px_24px_rgba(59,110,248,0.07)]";
-
-const HEADER_LABEL_CLASSES =
-  "text-[11px] font-bold uppercase tracking-[0.22em] text-[#3b6ef8]";
-
-const TITLE_CLASSES =
-  "mt-2 text-[22px] font-bold tracking-[-0.02em] text-[#111827]";
-
-const TEXT_CLASSES = "mt-2 text-[14px] leading-6 text-[#5a5f7a]";
-
-const CARD_CLASSES =
-  "rounded-2xl border border-[#edf0f7] bg-[#f8fafc] p-4";
-
-const FIELD_LABEL_CLASSES =
-  "text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]";
-
-const FIELD_VALUE_CLASSES =
-  "mt-1 break-all font-mono text-[13px] font-semibold text-[#1a1d2e]";
+  "rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-sm";
+const SUMMARY_CLASSES =
+  "rounded-[18px] border border-[#edf0f7] bg-[#f8fafc] p-4";
 
 function useInterfaceLocale(): LocaleCode {
   const [locale, setLocale] = useState<LocaleCode>("en");
@@ -135,10 +209,6 @@ function getStatusText(
     return t("valueObjects.actual.loading");
   }
 
-  if (status === "success") {
-    return t("valueObjects.actual.success");
-  }
-
   if (status === "not_authenticated") {
     return t("valueObjects.actual.notAuthenticated");
   }
@@ -148,18 +218,6 @@ function getStatusText(
   }
 
   return t("valueObjects.actual.error");
-}
-
-function formatValue(value: string | number | boolean | null | undefined) {
-  if (value === null || value === undefined || value === "") {
-    return "—";
-  }
-
-  if (typeof value === "boolean") {
-    return value ? "true" : "false";
-  }
-
-  return String(value);
 }
 
 function formatDate(value: string | null | undefined, locale: LocaleCode) {
@@ -173,7 +231,11 @@ function formatDate(value: string | null | undefined, locale: LocaleCode) {
     return value;
   }
 
-  return parsed.toLocaleString(getDateLocale(locale));
+  return parsed.toLocaleDateString(getDateLocale(locale), {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function getObjectDetailHref(valueObject: ActualValueObjectPayload) {
@@ -190,6 +252,7 @@ function buildLocaleAwareHref(pathname: string, locale: LocaleCode) {
 
 export function ActualValueObjectsList() {
   const locale = useInterfaceLocale();
+  const copy = COPY[locale] ?? COPY.en;
   const t = useMemo(
     () => (key: ValueObjectsMessageKey) => getValueObjectsMessage(key, locale),
     [locale],
@@ -250,197 +313,134 @@ export function ActualValueObjectsList() {
   }, []);
 
   const totalCount = valueObjects.length;
-
-  const draftCount = useMemo(
-    () =>
-      valueObjects.filter((valueObject) => valueObject.status === "draft")
-        .length,
-    [valueObjects],
-  );
-
-  const privateCount = useMemo(
-    () =>
-      valueObjects.filter((valueObject) => valueObject.usage_scope === "private")
-        .length,
-    [valueObjects],
-  );
-
-  const commercialCount = useMemo(
-    () =>
-      valueObjects.filter(
-        (valueObject) => valueObject.usage_scope === "commercial",
-      ).length,
-    [valueObjects],
-  );
+  const draftCount = valueObjects.filter(
+    (valueObject) => valueObject.status === "draft",
+  ).length;
+  const privateCount = valueObjects.filter(
+    (valueObject) => valueObject.usage_scope === "private",
+  ).length;
+  const commercialCount = valueObjects.filter(
+    (valueObject) => valueObject.usage_scope === "commercial",
+  ).length;
 
   return (
-    <section
-      className={SECTION_CLASSES}
-      aria-label={t("valueObjects.actual.title")}
-    >
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div className={HEADER_LABEL_CLASSES}>
-              {t("valueObjects.actual.eyebrow")}
-            </div>
-
-            <h2 className={TITLE_CLASSES}>
-              {t("valueObjects.actual.title")}
-            </h2>
-
-            <p className={TEXT_CLASSES}>
-              {t("valueObjects.actual.description")}
-            </p>
+    <section className={SECTION_CLASSES} aria-label={copy.title}>
+      <div className="flex flex-col gap-5">
+        <header>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
+            {copy.eyebrow}
           </div>
+          <h1 className="mt-1 text-[20px] font-bold leading-tight text-[#111827]">
+            {copy.title}
+          </h1>
+          <p className="mt-1 max-w-[850px] text-[13px] leading-5 text-[#7c8099]">
+            {copy.description}
+          </p>
+        </header>
 
-          <div className="rounded-2xl border border-[#bfdbfe] bg-[#eff6ff] px-4 py-3 text-right">
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#2563eb]">
-              {t("valueObjects.actual.currentStatus")}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            [t("valueObjects.actual.total"), totalCount],
+            [t("valueObjects.actual.draft"), draftCount],
+            [t("valueObjects.actual.private"), privateCount],
+            [t("valueObjects.actual.commercial"), commercialCount],
+          ].map(([label, value]) => (
+            <div key={String(label)} className={SUMMARY_CLASSES}>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#7c8099]">
+                {label}
+              </div>
+              <div className="mt-2 text-[22px] font-bold text-[#111827]">
+                {value}
+              </div>
             </div>
-            <div className="mt-1 font-mono text-[13px] font-semibold text-[#1e3a8a]">
-              {status}
-            </div>
-          </div>
+          ))}
         </div>
 
-        <div className="grid gap-3 md:grid-cols-4">
-          <div className={CARD_CLASSES}>
-            <div className={FIELD_LABEL_CLASSES}>
-              {t("valueObjects.actual.total")}
-            </div>
-            <div className={FIELD_VALUE_CLASSES}>{totalCount}</div>
-          </div>
-
-          <div className={CARD_CLASSES}>
-            <div className={FIELD_LABEL_CLASSES}>
-              {t("valueObjects.actual.draft")}
-            </div>
-            <div className={FIELD_VALUE_CLASSES}>{draftCount}</div>
-          </div>
-
-          <div className={CARD_CLASSES}>
-            <div className={FIELD_LABEL_CLASSES}>
-              {t("valueObjects.actual.private")}
-            </div>
-            <div className={FIELD_VALUE_CLASSES}>{privateCount}</div>
-          </div>
-
-          <div className={CARD_CLASSES}>
-            <div className={FIELD_LABEL_CLASSES}>
-              {t("valueObjects.actual.commercial")}
-            </div>
-            <div className={FIELD_VALUE_CLASSES}>{commercialCount}</div>
-          </div>
-        </div>
-
-        {status !== "success" && (
-          <div className="rounded-2xl border border-[#fed7aa] bg-[#fff7ed] p-4 text-[13px] font-semibold text-[#9a3412]">
+        {status !== "success" ? (
+          <div className="rounded-[18px] border border-[#fed7aa] bg-[#fff7ed] p-4 text-[13px] font-semibold text-[#9a3412]">
             {getStatusText(status, t)}
             {errorMessage ? ` ${errorMessage}` : ""}
           </div>
-        )}
+        ) : null}
 
-        {status === "success" && valueObjects.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-[#c9d5ff] bg-[#f7f9ff] p-5 text-[14px] leading-6 text-[#4a4f6a]">
-            {t("valueObjects.actual.empty")}{" "}
-            <Link
-              href={buildLocaleAwareHref("/value-objects/new/root", locale)}
-              className="font-bold text-[#3b6ef8] hover:underline"
-            >
-              /value-objects/new
-            </Link>
+        {status === "success" && valueObjects.length === 0 ? (
+          <div className="rounded-[18px] border border-dashed border-[#c9d5ff] bg-[#f7f9ff] p-5 text-[13px] leading-5 text-[#4a4f6a]">
+            {t("valueObjects.actual.empty")}
           </div>
-        )}
+        ) : null}
 
-        {status === "success" && valueObjects.length > 0 && (
+        {status === "success" && valueObjects.length > 0 ? (
           <div className="grid gap-3">
             {valueObjects.map((valueObject) => {
               const title =
                 valueObject.title?.trim() || t("valueObjects.actual.noTitle");
+              const isCommercial = valueObject.usage_scope === "commercial";
+              const isDraft = valueObject.status === "draft";
 
               return (
                 <article
                   key={valueObject.id ?? title}
-                  className="rounded-2xl border border-[#dfe3f1] bg-white p-4 shadow-sm"
+                  className="rounded-[20px] border border-[#dfe3f1] bg-white p-4 shadow-sm"
                 >
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                      <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
-                        {formatValue(valueObject.usage_scope)} /{" "}
-                        {formatValue(valueObject.status)}
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap gap-2">
+                        <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-[11px] font-semibold text-[#3b6ef8]">
+                          {isCommercial ? copy.commercial : copy.personal}
+                        </span>
+                        <span className="rounded-full bg-[#f5f6fb] px-3 py-1 text-[11px] font-semibold text-[#6b7280]">
+                          {isDraft ? copy.draft : copy.active}
+                        </span>
                       </div>
 
-                      <h3 className="mt-1 text-[18px] font-bold tracking-[-0.02em] text-[#111827]">
+                      <h2 className="mt-3 text-[16px] font-semibold text-[#111827]">
                         {title}
-                      </h3>
+                      </h2>
 
-                      <p className="mt-2 text-[13px] leading-5 text-[#5a5f7a]">
-                        {formatValue(valueObject.description)}
-                      </p>
+                      {valueObject.description?.trim() ? (
+                        <p className="mt-1 max-w-[760px] text-[13px] leading-5 text-[#5a5f7a]">
+                          {valueObject.description.trim()}
+                        </p>
+                      ) : null}
                     </div>
 
                     <Link
-                      href={buildLocaleAwareHref(getObjectDetailHref(valueObject), locale)}
-                      className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[13px] font-bold text-[#3b6ef8] transition hover:bg-[#e4eaff]"
+                      href={buildLocaleAwareHref(
+                        getObjectDetailHref(valueObject),
+                        locale,
+                      )}
+                      className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"
                     >
                       {t("valueObjects.actual.openEdit")}
                     </Link>
                   </div>
 
-                  <div className="mt-4 grid gap-2 md:grid-cols-4">
-                    <div className={CARD_CLASSES}>
-                      <div className={FIELD_LABEL_CLASSES}>id</div>
-                      <div className={FIELD_VALUE_CLASSES}>
-                        {formatValue(valueObject.id)}
+                  <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                    <div className={SUMMARY_CLASSES}>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7c8099]">
+                        {copy.status}
+                      </div>
+                      <div className="mt-1 text-[13px] font-semibold text-[#1a1d2e]">
+                        {isDraft ? copy.draft : copy.active}
                       </div>
                     </div>
 
-                    <div className={CARD_CLASSES}>
-                      <div className={FIELD_LABEL_CLASSES}>value_type</div>
-                      <div className={FIELD_VALUE_CLASSES}>
-                        {formatValue(valueObject.value_type)}
+                    <div className={SUMMARY_CLASSES}>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7c8099]">
+                        {copy.context}
+                      </div>
+                      <div className="mt-1 text-[13px] font-semibold text-[#1a1d2e]">
+                        {valueObject.organizations?.organization_name?.trim() ||
+                          (isCommercial ? copy.commercial : copy.personal)}
                       </div>
                     </div>
 
-                    <div className={CARD_CLASSES}>
-                      <div className={FIELD_LABEL_CLASSES}>source</div>
-                      <div className={FIELD_VALUE_CLASSES}>
-                        {formatValue(valueObject.source)}
+                    <div className={SUMMARY_CLASSES}>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7c8099]">
+                        {copy.created}
                       </div>
-                    </div>
-
-                    <div className={CARD_CLASSES}>
-                      <div className={FIELD_LABEL_CLASSES}>visibility</div>
-                      <div className={FIELD_VALUE_CLASSES}>
-                        {formatValue(valueObject.visibility)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 grid gap-2 md:grid-cols-3">
-                    <div className={CARD_CLASSES}>
-                      <div className={FIELD_LABEL_CLASSES}>organization_id</div>
-                      <div className={FIELD_VALUE_CLASSES}>
-                        {formatValue(valueObject.organization_id)}
-                      </div>
-                    </div>
-
-                    <div className={CARD_CLASSES}>
-                      <div className={FIELD_LABEL_CLASSES}>
-                        {t("valueObjects.actual.createdAt")}
-                      </div>
-                      <div className={FIELD_VALUE_CLASSES}>
+                      <div className="mt-1 text-[13px] font-semibold text-[#1a1d2e]">
                         {formatDate(valueObject.created_at, locale)}
-                      </div>
-                    </div>
-
-                    <div className={CARD_CLASSES}>
-                      <div className={FIELD_LABEL_CLASSES}>
-                        {t("valueObjects.actual.organization")}
-                      </div>
-                      <div className={FIELD_VALUE_CLASSES}>
-                        {formatValue(valueObject.organizations?.organization_name)}
                       </div>
                     </div>
                   </div>
@@ -448,7 +448,7 @@ export function ActualValueObjectsList() {
               );
             })}
           </div>
-        )}
+        ) : null}
       </div>
     </section>
   );
