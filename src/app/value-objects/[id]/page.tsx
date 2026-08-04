@@ -222,7 +222,7 @@ const COPY: Record<LocaleCode, Copy> = {
     details: "Details",
     giftCertificateTitle: "Gift certificate",
     addPlannedActivity: "Add planned activity",
-    addGiftCertificate: "Create gift certificate",
+    addGiftCertificate: "Create offer",
     activityCreateLater: "Creation from this card will be enabled with the dedicated activity template.",
     criteria: "Outcome criteria",
     noCriteria: "No success or failure criteria have been added yet.",
@@ -271,7 +271,7 @@ const COPY: Record<LocaleCode, Copy> = {
     details: "Szczegóły",
     giftCertificateTitle: "Bon podarunkowy",
     addPlannedActivity: "Dodaj planowaną aktywność",
-    addGiftCertificate: "Utwórz bon podarunkowy",
+    addGiftCertificate: "Utwórz ofertę",
     activityCreateLater: "Tworzenie z tej karty zostanie włączone wraz z dedykowanym szablonem aktywności.",
     criteria: "Kryteria wyniku",
     noCriteria: "Nie dodano jeszcze kryteriów sukcesu ani porażki.",
@@ -320,7 +320,7 @@ const COPY: Record<LocaleCode, Copy> = {
     details: "Подробнее",
     giftCertificateTitle: "Подарочный сертификат",
     addPlannedActivity: "Добавить плановую активность",
-    addGiftCertificate: "Создать подарочный сертификат",
+    addGiftCertificate: "Создать предложение",
     activityCreateLater: "Создание с этой страницы будет включено вместе со специальным шаблоном активности.",
     criteria: "Критерии результата",
     noCriteria: "Критерии успеха и провала пока не добавлены.",
@@ -369,7 +369,7 @@ const COPY: Record<LocaleCode, Copy> = {
     details: "Докладніше",
     giftCertificateTitle: "Подарунковий сертифікат",
     addPlannedActivity: "Додати заплановану активність",
-    addGiftCertificate: "Створити подарунковий сертифікат",
+    addGiftCertificate: "Створити пропозицію",
     activityCreateLater: "Створення з цієї сторінки буде ввімкнено разом зі спеціальним шаблоном активності.",
     criteria: "Критерії результату",
     noCriteria: "Критерії успіху та провалу ще не додані.",
@@ -418,7 +418,7 @@ const COPY: Record<LocaleCode, Copy> = {
     details: "Details",
     giftCertificateTitle: "Geschenkgutschein",
     addPlannedActivity: "Geplante Aktivität hinzufügen",
-    addGiftCertificate: "Geschenkgutschein erstellen",
+    addGiftCertificate: "Angebot erstellen",
     activityCreateLater: "Die Erstellung von dieser Seite wird mit der speziellen Aktivitätsvorlage aktiviert.",
     criteria: "Ergebniskriterien",
     noCriteria: "Es wurden noch keine Erfolgs- oder Misserfolgskriterien hinzugefügt.",
@@ -467,7 +467,7 @@ const COPY: Record<LocaleCode, Copy> = {
     details: "Detalles",
     giftCertificateTitle: "Certificado de regalo",
     addPlannedActivity: "Añadir actividad planificada",
-    addGiftCertificate: "Crear certificado de regalo",
+    addGiftCertificate: "Crear oferta",
     activityCreateLater: "La creación desde esta página se habilitará junto con la plantilla de actividad específica.",
     criteria: "Criterios de resultado",
     noCriteria: "Todavía no se han añadido criterios de éxito o fracaso.",
@@ -516,7 +516,7 @@ const COPY: Record<LocaleCode, Copy> = {
     details: "Podrobnosti",
     giftCertificateTitle: "Dárkový poukaz",
     addPlannedActivity: "Přidat plánovanou aktivitu",
-    addGiftCertificate: "Vytvořit dárkový poukaz",
+    addGiftCertificate: "Vytvořit nabídku",
     activityCreateLater: "Vytváření z této stránky bude zapnuto spolu se zvláštní šablonou aktivity.",
     criteria: "Kritéria výsledku",
     noCriteria: "Kritéria úspěchu ani neúspěchu zatím nebyla přidána.",
@@ -906,6 +906,16 @@ function buildLocaleHref(pathname: string, locale: LocaleCode) {
   }
 
   return `${pathname}?locale=${encodeURIComponent(locale)}`;
+}
+
+function buildOfferWizardHref(valueObjectId: string, locale: LocaleCode) {
+  const params = new URLSearchParams({ valueObjectId });
+
+  if (locale !== "en") {
+    params.set("locale", locale);
+  }
+
+  return `/offers/new?${params.toString()}`;
 }
 
 const VIEW_MODE_LABELS: Record<LocaleCode, string> = {
@@ -1550,10 +1560,7 @@ export default async function ValueObjectDetailPage({
 
                   {isProductOrService ? (
                     <Link
-                      href={buildLocaleHref(
-                        `/value-objects/${valueObject.id}/gift-certificates/new`,
-                        locale,
-                      )}
+                      href={buildOfferWizardHref(valueObject.id, locale)}
                       className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[13px] font-bold text-[#3b6ef8] transition hover:border-[#aebfff] hover:bg-[#e8edff]"
                     >
                       {activityCreateLabel}

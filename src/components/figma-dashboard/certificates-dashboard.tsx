@@ -1242,14 +1242,14 @@ export function CertificatesDashboardContent({
             label: labels.catalog,
           }
         : {
-            href: appendLocale("/value-objects", locale),
+            href: appendLocale("/offers/new", locale),
             label: labels.createCertificate,
           };
 
   const rightAction =
     mode === "provider"
       ? {
-          href: appendLocale("/value-objects", locale),
+          href: appendLocale("/offers/new", locale),
           label: labels.createCertificate,
         }
       : {
