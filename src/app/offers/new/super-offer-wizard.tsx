@@ -855,7 +855,7 @@ export function SuperOfferWizard({
       <div className="mx-auto grid w-full max-w-[1280px] gap-5">
         <div className="flex flex-wrap items-center gap-2">
           <Link
-            href={appendLocale("/seller-certificates", locale)}
+            href={appendLocale("/certificates?view=provided", locale)}
             className="rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"
           >
             {copy.back}

@@ -27,9 +27,10 @@ import { CertificateCommercialPrice } from "./certificate-commercial-price";
 import { CertificateShareButton } from "./certificate-share-button";
 
 export type CertificateDashboardMode =
-  | "catalog"
-  | "buyer"
-  | "provider";
+  | "participants"
+  | "received"
+  | "provided"
+  | "archive";
 
 export type CertificateDashboardState =
   | "draft"
@@ -133,17 +134,20 @@ type Labels = {
 
 const EN: Labels = {
   titles: {
-    catalog: "Offer catalog",
-    buyer: "My certificates",
-    provider: "My offers",
+    participants: "Participant offers",
+    received: "My certificates",
+    provided: "My offers",
+    archive: "Offer archive",
   },
   subtitles: {
-    catalog:
+    participants:
       "Products, services and private offers available for ARCTor points.",
-    buyer:
+    received:
       "Certificates ordered by your account, their check-in and confirmation states.",
-    provider:
+    provided:
       "Give gifts — meet new customers and friends.",
+    archive:
+      "Completed, expired and annulled certificates available to your account.",
   },
   total: "Certificates",
   allOffers: "All offers",
@@ -206,17 +210,20 @@ const EN: Labels = {
 const RU: Labels = {
   ...EN,
   titles: {
-    catalog: "Каталог предложений",
-    buyer: "Мои сертификаты",
-    provider: "Мои предложения",
+    participants: "Предложения участников",
+    received: "Мои сертификаты",
+    provided: "Мои предложения",
+    archive: "Архив предложений",
   },
   subtitles: {
-    catalog:
+    participants:
       "Товары, услуги и частные предложения, доступные за пункты ARCTor.",
-    buyer:
+    received:
       "Сертификаты, заказанные вашей учётной записью, и состояния их исполнения.",
-    provider:
+    provided:
       "Делайте подарки — находите новых покупателей и друзей.",
+    archive:
+      "Завершённые, истёкшие и аннулированные сертификаты вашей учётной записи.",
   },
   total: "Сертификаты",
   allOffers: "Все предложения",
@@ -279,17 +286,20 @@ const RU: Labels = {
 const PL: Labels = {
   ...EN,
   titles: {
-    catalog: "Katalog ofert",
-    buyer: "Moje bony",
-    provider: "Moje oferty",
+    participants: "Oferty uczestników",
+    received: "Moje bony",
+    provided: "Moje oferty",
+    archive: "Archiwum ofert",
   },
   subtitles: {
-    catalog:
+    participants:
       "Produkty, usługi i oferty prywatne dostępne za punkty ARCTor.",
-    buyer:
+    received:
       "Bony zamówione przez Twoje konto oraz stan ich realizacji.",
-    provider:
+    provided:
       "Dawaj prezenty — zdobywaj nowych klientów i przyjaciół.",
+    archive:
+      "Zrealizowane, wygasłe i anulowane certyfikaty dostępne dla Twojego konta.",
   },
   total: "Bony",
   allOffers: "Wszystkie oferty",
@@ -357,17 +367,20 @@ function getLabels(locale: LocaleCode): Labels {
     return {
       ...RU,
       titles: {
-        catalog: "Каталог пропозицій",
-        buyer: "Мої сертифікати",
-        provider: "Мої пропозиції",
+        participants: "Пропозиції учасників",
+        received: "Мої сертифікати",
+        provided: "Мої пропозиції",
+        archive: "Архів пропозицій",
       },
       subtitles: {
-        catalog:
+        participants:
           "Товари, послуги та приватні пропозиції, доступні за пункти ARCTor.",
-        buyer:
+        received:
           "Сертифікати, замовлені вашим обліковим записом, і стани їх виконання.",
-        provider:
+        provided:
           "Робіть подарунки — знаходьте нових покупців і друзів.",
+        archive:
+          "Завершені, прострочені та анульовані сертифікати вашого облікового запису.",
       },
       total: "Сертифікати",
       allOffers: "Усі пропозиції",
@@ -432,17 +445,20 @@ function getLabels(locale: LocaleCode): Labels {
     return {
       ...EN,
       titles: {
-        catalog: "Angebotskatalog",
-        buyer: "Meine Gutscheine",
-        provider: "Meine Angebote",
+        participants: "Angebote der Teilnehmer",
+        received: "Meine Gutscheine",
+        provided: "Meine Angebote",
+        archive: "Angebotsarchiv",
       },
       subtitles: {
-        catalog:
+        participants:
           "Produkte, Dienstleistungen und private Angebote, die für ARCTor-Punkte verfügbar sind.",
-        buyer:
+        received:
           "Von Ihrem Konto bestellte Gutscheine und der Stand ihrer Erfüllung.",
-        provider:
+        provided:
           "Machen Sie Geschenke – gewinnen Sie neue Kunden und Freunde.",
+        archive:
+          "Erfüllte, abgelaufene und annullierte Gutscheine Ihres Kontos.",
       },
       total: "Gutscheine",
       allOffers: "Alle Angebote",
@@ -507,17 +523,20 @@ function getLabels(locale: LocaleCode): Labels {
     return {
       ...EN,
       titles: {
-        catalog: "Catálogo de ofertas",
-        buyer: "Mis certificados",
-        provider: "Mis ofertas",
+        participants: "Ofertas de participantes",
+        received: "Mis certificados",
+        provided: "Mis ofertas",
+        archive: "Archivo de ofertas",
       },
       subtitles: {
-        catalog:
+        participants:
           "Productos, servicios y ofertas privadas disponibles por puntos ARCTor.",
-        buyer:
+        received:
           "Certificados solicitados por tu cuenta y el estado de su cumplimiento.",
-        provider:
+        provided:
           "Haz regalos y encuentra nuevos clientes y amigos.",
+        archive:
+          "Certificados realizados, caducados y anulados disponibles para tu cuenta.",
       },
       total: "Certificados",
       allOffers: "Todas las ofertas",
@@ -582,17 +601,20 @@ function getLabels(locale: LocaleCode): Labels {
     return {
       ...EN,
       titles: {
-        catalog: "Katalog nabídek",
-        buyer: "Moje certifikáty",
-        provider: "Moje nabídky",
+        participants: "Nabídky účastníků",
+        received: "Moje certifikáty",
+        provided: "Moje nabídky",
+        archive: "Archiv nabídek",
       },
       subtitles: {
-        catalog:
+        participants:
           "Produkty, služby a soukromé nabídky dostupné za body ARCTor.",
-        buyer:
+        received:
           "Certifikáty objednané vaším účtem a stav jejich splnění.",
-        provider:
+        provided:
           "Dávejte dárky — získávejte nové zákazníky a přátele.",
+        archive:
+          "Realizované, prošlé a anulované certifikáty dostupné pro váš účet.",
       },
       total: "Certifikáty",
       allOffers: "Všechny nabídky",
@@ -1041,7 +1063,7 @@ function CertificatePreview({
           {item.description?.trim() || item.title}
         </p>
 
-        {mode !== "provider" ? (
+        {mode !== "provided" ? (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span
               className="rounded-lg px-2.5 py-1 text-[11px] font-semibold"
@@ -1073,7 +1095,7 @@ function CertificatePreview({
             <div className="text-[10px] text-[#9ca3b8]">{labels.provider}</div>
           </div>
 
-          {mode !== "catalog" ? (
+          {mode !== "participants" ? (
             <div className="min-w-0 rounded-lg bg-[#f8fafc] px-2 py-1.5">
               <ParticipantValue
                 name={recipientName}
@@ -1148,7 +1170,7 @@ function getFilterDefinitions(
   mode: CertificateDashboardMode,
   labels: Labels,
 ): ReadonlyArray<readonly [FilterKey, string]> {
-  if (mode === "catalog") {
+  if (mode === "participants") {
     return [
       ["all", labels.publicCatalog],
       ["product", labels.products],
@@ -1157,13 +1179,22 @@ function getFilterDefinitions(
     ];
   }
 
-  if (mode === "buyer") {
+  if (mode === "received") {
     return [
       ["all", labels.total],
       ["active", labels.active],
       ["awaiting", labels.awaiting],
       ["completed", labels.completed],
       ["problem", labels.problems],
+    ];
+  }
+
+  if (mode === "archive") {
+    return [
+      ["all", labels.total],
+      ["product", labels.products],
+      ["service", labels.services],
+      ["newest", labels.newest],
     ];
   }
 
@@ -1226,19 +1257,19 @@ export function CertificatesDashboardContent({
     ["problem", "expired", "annulled"].includes(item.state),
   ).length;
   const completionPercent =
-    mode === "catalog"
+    mode === "participants"
       ? getPercent(items.length, Math.max(items.length, 1))
       : getPercent(completedCount, items.length);
 
   const action =
-    mode === "catalog"
+    mode === "participants"
       ? {
-          href: appendLocale("/my-certificates", locale),
+          href: appendLocale("/certificates?view=received", locale),
           label: labels.myCertificates,
         }
-      : mode === "buyer"
+      : mode === "received" || mode === "archive"
         ? {
-            href: appendLocale("/certificates", locale),
+            href: appendLocale("/certificates?view=participants", locale),
             label: labels.catalog,
           }
         : {
@@ -1247,43 +1278,49 @@ export function CertificatesDashboardContent({
           };
 
   const rightAction =
-    mode === "provider"
+    mode === "provided"
       ? {
           href: appendLocale("/offers/new", locale),
           label: labels.createCertificate,
         }
       : {
-          href: appendLocale("/certificates", locale),
+          href: appendLocale("/certificates?view=participants", locale),
           label: labels.findCertificate,
         };
 
   const breakdownRows: ReadonlyArray<readonly [string, number]> =
-    mode === "catalog"
+    mode === "participants"
       ? [
           [labels.products, productsCount],
           [labels.services, servicesCount],
           [labels.available, availableCount],
         ]
-      : mode === "buyer"
+      : mode === "received"
         ? [
             [labels.active, activeCount],
             [labels.awaiting, awaitingCount],
             [labels.completed, completedCount],
           ]
-        : [
-            [labels.available, availableCount],
-            [labels.active, activeCount],
-            [labels.completed, completedCount],
-          ];
+        : mode === "archive"
+          ? [
+              [labels.products, productsCount],
+              [labels.services, servicesCount],
+              [labels.completed, completedCount],
+            ]
+          : [
+              [labels.available, availableCount],
+              [labels.active, activeCount],
+              [labels.completed, completedCount],
+            ];
 
   const attentionValue =
-    mode === "catalog"
+    mode === "participants"
       ? labels.publicCatalog
       : problemCount > 0
         ? String(problemCount)
-        : mode === "buyer" && awaitingCount > 0
+        : mode === "received" && awaitingCount > 0
           ? String(awaitingCount)
-          : mode === "provider" && awaitingCount > 0
+          : mode === "provided" && awaitingCount > 0
             ? String(awaitingCount)
             : labels.noActions;
 
@@ -1317,7 +1354,7 @@ export function CertificatesDashboardContent({
       </div>
 
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {mode === "provider" ? (
+        {mode === "provided" ? (
           <>
             <KpiCard
               label={labels.allOffers}
@@ -1370,7 +1407,7 @@ export function CertificatesDashboardContent({
               label={labels.completion}
               percent={completionPercent}
               sub={
-                mode === "catalog"
+                mode === "participants"
                   ? labels.publicCatalog
                   : `${completedCount} / ${items.length}`
               }
@@ -1461,7 +1498,7 @@ export function CertificatesDashboardContent({
           {labels.searchSection}
         </h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {mode === "provider" ? (
+          {mode === "provided" ? (
             <>
               <DirectionCard
                 label={labels.activeOffers}
@@ -1491,26 +1528,26 @@ export function CertificatesDashboardContent({
           ) : (
             <>
               <DirectionCard
-                label={mode === "catalog" ? labels.products : labels.active}
-                count={mode === "catalog" ? productsCount : activeCount}
+                label={mode === "participants" ? labels.products : labels.active}
+                count={mode === "participants" ? productsCount : activeCount}
                 total={items.length}
                 color="#3b6ef8"
               />
               <DirectionCard
-                label={mode === "catalog" ? labels.services : labels.awaiting}
-                count={mode === "catalog" ? servicesCount : awaitingCount}
+                label={mode === "participants" ? labels.services : labels.awaiting}
+                count={mode === "participants" ? servicesCount : awaitingCount}
                 total={items.length}
                 color="#f97316"
               />
               <DirectionCard
-                label={mode === "catalog" ? labels.available : labels.completed}
-                count={mode === "catalog" ? availableCount : completedCount}
+                label={mode === "participants" ? labels.available : labels.completed}
+                count={mode === "participants" ? availableCount : completedCount}
                 total={items.length}
                 color="#22c55e"
               />
               <DirectionCard
-                label={mode === "catalog" ? labels.newest : labels.problems}
-                count={mode === "catalog" ? items.length : problemCount}
+                label={mode === "participants" ? labels.newest : labels.problems}
+                count={mode === "participants" ? items.length : problemCount}
                 total={items.length}
                 color="#8b5cf6"
               />

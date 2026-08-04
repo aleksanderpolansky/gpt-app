@@ -15,7 +15,7 @@ export default async function LegacyCertificateListPage({
   searchParams,
 }: LegacyCertificateListPageProps) {
   const resolved = await searchParams;
-  const query = new URLSearchParams({ view: "provided" });
+  const query = new URLSearchParams({ view: "participants" });
   const locale = firstParam(resolved?.locale);
   const lang = firstParam(resolved?.lang);
   if (locale) query.set("locale", locale);

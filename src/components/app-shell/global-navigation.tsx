@@ -132,11 +132,54 @@ function useNavigationTranslator(): NavigationTranslate {
 }
 
 function buildLocaleAwareHref(pathname: string, locale: LocaleCode): string {
-  if (locale === "en") {
-    return pathname;
+  const [path, rawQuery = ""] = pathname.split("?", 2);
+  const query = new URLSearchParams(rawQuery);
+
+  if (locale !== "en") {
+    query.set("locale", locale);
   }
 
-  return `${pathname}?locale=${encodeURIComponent(locale)}`;
+  const suffix = query.toString();
+  return suffix ? `${path}?${suffix}` : path;
+}
+
+type UnifiedCertificateView =
+  | "received"
+  | "provided"
+  | "participants"
+  | "archive"
+  | null;
+
+function readUnifiedCertificateView(): UnifiedCertificateView {
+  if (typeof window === "undefined") return null;
+
+  const pathname = window.location.pathname;
+  const search = new URLSearchParams(window.location.search);
+
+  if (pathname === "/my-certificates") return "received";
+  if (pathname === "/seller-certificates") return "provided";
+  if (pathname === "/gift-certificates") return "participants";
+  if (pathname !== "/certificates") return null;
+
+  const view = search.get("view");
+  if (view === "received" || view === "provided" || view === "archive") {
+    return view;
+  }
+
+  return "participants";
+}
+
+function useUnifiedCertificateView(): UnifiedCertificateView {
+  const [view, setView] = useState<UnifiedCertificateView>(null);
+
+  useEffect(() => {
+    const update = () => setView(readUnifiedCertificateView());
+    update();
+    window.addEventListener("popstate", update);
+    return () => window.removeEventListener("popstate", update);
+  }, []);
+
+  return view;
 }
 
 function getDraftOrganizationName(locale: LocaleCode) {
@@ -300,6 +343,7 @@ function TreeItem({
   onClick,
   comingSoon,
   comingSoonSuffix = getComingSoonSuffix("en"),
+  active,
 }: {
   readonly label: string;
   readonly depth?: number;
@@ -313,11 +357,18 @@ function TreeItem({
   readonly onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
   readonly comingSoon?: boolean;
   readonly comingSoonSuffix?: string;
+  readonly active?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen ?? false);
   const pl = depth === 1 ? "pl-9" : depth === 2 ? "pl-12" : "pl-[60px]";
   const textSize = depth === 1 ? "text-[12px] font-medium" : "text-[11.5px] font-normal";
-  const textColor = comingSoon ? "text-[#9ca3b8]" : depth === 1 ? "text-[#5a5f7a]" : "text-[#7c8099]";
+  const textColor = active
+    ? "text-[#3b6ef8]"
+    : comingSoon
+      ? "text-[#9ca3b8]"
+      : depth === 1
+        ? "text-[#5a5f7a]"
+        : "text-[#7c8099]";
   const displayLabel = getComingSoonLabel(label, comingSoon, comingSoonSuffix);
 
   if (children) {
@@ -358,7 +409,11 @@ function TreeItem({
   }`;
 
   return (
-    <div className={`group flex w-full items-center rounded-md pr-2 transition-all ${comingSoon ? "" : "hover:bg-gray-50"}`}>
+    <div
+      className={`group flex w-full items-center rounded-md pr-2 transition-all ${
+        active ? "bg-[#eef2ff]" : comingSoon ? "" : "hover:bg-gray-50"
+      }`}
+    >
       {comingSoon ? (
         <span
           aria-disabled="true"
@@ -374,6 +429,7 @@ function TreeItem({
           href={href}
           onClick={onClick}
           title={displayLabel}
+          aria-current={active ? "page" : undefined}
           className={linkClassName}
         >
           <span className="min-w-0 flex-1 truncate text-left leading-tight">
@@ -554,6 +610,7 @@ export function GlobalSidebar({
   const [profilesError, setProfilesError] = useState<string | null>(null);
   const t = useNavigationTranslator();
   const locale = useInterfaceLocale();
+  const certificateView = useUnifiedCertificateView();
   const localeHref = (pathname: string) => buildLocaleAwareHref(pathname, locale);
 
   async function createBusinessAndOpenEditor() {
@@ -768,10 +825,8 @@ export function GlobalSidebar({
           <TreeItem
             label={t("navigation.giftCertificates")}
             depth={2}
-            href={localeHref("/certificates")}
-            actionHref={localeHref("/certificates/new")}
-            actionTitle={t("navigation.createGiftCertificate")}
-            comingSoon comingSoonSuffix={getComingSoonSuffix(locale)}
+            href={localeHref("/certificates?view=participants")}
+            active={certificateView === "participants"}
           />
           <TreeItem label={t("navigation.events")} depth={2} href={localeHref("/calendar")} comingSoon comingSoonSuffix={getComingSoonSuffix(locale)} />
 
@@ -827,8 +882,8 @@ export function GlobalSidebar({
           <TreeItem
             label={t("navigation.myCertificates")}
             depth={2}
-            href={localeHref("/my-certificates")}
-            comingSoon comingSoonSuffix={getComingSoonSuffix(locale)}
+            href={localeHref("/certificates?view=received")}
+            active={certificateView === "received"}
           />
           <TreeItem
             label={t("navigation.purchaseConfirmationsInbox")}
@@ -838,8 +893,14 @@ export function GlobalSidebar({
           <TreeItem
             label={t("navigation.sellerCertificates")}
             depth={2}
-            href={localeHref("/seller-certificates")}
-            comingSoon comingSoonSuffix={getComingSoonSuffix(locale)}
+            href={localeHref("/certificates?view=provided")}
+            active={certificateView === "provided"}
+          />
+          <TreeItem
+            label={t("navigation.offerArchive")}
+            depth={2}
+            href={localeHref("/certificates?view=archive")}
+            active={certificateView === "archive"}
           />
           <TreeItem label={t("navigation.business")} depth={1} defaultOpen>
             {isLoadingOrganizations ? (
