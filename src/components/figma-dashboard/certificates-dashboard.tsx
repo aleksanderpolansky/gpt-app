@@ -92,6 +92,7 @@ type Labels = {
   readonly activeOffers: string;
   readonly realizedOffers: string;
   readonly realizedAt: string;
+  readonly realizedDate: string;
   readonly available: string;
   readonly active: string;
   readonly awaiting: string;
@@ -156,6 +157,7 @@ const EN: Labels = {
   activeOffers: "Active offers",
   realizedOffers: "Realized offers",
   realizedAt: "Realized",
+  realizedDate: "Realization date",
   available: "Available",
   active: "Ordered",
   awaiting: "Awaiting confirmation",
@@ -233,6 +235,7 @@ const RU: Labels = {
   activeOffers: "Активные предложения",
   realizedOffers: "Реализованные предложения",
   realizedAt: "Реализовано",
+  realizedDate: "Дата реализации",
   available: "Опубликованы",
   active: "Заказаны",
   awaiting: "Ожидают подтверждения",
@@ -310,6 +313,7 @@ const PL: Labels = {
   activeOffers: "Aktywne oferty",
   realizedOffers: "Zrealizowane oferty",
   realizedAt: "Zrealizowano",
+  realizedDate: "Data realizacji",
   available: "Opublikowane",
   active: "Zamówione",
   awaiting: "Oczekują na potwierdzenie",
@@ -392,6 +396,7 @@ function getLabels(locale: LocaleCode): Labels {
       activeOffers: "Активні пропозиції",
       realizedOffers: "Реалізовані пропозиції",
       realizedAt: "Реалізовано",
+      realizedDate: "Дата реалізації",
       available: "Опубліковані",
       active: "Замовлені",
       awaiting: "Очікують підтвердження",
@@ -471,6 +476,7 @@ function getLabels(locale: LocaleCode): Labels {
       activeOffers: "Aktive Angebote",
       realizedOffers: "Erfüllte Angebote",
       realizedAt: "Erfüllt",
+      realizedDate: "Datum der Erfüllung",
       available: "Veröffentlicht",
       active: "Bestellt",
       awaiting: "Bestätigung ausstehend",
@@ -550,6 +556,7 @@ function getLabels(locale: LocaleCode): Labels {
       activeOffers: "Ofertas activas",
       realizedOffers: "Ofertas realizadas",
       realizedAt: "Realizada",
+      realizedDate: "Fecha de realización",
       available: "Publicadas",
       active: "Solicitadas",
       awaiting: "Esperan confirmación",
@@ -629,6 +636,7 @@ function getLabels(locale: LocaleCode): Labels {
       activeOffers: "Aktivní nabídky",
       realizedOffers: "Realizované nabídky",
       realizedAt: "Realizováno",
+      realizedDate: "Datum realizace",
       available: "Publikované",
       active: "Objednané",
       awaiting: "Čekají na potvrzení",
@@ -699,17 +707,30 @@ function formatNumber(value: number, locale: LocaleCode): string {
   }).format(value);
 }
 
-function formatDate(value: string, locale: LocaleCode): string {
-  const date = new Date(`${value}T12:00:00Z`);
+function formatDate(
+  value: string,
+  locale: LocaleCode,
+  includeTime = false,
+): string {
+  const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const date = new Date(isDateOnly ? `${value}T12:00:00Z` : value);
 
   if (Number.isNaN(date.getTime())) {
     return value;
   }
 
-  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : locale, {
-    dateStyle: "medium",
-    timeZone: "UTC",
-  }).format(date);
+  return new Intl.DateTimeFormat(
+    locale === "en" ? "en-US" : locale,
+    includeTime
+      ? {
+          dateStyle: "medium",
+          timeStyle: "short",
+        }
+      : {
+          dateStyle: "medium",
+          timeZone: "UTC",
+        },
+  ).format(date);
 }
 
 function getPercent(value: number, total: number): number {
@@ -1016,12 +1037,16 @@ function CertificatePreview({
     "auto_confirmed",
     "redeemed",
   ].includes(item.state);
+  const displayedStateLabel =
+    mode === "participants" && isRealized
+      ? labels.realizedAt
+      : labels.states[item.state];
   const displayedDate =
     isRealized
       ? item.finalizedAt ?? item.redeemedAt ?? item.availableUntil
       : item.availableUntil;
   const displayedDateLabel =
-    isRealized ? labels.realizedAt : labels.validity;
+    isRealized ? labels.realizedDate : labels.validity;
 
   return (
     <div className="flex min-h-[190px] items-start gap-3 sm:gap-4">
@@ -1089,7 +1114,7 @@ function CertificatePreview({
               className="rounded-lg px-2.5 py-1 text-[11px] font-semibold"
               style={stateTone}
             >
-              {labels.states[item.state]}
+              {displayedStateLabel}
             </span>
           </div>
         ) : null}
@@ -1135,7 +1160,7 @@ function CertificatePreview({
 
           <div className="col-span-2 min-w-0 rounded-lg bg-[#f8fafc] px-2 py-1.5 sm:col-span-1">
             <div className="line-clamp-1 text-[12px] font-semibold text-[#1a1d2e]">
-              {formatDate(displayedDate, locale)}
+              {formatDate(displayedDate, locale, isRealized)}
             </div>
             <div className="text-[10px] text-[#9ca3b8]">
               {displayedDateLabel}
