@@ -193,7 +193,7 @@ const COPY: Record<LocaleCode, Copy> = {
     intermediateEyebrow: "Intermediate observation object",
     path: "Path",
     genericEyebrow: "Observation object",
-    back: "Back to observation objects",
+    back: "← Back to observation objects",
     edit: "Edit",
     editLater: "Editing is not available in this authoring step yet.",
     restructure: "Restructure tree",
@@ -242,7 +242,7 @@ const COPY: Record<LocaleCode, Copy> = {
     intermediateEyebrow: "Pośredni obiekt obserwacji",
     path: "Ścieżka",
     genericEyebrow: "Obiekt obserwacji",
-    back: "Wróć do obiektów obserwacji",
+    back: "← Wróć do obiektów obserwacji",
     edit: "Edytuj",
     editLater: "Edycja nie jest jeszcze dostępna na tym etapie.",
     restructure: "Przebuduj drzewo",
@@ -291,7 +291,7 @@ const COPY: Record<LocaleCode, Copy> = {
     intermediateEyebrow: "Промежуточный объект наблюдения",
     path: "Путь",
     genericEyebrow: "Объект наблюдения",
-    back: "Назад к объектам наблюдения",
+    back: "← Назад к объектам наблюдения",
     edit: "Редактировать",
     editLater: "Редактирование пока недоступно на этом этапе.",
     restructure: "Перестроить дерево",
@@ -340,7 +340,7 @@ const COPY: Record<LocaleCode, Copy> = {
     intermediateEyebrow: "Проміжний об’єкт спостереження",
     path: "Шлях",
     genericEyebrow: "Об’єкт спостереження",
-    back: "Назад до об’єктів спостереження",
+    back: "← Назад до об’єктів спостереження",
     edit: "Редагувати",
     editLater: "Редагування поки недоступне на цьому етапі.",
     restructure: "Перебудувати дерево",
@@ -389,7 +389,7 @@ const COPY: Record<LocaleCode, Copy> = {
     intermediateEyebrow: "Zwischen-Beobachtungsobjekt",
     path: "Pfad",
     genericEyebrow: "Beobachtungsobjekt",
-    back: "Zurück zu Beobachtungsobjekten",
+    back: "← Zurück zu Beobachtungsobjekten",
     edit: "Bearbeiten",
     editLater: "Die Bearbeitung ist in diesem Schritt noch nicht verfügbar.",
     restructure: "Baum umstrukturieren",
@@ -438,7 +438,7 @@ const COPY: Record<LocaleCode, Copy> = {
     intermediateEyebrow: "Objeto intermedio de observación",
     path: "Ruta",
     genericEyebrow: "Objeto de observación",
-    back: "Volver a objetos de observación",
+    back: "← Volver a objetos de observación",
     edit: "Editar",
     editLater: "La edición todavía no está disponible en este paso.",
     restructure: "Reestructurar árbol",
@@ -487,7 +487,7 @@ const COPY: Record<LocaleCode, Copy> = {
     intermediateEyebrow: "Mezilehlý objekt pozorování",
     path: "Cesta",
     genericEyebrow: "Objekt pozorování",
-    back: "Zpět k objektům pozorování",
+    back: "← Zpět k objektům pozorování",
     edit: "Upravit",
     editLater: "Úpravy zatím nejsou v tomto kroku dostupné.",
     restructure: "Přestavět strom",
@@ -1361,8 +1361,8 @@ export default async function ValueObjectDetailPage({
   }
 
   return (
-    <main className="min-h-full bg-[#eef1f7] px-4 py-5 text-[#1a1d2e] md:px-6">
-      <div className="mx-auto grid w-full max-w-[1640px] gap-5">
+    <main className="min-h-full bg-[#f5f6fb] text-[#1a1d2e]">
+      <div className="grid gap-5 p-5">
         <div className="flex flex-wrap items-center gap-2">
           {!editMode ? (
             <Link
@@ -1397,55 +1397,108 @@ export default async function ValueObjectDetailPage({
               {copy.edit}
             </button>
           )}
+
+          <Link
+            href={buildLocaleHref(
+              `/value-objects/${valueObject.id}/restructure`,
+              locale,
+            )}
+            className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"
+          >
+            {copy.restructure}
+          </Link>
+
+          {isLeaf ? (
+            <Link
+              href={buildLocaleHref(
+                `/value-objects/${valueObject.id}/standards`,
+                locale,
+              )}
+              title={copy.parametersAndTargetsReadOnly}
+              className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"
+            >
+              {copy.parametersAndTargets}
+            </Link>
+          ) : null}
         </div>
 
-        <header className="rounded-[26px] border border-black/[0.07] bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
-          <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#3b6ef8]">
-            {isRoot
-              ? copy.rootEyebrow
-              : isIntermediate
-                ? copy.intermediateEyebrow
-                : isLeaf
-                  ? copy.leafEyebrow
-                  : copy.genericEyebrow}
-          </div>
+        {editMode && canEdit ? (
+          <section className="max-w-[980px]">
+            <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#8b91aa]">
+              {isRoot
+                ? copy.rootEyebrow
+                : isIntermediate
+                  ? copy.intermediateEyebrow
+                  : isLeaf
+                    ? copy.leafEyebrow
+                    : copy.genericEyebrow}
+            </div>
 
-          <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-[760px]">
-              {editMode && canEdit ? (
-                <ValueObjectInlineEditor
-                  valueObjectId={valueObject.id}
-                  locale={locale}
-                  initialTitle={valueObject.title}
-                  initialDescription={valueObject.description}
-                  isProductOrService={isProductOrService}
-                  isService={isService}
-                  initialPrice={valueObject.default_price}
-                  currency={valueObject.default_currency}
-                  initialDurationMinutes={valueObject.default_duration_minutes}
-                  viewHref={viewHref}
-                />
-              ) : (
-                <>
-                  <h1 className="text-[32px] font-bold tracking-[-0.035em] text-[#111827]">
-                    {valueObject.title}
-                  </h1>
-                  <p className="mt-3 text-[14px] leading-6 text-[#5a5f7a]">
-                    {valueObject.description || "—"}
-                  </p>
-                </>
-              )}
+            <ValueObjectInlineEditor
+              valueObjectId={valueObject.id}
+              locale={locale}
+              initialTitle={valueObject.title}
+              initialDescription={valueObject.description}
+              isProductOrService={isProductOrService}
+              isService={isService}
+              initialPrice={valueObject.default_price}
+              currency={valueObject.default_currency}
+              initialDurationMinutes={valueObject.default_duration_minutes}
+              viewHref={viewHref}
+            />
+
+            {pathNodes.length > 1 && (
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] font-semibold text-[#5a5f7a]">
+                <span className="uppercase tracking-[0.14em] text-[#7c8099]">
+                  {copy.path}
+                </span>
+                {pathNodes.map((node, index) => (
+                  <span key={node.id} className="inline-flex items-center gap-2">
+                    {index > 0 && <span aria-hidden="true">→</span>}
+                    {node.id === valueObject.id ? (
+                      <span>{node.title}</span>
+                    ) : (
+                      <Link
+                        href={buildLocaleHref(
+                          `/value-objects/${node.id}`,
+                          locale,
+                        )}
+                        className="text-[#3b6ef8] hover:underline"
+                      >
+                        {node.title}
+                      </Link>
+                    )}
+                  </span>
+                ))}
+              </div>
+            )}
+          </section>
+        ) : (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h1 className="text-[20px] font-bold leading-tight text-[#1a1d2e]">
+                {valueObject.title}
+              </h1>
+              <p className="mt-0.5 text-[13px] text-[#7c8099]">
+                {isRoot
+                  ? copy.rootEyebrow
+                  : isIntermediate
+                    ? copy.intermediateEyebrow
+                    : isLeaf
+                      ? copy.leafEyebrow
+                      : copy.genericEyebrow}
+              </p>
+              <p className="mt-1 max-w-[760px] text-[12px] font-medium leading-5 text-[#9ca3b8]">
+                {valueObject.description || "—"}
+              </p>
 
               {pathNodes.length > 1 && (
-                <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] font-semibold text-[#5a5f7a]">
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] font-semibold text-[#5a5f7a]">
                   <span className="uppercase tracking-[0.14em] text-[#7c8099]">
                     {copy.path}
                   </span>
                   {pathNodes.map((node, index) => (
-                    <span
-                      key={node.id}
-                      className="inline-flex items-center gap-2"
-                    >
+                    <span key={node.id} className="inline-flex items-center gap-2">
                       {index > 0 && <span aria-hidden="true">→</span>}
                       {node.id === valueObject.id ? (
                         <span>{node.title}</span>
@@ -1465,32 +1518,8 @@ export default async function ValueObjectDetailPage({
                 </div>
               )}
             </div>
-
-            <div className="flex flex-wrap justify-end gap-2">
-              {isLeaf ? (
-                <Link
-                  href={buildLocaleHref(
-                    `/value-objects/${valueObject.id}/standards`,
-                    locale,
-                  )}
-                  title={copy.parametersAndTargetsReadOnly}
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-3 text-[13px] font-bold text-[#3b6ef8] transition hover:border-[#aebfff] hover:bg-[#e8edff]"
-                >
-                  {copy.parametersAndTargets}
-                </Link>
-              ) : null}
-              <Link
-                href={buildLocaleHref(
-                  `/value-objects/${valueObject.id}/restructure`,
-                  locale,
-                )}
-                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#e6dcff] bg-[#f7f1ff] px-4 py-3 text-[13px] font-bold text-[#8b5cf6] transition hover:border-[#cdb7ff] hover:bg-[#f1e9ff]"
-              >
-                {copy.restructure}
-              </Link>
-            </div>
           </div>
-        </header>
+        )}
 
         <ValueObjectProfileTopGrid
           valueObjectId={valueObject.id}
