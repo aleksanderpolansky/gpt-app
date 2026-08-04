@@ -68,6 +68,7 @@ export type CertificateDashboardItem = {
   readonly publishedAt: string | null;
   readonly orderedAt: string | null;
   readonly finalizedAt: string | null;
+  readonly redeemedAt: string | null;
   readonly href: string;
   readonly shareHref: string;
 };
@@ -90,6 +91,7 @@ type Labels = {
   readonly allOffers: string;
   readonly activeOffers: string;
   readonly realizedOffers: string;
+  readonly realizedAt: string;
   readonly available: string;
   readonly active: string;
   readonly awaiting: string;
@@ -141,7 +143,7 @@ const EN: Labels = {
   },
   subtitles: {
     participants:
-      "Products, services and private offers available for ARCTor points.",
+      "Active and realized products, services and private offers from ARCTor participants.",
     received:
       "Certificates ordered by your account, their check-in and confirmation states.",
     provided:
@@ -153,6 +155,7 @@ const EN: Labels = {
   allOffers: "All offers",
   activeOffers: "Active offers",
   realizedOffers: "Realized offers",
+  realizedAt: "Realized",
   available: "Available",
   active: "Ordered",
   awaiting: "Awaiting confirmation",
@@ -217,7 +220,7 @@ const RU: Labels = {
   },
   subtitles: {
     participants:
-      "Товары, услуги и частные предложения, доступные за пункты ARCTor.",
+      "Активные и реализованные товары, услуги и частные предложения участников ARCTor.",
     received:
       "Сертификаты, заказанные вашей учётной записью, и состояния их исполнения.",
     provided:
@@ -229,6 +232,7 @@ const RU: Labels = {
   allOffers: "Все предложения",
   activeOffers: "Активные предложения",
   realizedOffers: "Реализованные предложения",
+  realizedAt: "Реализовано",
   available: "Опубликованы",
   active: "Заказаны",
   awaiting: "Ожидают подтверждения",
@@ -293,7 +297,7 @@ const PL: Labels = {
   },
   subtitles: {
     participants:
-      "Produkty, usługi i oferty prywatne dostępne za punkty ARCTor.",
+      "Aktywne i zrealizowane produkty, usługi oraz prywatne oferty uczestników ARCTor.",
     received:
       "Bony zamówione przez Twoje konto oraz stan ich realizacji.",
     provided:
@@ -305,6 +309,7 @@ const PL: Labels = {
   allOffers: "Wszystkie oferty",
   activeOffers: "Aktywne oferty",
   realizedOffers: "Zrealizowane oferty",
+  realizedAt: "Zrealizowano",
   available: "Opublikowane",
   active: "Zamówione",
   awaiting: "Oczekują na potwierdzenie",
@@ -374,7 +379,7 @@ function getLabels(locale: LocaleCode): Labels {
       },
       subtitles: {
         participants:
-          "Товари, послуги та приватні пропозиції, доступні за пункти ARCTor.",
+          "Активні й реалізовані товари, послуги та приватні пропозиції учасників ARCTor.",
         received:
           "Сертифікати, замовлені вашим обліковим записом, і стани їх виконання.",
         provided:
@@ -386,6 +391,7 @@ function getLabels(locale: LocaleCode): Labels {
       allOffers: "Усі пропозиції",
       activeOffers: "Активні пропозиції",
       realizedOffers: "Реалізовані пропозиції",
+      realizedAt: "Реалізовано",
       available: "Опубліковані",
       active: "Замовлені",
       awaiting: "Очікують підтвердження",
@@ -452,7 +458,7 @@ function getLabels(locale: LocaleCode): Labels {
       },
       subtitles: {
         participants:
-          "Produkte, Dienstleistungen und private Angebote, die für ARCTor-Punkte verfügbar sind.",
+          "Aktive und erfüllte Produkte, Dienstleistungen und private Angebote der ARCTor-Teilnehmer.",
         received:
           "Von Ihrem Konto bestellte Gutscheine und der Stand ihrer Erfüllung.",
         provided:
@@ -464,6 +470,7 @@ function getLabels(locale: LocaleCode): Labels {
       allOffers: "Alle Angebote",
       activeOffers: "Aktive Angebote",
       realizedOffers: "Erfüllte Angebote",
+      realizedAt: "Erfüllt",
       available: "Veröffentlicht",
       active: "Bestellt",
       awaiting: "Bestätigung ausstehend",
@@ -530,7 +537,7 @@ function getLabels(locale: LocaleCode): Labels {
       },
       subtitles: {
         participants:
-          "Productos, servicios y ofertas privadas disponibles por puntos ARCTor.",
+          "Productos, servicios y ofertas privadas activos y realizados por participantes de ARCTor.",
         received:
           "Certificados solicitados por tu cuenta y el estado de su cumplimiento.",
         provided:
@@ -542,6 +549,7 @@ function getLabels(locale: LocaleCode): Labels {
       allOffers: "Todas las ofertas",
       activeOffers: "Ofertas activas",
       realizedOffers: "Ofertas realizadas",
+      realizedAt: "Realizada",
       available: "Publicadas",
       active: "Solicitadas",
       awaiting: "Esperan confirmación",
@@ -608,7 +616,7 @@ function getLabels(locale: LocaleCode): Labels {
       },
       subtitles: {
         participants:
-          "Produkty, služby a soukromé nabídky dostupné za body ARCTor.",
+          "Aktivní a realizované produkty, služby a soukromé nabídky účastníků ARCTor.",
         received:
           "Certifikáty objednané vaším účtem a stav jejich splnění.",
         provided:
@@ -620,6 +628,7 @@ function getLabels(locale: LocaleCode): Labels {
       allOffers: "Všechny nabídky",
       activeOffers: "Aktivní nabídky",
       realizedOffers: "Realizované nabídky",
+      realizedAt: "Realizováno",
       available: "Publikované",
       active: "Objednané",
       awaiting: "Čekají na potvrzení",
@@ -1002,6 +1011,17 @@ function CertificatePreview({
       ? item.recipientName
       : labels.recipientHidden
     : labels.recipientPending;
+  const isRealized = [
+    "confirmed_by_buyer",
+    "auto_confirmed",
+    "redeemed",
+  ].includes(item.state);
+  const displayedDate =
+    isRealized
+      ? item.finalizedAt ?? item.redeemedAt ?? item.availableUntil
+      : item.availableUntil;
+  const displayedDateLabel =
+    isRealized ? labels.realizedAt : labels.validity;
 
   return (
     <div className="flex min-h-[190px] items-start gap-3 sm:gap-4">
@@ -1095,7 +1115,7 @@ function CertificatePreview({
             <div className="text-[10px] text-[#9ca3b8]">{labels.provider}</div>
           </div>
 
-          {mode !== "participants" ? (
+          {mode !== "participants" || isRealized ? (
             <div className="min-w-0 rounded-lg bg-[#f8fafc] px-2 py-1.5">
               <ParticipantValue
                 name={recipientName}
@@ -1115,9 +1135,11 @@ function CertificatePreview({
 
           <div className="col-span-2 min-w-0 rounded-lg bg-[#f8fafc] px-2 py-1.5 sm:col-span-1">
             <div className="line-clamp-1 text-[12px] font-semibold text-[#1a1d2e]">
-              {formatDate(item.availableUntil, locale)}
+              {formatDate(displayedDate, locale)}
             </div>
-            <div className="text-[10px] text-[#9ca3b8]">{labels.validity}</div>
+            <div className="text-[10px] text-[#9ca3b8]">
+              {displayedDateLabel}
+            </div>
           </div>
         </div>
       </div>
@@ -1163,6 +1185,26 @@ function filterItems(
     );
   }
 
+  if (filter === "newest") {
+    return [...items].sort((left, right) =>
+      String(
+        right.finalizedAt ??
+          right.redeemedAt ??
+          right.orderedAt ??
+          right.publishedAt ??
+          "",
+      ).localeCompare(
+        String(
+          left.finalizedAt ??
+            left.redeemedAt ??
+            left.orderedAt ??
+            left.publishedAt ??
+            "",
+        ),
+      ),
+    );
+  }
+
   return [...items];
 }
 
@@ -1172,7 +1214,9 @@ function getFilterDefinitions(
 ): ReadonlyArray<readonly [FilterKey, string]> {
   if (mode === "participants") {
     return [
-      ["all", labels.publicCatalog],
+      ["all", labels.allOffers],
+      ["available", labels.activeOffers],
+      ["completed", labels.realizedOffers],
       ["product", labels.products],
       ["service", labels.services],
       ["newest", labels.newest],
@@ -1256,10 +1300,7 @@ export function CertificatesDashboardContent({
   const problemCount = items.filter((item) =>
     ["problem", "expired", "annulled"].includes(item.state),
   ).length;
-  const completionPercent =
-    mode === "participants"
-      ? getPercent(items.length, Math.max(items.length, 1))
-      : getPercent(completedCount, items.length);
+  const completionPercent = getPercent(completedCount, items.length);
 
   const action =
     mode === "participants"
@@ -1291,9 +1332,9 @@ export function CertificatesDashboardContent({
   const breakdownRows: ReadonlyArray<readonly [string, number]> =
     mode === "participants"
       ? [
+          [labels.activeOffers, availableCount],
+          [labels.realizedOffers, completedCount],
           [labels.products, productsCount],
-          [labels.services, servicesCount],
-          [labels.available, availableCount],
         ]
       : mode === "received"
         ? [
@@ -1408,7 +1449,7 @@ export function CertificatesDashboardContent({
               percent={completionPercent}
               sub={
                 mode === "participants"
-                  ? labels.publicCatalog
+                  ? `${labels.realizedOffers}: ${completedCount} / ${items.length}`
                   : `${completedCount} / ${items.length}`
               }
             />
@@ -1546,8 +1587,10 @@ export function CertificatesDashboardContent({
                 color="#22c55e"
               />
               <DirectionCard
-                label={mode === "participants" ? labels.newest : labels.problems}
-                count={mode === "participants" ? items.length : problemCount}
+                label={
+                  mode === "participants" ? labels.realizedOffers : labels.problems
+                }
+                count={mode === "participants" ? completedCount : problemCount}
                 total={items.length}
                 color="#8b5cf6"
               />

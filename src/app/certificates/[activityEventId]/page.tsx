@@ -347,7 +347,7 @@ const OFFER_PAGE_COPY: Record<LocaleCode, OfferPageCopy> = {
 };
 
 function isPubliclyShareableLifecycle(status: string): boolean {
-  return ["available", "active", "redeemed", "expired", "annulled"].includes(
+  return ["available", "active", "redeemed"].includes(
     status,
   );
 }
@@ -470,6 +470,20 @@ function buildOfferPageHref(
   return query ? `${pathname}?${query}` : pathname;
 }
 
+function getHiddenRecipientLabel(locale: LocaleCode): string {
+  const labels: Record<LocaleCode, string> = {
+    en: "Hidden recipient",
+    pl: "Ukryty odbiorca",
+    ru: "Скрытый получатель",
+    uk: "Прихований отримувач",
+    de: "Verborgener Empfänger",
+    es: "Destinatario oculto",
+    cs: "Skrytý příjemce",
+  };
+
+  return labels[locale];
+}
+
 function formatPlacedDate(value: string | null, locale: LocaleCode): string {
   if (!value) return "—";
 
@@ -558,6 +572,14 @@ export default async function CertificateCatalogDetailPage({
   );
   const providerHref = certificate.providerPublicHref
     ? buildGiftCertificateLocaleHref(certificate.providerPublicHref, locale)
+    : null;
+  const recipientHref = certificate.recipientPublicHref
+    ? buildGiftCertificateLocaleHref(certificate.recipientPublicHref, locale)
+    : null;
+  const recipientName = certificate.recipientDisplayName
+    ? recipientHref || isProviderManager || isRecipient
+      ? certificate.recipientDisplayName
+      : getHiddenRecipientLabel(locale)
     : null;
 
   return (
@@ -869,10 +891,21 @@ export default async function CertificateCatalogDetailPage({
                 <span className="font-semibold text-[#1a1d2e]">{pageCopy.reputation}: </span>
                 {certificate.providerReputation}
               </div>
-              {certificate.recipientDisplayName ? (
+              {recipientName ? (
                 <div>
-                  <span className="font-semibold text-[#1a1d2e]">{pageCopy.recipient}: </span>
-                  {certificate.recipientDisplayName}
+                  <span className="font-semibold text-[#1a1d2e]">
+                    {pageCopy.recipient}: {" "}
+                  </span>
+                  {recipientHref ? (
+                    <Link
+                      href={recipientHref}
+                      className="font-medium text-[#315bd0] hover:underline"
+                    >
+                      {recipientName}
+                    </Link>
+                  ) : (
+                    recipientName
+                  )}
                 </div>
               ) : null}
             </div>

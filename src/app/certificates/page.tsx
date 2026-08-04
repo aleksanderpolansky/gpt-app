@@ -13,7 +13,7 @@ import {
   normalizeGiftCertificateLocale,
 } from "./gift-certificate-copy";
 import {
-  listAvailableGiftCertificates,
+  listPublicGiftCertificates,
   listBuyerGiftCertificates,
   listProviderGiftCertificates,
   type GiftCertificateCatalogItem,
@@ -132,6 +132,7 @@ function toDashboardItem(
     publishedAt: certificate.publishedAt,
     orderedAt: certificate.orderedAt,
     finalizedAt: certificate.confirmation?.finalized_at ?? null,
+    redeemedAt: certificate.redeemedAt,
     href,
     shareHref: href,
   };
@@ -167,7 +168,7 @@ export default async function CertificatesPage({
   const view = normalizeView(resolvedSearchParams?.view);
 
   if (view === "participants") {
-    const certificates = await listAvailableGiftCertificates();
+    const certificates = await listPublicGiftCertificates();
     return (
       <CertificatesDashboardContent
         initialLocale={locale}

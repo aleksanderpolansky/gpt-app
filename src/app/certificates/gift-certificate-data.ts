@@ -693,32 +693,46 @@ function sortByNewest(
   );
 }
 
-export async function listAvailableGiftCertificates(): Promise<
+export async function listPublicGiftCertificates(): Promise<
   GiftCertificateCatalogItem[]
 > {
   const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from("activity_gift_certificate_terms")
     .select(TERMS_SELECT)
-    .eq("lifecycle_status", "available")
+    .in("lifecycle_status", ["available", "redeemed"])
     .not("published_at", "is", null)
-    .gte("available_until", today)
-    .order("published_at", { ascending: false })
-    .limit(200);
+    .order("updated_at", { ascending: false })
+    .limit(500);
 
   if (error) {
     throw new Error(error.message);
   }
 
   const items = await hydrateTerms((data ?? []) as TermsRow[]);
+  const publicItems = items.filter((item) => {
+    if (item.activity.status !== "planned") {
+      return false;
+    }
 
-  return items
-    .filter(
-      (item) =>
-        item.activity.status === "planned" &&
-        item.flowState === "available",
-    )
-    .sort((left, right) => {
+    if (item.flowState === "available") {
+      return item.availableUntil >= today;
+    }
+
+    return ["confirmed_by_buyer", "auto_confirmed", "redeemed"].includes(
+      item.flowState,
+    );
+  });
+
+  return publicItems.sort((left, right) => {
+    const leftIsAvailable = left.flowState === "available";
+    const rightIsAvailable = right.flowState === "available";
+
+    if (leftIsAvailable !== rightIsAvailable) {
+      return leftIsAvailable ? -1 : 1;
+    }
+
+    if (leftIsAvailable && rightIsAvailable) {
       if (right.providerReputation !== left.providerReputation) {
         return right.providerReputation - left.providerReputation;
       }
@@ -726,7 +740,18 @@ export async function listAvailableGiftCertificates(): Promise<
       return String(right.publishedAt ?? "").localeCompare(
         String(left.publishedAt ?? ""),
       );
-    });
+    }
+
+    return String(
+      right.confirmation?.finalized_at ??
+        right.redeemedAt ??
+        right.updatedAt,
+    ).localeCompare(
+      String(
+        left.confirmation?.finalized_at ?? left.redeemedAt ?? left.updatedAt,
+      ),
+    );
+  });
 }
 
 export async function listBuyerGiftCertificates(
