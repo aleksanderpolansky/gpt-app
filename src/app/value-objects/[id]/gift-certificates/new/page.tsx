@@ -5,7 +5,7 @@ import {
   resolveActiveActorContext,
 } from "../../../../../../lib/actor-context";
 import { auth0 } from "../../../../../../lib/auth0";
-import { getEcbReferenceRate } from "../../../../../../lib/exchange-rates/ecb-reference-rate";
+import { resolveOfficialEurReferenceRate } from "../../../../../../lib/exchange-rates/official-eur-reference-rate";
 import { supabase } from "../../../../../../lib/supabase";
 import { getOrganizationCurrency } from "@/lib/commercial/currency";
 import { readValueObjectPublicImageUrl } from "@/lib/value-object-public-image";
@@ -173,7 +173,7 @@ export default async function GiftCertificateCreatePage({
     );
   }
 
-  const referenceRate = await getEcbReferenceRate(providerCurrency);
+  const referenceRate = await resolveOfficialEurReferenceRate(providerCurrency);
 
   return (
     <GiftCertificateCreateForm

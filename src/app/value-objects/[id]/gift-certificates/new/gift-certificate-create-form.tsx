@@ -597,7 +597,6 @@ export function GiftCertificateCreateForm({
               coverageMode === "provider_currency_amount"
                 ? parseNumber(coverageValue)
                 : null,
-            referenceExchangeRate: referenceRate.providerCurrencyPerEuro,
             termsText: termsText.trim() || null,
             startedAt,
             endedAt,

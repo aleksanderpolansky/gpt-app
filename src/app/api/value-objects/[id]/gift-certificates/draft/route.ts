@@ -5,7 +5,7 @@ import {
   resolveActiveActorContext,
 } from "../../../../../../../lib/actor-context";
 import { auth0 } from "../../../../../../../lib/auth0";
-import { getEcbReferenceRate } from "../../../../../../../lib/exchange-rates/ecb-reference-rate";
+import { resolveOfficialEurReferenceRate } from "../../../../../../../lib/exchange-rates/official-eur-reference-rate";
 import { supabase } from "../../../../../../../lib/supabase";
 import { getOrganizationCurrency } from "@/lib/commercial/currency";
 
@@ -34,7 +34,6 @@ type RequestBody = {
   pointsCoverageMode?: unknown;
   pointsCoveragePercent?: unknown;
   pointsCoveredAmount?: unknown;
-  referenceExchangeRate?: unknown;
   termsText?: unknown;
   startedAt?: unknown;
   endedAt?: unknown;
@@ -465,10 +464,10 @@ export async function POST(
   }
 
 
-  let referenceRate: Awaited<ReturnType<typeof getEcbReferenceRate>>;
+  let referenceRate: Awaited<ReturnType<typeof resolveOfficialEurReferenceRate>>;
 
   try {
-    referenceRate = await getEcbReferenceRate(providerCurrency);
+    referenceRate = await resolveOfficialEurReferenceRate(providerCurrency);
   } catch (error) {
     return NextResponse.json(
       {
@@ -517,9 +516,17 @@ export async function POST(
           ? coveredAmount
           : null,
       p_reference_exchange_rate:
-        providerCurrency === "EUR"
-          ? null
-          : referenceRate.providerCurrencyPerEuro,
+        referenceRate.providerCurrencyPerEuro,
+      p_reference_exchange_rate_source:
+        referenceRate.sourceCode,
+      p_reference_exchange_rate_date:
+        referenceRate.referenceDate,
+      p_reference_exchange_rate_fetched_at:
+        referenceRate.fetchedAt,
+      p_reference_exchange_rate_source_url:
+        referenceRate.sourceUrl,
+      p_reference_exchange_rate_is_fallback:
+        referenceRate.isFallback,
       p_terms_text: termsText,
       p_started_at:
         valueObject.object_kind === "service_type"

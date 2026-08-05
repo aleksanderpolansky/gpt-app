@@ -26,6 +26,11 @@ type TermsRow = {
   money_remainder_provider_currency: number | string;
   points_price: number | string;
   reference_exchange_rate: number | string;
+  reference_exchange_rate_source: string;
+  reference_exchange_rate_date: string;
+  reference_exchange_rate_fetched_at: string;
+  reference_exchange_rate_source_url: string;
+  reference_exchange_rate_is_fallback: boolean;
   terms_text: string | null;
   public_snapshot_json: unknown;
   recipient_user_id: string | null;
@@ -195,6 +200,11 @@ export type GiftCertificateCatalogItem = {
   readonly moneyRemainder: number;
   readonly pointsPrice: number;
   readonly referenceExchangeRate: number;
+  readonly referenceExchangeRateSource: string;
+  readonly referenceExchangeRateDate: string;
+  readonly referenceExchangeRateFetchedAt: string;
+  readonly referenceExchangeRateSourceUrl: string;
+  readonly referenceExchangeRateIsFallback: boolean;
   readonly termsText: string | null;
   readonly publicCode: string | null;
   readonly qrTokenHash: string | null;
@@ -234,6 +244,11 @@ const TERMS_SELECT = `
   money_remainder_provider_currency,
   points_price,
   reference_exchange_rate,
+  reference_exchange_rate_source,
+  reference_exchange_rate_date,
+  reference_exchange_rate_fetched_at,
+  reference_exchange_rate_source_url,
+  reference_exchange_rate_is_fallback,
   terms_text,
   public_snapshot_json,
   recipient_user_id,
@@ -653,6 +668,16 @@ async function hydrateTerms(
         ),
         pointsPrice: toNumber(terms.points_price),
         referenceExchangeRate: toNumber(terms.reference_exchange_rate),
+        referenceExchangeRateSource:
+          terms.reference_exchange_rate_source,
+        referenceExchangeRateDate:
+          terms.reference_exchange_rate_date,
+        referenceExchangeRateFetchedAt:
+          terms.reference_exchange_rate_fetched_at,
+        referenceExchangeRateSourceUrl:
+          terms.reference_exchange_rate_source_url,
+        referenceExchangeRateIsFallback:
+          terms.reference_exchange_rate_is_fallback,
         termsText: terms.terms_text,
         publicCode: terms.public_code,
         qrTokenHash: terms.qr_token_hash,

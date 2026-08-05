@@ -2,6 +2,9 @@ import "server-only";
 
 const ECB_DAILY_REFERENCE_RATES_URL =
   "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml";
+const EUR_IDENTITY_SOURCE_URL = "urn:arctor:exchange-rate:eur-identity";
+
+export const ECB_REFERENCE_RATE_MAX_FALLBACK_AGE_DAYS = 7;
 
 export type EcbReferenceRate = {
   readonly baseCurrency: "EUR";
@@ -10,6 +13,8 @@ export type EcbReferenceRate = {
   readonly referenceDate: string;
   readonly sourceCode: "ECB_EURO_REFERENCE_RATE" | "EUR_IDENTITY";
   readonly sourceUrl: string;
+  readonly fetchedAt: string;
+  readonly isFallback: boolean;
 };
 
 function normalizeCurrency(value: string): string {
@@ -26,7 +31,11 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function parseEcbDailyXml(xml: string, currency: string): EcbReferenceRate {
+function parseEcbDailyXml(
+  xml: string,
+  currency: string,
+  fetchedAt: string,
+): EcbReferenceRate {
   const datedCube = xml.match(
     /<Cube\s+time=["']([^"']+)["']>([\s\S]*?)<\/Cube>/i,
   );
@@ -62,6 +71,25 @@ function parseEcbDailyXml(xml: string, currency: string): EcbReferenceRate {
     referenceDate,
     sourceCode: "ECB_EURO_REFERENCE_RATE",
     sourceUrl: ECB_DAILY_REFERENCE_RATES_URL,
+    fetchedAt,
+    isFallback: false,
+  };
+}
+
+export function getEurIdentityReferenceRate(
+  now = new Date(),
+): EcbReferenceRate {
+  const fetchedAt = now.toISOString();
+
+  return {
+    baseCurrency: "EUR",
+    quoteCurrency: "EUR",
+    providerCurrencyPerEuro: 1,
+    referenceDate: fetchedAt.slice(0, 10),
+    sourceCode: "EUR_IDENTITY",
+    sourceUrl: EUR_IDENTITY_SOURCE_URL,
+    fetchedAt,
+    isFallback: false,
   };
 }
 
@@ -71,14 +99,7 @@ export async function getEcbReferenceRate(
   const currency = normalizeCurrency(currencyCode);
 
   if (currency === "EUR") {
-    return {
-      baseCurrency: "EUR",
-      quoteCurrency: "EUR",
-      providerCurrencyPerEuro: 1,
-      referenceDate: new Date().toISOString().slice(0, 10),
-      sourceCode: "EUR_IDENTITY",
-      sourceUrl: ECB_DAILY_REFERENCE_RATES_URL,
-    };
+    return getEurIdentityReferenceRate();
   }
 
   const response = await fetch(ECB_DAILY_REFERENCE_RATES_URL, {
@@ -97,5 +118,9 @@ export async function getEcbReferenceRate(
     );
   }
 
-  return parseEcbDailyXml(await response.text(), currency);
+  return parseEcbDailyXml(
+    await response.text(),
+    currency,
+    new Date().toISOString(),
+  );
 }
