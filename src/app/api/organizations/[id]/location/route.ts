@@ -635,7 +635,20 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     primaryLocationId: updatedLocation.id,
   });
 
-  const defaultCurrency = getDefaultCurrencyByCountryCode(locationInput.countryCode, { fallbackCurrency: "PLN" });
+  const defaultCurrency = getDefaultCurrencyByCountryCode(
+    locationInput.countryCode,
+  );
+
+  if (!defaultCurrency) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "A supported organization country is required before its currency can be determined.",
+      },
+      { status: 400 },
+    );
+  }
 
   const nowIso = new Date().toISOString();
 

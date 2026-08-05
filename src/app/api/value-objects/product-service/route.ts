@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getOrganizationCurrency } from "@/lib/commercial/currency";
 import {
   ActorContextError,
   resolveActiveActorContext,
@@ -239,7 +240,7 @@ export async function POST(request: Request) {
   if (organizationId) {
     const { data: organization, error: organizationError } = await supabase
       .from("organizations")
-      .select("id, default_currency, status, owner_actor_id")
+      .select("id, country_code, default_currency, status, owner_actor_id")
       .eq("id", organizationId)
       .eq("owner_actor_id", actorContext.actorId)
       .eq("status", "active")
@@ -259,10 +260,30 @@ export async function POST(request: Request) {
       );
     }
 
-    providerCurrency =
-      typeof organization.default_currency === "string"
-        ? organization.default_currency.trim().toUpperCase()
-        : "";
+    providerCurrency = getOrganizationCurrency(organization) ?? "";
+
+    if (!providerCurrency) {
+      return NextResponse.json(
+        {
+          error:
+            "Organization currency does not match the country of its address. Save the organization address before creating a product or service.",
+        },
+        { status: 409 },
+      );
+    }
+
+    if (
+      requestedCurrency &&
+      requestedCurrency.toUpperCase() !== providerCurrency
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "The requested currency does not match the organization country.",
+        },
+        { status: 400 },
+      );
+    }
   } else if (requestedCurrency && requestedCurrency.toUpperCase() !== "EUR") {
     return NextResponse.json(
       { error: "Personal and avatar providers use EUR in this release" },

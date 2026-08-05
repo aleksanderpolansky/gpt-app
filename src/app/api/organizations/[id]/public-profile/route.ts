@@ -2,6 +2,10 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import {
+  getDefaultCurrencyByCountryCode,
+  normalizeCountryCode,
+} from "@/lib/commercial/currency";
+import {
   ActorContextError,
   resolveActiveActorContext,
 } from "../../../../../../lib/actor-context";
@@ -21,6 +25,8 @@ type OrganizationRow = {
   owner_actor_id: string | null;
   public_slug: string | null;
   social_links_json: Record<string, unknown> | null;
+  country_code: string | null;
+  default_currency: string | null;
 };
 
 type LocationPayload = {
@@ -168,7 +174,9 @@ async function getOwnedOrganization(input: {
 }) {
   const { data, error } = await supabase
     .from("organizations")
-    .select("id, owner_actor_id, public_slug, social_links_json")
+    .select(
+      "id, owner_actor_id, public_slug, social_links_json, country_code, default_currency",
+    )
     .eq("id", input.organizationId)
     .limit(1);
 
@@ -273,6 +281,28 @@ export async function PATCH(request: Request, { params }: RouteProps) {
 
   const categoryLabel = parseNullableText(body.categoryLabel);
   const logoUrl = parseNullableText(body.logoUrl);
+  const locationPayload =
+    body.location && typeof body.location === "object"
+      ? (body.location as LocationPayload)
+      : null;
+  const nextCountryCode = locationPayload
+    ? normalizeCountryCode(parseNullableText(locationPayload.countryCode))
+    : normalizeCountryCode(organization.country_code);
+  const nextDefaultCurrency = locationPayload
+    ? getDefaultCurrencyByCountryCode(nextCountryCode)
+    : organization.default_currency;
+
+  if (locationPayload && !nextDefaultCurrency) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "A supported organization country is required before its currency can be determined.",
+      },
+      { status: 400 },
+    );
+  }
+
   const nextSocialLinksJson = getNextSocialLinksJson(
     organization.social_links_json,
     categoryLabel,
@@ -293,6 +323,8 @@ export async function PATCH(request: Request, { params }: RouteProps) {
         website_url: parseNullableText(body.websiteUrl),
         booking_url: parseNullableText(body.bookingUrl),
         public_email: parseNullableText(body.publicEmail),
+        country_code: nextCountryCode,
+        default_currency: nextDefaultCurrency,
         updated_at: now,
       })
       .eq("id", organizationId)
@@ -311,6 +343,8 @@ export async function PATCH(request: Request, { params }: RouteProps) {
         public_email,
         logo_url,
         social_links_json,
+        country_code,
+        default_currency,
         updated_at
       `,
       )
@@ -323,11 +357,6 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     );
   }
 
-  const locationPayload =
-    body.location && typeof body.location === "object"
-      ? (body.location as LocationPayload)
-      : null;
-
   let updatedLocation = null;
 
   if (locationPayload) {
@@ -337,7 +366,7 @@ export async function PATCH(request: Request, { params }: RouteProps) {
       : parseAddressVisibility(locationPayload.addressVisibility);
 
     const locationUpdate = {
-      country_code: parseNullableText(locationPayload.countryCode),
+      country_code: nextCountryCode,
       city: parseNullableText(locationPayload.city),
       district: parseNullableText(locationPayload.district),
       street_address: streetAddress,

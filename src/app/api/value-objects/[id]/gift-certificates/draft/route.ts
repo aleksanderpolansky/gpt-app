@@ -7,6 +7,7 @@ import {
 import { auth0 } from "../../../../../../../lib/auth0";
 import { getEcbReferenceRate } from "../../../../../../../lib/exchange-rates/ecb-reference-rate";
 import { supabase } from "../../../../../../../lib/supabase";
+import { getOrganizationCurrency } from "@/lib/commercial/currency";
 
 export const dynamic = "force-dynamic";
 
@@ -359,18 +360,59 @@ export async function POST(
   }
 
   const ordinaryPrice = Number(valueObject.default_price ?? 0);
-  const providerCurrency =
+  const valueObjectCurrency =
     typeof valueObject.default_currency === "string"
       ? valueObject.default_currency.trim().toUpperCase()
       : "";
+  let providerCurrency = "EUR";
+
+  if (valueObject.organization_id) {
+    const { data: organizationData, error: organizationError } = await supabase
+      .from("organizations")
+      .select("id, country_code, default_currency, status, owner_actor_id")
+      .eq("id", valueObject.organization_id)
+      .eq("owner_actor_id", actorContext.actorId)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (organizationError) {
+      return NextResponse.json(
+        { error: organizationError.message },
+        { status: 500 },
+      );
+    }
+
+    if (!organizationData) {
+      return NextResponse.json(
+        { error: "Organization not found or access denied" },
+        { status: 403 },
+      );
+    }
+
+    providerCurrency = getOrganizationCurrency(organizationData) ?? "";
+
+    if (!providerCurrency) {
+      return NextResponse.json(
+        {
+          error:
+            "Organization currency does not match the country of its address.",
+        },
+        { status: 409 },
+      );
+    }
+  }
 
   if (
     !Number.isFinite(ordinaryPrice) ||
     ordinaryPrice < 0 ||
-    !/^[A-Z]{3}$/.test(providerCurrency)
+    !/^[A-Z]{3}$/.test(providerCurrency) ||
+    valueObjectCurrency !== providerCurrency
   ) {
     return NextResponse.json(
-      { error: "Product or service price is unavailable" },
+      {
+        error:
+          "Product or service price or provider currency is unavailable.",
+      },
       { status: 400 },
     );
   }

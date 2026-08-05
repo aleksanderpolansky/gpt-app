@@ -7,6 +7,7 @@ import {
 import { auth0 } from "../../../../../../lib/auth0";
 import { getEcbReferenceRate } from "../../../../../../lib/exchange-rates/ecb-reference-rate";
 import { supabase } from "../../../../../../lib/supabase";
+import { getOrganizationCurrency } from "@/lib/commercial/currency";
 import { readValueObjectPublicImageUrl } from "@/lib/value-object-public-image";
 import { GiftCertificateCreateForm } from "./gift-certificate-create-form";
 
@@ -38,6 +39,7 @@ type ValueObjectRow = {
 type OrganizationRow = {
   id: string;
   organization_name: string;
+  country_code: string | null;
   default_currency: string | null;
   status: string;
   owner_actor_id: string;
@@ -123,12 +125,13 @@ export default async function GiftCertificateCreatePage({
   let providerLabel = actorContext.profile.displayName;
   let providerType: "personal" | "avatar" | "organization" =
     actorContext.profile.profileKind === "avatar" ? "avatar" : "personal";
+  let providerCurrency = "EUR";
 
   if (valueObject.organization_id) {
     const { data: organizationData, error: organizationError } = await supabase
       .from("organizations")
       .select(
-        "id, organization_name, default_currency, status, owner_actor_id",
+        "id, organization_name, country_code, default_currency, status, owner_actor_id",
       )
       .eq("id", valueObject.organization_id)
       .eq("owner_actor_id", actorContext.actorId)
@@ -147,15 +150,27 @@ export default async function GiftCertificateCreatePage({
 
     providerLabel = organization.organization_name;
     providerType = "organization";
+    providerCurrency = getOrganizationCurrency(organization) ?? "";
+
+    if (!providerCurrency) {
+      throw new Error(
+        "Organization currency does not match the country of its address.",
+      );
+    }
   }
 
-  const providerCurrency =
+  const valueObjectCurrency =
     typeof valueObject.default_currency === "string"
       ? valueObject.default_currency.trim().toUpperCase()
       : "";
 
-  if (!/^[A-Z]{3}$/.test(providerCurrency)) {
-    throw new Error("Provider currency is unavailable");
+  if (
+    !/^[A-Z]{3}$/.test(providerCurrency) ||
+    valueObjectCurrency !== providerCurrency
+  ) {
+    throw new Error(
+      "Product or service currency does not match the provider country.",
+    );
   }
 
   const referenceRate = await getEcbReferenceRate(providerCurrency);

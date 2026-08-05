@@ -820,8 +820,17 @@ export async function POST(request: Request) {
 
   const defaultCurrency = getDefaultCurrencyByCountryCode(
     locationInput.countryCode,
-    { fallbackCurrency: "PLN" }
   );
+
+  if (!defaultCurrency) {
+    return NextResponse.json(
+      {
+        error:
+          "A supported organization country is required before its currency can be determined.",
+      },
+      { status: 400 },
+    );
+  }
   const directoryPublishedAt = new Date().toISOString();
   const createLocation = hasAnyLocationInput(locationInput);
   const cityName =
