@@ -321,11 +321,7 @@ export default async function SuperOfferWizardPage({
       items.some((item) => item.id === requestedValueObjectId),
   );
   const initialMode =
-    requestedMode === "new" || requestedOrganizationProvider
-      ? "new"
-      : requestedMode === "existing" || requestedItemExists
-        ? "existing"
-        : null;
+    requestedMode === "existing" || requestedItemExists ? "existing" : "new";
 
   return (
     <SuperOfferWizard

@@ -1335,6 +1335,22 @@ function getPublicOrganizationEditModeLabel(locale?: string) {
 
   return labels[labelLocale] ?? labels.en;
 }
+
+function getPublicOrganizationAddSuperOfferLabel(locale?: string) {
+  const labelLocale = getPublicOrganizationDashboardLocale(locale);
+
+  const labels: Record<PublicOrganizationDashboardLocaleKey, string> = {
+    en: "Add super offer",
+    pl: "Dodaj superofertę",
+    uk: "\u0414\u043e\u0434\u0430\u0442\u0438 \u0441\u0443\u043f\u0435\u0440\u043f\u0440\u043e\u043f\u043e\u0437\u0438\u0446\u0456\u044e",
+    ru: "\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0441\u0443\u043f\u0435\u0440\u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435",
+    de: "Superangebot hinzuf\u00fcgen",
+    es: "A\u00f1adir superoferta",
+    cs: "P\u0159idat supernab\u00eddku",
+  };
+
+  return labels[labelLocale] ?? labels.en;
+}
 function normalizePublicExternalHref(value: string | null | undefined) {
   if (!value) {
     return null;
@@ -1997,6 +2013,12 @@ export default async function DirectoryOrganizationPage({
   const editProfileHref = organization
     ? appendLocaleToHref(`/organizations/${organization.id}/edit`, selectedLocale)
     : null;
+  const addSuperOfferHref = organization
+    ? appendLocaleToHref(
+        `/offers/new?organizationId=${encodeURIComponent(organization.id)}`,
+        selectedLocale,
+      )
+    : null;
 
   return (
     <main className="min-h-full bg-[#f5f6fb] text-[#1a1d2e]">
@@ -2015,6 +2037,15 @@ export default async function DirectoryOrganizationPage({
               className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"
             >
               {getPublicOrganizationEditModeLabel(selectedLocale)}
+            </Link>
+          ) : null}
+
+          {isOrganizationOwner && addSuperOfferHref ? (
+            <Link
+              href={addSuperOfferHref}
+              className="w-fit rounded-full border border-[#3b6ef8] bg-[#3b6ef8] px-4 py-2 text-[12px] font-bold text-white shadow-[0_8px_20px_rgba(59,110,248,0.18)] transition hover:-translate-y-0.5 hover:bg-[#315fd8]"
+            >
+              {getPublicOrganizationAddSuperOfferLabel(selectedLocale)}
             </Link>
           ) : null}
         </div>

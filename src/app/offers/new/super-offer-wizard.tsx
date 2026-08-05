@@ -50,7 +50,7 @@ type SuperOfferWizardProps = {
   readonly activeProfileId: string;
   readonly providers: readonly SuperOfferProvider[];
   readonly items: readonly SuperOfferValueObject[];
-  readonly initialMode: WizardMode | null;
+  readonly initialMode: WizardMode;
   readonly initialProviderKey: string;
   readonly initialValueObjectId: string | null;
 };
@@ -607,7 +607,7 @@ export function SuperOfferWizard({
   const router = useRouter();
   const copy = COPY[locale];
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [mode, setMode] = useState<WizardMode | null>(initialMode);
+  const [mode, setMode] = useState<WizardMode>(initialMode);
   const [providerKey, setProviderKey] = useState(initialProviderKey);
   const [currentActiveProfileId, setCurrentActiveProfileId] =
     useState(activeProfileId);
@@ -861,18 +861,16 @@ export function SuperOfferWizard({
             {copy.back}
           </Link>
 
-          {mode ? (
-            <button
-              type="button"
-              onClick={() => {
-                setMode(null);
-                setErrorMessage(null);
-              }}
-              className="rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"
-            >
-              {copy.changeChoice}
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={() => {
+              setMode(mode === "new" ? "existing" : "new");
+              setErrorMessage(null);
+            }}
+            className="rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"
+          >
+            {mode === "new" ? copy.existingChoice : copy.newChoice}
+          </button>
         </div>
 
         <header>
@@ -889,42 +887,6 @@ export function SuperOfferWizard({
           <div className="rounded-[18px] border border-[#ffd5d5] bg-[#fff7f7] px-5 py-4 text-[13px] font-semibold text-[#b42318]">
             {errorMessage}
           </div>
-        ) : null}
-
-        {!mode ? (
-          <section className="grid gap-5 lg:grid-cols-2">
-            <button
-              type="button"
-              onClick={() => setMode("new")}
-              className="flex min-h-44 flex-col rounded-[24px] border border-black/[0.07] bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#b9c8ff] hover:shadow-md"
-            >
-              <div className="text-[18px] font-bold text-[#111827]">
-                {copy.newChoice}
-              </div>
-              <p className="mt-3 text-[13px] leading-6 text-[#5a5f7a]">
-                {copy.newChoiceDescription}
-              </p>
-              <span className="mt-6 inline-flex min-h-10 w-full items-center justify-center rounded-full bg-[#3b6ef8] px-4 py-2 text-[12px] font-bold text-white shadow-[0_8px_20px_rgba(59,110,248,0.18)]">
-                {copy.continueChoice}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setMode("existing")}
-              className="flex min-h-44 flex-col rounded-[24px] border border-black/[0.07] bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#b9c8ff] hover:shadow-md"
-            >
-              <div className="text-[18px] font-bold text-[#111827]">
-                {copy.existingChoice}
-              </div>
-              <p className="mt-3 text-[13px] leading-6 text-[#5a5f7a]">
-                {copy.existingChoiceDescription}
-              </p>
-              <span className="mt-6 inline-flex min-h-10 w-full items-center justify-center rounded-full bg-[#3b6ef8] px-4 py-2 text-[12px] font-bold text-white shadow-[0_8px_20px_rgba(59,110,248,0.18)]">
-                {copy.continueChoice}
-              </span>
-            </button>
-          </section>
         ) : null}
 
         {mode === "new" ? (
