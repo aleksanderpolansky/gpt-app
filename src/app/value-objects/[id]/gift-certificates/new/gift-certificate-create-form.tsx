@@ -682,7 +682,7 @@ export function GiftCertificateCreateForm({
     const remainder = roundMoney(
       ordinaryPrice - coveredProviderAmount,
     );
-    const pointsPrice = roundMoney(
+    const pointsPrice = Math.ceil(
       coveredProviderAmount / rawRate,
     );
 
