@@ -616,7 +616,7 @@ export function SuperOfferWizard({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [defaultPrice, setDefaultPrice] = useState("");
-  const [defaultDurationMinutes, setDefaultDurationMinutes] = useState("");
+  const [defaultDurationMinutes, setDefaultDurationMinutes] = useState("30");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
   const [selectedValueObjectId, setSelectedValueObjectId] = useState(

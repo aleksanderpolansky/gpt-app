@@ -182,8 +182,11 @@ function normalizeLocale(value: unknown): LocaleCode {
     : "en";
 }
 
-function buildValueObjectDetailUrl(id: string, locale: LocaleCode) {
-  const pathname = `/value-objects/${id}`;
+function buildGiftCertificateReviewUrl(
+  activityEventId: string,
+  locale: LocaleCode,
+) {
+  const pathname = `/certificates/${activityEventId}`;
 
   return locale === "en"
     ? pathname
@@ -481,9 +484,22 @@ export async function POST(
   }
 
   if (valueObject.object_kind === "service_type") {
+    const hasStartedAt = Boolean(startedAt);
+    const hasEndedAt = Boolean(endedAt);
+
+    if (hasStartedAt !== hasEndedAt) {
+      return NextResponse.json(
+        {
+          error:
+            "Service timing must be either individually agreed or a complete exact interval",
+        },
+        { status: 400 },
+      );
+    }
+
     if (
-      !startedAt ||
-      !endedAt ||
+      startedAt &&
+      endedAt &&
       Date.parse(endedAt) <= Date.parse(startedAt)
     ) {
       return NextResponse.json(
@@ -566,8 +582,8 @@ export async function POST(
     ok: true,
     disposition: payload?.disposition ?? null,
     activityEventId,
-    redirectUrl: buildValueObjectDetailUrl(
-      valueObject.id,
+    redirectUrl: buildGiftCertificateReviewUrl(
+      activityEventId,
       locale,
     ),
   });

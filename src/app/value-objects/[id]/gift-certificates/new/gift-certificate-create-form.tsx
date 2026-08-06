@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { formatLocalizedPoints } from "@/components/figma-dashboard/certificate-value-format";
 
@@ -66,13 +66,19 @@ type Copy = {
   availableUntil: string;
   validityHint: string;
   coverageMode: string;
+  coverageHint: string;
   percentage: string;
+  percentageHint: string;
   amount: string;
+  amountHint: string;
   coverageValue: string;
   exchangeRate: string;
   exchangeRateHint: string;
+  individualTime: string;
+  individualTimeHint: string;
   serviceStart: string;
-  serviceEnd: string;
+  serviceDuration: string;
+  serviceDurationHint: string;
   exactSlotHint: string;
   terms: string;
   termsHint: string;
@@ -89,9 +95,9 @@ type Copy = {
 const COPY: Record<LocaleCode, Copy> = {
   en: {
     eyebrow: "Gift certificate",
-    title: "Create a gift-certificate draft",
+    title: "Create a gift certificate",
     intro:
-      "The certificate is a planned activity linked to this product or service. This step creates only a draft; it does not publish the certificate, debit points or create a QR code.",
+      "Set the validity period, usage conditions and the part of the ordinary price you are ready to give to the visitor. After saving, you can review the details and publish the certificate.",
     back: "Back to product or service",
     provider: "Provider",
     item: "Product or service",
@@ -106,35 +112,48 @@ const COPY: Record<LocaleCode, Copy> = {
     serviceOnline: "Service online",
     availableFrom: "Valid from",
     availableUntil: "Valid until",
-    validityHint: "The author sets both dates. The period may not exceed 31 days.",
-    coverageMode: "Points coverage",
-    percentage: "Percentage of the ordinary price",
-    amount: "Amount in provider currency",
-    coverageValue: "Coverage value",
+    validityHint:
+      "By default, the certificate is valid from today for one calendar month. You may change both dates; the period may not exceed 31 days.",
+    coverageMode: "Gift for the visitor",
+    coverageHint:
+      "Specify the part of the ordinary price that you are ready to give to the visitor who orders the certificate. The visitor does not pay this part in money. Entitlement to the gift is confirmed by points earned for confirmed purchases from your enterprise and other enterprises listed on ARCTor. Points are not transferred to you and are not payment.",
+    percentage: "Give part of the price as a percentage",
+    percentageHint:
+      "Specify what percentage of the ordinary price you are ready to give to the visitor.",
+    amount: "Give an amount in provider currency",
+    amountHint:
+      "Specify the amount in your enterprise's currency that you are ready to give to the visitor.",
+    coverageValue: "Gift amount",
     exchangeRate: "Provider-currency units per 1 €",
     exchangeRateHint:
       "Required because ARCTor points use the euro as the reference currency. 1 point = 1 €.",
-    serviceStart: "Service starts",
-    serviceEnd: "Service ends",
+    individualTime: "Arrange the visit time individually",
+    individualTimeHint:
+      "The visitor and the provider agree on the exact date and time after the certificate is ordered.",
+    serviceStart: "Visit date and time",
+    serviceDuration: "Duration, minutes",
+    serviceDurationHint:
+      "The end time is calculated automatically. The default duration is 30 minutes.",
     exactSlotHint:
-      "A service certificate represents one exact slot chosen by the author.",
-    terms: "Conditions and comments",
-    termsHint: "Optional public conditions for this certificate.",
+      "Choose a valid visit start and a positive duration.",
+    terms: "Additional certificate conditions",
+    termsHint:
+      "Optional field. Add restrictions, booking rules or other important information for the visitor.",
     preview: "Calculation preview",
-    points: "Points price",
-    covered: "Covered in provider currency",
-    remainder: "Money remainder",
+    points: "Points required",
+    covered: "Gift for the visitor",
+    remainder: "Remaining to pay",
     externalPayment:
-      "Any money remainder is paid outside ARCTor. ARCTor does not accept or confirm monetary payment.",
-    create: "Create draft",
-    creating: "Creating…",
+      "The remaining amount is paid to the provider outside ARCTor. Points confirm the visitor's right to the gift and are not transferred to the provider.",
+    create: "Save and review",
+    creating: "Saving…",
     errorPrefix: "Could not create:",
   },
   pl: {
     eyebrow: "Bon podarunkowy",
-    title: "Utwórz szkic bonu podarunkowego",
+    title: "Utwórz bon podarunkowy",
     intro:
-      "Bon jest planowaną aktywnością powiązaną z tym produktem lub usługą. Ten krok tworzy tylko szkic; nie publikuje bonu, nie pobiera punktów i nie tworzy kodu QR.",
+      "Ustaw okres ważności, warunki wykorzystania i część zwykłej ceny, którą chcesz podarować odwiedzającemu. Po zapisaniu sprawdzisz dane i opublikujesz bon.",
     back: "Wróć do produktu lub usługi",
     provider: "Dostawca",
     item: "Produkt lub usługa",
@@ -150,35 +169,47 @@ const COPY: Record<LocaleCode, Copy> = {
     availableFrom: "Ważny od",
     availableUntil: "Ważny do",
     validityHint:
-      "Autor ustala obie daty. Okres nie może przekraczać 31 dni.",
-    coverageMode: "Pokrycie punktami",
-    percentage: "Procent zwykłej ceny",
-    amount: "Kwota w walucie dostawcy",
-    coverageValue: "Wartość pokrycia",
+      "Domyślnie bon jest ważny od dziś przez jeden miesiąc kalendarzowy. Obie daty można zmienić; okres nie może przekraczać 31 dni.",
+    coverageMode: "Prezent dla odwiedzającego",
+    coverageHint:
+      "Wskaż część zwykłej ceny, którą chcesz podarować osobie zamawiającej bon. Tej części odwiedzający nie płaci pieniędzmi. Prawo do prezentu potwierdzają punkty przyznawane za potwierdzone zakupy w Twoim przedsiębiorstwie i innych przedsiębiorstwach obecnych w ARCTor. Punkty nie są przekazywane Tobie i nie stanowią zapłaty.",
+    percentage: "Podaruj część ceny w procentach",
+    percentageHint:
+      "Wskaż, jaki procent zwykłej ceny chcesz podarować odwiedzającemu.",
+    amount: "Podaruj kwotę w walucie dostawcy",
+    amountHint:
+      "Wskaż kwotę w walucie Twojego przedsiębiorstwa, którą chcesz podarować odwiedzającemu.",
+    coverageValue: "Wartość prezentu",
     exchangeRate: "Jednostki waluty dostawcy za 1 €",
     exchangeRateHint:
       "Wymagane, ponieważ walutą odniesienia punktów ARCTor jest euro. 1 punkt = 1 €.",
-    serviceStart: "Początek usługi",
-    serviceEnd: "Koniec usługi",
+    individualTime: "Termin wizyty ustalany indywidualnie",
+    individualTimeHint:
+      "Po zamówieniu bonu odwiedzający i przedstawiciel przedsiębiorstwa uzgadniają dokładną datę i godzinę.",
+    serviceStart: "Data i godzina wizyty",
+    serviceDuration: "Czas trwania, minuty",
+    serviceDurationHint:
+      "Godzina zakończenia jest obliczana automatycznie. Domyślny czas to 30 minut.",
     exactSlotHint:
-      "Bon na usługę oznacza jeden dokładny termin wybrany przez autora.",
-    terms: "Warunki i komentarze",
-    termsHint: "Opcjonalne publiczne warunki tego bonu.",
+      "Wybierz prawidłową datę i godzinę wizyty oraz dodatni czas trwania.",
+    terms: "Dodatkowe warunki bonu",
+    termsHint:
+      "Pole opcjonalne. Możesz podać ograniczenia, zasady rezerwacji lub inne ważne informacje dla odwiedzającego.",
     preview: "Podgląd obliczenia",
-    points: "Cena w punktach",
-    covered: "Pokryte w walucie dostawcy",
-    remainder: "Pozostała kwota pieniężna",
+    points: "Wymagana liczba punktów",
+    covered: "Prezent dla odwiedzającego",
+    remainder: "Pozostaje do zapłaty",
     externalPayment:
-      "Pozostała kwota pieniężna jest płacona poza ARCTor. ARCTor nie przyjmuje ani nie potwierdza płatności pieniężnej.",
-    create: "Utwórz szkic",
-    creating: "Tworzenie…",
+      "Pozostałą kwotę odwiedzający płaci dostawcy poza ARCTor. Punkty potwierdzają prawo do prezentu i nie są przekazywane dostawcy.",
+    create: "Zapisz i sprawdź",
+    creating: "Zapisywanie…",
     errorPrefix: "Nie udało się utworzyć:",
   },
   ru: {
     eyebrow: "Подарочный сертификат",
-    title: "Создать черновик подарочного сертификата",
+    title: "Создать подарочный сертификат",
     intro:
-      "Сертификат является плановой активностью, связанной с этим товаром или услугой. На этом шаге создаётся только черновик: он не публикуется, пункты не списываются и QR-код не создаётся.",
+      "Укажите срок действия, условия использования и часть обычной стоимости, которую вы готовы подарить посетителю. После сохранения вы сможете проверить данные и опубликовать сертификат.",
     back: "Назад к товару или услуге",
     provider: "Предоставляющий",
     item: "Товар или услуга",
@@ -194,35 +225,47 @@ const COPY: Record<LocaleCode, Copy> = {
     availableFrom: "Действует с",
     availableUntil: "Действует до",
     validityHint:
-      "Автор устанавливает обе даты. Продолжительность периода не может превышать 31 день.",
-    coverageMode: "Покрытие пунктами",
-    percentage: "Процент обычной стоимости",
-    amount: "Сумма в валюте предоставляющего",
-    coverageValue: "Размер покрытия",
+      "По умолчанию сертификат действует с сегодняшнего дня в течение одного календарного месяца. Обе даты можно изменить; срок не может превышать 31 день.",
+    coverageMode: "Подарок посетителю",
+    coverageHint:
+      "Укажите часть обычной стоимости, которую вы готовы подарить посетителю, заказавшему сертификат. Эту часть посетитель не оплачивает деньгами. Право на подарок подтверждается пунктами, которые начисляются за подтверждённые покупки у вашего предприятия и других предприятий, представленных на ARCTor. Пункты не переводятся вам и не являются оплатой.",
+    percentage: "Подарить часть стоимости в процентах",
+    percentageHint:
+      "Укажите, какой процент обычной стоимости вы готовы подарить посетителю.",
+    amount: "Подарить сумму в валюте предоставляющего",
+    amountHint:
+      "Укажите сумму в валюте вашего предприятия, которую вы готовы подарить посетителю.",
+    coverageValue: "Размер подарка",
     exchangeRate: "Единиц валюты предоставляющего за 1 €",
     exchangeRateHint:
       "Обязательно, поскольку расчётная валюта пунктов ARCTor — евро. 1 пункт = 1 €.",
-    serviceStart: "Начало услуги",
-    serviceEnd: "Окончание услуги",
+    individualTime: "Время визита согласовывается индивидуально",
+    individualTimeHint:
+      "Точную дату и время посетитель согласует с представителем предприятия после заказа сертификата.",
+    serviceStart: "Дата и время начала",
+    serviceDuration: "Продолжительность, минуты",
+    serviceDurationHint:
+      "Окончание рассчитывается автоматически. По умолчанию — 30 минут.",
     exactSlotHint:
-      "Сертификат на услугу представляет один точный временной интервал, выбранный автором.",
-    terms: "Условия и комментарии",
-    termsHint: "Необязательные публичные условия этого сертификата.",
+      "Укажите корректные дату и время начала и положительную продолжительность услуги.",
+    terms: "Дополнительные условия сертификата",
+    termsHint:
+      "Необязательное поле. Здесь можно указать ограничения, правила записи или другую важную информацию для посетителя.",
     preview: "Предварительный расчёт",
-    points: "Стоимость в пунктах",
-    covered: "Покрыто в валюте предоставляющего",
-    remainder: "Денежный остаток",
+    points: "Требуется пунктов",
+    covered: "Подарок посетителю",
+    remainder: "Остаётся оплатить",
     externalPayment:
-      "Денежный остаток оплачивается вне ARCTor. ARCTor не принимает деньги и не подтверждает денежный платёж.",
-    create: "Создать черновик",
-    creating: "Создаётся…",
+      "Оставшаяся сумма оплачивается предоставляющему вне ARCTor. Пункты подтверждают право посетителя на подарок и не переводятся предоставляющему.",
+    create: "Сохранить и проверить",
+    creating: "Сохраняется…",
     errorPrefix: "Не удалось создать:",
   },
   uk: {
     eyebrow: "Подарунковий сертифікат",
-    title: "Створити чернетку подарункового сертифіката",
+    title: "Створити подарунковий сертифікат",
     intro:
-      "Сертифікат є запланованою активністю, пов’язаною з цим товаром або послугою. На цьому кроці створюється лише чернетка: вона не публікується, пункти не списуються і QR-код не створюється.",
+      "Укажіть строк дії, умови використання та частину звичайної вартості, яку ви готові подарувати відвідувачу. Після збереження ви зможете перевірити дані й опублікувати сертифікат.",
     back: "Назад до товару або послуги",
     provider: "Надавач",
     item: "Товар або послуга",
@@ -238,35 +281,47 @@ const COPY: Record<LocaleCode, Copy> = {
     availableFrom: "Діє з",
     availableUntil: "Діє до",
     validityHint:
-      "Автор встановлює обидві дати. Тривалість періоду не може перевищувати 31 день.",
-    coverageMode: "Покриття пунктами",
-    percentage: "Відсоток звичайної вартості",
-    amount: "Сума у валюті надавача",
-    coverageValue: "Розмір покриття",
+      "За замовчуванням сертифікат діє від сьогодні протягом одного календарного місяця. Обидві дати можна змінити; строк не може перевищувати 31 день.",
+    coverageMode: "Подарунок відвідувачу",
+    coverageHint:
+      "Укажіть частину звичайної вартості, яку ви готові подарувати відвідувачу, що замовив сертифікат. Цю частину відвідувач не сплачує грошима. Право на подарунок підтверджується пунктами, які нараховуються за підтверджені покупки у вашого підприємства та інших підприємств, представлених на ARCTor. Пункти не переказуються вам і не є оплатою.",
+    percentage: "Подарувати частину вартості у відсотках",
+    percentageHint:
+      "Укажіть, який відсоток звичайної вартості ви готові подарувати відвідувачу.",
+    amount: "Подарувати суму у валюті надавача",
+    amountHint:
+      "Укажіть суму у валюті вашого підприємства, яку ви готові подарувати відвідувачу.",
+    coverageValue: "Розмір подарунка",
     exchangeRate: "Одиниць валюти надавача за 1 €",
     exchangeRateHint:
       "Обов’язково, оскільки розрахункова валюта пунктів ARCTor — євро. 1 пункт = 1 €.",
-    serviceStart: "Початок послуги",
-    serviceEnd: "Закінчення послуги",
+    individualTime: "Час візиту узгоджується індивідуально",
+    individualTimeHint:
+      "Точну дату й час відвідувач узгоджує з представником підприємства після замовлення сертифіката.",
+    serviceStart: "Дата й час початку",
+    serviceDuration: "Тривалість, хвилини",
+    serviceDurationHint:
+      "Час завершення розраховується автоматично. За замовчуванням — 30 хвилин.",
     exactSlotHint:
-      "Сертифікат на послугу означає один точний часовий інтервал, вибраний автором.",
-    terms: "Умови та коментарі",
-    termsHint: "Необов’язкові публічні умови цього сертифіката.",
+      "Укажіть правильні дату й час початку та додатну тривалість послуги.",
+    terms: "Додаткові умови сертифіката",
+    termsHint:
+      "Необов’язкове поле. Тут можна вказати обмеження, правила запису або іншу важливу інформацію для відвідувача.",
     preview: "Попередній розрахунок",
-    points: "Вартість у пунктах",
-    covered: "Покрито у валюті надавача",
-    remainder: "Грошовий залишок",
+    points: "Потрібно пунктів",
+    covered: "Подарунок відвідувачу",
+    remainder: "Залишається сплатити",
     externalPayment:
-      "Грошовий залишок сплачується поза ARCTor. ARCTor не приймає гроші й не підтверджує грошову оплату.",
-    create: "Створити чернетку",
-    creating: "Створення…",
+      "Залишок сплачується надавачу поза ARCTor. Пункти підтверджують право відвідувача на подарунок і не переказуються надавачу.",
+    create: "Зберегти й перевірити",
+    creating: "Збереження…",
     errorPrefix: "Не вдалося створити:",
   },
   de: {
     eyebrow: "Geschenkgutschein",
-    title: "Geschenkgutschein-Entwurf erstellen",
+    title: "Geschenkgutschein erstellen",
     intro:
-      "Der Gutschein ist eine geplante Aktivität, die mit diesem Produkt oder dieser Dienstleistung verknüpft ist. Dieser Schritt erstellt nur einen Entwurf; er veröffentlicht nichts, zieht keine Punkte ab und erstellt keinen QR-Code.",
+      "Legen Sie Gültigkeit, Nutzungsbedingungen und den Teil des regulären Preises fest, den Sie dem Besucher schenken möchten. Nach dem Speichern können Sie die Angaben prüfen und den Gutschein veröffentlichen.",
     back: "Zurück zum Produkt oder zur Dienstleistung",
     provider: "Anbieter",
     item: "Produkt oder Dienstleistung",
@@ -282,35 +337,47 @@ const COPY: Record<LocaleCode, Copy> = {
     availableFrom: "Gültig ab",
     availableUntil: "Gültig bis",
     validityHint:
-      "Der Autor legt beide Daten fest. Der Zeitraum darf 31 Tage nicht überschreiten.",
-    coverageMode: "Punkte-Abdeckung",
-    percentage: "Prozent des regulären Preises",
-    amount: "Betrag in Anbieterwährung",
-    coverageValue: "Abdeckungswert",
+      "Standardmäßig gilt der Gutschein ab heute einen Kalendermonat lang. Beide Daten können geändert werden; der Zeitraum darf 31 Tage nicht überschreiten.",
+    coverageMode: "Geschenk für den Besucher",
+    coverageHint:
+      "Geben Sie den Teil des regulären Preises an, den Sie dem Besucher bei Bestellung des Gutscheins schenken möchten. Diesen Teil bezahlt der Besucher nicht mit Geld. Das Recht auf das Geschenk wird durch Punkte bestätigt, die für bestätigte Einkäufe bei Ihrem Unternehmen und anderen auf ARCTor vertretenen Unternehmen vergeben werden. Die Punkte werden Ihnen nicht übertragen und sind keine Zahlung.",
+    percentage: "Einen Teil des Preises prozentual schenken",
+    percentageHint:
+      "Geben Sie an, welchen Prozentsatz des regulären Preises Sie dem Besucher schenken möchten.",
+    amount: "Einen Betrag in Anbieterwährung schenken",
+    amountHint:
+      "Geben Sie den Betrag in der Währung Ihres Unternehmens an, den Sie dem Besucher schenken möchten.",
+    coverageValue: "Wert des Geschenks",
     exchangeRate: "Einheiten der Anbieterwährung je 1 €",
     exchangeRateHint:
       "Erforderlich, weil der Euro die Referenzwährung für ARCTor-Punkte ist. 1 Punkt = 1 €.",
-    serviceStart: "Beginn der Dienstleistung",
-    serviceEnd: "Ende der Dienstleistung",
+    individualTime: "Besuchszeit wird individuell vereinbart",
+    individualTimeHint:
+      "Nach der Gutscheinbestellung vereinbaren Besucher und Unternehmensvertreter das genaue Datum und die genaue Uhrzeit.",
+    serviceStart: "Datum und Uhrzeit des Besuchs",
+    serviceDuration: "Dauer, Minuten",
+    serviceDurationHint:
+      "Das Ende wird automatisch berechnet. Die Standarddauer beträgt 30 Minuten.",
     exactSlotHint:
-      "Ein Dienstleistungsgutschein steht für einen genauen, vom Autor gewählten Termin.",
-    terms: "Bedingungen und Kommentare",
-    termsHint: "Optionale öffentliche Bedingungen dieses Gutscheins.",
+      "Wählen Sie einen gültigen Beginn und eine positive Dauer.",
+    terms: "Zusätzliche Gutscheinbedingungen",
+    termsHint:
+      "Optionales Feld. Hier können Einschränkungen, Buchungsregeln oder andere wichtige Informationen für den Besucher angegeben werden.",
     preview: "Berechnungsvorschau",
-    points: "Preis in Punkten",
-    covered: "In Anbieterwährung abgedeckt",
-    remainder: "Geldrestbetrag",
+    points: "Erforderliche Punkte",
+    covered: "Geschenk für den Besucher",
+    remainder: "Noch zu bezahlen",
     externalPayment:
-      "Ein Geldrestbetrag wird außerhalb von ARCTor bezahlt. ARCTor nimmt keine Geldzahlung an und bestätigt sie nicht.",
-    create: "Entwurf erstellen",
-    creating: "Wird erstellt…",
+      "Der Restbetrag wird außerhalb von ARCTor an den Anbieter gezahlt. Punkte bestätigen das Recht auf das Geschenk und werden nicht an den Anbieter übertragen.",
+    create: "Speichern und prüfen",
+    creating: "Wird gespeichert…",
     errorPrefix: "Erstellung fehlgeschlagen:",
   },
   es: {
     eyebrow: "Certificado de regalo",
-    title: "Crear borrador de certificado de regalo",
+    title: "Crear certificado de regalo",
     intro:
-      "El certificado es una actividad planificada vinculada a este producto o servicio. Este paso solo crea un borrador; no lo publica, no descuenta puntos ni crea un código QR.",
+      "Indique el período de validez, las condiciones de uso y la parte del precio habitual que desea regalar al visitante. Después de guardar podrá revisar los datos y publicar el certificado.",
     back: "Volver al producto o servicio",
     provider: "Proveedor",
     item: "Producto o servicio",
@@ -326,35 +393,47 @@ const COPY: Record<LocaleCode, Copy> = {
     availableFrom: "Válido desde",
     availableUntil: "Válido hasta",
     validityHint:
-      "El autor fija ambas fechas. El período no puede superar 31 días.",
-    coverageMode: "Cobertura con puntos",
-    percentage: "Porcentaje del precio habitual",
-    amount: "Importe en la moneda del proveedor",
-    coverageValue: "Valor cubierto",
+      "De forma predeterminada, el certificado es válido desde hoy durante un mes natural. Puede cambiar ambas fechas; el período no puede superar 31 días.",
+    coverageMode: "Regalo para el visitante",
+    coverageHint:
+      "Indique la parte del precio habitual que desea regalar al visitante que solicite el certificado. El visitante no paga esa parte con dinero. El derecho al regalo se confirma con puntos obtenidos por compras confirmadas en su empresa y en otras empresas presentes en ARCTor. Los puntos no se le transfieren y no constituyen un pago.",
+    percentage: "Regalar parte del precio en porcentaje",
+    percentageHint:
+      "Indique qué porcentaje del precio habitual desea regalar al visitante.",
+    amount: "Regalar un importe en la moneda del proveedor",
+    amountHint:
+      "Indique el importe en la moneda de su empresa que desea regalar al visitante.",
+    coverageValue: "Valor del regalo",
     exchangeRate: "Unidades de moneda del proveedor por 1 €",
     exchangeRateHint:
       "Obligatorio porque la moneda de referencia de los puntos ARCTor es el euro. 1 punto = 1 €.",
-    serviceStart: "Inicio del servicio",
-    serviceEnd: "Fin del servicio",
+    individualTime: "La hora de la visita se acuerda individualmente",
+    individualTimeHint:
+      "Después de solicitar el certificado, el visitante y el representante de la empresa acuerdan la fecha y hora exactas.",
+    serviceStart: "Fecha y hora de la visita",
+    serviceDuration: "Duración, minutos",
+    serviceDurationHint:
+      "La hora de finalización se calcula automáticamente. La duración predeterminada es de 30 minutos.",
     exactSlotHint:
-      "Un certificado de servicio representa un intervalo exacto elegido por el autor.",
-    terms: "Condiciones y comentarios",
-    termsHint: "Condiciones públicas opcionales de este certificado.",
+      "Elija una fecha y hora de inicio válidas y una duración positiva.",
+    terms: "Condiciones adicionales del certificado",
+    termsHint:
+      "Campo opcional. Añada restricciones, reglas de reserva u otra información importante para el visitante.",
     preview: "Vista previa del cálculo",
-    points: "Precio en puntos",
-    covered: "Cubierto en moneda del proveedor",
-    remainder: "Resto monetario",
+    points: "Puntos necesarios",
+    covered: "Regalo para el visitante",
+    remainder: "Queda por pagar",
     externalPayment:
-      "El resto monetario se paga fuera de ARCTor. ARCTor no acepta ni confirma el pago monetario.",
-    create: "Crear borrador",
-    creating: "Creando…",
+      "El importe restante se paga al proveedor fuera de ARCTor. Los puntos confirman el derecho al regalo y no se transfieren al proveedor.",
+    create: "Guardar y revisar",
+    creating: "Guardando…",
     errorPrefix: "No se pudo crear:",
   },
   cs: {
     eyebrow: "Dárkový certifikát",
-    title: "Vytvořit koncept dárkového certifikátu",
+    title: "Vytvořit dárkový certifikát",
     intro:
-      "Certifikát je plánovaná aktivita propojená s tímto produktem nebo službou. Tento krok vytvoří pouze koncept; nic nezveřejní, neodečte body ani nevytvoří QR kód.",
+      "Nastavte dobu platnosti, podmínky využití a část běžné ceny, kterou chcete návštěvníkovi darovat. Po uložení můžete údaje zkontrolovat a certifikát zveřejnit.",
     back: "Zpět k produktu nebo službě",
     provider: "Poskytovatel",
     item: "Produkt nebo služba",
@@ -370,30 +449,43 @@ const COPY: Record<LocaleCode, Copy> = {
     availableFrom: "Platí od",
     availableUntil: "Platí do",
     validityHint:
-      "Autor stanoví obě data. Období nesmí překročit 31 dní.",
-    coverageMode: "Pokrytí body",
-    percentage: "Procento obvyklé ceny",
-    amount: "Částka v měně poskytovatele",
-    coverageValue: "Hodnota pokrytí",
+      "Ve výchozím nastavení platí certifikát ode dneška jeden kalendářní měsíc. Obě data lze změnit; období nesmí překročit 31 dní.",
+    coverageMode: "Dárek pro návštěvníka",
+    coverageHint:
+      "Uveďte část běžné ceny, kterou chcete darovat návštěvníkovi objednávajícímu certifikát. Tuto část návštěvník neplatí penězi. Nárok na dárek potvrzují body získané za potvrzené nákupy u vašeho podniku a dalších podniků uvedených na ARCTor. Body se vám nepřevádějí a nejsou platbou.",
+    percentage: "Darovat část ceny v procentech",
+    percentageHint:
+      "Uveďte, jaké procento běžné ceny chcete návštěvníkovi darovat.",
+    amount: "Darovat částku v měně poskytovatele",
+    amountHint:
+      "Uveďte částku v měně vašeho podniku, kterou chcete návštěvníkovi darovat.",
+    coverageValue: "Hodnota dárku",
     exchangeRate: "Jednotek měny poskytovatele za 1 €",
     exchangeRateHint:
       "Povinné, protože referenční měnou bodů ARCTor je euro. 1 bod = 1 €.",
-    serviceStart: "Začátek služby",
-    serviceEnd: "Konec služby",
+    individualTime: "Čas návštěvy se domlouvá individuálně",
+    individualTimeHint:
+      "Po objednání certifikátu si návštěvník a zástupce podniku dohodnou přesné datum a čas.",
+    serviceStart: "Datum a čas návštěvy",
+    serviceDuration: "Délka, minuty",
+    serviceDurationHint:
+      "Konec se vypočítá automaticky. Výchozí délka je 30 minut.",
     exactSlotHint:
-      "Certifikát služby představuje jeden přesný časový interval zvolený autorem.",
-    terms: "Podmínky a komentáře",
-    termsHint: "Volitelné veřejné podmínky tohoto certifikátu.",
+      "Zvolte platný začátek návštěvy a kladnou délku.",
+    terms: "Další podmínky certifikátu",
+    termsHint:
+      "Volitelné pole. Můžete uvést omezení, pravidla rezervace nebo jiné důležité informace pro návštěvníka.",
     preview: "Náhled výpočtu",
-    points: "Cena v bodech",
-    covered: "Pokryto v měně poskytovatele",
-    remainder: "Peněžní zbytek",
+    points: "Potřebné body",
+    covered: "Dárek pro návštěvníka",
+    remainder: "Zbývá zaplatit",
     externalPayment:
-      "Peněžní zbytek se platí mimo ARCTor. ARCTor nepřijímá ani nepotvrzuje peněžní platbu.",
-    create: "Vytvořit koncept",
-    creating: "Vytváření…",
+      "Zbývající částka se platí poskytovateli mimo ARCTor. Body potvrzují nárok na dárek a poskytovateli se nepřevádějí.",
+    create: "Uložit a zkontrolovat",
+    creating: "Ukládání…",
     errorPrefix: "Nepodařilo se vytvořit:",
   },
+
 };
 
 function buildLocaleHref(pathname: string, locale: LocaleCode) {
@@ -444,6 +536,42 @@ function calculateDateDifferenceDays(from: string, until: string) {
   );
 }
 
+function formatDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getDefaultValidityRange(now = new Date()) {
+  const from = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    12,
+  );
+  const targetMonthIndex = from.getMonth() + 1;
+  const targetYear = from.getFullYear() + Math.floor(targetMonthIndex / 12);
+  const targetMonth = targetMonthIndex % 12;
+  const targetMonthLastDay = new Date(
+    targetYear,
+    targetMonth + 1,
+    0,
+  ).getDate();
+  const until = new Date(
+    targetYear,
+    targetMonth,
+    Math.min(from.getDate(), targetMonthLastDay),
+    12,
+  );
+
+  return {
+    from: formatDateInputValue(from),
+    until: formatDateInputValue(until),
+  };
+}
+
 export function GiftCertificateCreateForm({
   locale,
   valueObject,
@@ -471,14 +599,25 @@ export function GiftCertificateCreateForm({
   const [coverageMode, setCoverageMode] =
     useState<CoverageMode>("percentage");
   const [coverageValue, setCoverageValue] = useState("100");
+  const [individualServiceTime, setIndividualServiceTime] =
+    useState(true);
   const [serviceStart, setServiceStart] = useState("");
-  const [serviceEnd, setServiceEnd] = useState("");
+  const [serviceDurationMinutes, setServiceDurationMinutes] = useState(
+    String(valueObject.ordinaryDurationMinutes ?? 30),
+  );
   const [termsText, setTermsText] = useState("");
   const [idempotencyKey, setIdempotencyKey] = useState(
     makeIdempotencyKey,
   );
   const [pending, setPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    const defaults = getDefaultValidityRange();
+
+    setAvailableFrom((current) => current || defaults.from);
+    setAvailableUntil((current) => current || defaults.until);
+  }, []);
 
   const calculation = useMemo(() => {
     const ordinaryPrice = roundMoney(valueObject.ordinaryPrice);
@@ -553,23 +692,24 @@ export function GiftCertificateCreateForm({
     let startedAt: string | null = null;
     let endedAt: string | null = null;
 
-    if (isService) {
+    if (isService && !individualServiceTime) {
       const startDate = new Date(serviceStart);
-      const endDate = new Date(serviceEnd);
+      const durationMinutes = Number(serviceDurationMinutes.trim());
 
       if (
         !serviceStart ||
-        !serviceEnd ||
         Number.isNaN(startDate.getTime()) ||
-        Number.isNaN(endDate.getTime()) ||
-        endDate.getTime() <= startDate.getTime()
+        !Number.isInteger(durationMinutes) ||
+        durationMinutes <= 0
       ) {
         setErrorMessage(`${copy.errorPrefix} ${copy.exactSlotHint}`);
         return;
       }
 
       startedAt = startDate.toISOString();
-      endedAt = endDate.toISOString();
+      endedAt = new Date(
+        startDate.getTime() + durationMinutes * 60_000,
+      ).toISOString();
     }
 
     setPending(true);
@@ -778,52 +918,84 @@ export function GiftCertificateCreateForm({
               </p>
 
               {isService ? (
-                <>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <label className="grid gap-2">
-                      <span className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
-                        {copy.serviceStart}
+                <fieldset className="grid gap-3 rounded-2xl border border-[#e4e7f0] bg-[#f8fafc] p-4">
+                  <label className="flex cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={individualServiceTime}
+                      onChange={(event) =>
+                        setIndividualServiceTime(event.target.checked)
+                      }
+                      className="mt-1 h-4 w-4 rounded border-[#cfd5e6] text-[#3b6ef8]"
+                    />
+                    <span className="grid gap-1">
+                      <span className="text-[14px] font-bold text-[#1a1d2e]">
+                        {copy.individualTime}
                       </span>
-                      <input
-                        type="datetime-local"
-                        value={serviceStart}
-                        onChange={(event) =>
-                          setServiceStart(event.target.value)
-                        }
-                        className="min-h-12 rounded-xl border border-[#dfe3f1] bg-white px-4 text-[14px] text-[#1a1d2e]"
-                      />
-                    </label>
-                    <label className="grid gap-2">
-                      <span className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
-                        {copy.serviceEnd}
+                      <span className="text-[12px] leading-5 text-[#7c8099]">
+                        {copy.individualTimeHint}
                       </span>
-                      <input
-                        type="datetime-local"
-                        value={serviceEnd}
-                        onChange={(event) =>
-                          setServiceEnd(event.target.value)
-                        }
-                        className="min-h-12 rounded-xl border border-[#dfe3f1] bg-white px-4 text-[14px] text-[#1a1d2e]"
-                      />
-                    </label>
-                  </div>
-                  <p className="-mt-2 text-[12px] leading-5 text-[#7c8099]">
-                    {copy.exactSlotHint}
-                  </p>
-                </>
+                    </span>
+                  </label>
+
+                  {!individualServiceTime ? (
+                    <div className="grid gap-4 border-t border-[#e4e7f0] pt-4 sm:grid-cols-2">
+                      <label className="grid gap-2">
+                        <span className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
+                          {copy.serviceStart}
+                        </span>
+                        <input
+                          type="datetime-local"
+                          value={serviceStart}
+                          onChange={(event) =>
+                            setServiceStart(event.target.value)
+                          }
+                          className="min-h-12 rounded-xl border border-[#dfe3f1] bg-white px-4 text-[14px] text-[#1a1d2e]"
+                        />
+                      </label>
+                      <label className="grid gap-2">
+                        <span className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
+                          {copy.serviceDuration}
+                        </span>
+                        <input
+                          inputMode="numeric"
+                          value={serviceDurationMinutes}
+                          onChange={(event) =>
+                            setServiceDurationMinutes(event.target.value)
+                          }
+                          className="min-h-12 rounded-xl border border-[#dfe3f1] bg-white px-4 text-[14px] text-[#1a1d2e]"
+                        />
+                      </label>
+                      <p className="text-[12px] leading-5 text-[#7c8099] sm:col-span-2">
+                        {copy.serviceDurationHint}
+                      </p>
+                    </div>
+                  ) : null}
+                </fieldset>
               ) : null}
 
-              <fieldset className="grid gap-3">
-                <legend className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
+              <fieldset className="grid gap-3 rounded-2xl border border-[#e4e7f0] bg-[#f8fafc] p-4">
+                <legend className="px-1 text-[12px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
                   {copy.coverageMode}
                 </legend>
+                <p className="text-[12px] leading-5 text-[#5a5f7a]">
+                  {copy.coverageHint}
+                </p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {(
                     [
-                      ["percentage", copy.percentage],
-                      ["provider_currency_amount", copy.amount],
+                      [
+                        "percentage",
+                        copy.percentage,
+                        copy.percentageHint,
+                      ],
+                      [
+                        "provider_currency_amount",
+                        copy.amount,
+                        copy.amountHint,
+                      ],
                     ] as const
-                  ).map(([mode, label]) => (
+                  ).map(([mode, label, hint]) => (
                     <button
                       key={mode}
                       type="button"
@@ -837,11 +1009,14 @@ export function GiftCertificateCreateForm({
                       }}
                       className={
                         coverageMode === mode
-                          ? "rounded-2xl border border-[#3b6ef8] bg-[#eef2ff] p-4 text-left text-[14px] font-bold text-[#315bd0]"
-                          : "rounded-2xl border border-[#e4e7f0] bg-white p-4 text-left text-[14px] font-bold text-[#4a4f6a]"
+                          ? "grid gap-2 rounded-2xl border border-[#3b6ef8] bg-[#eef2ff] p-4 text-left text-[#315bd0]"
+                          : "grid gap-2 rounded-2xl border border-[#e4e7f0] bg-white p-4 text-left text-[#4a4f6a]"
                       }
                     >
-                      {label}
+                      <span className="text-[14px] font-bold">{label}</span>
+                      <span className="text-[12px] leading-5 opacity-80">
+                        {hint}
+                      </span>
                     </button>
                   ))}
                 </div>
