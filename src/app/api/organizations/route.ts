@@ -4,6 +4,11 @@ import {
   normalizeCountryCode,
 } from "@/lib/commercial/currency";
 import {
+  GooglePlacesAddressError,
+  verifyAddressSelectionToken,
+  type VerifiedGoogleAddressSelection,
+} from "@/lib/geo/google-places-address";
+import {
   ActorContextError,
   resolveActiveActorContext,
 } from "../../../../lib/actor-context";
@@ -33,6 +38,11 @@ type ParsedOrganizationLocationInput = {
   city: string | null;
   districtGeoAreaId: string | null;
   district: string | null;
+  streetAddress: string | null;
+  postalCode: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  addressSelectionToken: string | null;
 };
 
 type OrganizationLocationRow = {
@@ -41,6 +51,8 @@ type OrganizationLocationRow = {
   country_code: string | null;
   city: string | null;
   district: string | null;
+  street_address: string | null;
+  postal_code: string | null;
   address_visibility: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -158,7 +170,32 @@ function parseOptionalText(value: unknown) {
   return trimmedValue;
 }
 
+function parseNullableCoordinate(
+  value: unknown,
+  minimum: number,
+  maximum: number,
+) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
 
+  const parsedValue =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number(value.trim())
+        : Number.NaN;
+
+  if (
+    !Number.isFinite(parsedValue) ||
+    parsedValue < minimum ||
+    parsedValue > maximum
+  ) {
+    return null;
+  }
+
+  return Math.round(parsedValue * 1_000_000) / 1_000_000;
+}
 
 function normalizeUuid(value: string | null) {
   if (!value) {
@@ -185,6 +222,11 @@ function parseOrganizationLocationInput(
     city: parseOptionalText(body.city),
     districtGeoAreaId: normalizeUuid(parseOptionalText(body.districtGeoAreaId)),
     district: parseOptionalText(body.district),
+    streetAddress: parseOptionalText(body.streetAddress),
+    postalCode: parseOptionalText(body.postalCode),
+    latitude: parseNullableCoordinate(body.latitude, -90, 90),
+    longitude: parseNullableCoordinate(body.longitude, -180, 180),
+    addressSelectionToken: parseOptionalText(body.addressSelectionToken),
   };
 }
 
@@ -195,7 +237,12 @@ function hasAnyLocationInput(input: ParsedOrganizationLocationInput) {
       input.cityGeoAreaId ||
       input.city ||
       input.districtGeoAreaId ||
-      input.district
+      input.district ||
+      input.streetAddress ||
+      input.postalCode ||
+      input.latitude !== null ||
+      input.longitude !== null ||
+      input.addressSelectionToken
   );
 }
 
@@ -726,7 +773,7 @@ export async function GET(request: Request) {
   const { data: locations, error: locationsError } = await supabase
     .from("organization_locations")
     .select(
-      "id, organization_id, country_code, city, district, address_visibility, latitude, longitude, is_primary, is_active, created_at"
+      "id, organization_id, country_code, city, district, street_address, postal_code, address_visibility, latitude, longitude, is_primary, is_active, created_at"
     )
     .in("organization_id", organizationIds)
     .eq("is_active", true)
@@ -766,6 +813,44 @@ export async function GET(request: Request) {
   });
 }
 
+function applyVerifiedAddressSelection(
+  input: ParsedOrganizationLocationInput,
+  selection: VerifiedGoogleAddressSelection,
+): ParsedOrganizationLocationInput {
+  return {
+    ...input,
+    countryCode: selection.countryCode,
+    city: selection.city,
+    district: selection.district,
+    streetAddress: selection.streetAddress,
+    postalCode: selection.postalCode,
+    latitude: selection.latitude,
+    longitude: selection.longitude,
+  };
+}
+
+function getAddressSelectionErrorResponse(error: unknown) {
+  if (error instanceof GooglePlacesAddressError) {
+    return NextResponse.json(
+      {
+        error: error.message,
+        errorCode: error.code,
+      },
+      { status: error.status },
+    );
+  }
+
+  return NextResponse.json(
+    {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Address selection could not be verified.",
+    },
+    { status: 400 },
+  );
+}
+
 export async function POST(request: Request) {
   const { actorContext, errorResponse } = await getCurrentActorContext();
 
@@ -800,7 +885,35 @@ export async function POST(request: Request) {
     );
   }
 
-  const locationInput = parseOrganizationLocationInput(body);
+  let locationInput = parseOrganizationLocationInput(body);
+
+  if (locationInput.addressSelectionToken) {
+    try {
+      const verifiedSelection = verifyAddressSelectionToken(
+        locationInput.addressSelectionToken,
+      );
+
+      if (
+        locationInput.countryCode &&
+        locationInput.countryCode !== verifiedSelection.countryCode
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "The selected address country was changed. Select the address again or continue with manual country data.",
+          },
+          { status: 400 },
+        );
+      }
+
+      locationInput = applyVerifiedAddressSelection(
+        locationInput,
+        verifiedSelection,
+      );
+    } catch (error) {
+      return getAddressSelectionErrorResponse(error);
+    }
+  }
 
   const locationValidation = await validateOrganizationLocationInput(
     locationInput,
@@ -837,8 +950,14 @@ export async function POST(request: Request) {
     locationValidation.cityGeoArea?.name ?? locationInput.city ?? null;
   const districtName =
     locationValidation.districtGeoArea?.name ?? locationInput.district ?? null;
-  const latitude = locationValidation.cityGeoArea?.latitude ?? null;
-  const longitude = locationValidation.cityGeoArea?.longitude ?? null;
+  const latitude =
+    locationInput.latitude ??
+    locationValidation.cityGeoArea?.latitude ??
+    null;
+  const longitude =
+    locationInput.longitude ??
+    locationValidation.cityGeoArea?.longitude ??
+    null;
 
   const { data: creationRows, error: creationError } = await supabase.rpc(
     "create_actor_owned_organization_v1",
@@ -877,6 +996,35 @@ export async function POST(request: Request) {
       },
       { status: creationError?.code === "42501" ? 403 : 500 }
     );
+  }
+
+  let addressPersistenceWarning: string | null = null;
+
+  if (
+    creation.location_id &&
+    (
+      locationInput.streetAddress ||
+      locationInput.postalCode ||
+      locationInput.latitude !== null ||
+      locationInput.longitude !== null
+    )
+  ) {
+    const { error: exactLocationUpdateError } = await supabase
+      .from("organization_locations")
+      .update({
+        street_address: locationInput.streetAddress,
+        postal_code: locationInput.postalCode,
+        latitude,
+        longitude,
+        address_visibility: "approximate",
+      })
+      .eq("id", creation.location_id)
+      .eq("organization_id", creation.organization_id);
+
+    if (exactLocationUpdateError) {
+      addressPersistenceWarning =
+        "Organization was created, but the exact street and postal code could not be saved.";
+    }
   }
 
   const { data: organization, error: organizationError } = await supabase
@@ -1034,6 +1182,7 @@ export async function POST(request: Request) {
         publishedAt: organization.directory_published_at,
       },
       semanticIntake,
+      addressPersistenceWarning,
     },
     { status: 201 }
   );

@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
+import OrganizationAddressAutocomplete, {
+  type OrganizationAddressSelection,
+} from "@/components/commercial/OrganizationAddressAutocomplete";
 import {
   getLocaleSearchParam,
   getOrganizationsMessage,
@@ -76,6 +79,10 @@ type CreateOrganizationResponse = {
     country_code?: string | null;
     city?: string | null;
     district?: string | null;
+    street_address?: string | null;
+    postal_code?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
     address_visibility?: string | null;
   } | null;
   organizationActor?: {
@@ -185,9 +192,15 @@ export default function NewOrganizationPage() {
     useState<OrganizationTypeValue>("private_business");
   const [description, setDescription] = useState("");
 
-  const [includeLocation, setIncludeLocation] = useState(true);
-  const [countryCode, setCountryCode] = useState("PL");
-  const [city, setCity] = useState("Szczecin");
+  const [addressQuery, setAddressQuery] = useState("");
+  const [addressSelectionToken, setAddressSelectionToken] = useState<
+    string | null
+  >(null);
+  const [selectedAddressLabel, setSelectedAddressLabel] = useState<
+    string | null
+  >(null);
+  const [countryCode, setCountryCode] = useState("");
+  const [city, setCity] = useState("");
   const [district, setDistrict] = useState("");
 
   const [result, setResult] = useState<CreateOrganizationResponse | null>(null);
@@ -205,8 +218,8 @@ export default function NewOrganizationPage() {
   const organizationId = result?.organization?.id ?? null;
 
   const locationPreview = useMemo(() => {
-    if (!includeLocation) {
-      return t("organizations.location.missingLong");
+    if (selectedAddressLabel) {
+      return selectedAddressLabel;
     }
 
     const parts = [
@@ -220,12 +233,34 @@ export default function NewOrganizationPage() {
     }
 
     return parts.join(", ");
-  }, [city, countryCode, district, includeLocation, t]);
+  }, [city, countryCode, district, selectedAddressLabel, t]);
 
   const canSubmit =
     !isSubmitting &&
     organizationName.trim().length >= 2 &&
-    (!includeLocation || normalizeCountryCode(countryCode).length === 2);
+    normalizeCountryCode(countryCode).length === 2;
+
+  function clearVerifiedAddressSelection() {
+    setAddressSelectionToken(null);
+    setSelectedAddressLabel(null);
+  }
+
+  function handleAddressQueryChange(value: string) {
+    setAddressQuery(value);
+
+    if (value !== selectedAddressLabel) {
+      clearVerifiedAddressSelection();
+    }
+  }
+
+  function handleAddressSelection(selection: OrganizationAddressSelection) {
+    setAddressQuery(selection.formattedAddress);
+    setAddressSelectionToken(selection.addressSelectionToken);
+    setSelectedAddressLabel(selection.formattedAddress);
+    setCountryCode(selection.countryCode);
+    setCity(selection.city ?? "");
+    setDistrict(selection.district ?? "");
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -243,11 +278,10 @@ export default function NewOrganizationPage() {
       description: description.trim() || null,
     };
 
-    if (includeLocation) {
-      payload.countryCode = normalizeCountryCode(countryCode);
-      payload.city = city.trim() || null;
-      payload.district = district.trim() || null;
-    }
+    payload.countryCode = normalizeCountryCode(countryCode);
+    payload.city = city.trim() || null;
+    payload.district = district.trim() || null;
+    payload.addressSelectionToken = addressSelectionToken;
 
     try {
       const response = await fetch("/api/organizations", {
@@ -378,63 +412,75 @@ export default function NewOrganizationPage() {
             </div>
 
             <div className="rounded-2xl border border-[#edf0f7] bg-[#f8f9fd] p-4">
-              <label className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={includeLocation}
-                  onChange={(event) => setIncludeLocation(event.target.checked)}
-                  className="mt-1 h-4 w-4"
-                />
-                <span>
-                  <span className="block text-[13px] font-semibold text-[#343854]">
-                    {t("organizations.form.addBaseLocation")}
-                  </span>
-                  <span className="mt-1 block text-[12px] leading-5 text-[#7c8099]">
-                    {t("organizations.form.baseLocationDescription")}
-                  </span>
+              <div>
+                <span className="block text-[13px] font-semibold text-[#343854]">
+                  {t("organizations.form.addBaseLocation")}
                 </span>
-              </label>
+                <span className="mt-1 block text-[12px] leading-5 text-[#7c8099]">
+                  {t("organizations.form.baseLocationDescription")}
+                </span>
+              </div>
 
-              {includeLocation ? (
-                <div className="mt-4 grid gap-3 md:grid-cols-3">
-                  <div className="grid gap-2">
-                    <label className="text-[12px] font-semibold text-[#4a4f6a]">
-                      {t("organizations.form.country")}
-                    </label>
-                    <input
-                      value={countryCode}
-                      onChange={(event) => setCountryCode(event.target.value)}
-                      placeholder="PL"
-                      maxLength={2}
-                      className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] uppercase text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
-                    />
-                  </div>
+              <div className="mt-4">
+                <OrganizationAddressAutocomplete
+                  locale={locale}
+                  value={addressQuery}
+                  onChange={handleAddressQueryChange}
+                  onSelect={handleAddressSelection}
+                  countryCodeHint={countryCode}
+                  selectedAddress={selectedAddressLabel}
+                />
+              </div>
 
-                  <div className="grid gap-2">
-                    <label className="text-[12px] font-semibold text-[#4a4f6a]">
-                      {t("organizations.form.city")}
-                    </label>
-                    <input
-                      value={city}
-                      onChange={(event) => setCity(event.target.value)}
-                      placeholder="Szczecin"
-                      className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <label className="text-[12px] font-semibold text-[#4a4f6a]">
-                      {t("organizations.form.district")}
-                    </label>
-                    <input
-                      value={district}
-                      onChange={(event) => setDistrict(event.target.value)}
-                      placeholder={t("organizations.form.optional")}
-                      className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
-                    />
-                  </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <div className="grid gap-2">
+                  <label className="text-[12px] font-semibold text-[#4a4f6a]">
+                    {t("organizations.form.country")}
+                  </label>
+                  <input
+                    value={countryCode}
+                    onChange={(event) => {
+                      clearVerifiedAddressSelection();
+                      setCountryCode(event.target.value);
+                    }}
+                    placeholder="PL"
+                    maxLength={2}
+                    required
+                    className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] uppercase text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
+                  />
                 </div>
-              ) : null}
+
+                <div className="grid gap-2">
+                  <label className="text-[12px] font-semibold text-[#4a4f6a]">
+                    {t("organizations.form.city")}
+                  </label>
+                  <input
+                    value={city}
+                    onChange={(event) => {
+                      clearVerifiedAddressSelection();
+                      setCity(event.target.value);
+                    }}
+                    placeholder="Szczecin"
+                    className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <label className="text-[12px] font-semibold text-[#4a4f6a]">
+                    {t("organizations.form.district")}
+                  </label>
+                  <input
+                    value={district}
+                    onChange={(event) => {
+                      clearVerifiedAddressSelection();
+                      setDistrict(event.target.value);
+                    }}
+                    placeholder={t("organizations.form.optional")}
+                    className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
+                  />
+                </div>
+              </div>
+
 
               <div className="mt-4 rounded-xl border border-[#e5e7eb] bg-white px-4 py-3 text-[12px] leading-5 text-[#5a5f7a]">
                 <strong className="text-[#343854]">

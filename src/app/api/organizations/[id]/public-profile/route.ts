@@ -6,6 +6,11 @@ import {
   normalizeCountryCode,
 } from "@/lib/commercial/currency";
 import {
+  GooglePlacesAddressError,
+  verifyAddressSelectionToken,
+  type VerifiedGoogleAddressSelection,
+} from "@/lib/geo/google-places-address";
+import {
   ActorContextError,
   resolveActiveActorContext,
 } from "../../../../../../lib/actor-context";
@@ -39,6 +44,7 @@ type LocationPayload = {
   latitude?: unknown;
   longitude?: unknown;
   addressVisibility?: unknown;
+  addressSelectionToken?: unknown;
 };
 
 const ADDRESS_VISIBILITY_VALUES = new Set(["public", "approximate", "hidden"]);
@@ -117,6 +123,30 @@ function parseNullableCoordinate(value: unknown, min: number, max: number) {
   }
 
   return Math.round(parsedValue * 1000000) / 1000000;
+}
+
+function getAddressSelectionErrorResponse(error: unknown) {
+  if (error instanceof GooglePlacesAddressError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error.message,
+        errorCode: error.code,
+      },
+      { status: error.status },
+    );
+  }
+
+  return NextResponse.json(
+    {
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Address selection could not be verified.",
+    },
+    { status: 400 },
+  );
 }
 
 async function getCurrentActorContext() {
@@ -285,8 +315,47 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     body.location && typeof body.location === "object"
       ? (body.location as LocationPayload)
       : null;
+  let verifiedAddressSelection: VerifiedGoogleAddressSelection | null = null;
+
+  if (locationPayload) {
+    const addressSelectionToken = parseNullableText(
+      locationPayload.addressSelectionToken,
+    );
+
+    if (addressSelectionToken) {
+      try {
+        verifiedAddressSelection = verifyAddressSelectionToken(
+          addressSelectionToken,
+        );
+      } catch (error) {
+        return getAddressSelectionErrorResponse(error);
+      }
+
+      const submittedCountryCode = normalizeCountryCode(
+        parseNullableText(locationPayload.countryCode),
+      );
+
+      if (
+        submittedCountryCode &&
+        submittedCountryCode !== verifiedAddressSelection.countryCode
+      ) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              "The selected address country was changed. Select the address again or continue with manual country data.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+  }
+
   const nextCountryCode = locationPayload
-    ? normalizeCountryCode(parseNullableText(locationPayload.countryCode))
+    ? (
+        verifiedAddressSelection?.countryCode ??
+        normalizeCountryCode(parseNullableText(locationPayload.countryCode))
+      )
     : normalizeCountryCode(organization.country_code);
   const nextDefaultCurrency = locationPayload
     ? getDefaultCurrencyByCountryCode(nextCountryCode)
@@ -360,20 +429,32 @@ export async function PATCH(request: Request, { params }: RouteProps) {
   let updatedLocation = null;
 
   if (locationPayload) {
-    const streetAddress = parseNullableText(locationPayload.streetAddress);
-    const addressVisibility = streetAddress
-      ? "public"
-      : parseAddressVisibility(locationPayload.addressVisibility);
+    const streetAddress =
+      verifiedAddressSelection?.streetAddress ??
+      parseNullableText(locationPayload.streetAddress);
+    const addressVisibility = parseAddressVisibility(
+      locationPayload.addressVisibility,
+    );
 
     const locationUpdate = {
       country_code: nextCountryCode,
-      city: parseNullableText(locationPayload.city),
-      district: parseNullableText(locationPayload.district),
+      city:
+        verifiedAddressSelection?.city ??
+        parseNullableText(locationPayload.city),
+      district:
+        verifiedAddressSelection?.district ??
+        parseNullableText(locationPayload.district),
       street_address: streetAddress,
-      postal_code: parseNullableText(locationPayload.postalCode),
+      postal_code:
+        verifiedAddressSelection?.postalCode ??
+        parseNullableText(locationPayload.postalCode),
       label: parseNullableText(locationPayload.label),
-      latitude: parseNullableCoordinate(locationPayload.latitude, -90, 90),
-      longitude: parseNullableCoordinate(locationPayload.longitude, -180, 180),
+      latitude:
+        verifiedAddressSelection?.latitude ??
+        parseNullableCoordinate(locationPayload.latitude, -90, 90),
+      longitude:
+        verifiedAddressSelection?.longitude ??
+        parseNullableCoordinate(locationPayload.longitude, -180, 180),
       address_visibility: addressVisibility,
       is_primary: true,
       is_active: true,

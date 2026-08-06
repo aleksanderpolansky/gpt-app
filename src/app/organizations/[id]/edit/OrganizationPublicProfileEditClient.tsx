@@ -25,6 +25,9 @@ import {
 } from "react";
 import { getOrganizationTypeLabel } from "../../../../i18n/messages/system-labels";
 import PurchaseConfirmationRequestCard from "@/components/commercial/PurchaseConfirmationRequestCard";
+import OrganizationAddressAutocomplete, {
+  type OrganizationAddressSelection,
+} from "@/components/commercial/OrganizationAddressAutocomplete";
 import OrganizationLocationMapPreview from "@/components/commercial/OrganizationLocationMapPreview";
 import OrganizationHideButton from "../OrganizationHideButton";
 
@@ -483,6 +486,17 @@ function getInitialValues(data: OrganizationPublicProfileEditInitialData): EditV
   };
 }
 
+function getAddressSearchValue(values: EditValues) {
+  return [
+    values.streetAddress,
+    values.postalCode,
+    values.city,
+    values.countryCode,
+  ]
+    .filter((part) => part.trim())
+    .join(", ");
+}
+
 function getLocationLine(values: EditValues) {
   const parts = [
     values.city,
@@ -823,6 +837,15 @@ export default function OrganizationPublicProfileEditClient({
   const initialValues = useMemo(() => getInitialValues(initialData), [initialData]);
   const [savedValues, setSavedValues] = useState<EditValues>(initialValues);
   const [values, setValues] = useState<EditValues>(initialValues);
+  const [addressSearchQuery, setAddressSearchQuery] = useState(
+    getAddressSearchValue(initialValues),
+  );
+  const [addressSelectionToken, setAddressSelectionToken] = useState<
+    string | null
+  >(null);
+  const [selectedAddressLabel, setSelectedAddressLabel] = useState<
+    string | null
+  >(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -842,8 +865,63 @@ export default function OrganizationPublicProfileEditClient({
     setErrorMessage(null);
   }
 
+  function clearVerifiedAddressSelection() {
+    setAddressSelectionToken(null);
+    setSelectedAddressLabel(null);
+  }
+
+  function setLocationField(key: keyof EditValues, value: string) {
+    clearVerifiedAddressSelection();
+    setField(key, value);
+  }
+
+  function handleAddressSearchChange(value: string) {
+    setAddressSearchQuery(value);
+
+    if (value !== selectedAddressLabel) {
+      clearVerifiedAddressSelection();
+    }
+  }
+
+  function handleAddressSelection(selection: OrganizationAddressSelection) {
+    setAddressSearchQuery(selection.formattedAddress);
+    setAddressSelectionToken(selection.addressSelectionToken);
+    setSelectedAddressLabel(selection.formattedAddress);
+    setValues((current) => ({
+      ...current,
+      countryCode: selection.countryCode,
+      city: selection.city ?? "",
+      district: selection.district ?? "",
+      streetAddress: selection.streetAddress ?? "",
+      postalCode: selection.postalCode ?? "",
+      latitude:
+        selection.latitude === null ? "" : String(selection.latitude),
+      longitude:
+        selection.longitude === null ? "" : String(selection.longitude),
+    }));
+    setSaveState("idle");
+    setErrorMessage(null);
+  }
+
   function resetField(key: keyof EditValues) {
+    clearVerifiedAddressSelection();
     setValues((current) => ({ ...current, [key]: savedValues[key] }));
+
+    if (
+      key === "streetAddress" ||
+      key === "postalCode" ||
+      key === "city" ||
+      key === "district" ||
+      key === "countryCode"
+    ) {
+      setAddressSearchQuery(
+        getAddressSearchValue({
+          ...values,
+          [key]: savedValues[key],
+        }),
+      );
+    }
+
     setSaveState("idle");
     setErrorMessage(null);
   }
@@ -884,9 +962,8 @@ export default function OrganizationPublicProfileEditClient({
               label: values.serviceArea,
               latitude: values.latitude,
               longitude: values.longitude,
-              addressVisibility: values.streetAddress.trim()
-                ? "public"
-                : values.addressVisibility,
+              addressVisibility: values.addressVisibility,
+              addressSelectionToken,
             },
           }),
         },
@@ -944,6 +1021,9 @@ export default function OrganizationPublicProfileEditClient({
 
       setValues(nextValues);
       setSavedValues(nextValues);
+      setAddressSearchQuery(getAddressSearchValue(nextValues));
+      setAddressSelectionToken(null);
+      setSelectedAddressLabel(null);
       setSaveState("saved");
     } catch (error) {
       const nextMessage =
@@ -1180,6 +1260,15 @@ export default function OrganizationPublicProfileEditClient({
 
           <TopCard label={messages.address} icon={MapPin} accent="#f97316">
             <div className="space-y-2">
+              <OrganizationAddressAutocomplete
+                locale={locale}
+                value={addressSearchQuery}
+                onChange={handleAddressSearchChange}
+                onSelect={handleAddressSelection}
+                countryCodeHint={values.countryCode}
+                selectedAddress={selectedAddressLabel}
+              />
+
               <EditableShell
                 dirty={isDirty("streetAddress")}
                 onReset={() => resetField("streetAddress")}
@@ -1187,7 +1276,7 @@ export default function OrganizationPublicProfileEditClient({
               >
                 <TextInput
                   value={values.streetAddress}
-                  onChange={(value) => setField("streetAddress", value)}
+                  onChange={(value) => setLocationField("streetAddress", value)}
                   className="text-[18px] font-bold text-[#111827]"
                   placeholder=""
                 />
@@ -1201,7 +1290,7 @@ export default function OrganizationPublicProfileEditClient({
                 >
                   <TextInput
                     value={values.city}
-                    onChange={(value) => setField("city", value)}
+                    onChange={(value) => setLocationField("city", value)}
                     className="text-[13px] text-[#4d536f]"
                     placeholder=""
                   />
@@ -1213,7 +1302,7 @@ export default function OrganizationPublicProfileEditClient({
                 >
                   <TextInput
                     value={values.countryCode}
-                    onChange={(value) => setField("countryCode", value)}
+                    onChange={(value) => setLocationField("countryCode", value)}
                     className="text-[13px] text-[#4d536f]"
                     placeholder=""
                   />
