@@ -129,7 +129,7 @@ const COPY: Record<LocaleCode, Copy> = {
       "Required because ARCTor points use the euro as the reference currency. 1 point = 1 €.",
     individualTime: "Arrange the visit time individually",
     individualTimeHint:
-      "The visitor and the provider agree on the exact date and time after the certificate is ordered.",
+      "The visitor and the provider agree on the exact date and time after the certificate is ordered. Clear the checkbox to specify the exact service date and time.",
     serviceStart: "Visit date and time",
     serviceDuration: "Duration, minutes",
     serviceDurationHint:
@@ -142,7 +142,7 @@ const COPY: Record<LocaleCode, Copy> = {
     preview: "Calculation preview",
     points: "Points required",
     covered: "Gift for the visitor",
-    remainder: "Remaining to pay",
+    remainder: "Buyer will pay the remainder",
     externalPayment:
       "The remaining amount is paid to the provider outside ARCTor. Points confirm the visitor's right to the gift and are not transferred to the provider.",
     create: "Save and review",
@@ -185,7 +185,7 @@ const COPY: Record<LocaleCode, Copy> = {
       "Wymagane, ponieważ walutą odniesienia punktów ARCTor jest euro. 1 punkt = 1 €.",
     individualTime: "Termin wizyty ustalany indywidualnie",
     individualTimeHint:
-      "Po zamówieniu bonu odwiedzający i przedstawiciel przedsiębiorstwa uzgadniają dokładną datę i godzinę.",
+      "Po zamówieniu bonu odwiedzający i przedstawiciel przedsiębiorstwa uzgadniają dokładną datę i godzinę. Odznacz pole, aby wskazać dokładną datę i godzinę wykonania usługi.",
     serviceStart: "Data i godzina wizyty",
     serviceDuration: "Czas trwania, minuty",
     serviceDurationHint:
@@ -198,7 +198,7 @@ const COPY: Record<LocaleCode, Copy> = {
     preview: "Podgląd obliczenia",
     points: "Wymagana liczba punktów",
     covered: "Prezent dla odwiedzającego",
-    remainder: "Pozostaje do zapłaty",
+    remainder: "Kupujący dopłaci",
     externalPayment:
       "Pozostałą kwotę odwiedzający płaci dostawcy poza ARCTor. Punkty potwierdzają prawo do prezentu i nie są przekazywane dostawcy.",
     create: "Zapisz i sprawdź",
@@ -241,7 +241,7 @@ const COPY: Record<LocaleCode, Copy> = {
       "Обязательно, поскольку расчётная валюта пунктов ARCTor — евро. 1 пункт = 1 €.",
     individualTime: "Время визита согласовывается индивидуально",
     individualTimeHint:
-      "Точную дату и время посетитель согласует с представителем предприятия после заказа сертификата.",
+      "Точную дату и время посетитель согласует с представителем предприятия после заказа сертификата. Снимите галочку, чтобы указать точные дату и время оказания услуги.",
     serviceStart: "Дата и время начала",
     serviceDuration: "Продолжительность, минуты",
     serviceDurationHint:
@@ -254,7 +254,7 @@ const COPY: Record<LocaleCode, Copy> = {
     preview: "Предварительный расчёт",
     points: "Требуется пунктов",
     covered: "Подарок посетителю",
-    remainder: "Остаётся оплатить",
+    remainder: "Покупатель доплатит",
     externalPayment:
       "Оставшаяся сумма оплачивается предоставляющему вне ARCTor. Пункты подтверждают право посетителя на подарок и не переводятся предоставляющему.",
     create: "Сохранить и проверить",
@@ -297,7 +297,7 @@ const COPY: Record<LocaleCode, Copy> = {
       "Обов’язково, оскільки розрахункова валюта пунктів ARCTor — євро. 1 пункт = 1 €.",
     individualTime: "Час візиту узгоджується індивідуально",
     individualTimeHint:
-      "Точну дату й час відвідувач узгоджує з представником підприємства після замовлення сертифіката.",
+      "Точну дату й час відвідувач узгоджує з представником підприємства після замовлення сертифіката. Зніміть позначку, щоб указати точні дату й час надання послуги.",
     serviceStart: "Дата й час початку",
     serviceDuration: "Тривалість, хвилини",
     serviceDurationHint:
@@ -310,7 +310,7 @@ const COPY: Record<LocaleCode, Copy> = {
     preview: "Попередній розрахунок",
     points: "Потрібно пунктів",
     covered: "Подарунок відвідувачу",
-    remainder: "Залишається сплатити",
+    remainder: "Покупець доплатить",
     externalPayment:
       "Залишок сплачується надавачу поза ARCTor. Пункти підтверджують право відвідувача на подарунок і не переказуються надавачу.",
     create: "Зберегти й перевірити",
@@ -353,7 +353,7 @@ const COPY: Record<LocaleCode, Copy> = {
       "Erforderlich, weil der Euro die Referenzwährung für ARCTor-Punkte ist. 1 Punkt = 1 €.",
     individualTime: "Besuchszeit wird individuell vereinbart",
     individualTimeHint:
-      "Nach der Gutscheinbestellung vereinbaren Besucher und Unternehmensvertreter das genaue Datum und die genaue Uhrzeit.",
+      "Nach der Gutscheinbestellung vereinbaren Besucher und Unternehmensvertreter das genaue Datum und die genaue Uhrzeit. Deaktivieren Sie das Kontrollkästchen, um Datum und Uhrzeit der Dienstleistung genau festzulegen.",
     serviceStart: "Datum und Uhrzeit des Besuchs",
     serviceDuration: "Dauer, Minuten",
     serviceDurationHint:
@@ -366,7 +366,7 @@ const COPY: Record<LocaleCode, Copy> = {
     preview: "Berechnungsvorschau",
     points: "Erforderliche Punkte",
     covered: "Geschenk für den Besucher",
-    remainder: "Noch zu bezahlen",
+    remainder: "Der Käufer zahlt den Rest",
     externalPayment:
       "Der Restbetrag wird außerhalb von ARCTor an den Anbieter gezahlt. Punkte bestätigen das Recht auf das Geschenk und werden nicht an den Anbieter übertragen.",
     create: "Speichern und prüfen",
@@ -409,7 +409,7 @@ const COPY: Record<LocaleCode, Copy> = {
       "Obligatorio porque la moneda de referencia de los puntos ARCTor es el euro. 1 punto = 1 €.",
     individualTime: "La hora de la visita se acuerda individualmente",
     individualTimeHint:
-      "Después de solicitar el certificado, el visitante y el representante de la empresa acuerdan la fecha y hora exactas.",
+      "Después de solicitar el certificado, el visitante y el representante de la empresa acuerdan la fecha y hora exactas. Desmarque la casilla para indicar la fecha y hora exactas de prestación del servicio.",
     serviceStart: "Fecha y hora de la visita",
     serviceDuration: "Duración, minutos",
     serviceDurationHint:
@@ -422,7 +422,7 @@ const COPY: Record<LocaleCode, Copy> = {
     preview: "Vista previa del cálculo",
     points: "Puntos necesarios",
     covered: "Regalo para el visitante",
-    remainder: "Queda por pagar",
+    remainder: "El comprador pagará el resto",
     externalPayment:
       "El importe restante se paga al proveedor fuera de ARCTor. Los puntos confirman el derecho al regalo y no se transfieren al proveedor.",
     create: "Guardar y revisar",
@@ -465,7 +465,7 @@ const COPY: Record<LocaleCode, Copy> = {
       "Povinné, protože referenční měnou bodů ARCTor je euro. 1 bod = 1 €.",
     individualTime: "Čas návštěvy se domlouvá individuálně",
     individualTimeHint:
-      "Po objednání certifikátu si návštěvník a zástupce podniku dohodnou přesné datum a čas.",
+      "Po objednání certifikátu si návštěvník a zástupce podniku dohodnou přesné datum a čas. Zrušte zaškrtnutí, chcete-li zadat přesné datum a čas poskytnutí služby.",
     serviceStart: "Datum a čas návštěvy",
     serviceDuration: "Délka, minuty",
     serviceDurationHint:
@@ -478,7 +478,7 @@ const COPY: Record<LocaleCode, Copy> = {
     preview: "Náhled výpočtu",
     points: "Potřebné body",
     covered: "Dárek pro návštěvníka",
-    remainder: "Zbývá zaplatit",
+    remainder: "Kupující doplatí",
     externalPayment:
       "Zbývající částka se platí poskytovateli mimo ARCTor. Body potvrzují nárok na dárek a poskytovateli se nepřevádějí.",
     create: "Uložit a zkontrolovat",
@@ -799,7 +799,7 @@ export function GiftCertificateCreateForm({
           </section>
         ) : null}
 
-        <section className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+        <section className="grid gap-5">
           <article className="rounded-[24px] border border-black/[0.07] bg-white p-6 shadow-sm">
             <div className="grid gap-5">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -1043,20 +1043,48 @@ export function GiftCertificateCreateForm({
                 </div>
               </label>
 
-              <div className="grid gap-2 rounded-2xl border border-[#dfe3f1] bg-[#f8fafc] p-4">
-                <span className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
-                  {copy.exchangeRate}
-                </span>
-                <div className="font-mono text-[18px] font-bold text-[#111827]">
-                  1 € = {referenceRate.providerCurrencyPerEuro.toLocaleString(
-                    locale === "en" ? "en-US" : locale,
-                    { maximumFractionDigits: 8 },
-                  )} {valueObject.currency}
+              <section className="rounded-2xl border border-[#dfe3f1] bg-[#f8fafc] p-4">
+                <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#3b6ef8]">
+                  {copy.preview}
                 </div>
-                <span className="text-[12px] leading-5 text-[#7c8099]">
-                  {referenceRate.sourceLabel} · {referenceRate.referenceDate}. {copy.exchangeRateHint}
-                </span>
-              </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  {[
+                    [
+                      copy.covered,
+                      calculation.valid
+                        ? `${calculation.coveredProviderAmount.toFixed(2)} ${valueObject.currency}`
+                        : "—",
+                    ],
+                    [
+                      copy.points,
+                      calculation.valid
+                        ? formatLocalizedPoints(calculation.pointsPrice, locale)
+                        : "—",
+                    ],
+                    [
+                      copy.remainder,
+                      calculation.valid
+                        ? `${calculation.remainder.toFixed(2)} ${valueObject.currency}`
+                        : "—",
+                    ],
+                  ].map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="rounded-2xl border border-[#e7eaf2] bg-white p-4"
+                    >
+                      <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#7c8099]">
+                        {label}
+                      </div>
+                      <div className="mt-2 font-mono text-[16px] font-bold text-[#111827]">
+                        {value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-4 rounded-2xl border border-[#ffe6b5] bg-[#fffaf0] p-4 text-[12px] leading-5 text-[#7a5d1d]">
+                  {copy.externalPayment}
+                </p>
+              </section>
 
               <label className="grid gap-2">
                 <span className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
@@ -1087,50 +1115,6 @@ export function GiftCertificateCreateForm({
             </div>
           </article>
 
-          <aside className="grid content-start gap-5">
-            <section className="rounded-[24px] border border-black/[0.07] bg-white p-6 shadow-sm">
-              <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#3b6ef8]">
-                {copy.preview}
-              </div>
-              <div className="mt-4 grid gap-3">
-                {[
-                  [
-                    copy.covered,
-                    calculation.valid
-                      ? `${calculation.coveredProviderAmount.toFixed(2)} ${valueObject.currency}`
-                      : "—",
-                  ],
-                  [
-                    copy.points,
-                    calculation.valid
-                      ? formatLocalizedPoints(calculation.pointsPrice, locale)
-                      : "—",
-                  ],
-                  [
-                    copy.remainder,
-                    calculation.valid
-                      ? `${calculation.remainder.toFixed(2)} ${valueObject.currency}`
-                      : "—",
-                  ],
-                ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    className="rounded-2xl border border-[#e7eaf2] bg-[#f8fafc] p-4"
-                  >
-                    <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#7c8099]">
-                      {label}
-                    </div>
-                    <div className="mt-2 font-mono text-[16px] font-bold text-[#111827]">
-                      {value}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-4 rounded-2xl border border-[#ffe6b5] bg-[#fffaf0] p-4 text-[12px] leading-5 text-[#7a5d1d]">
-                {copy.externalPayment}
-              </p>
-            </section>
-          </aside>
         </section>
       </div>
     </main>
