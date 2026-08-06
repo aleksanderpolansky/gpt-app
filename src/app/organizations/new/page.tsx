@@ -443,8 +443,8 @@ export default function NewOrganizationPage() {
                       clearVerifiedAddressSelection();
                       setCountryCode(event.target.value);
                     }}
-                    placeholder="PL"
                     maxLength={2}
+                    autoComplete="off"
                     required
                     className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] uppercase text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
                   />
@@ -460,7 +460,7 @@ export default function NewOrganizationPage() {
                       clearVerifiedAddressSelection();
                       setCity(event.target.value);
                     }}
-                    placeholder="Szczecin"
+                    autoComplete="off"
                     className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
                   />
                 </div>
@@ -476,6 +476,7 @@ export default function NewOrganizationPage() {
                       setDistrict(event.target.value);
                     }}
                     placeholder={t("organizations.form.optional")}
+                    autoComplete="off"
                     className="w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
                   />
                 </div>

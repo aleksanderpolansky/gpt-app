@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { NextResponse } from "next/server";
 
 import {
@@ -7,6 +9,7 @@ import {
   searchGooglePlacesAddresses,
 } from "@/lib/geo/google-places-address";
 import { auth0 } from "../../../../../lib/auth0";
+import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +22,45 @@ type RequestBody = {
   regionCode?: unknown;
 };
 
+
+type AddressRateLimitOperation = "search" | "resolve";
+
+type AddressRateLimitRow = {
+  allowed?: unknown;
+  retry_after_seconds?: unknown;
+  limit_scope?: unknown;
+  user_count?: unknown;
+  user_limit?: unknown;
+  global_day_count?: unknown;
+  global_day_limit?: unknown;
+  global_month_count?: unknown;
+  global_month_limit?: unknown;
+};
+
+class AddressRateLimitError extends Error {
+  code: string;
+  status: number;
+  retryAfterSeconds: number;
+  limitScope: string | null;
+
+  constructor(input: {
+    code: string;
+    message: string;
+    retryAfterSeconds: number;
+    limitScope?: string | null;
+  }) {
+    super(input.message);
+    this.name = "AddressRateLimitError";
+    this.code = input.code;
+    this.status = 429;
+    this.retryAfterSeconds = Math.max(
+      1,
+      Math.floor(input.retryAfterSeconds),
+    );
+    this.limitScope = input.limitScope ?? null;
+  }
+}
+
 function parseText(value: unknown) {
   if (typeof value !== "string") {
     return null;
@@ -29,6 +71,24 @@ function parseText(value: unknown) {
 }
 
 function errorResponse(error: unknown) {
+  if (error instanceof AddressRateLimitError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error.message,
+        code: error.code,
+        retryAfterSeconds: error.retryAfterSeconds,
+        limitScope: error.limitScope,
+      },
+      {
+        status: error.status,
+        headers: {
+          "Retry-After": String(error.retryAfterSeconds),
+        },
+      },
+    );
+  }
+
   if (error instanceof GooglePlacesAddressError) {
     return NextResponse.json(
       {
@@ -51,6 +111,75 @@ function errorResponse(error: unknown) {
     },
     { status: 500 },
   );
+}
+
+function createRateLimitUserKey(userSubject: string) {
+  return createHash("sha256")
+    .update(`ARCTOR_GOOGLE_PLACES:${userSubject}`, "utf8")
+    .digest("hex");
+}
+
+function parseRateLimitNumber(value: unknown) {
+  const parsedValue =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number(value)
+        : Number.NaN;
+
+  return Number.isFinite(parsedValue) ? parsedValue : null;
+}
+
+async function enforceGooglePlacesRateLimit(input: {
+  userSubject: string;
+  operation: AddressRateLimitOperation;
+}) {
+  const { data, error } = await supabase.rpc(
+    "consume_google_places_rate_limit_v1",
+    {
+      p_user_key: createRateLimitUserKey(input.userSubject),
+      p_operation: input.operation,
+    },
+  );
+
+  if (error) {
+    throw new GooglePlacesAddressError(
+      "ADDRESS_RATE_LIMIT_UNAVAILABLE",
+      "Address search protection is temporarily unavailable. Enter the country and city manually.",
+      503,
+    );
+  }
+
+  const firstRow = Array.isArray(data) ? data[0] : data;
+  const row =
+    firstRow && typeof firstRow === "object"
+      ? (firstRow as AddressRateLimitRow)
+      : null;
+
+  if (!row || typeof row.allowed !== "boolean") {
+    throw new GooglePlacesAddressError(
+      "ADDRESS_RATE_LIMIT_INVALID_RESPONSE",
+      "Address search protection returned an invalid response. Enter the country and city manually.",
+      503,
+    );
+  }
+
+  if (row.allowed) {
+    return;
+  }
+
+  const retryAfterSeconds =
+    parseRateLimitNumber(row.retry_after_seconds) ?? 60;
+  const limitScope =
+    typeof row.limit_scope === "string" ? row.limit_scope : null;
+
+  throw new AddressRateLimitError({
+    code: "ADDRESS_RATE_LIMITED",
+    message:
+      "Address search limit reached. Enter the country and city manually or try again later.",
+    retryAfterSeconds,
+    limitScope,
+  });
 }
 
 export async function POST(request: Request) {
@@ -101,6 +230,11 @@ export async function POST(request: Request) {
         );
       }
 
+      await enforceGooglePlacesRateLimit({
+        userSubject: session.user.sub,
+        operation: "search",
+      });
+
       const suggestions = await searchGooglePlacesAddresses({
         query,
         sessionToken,
@@ -127,6 +261,11 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
+
+      await enforceGooglePlacesRateLimit({
+        userSubject: session.user.sub,
+        operation: "resolve",
+      });
 
       const selection = await resolveGooglePlaceAddress({
         placeId,
