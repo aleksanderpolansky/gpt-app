@@ -182,6 +182,19 @@ function normalizeLocale(value: unknown): LocaleCode {
     : "en";
 }
 
+function normalizeRpcErrorCode(
+  message: string,
+  sqlState: string | null | undefined,
+): string | null {
+  const normalizedMessage = message.trim();
+
+  if (/^[A-Z][A-Z0-9_]+$/.test(normalizedMessage)) {
+    return normalizedMessage;
+  }
+
+  return sqlState ?? null;
+}
+
 function buildGiftCertificateReviewUrl(
   activityEventId: string,
   locale: LocaleCode,
@@ -558,8 +571,11 @@ export async function POST(
   if (error) {
     return NextResponse.json(
       {
-        error: error.message,
-        errorCode: error.code ?? null,
+        error: "Gift-certificate draft could not be created",
+        errorCode: normalizeRpcErrorCode(
+          error.message,
+          error.code,
+        ),
       },
       { status: 400 },
     );

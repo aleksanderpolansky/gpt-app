@@ -25,11 +25,23 @@ function normalizeImageUrl(value: unknown): string | null {
 }
 
 export function readValueObjectPublicImageUrl(metadata: unknown): string | null {
-  if (!isRecord(metadata) || !isRecord(metadata.publicProfile)) {
+  if (!isRecord(metadata)) {
     return null;
   }
 
-  return normalizeImageUrl(metadata.publicProfile.image_url);
+  const publicProfile = isRecord(metadata.public_profile)
+    ? metadata.public_profile
+    : isRecord(metadata.publicProfile)
+      ? metadata.publicProfile
+      : null;
+
+  if (!publicProfile) {
+    return null;
+  }
+
+  return normalizeImageUrl(
+    publicProfile.image_url ?? publicProfile.imageUrl,
+  );
 }
 
 export function readGiftCertificateProductImageSnapshot(

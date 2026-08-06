@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { formatLocalizedPoints } from "@/components/figma-dashboard/certificate-value-format";
 
@@ -90,6 +90,8 @@ type Copy = {
   create: string;
   creating: string;
   errorPrefix: string;
+  saveError: string;
+  individualTimeSaveError: string;
 };
 
 const COPY: Record<LocaleCode, Copy> = {
@@ -148,6 +150,9 @@ const COPY: Record<LocaleCode, Copy> = {
     create: "Save and review",
     creating: "Saving…",
     errorPrefix: "Could not create:",
+    saveError: "The certificate could not be saved. Check the entered data and try again.",
+    individualTimeSaveError:
+      "The certificate could not be saved with an individually arranged visit time. Refresh the page and try again.",
   },
   pl: {
     eyebrow: "Bon podarunkowy",
@@ -204,6 +209,9 @@ const COPY: Record<LocaleCode, Copy> = {
     create: "Zapisz i sprawdź",
     creating: "Zapisywanie…",
     errorPrefix: "Nie udało się utworzyć:",
+    saveError: "Nie udało się zapisać bonu. Sprawdź wprowadzone dane i spróbuj ponownie.",
+    individualTimeSaveError:
+      "Nie udało się zapisać bonu z terminem ustalanym indywidualnie. Odśwież stronę i spróbuj ponownie.",
   },
   ru: {
     eyebrow: "Подарочный сертификат",
@@ -260,6 +268,9 @@ const COPY: Record<LocaleCode, Copy> = {
     create: "Сохранить и проверить",
     creating: "Сохраняется…",
     errorPrefix: "Не удалось создать:",
+    saveError: "Не удалось сохранить сертификат. Проверьте введённые данные и повторите попытку.",
+    individualTimeSaveError:
+      "Не удалось сохранить сертификат с индивидуальным согласованием времени. Обновите страницу и повторите попытку.",
   },
   uk: {
     eyebrow: "Подарунковий сертифікат",
@@ -316,6 +327,9 @@ const COPY: Record<LocaleCode, Copy> = {
     create: "Зберегти й перевірити",
     creating: "Збереження…",
     errorPrefix: "Не вдалося створити:",
+    saveError: "Не вдалося зберегти сертифікат. Перевірте введені дані та повторіть спробу.",
+    individualTimeSaveError:
+      "Не вдалося зберегти сертифікат з індивідуальним узгодженням часу. Оновіть сторінку та повторіть спробу.",
   },
   de: {
     eyebrow: "Geschenkgutschein",
@@ -372,6 +386,9 @@ const COPY: Record<LocaleCode, Copy> = {
     create: "Speichern und prüfen",
     creating: "Wird gespeichert…",
     errorPrefix: "Erstellung fehlgeschlagen:",
+    saveError: "Der Gutschein konnte nicht gespeichert werden. Prüfen Sie die eingegebenen Daten und versuchen Sie es erneut.",
+    individualTimeSaveError:
+      "Der Gutschein mit individuell vereinbarter Besuchszeit konnte nicht gespeichert werden. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
   },
   es: {
     eyebrow: "Certificado de regalo",
@@ -428,6 +445,9 @@ const COPY: Record<LocaleCode, Copy> = {
     create: "Guardar y revisar",
     creating: "Guardando…",
     errorPrefix: "No se pudo crear:",
+    saveError: "No se pudo guardar el certificado. Revise los datos introducidos e inténtelo de nuevo.",
+    individualTimeSaveError:
+      "No se pudo guardar el certificado con la hora de visita acordada individualmente. Actualice la página e inténtelo de nuevo.",
   },
   cs: {
     eyebrow: "Dárkový certifikát",
@@ -484,6 +504,9 @@ const COPY: Record<LocaleCode, Copy> = {
     create: "Uložit a zkontrolovat",
     creating: "Ukládání…",
     errorPrefix: "Nepodařilo se vytvořit:",
+    saveError: "Certifikát se nepodařilo uložit. Zkontrolujte zadané údaje a zkuste to znovu.",
+    individualTimeSaveError:
+      "Certifikát s individuálně domluveným časem návštěvy se nepodařilo uložit. Obnovte stránku a zkuste to znovu.",
   },
 
 };
@@ -611,6 +634,8 @@ export function GiftCertificateCreateForm({
   );
   const [pending, setPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [itemImageFailed, setItemImageFailed] = useState(false);
+  const errorMessageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const defaults = getDefaultValidityRange();
@@ -618,6 +643,26 @@ export function GiftCertificateCreateForm({
     setAvailableFrom((current) => current || defaults.from);
     setAvailableUntil((current) => current || defaults.until);
   }, []);
+
+  useEffect(() => {
+    setItemImageFailed(false);
+  }, [valueObject.imageUrl]);
+
+  useEffect(() => {
+    if (!errorMessage) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      errorMessageRef.current?.focus({ preventScroll: true });
+      errorMessageRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [errorMessage]);
 
   const calculation = useMemo(() => {
     const ordinaryPrice = roundMoney(valueObject.ordinaryPrice);
@@ -748,17 +793,32 @@ export function GiftCertificateCreateForm({
       const data = (await response.json()) as CreateResponse;
 
       if (!response.ok || !data.ok || !data.redirectUrl) {
-        throw new Error(data.error || `HTTP ${response.status}`);
+        const technicalCode =
+          data.errorCode === "PGC3B_SERVICE_REQUIRES_EXACT_SCHEDULE" ||
+          data.error === "PGC3B_SERVICE_REQUIRES_EXACT_SCHEDULE"
+            ? "PGC3B_SERVICE_REQUIRES_EXACT_SCHEDULE"
+            : `HTTP ${response.status}`;
+
+        console.error("Gift certificate draft save failed", {
+          status: response.status,
+          error: data.error,
+          errorCode: data.errorCode,
+        });
+
+        throw new Error(technicalCode);
       }
 
       setIdempotencyKey(makeIdempotencyKey());
       router.push(data.redirectUrl);
       router.refresh();
     } catch (error) {
+      const responseError =
+        error instanceof Error ? error.message : null;
+
       setErrorMessage(
-        `${copy.errorPrefix} ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        responseError === "PGC3B_SERVICE_REQUIRES_EXACT_SCHEDULE"
+          ? copy.individualTimeSaveError
+          : copy.saveError,
       );
     } finally {
       setPending(false);
@@ -793,12 +853,6 @@ export function GiftCertificateCreateForm({
           </div>
         </header>
 
-        {errorMessage ? (
-          <section className="rounded-[18px] border border-[#ffd5d5] bg-[#fff7f7] p-5 text-[14px] font-semibold text-[#b42318]">
-            {errorMessage}
-          </section>
-        ) : null}
-
         <section className="grid gap-5">
           <article className="rounded-[24px] border border-black/[0.07] bg-white p-6 shadow-sm">
             <div className="grid gap-5">
@@ -816,12 +870,14 @@ export function GiftCertificateCreateForm({
                     {copy.item}
                   </div>
                   <div className="mt-3 flex items-center gap-3">
-                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-[#dfe4ff] bg-[#eef2ff]">
-                      {valueObject.imageUrl ? (
+                    <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-[#dfe4ff] bg-[#eef2ff] sm:h-24 sm:w-24">
+                      {valueObject.imageUrl && !itemImageFailed ? (
                         <img
                           src={valueObject.imageUrl}
                           alt={valueObject.title}
                           className="h-full w-full object-cover object-center"
+                          loading="eager"
+                          onError={() => setItemImageFailed(true)}
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-[#7c8099]">
@@ -1103,6 +1159,18 @@ export function GiftCertificateCreateForm({
                   {copy.termsHint}
                 </span>
               </label>
+
+              {errorMessage ? (
+                <div
+                  ref={errorMessageRef}
+                  role="alert"
+                  aria-live="assertive"
+                  tabIndex={-1}
+                  className="rounded-[18px] border border-[#ffd5d5] bg-[#fff7f7] p-4 text-[14px] font-semibold leading-6 text-[#b42318] outline-none"
+                >
+                  {errorMessage}
+                </div>
+              ) : null}
 
               <button
                 type="button"
