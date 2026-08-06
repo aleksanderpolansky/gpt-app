@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import ExternalServiceLimitsPanel from "./ExternalServiceLimitsPanel";
+
 type TierProjection = {
   tierCode: string;
   modelName: string | null;
@@ -393,6 +395,8 @@ export default function AdminUsersPage() {
             </p>
           </article>
         </section>
+
+        <ExternalServiceLimitsPanel />
 
         <section className="rounded-3xl border border-slate-800 bg-slate-900 p-5">
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_160px_160px]">
