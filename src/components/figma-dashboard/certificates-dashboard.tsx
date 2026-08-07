@@ -174,7 +174,7 @@ const EN: Labels = {
   newest: "Newest first",
   searchFilters: "Search and filters",
   findCertificate: "Find offer",
-  createCertificate: "Create offer",
+  createCertificate: "Add super offer",
   myCertificates: "My certificates",
   catalog: "Offer catalog",
   publicCatalog: "Public catalog",
@@ -255,7 +255,7 @@ const RU: Labels = {
   newest: "Сначала новые",
   searchFilters: "Поиск и фильтры",
   findCertificate: "Найти предложение",
-  createCertificate: "Создать предложение",
+  createCertificate: "Добавить суперпредложение",
   myCertificates: "Мои сертификаты",
   catalog: "Каталог предложений",
   publicCatalog: "Все предложения",
@@ -336,7 +336,7 @@ const PL: Labels = {
   newest: "Najnowsze",
   searchFilters: "Wyszukiwanie i filtry",
   findCertificate: "Znajdź ofertę",
-  createCertificate: "Utwórz ofertę",
+  createCertificate: "Dodaj superofertę",
   myCertificates: "Moje bony",
   catalog: "Katalog ofert",
   publicCatalog: "Wszystkie oferty",
@@ -422,7 +422,7 @@ function getLabels(locale: LocaleCode): Labels {
       newest: "Спочатку нові",
       searchFilters: "Пошук і фільтри",
       findCertificate: "Знайти пропозицію",
-      createCertificate: "Створити пропозицію",
+      createCertificate: "Додати суперпропозицію",
       myCertificates: "Мої сертифікати",
       catalog: "Каталог пропозицій",
       publicCatalog: "Усі пропозиції",
@@ -505,7 +505,7 @@ function getLabels(locale: LocaleCode): Labels {
       newest: "Neueste zuerst",
       searchFilters: "Suche und Filter",
       findCertificate: "Angebot finden",
-      createCertificate: "Angebot erstellen",
+      createCertificate: "Superangebot hinzufügen",
       myCertificates: "Meine Gutscheine",
       catalog: "Angebotskatalog",
       publicCatalog: "Alle Angebote",
@@ -588,7 +588,7 @@ function getLabels(locale: LocaleCode): Labels {
       newest: "Más recientes",
       searchFilters: "Búsqueda y filtros",
       findCertificate: "Buscar oferta",
-      createCertificate: "Crear oferta",
+      createCertificate: "Añadir superoferta",
       myCertificates: "Mis certificados",
       catalog: "Catálogo de ofertas",
       publicCatalog: "Todas las ofertas",
@@ -671,7 +671,7 @@ function getLabels(locale: LocaleCode): Labels {
       newest: "Nejnovější",
       searchFilters: "Vyhledávání a filtry",
       findCertificate: "Najít nabídku",
-      createCertificate: "Vytvořit nabídku",
+      createCertificate: "Přidat supernabídku",
       myCertificates: "Moje certifikáty",
       catalog: "Katalog nabídek",
       publicCatalog: "Všechny nabídky",
@@ -1470,13 +1470,10 @@ export function CertificatesDashboardContent({
   ).length;
   const completionPercent = getPercent(completedCount, items.length);
 
-  const action =
-    mode === "provided"
-      ? {
-          href: appendLocale("/offers/new", locale),
-          label: labels.createCertificate,
-        }
-      : null;
+  const action = {
+    href: appendLocale("/offers/new", locale),
+    label: labels.createCertificate,
+  };
 
   const rightAction =
     mode === "provided"
@@ -1600,24 +1597,20 @@ export function CertificatesDashboardContent({
         </div>
       ) : null}
 
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-[20px] font-bold leading-tight text-[#1a1d2e]">
-            {labels.titles[mode]}
-          </h1>
-          <p className="mt-0.5 text-[13px] text-[#7c8099]">
-            {labels.subtitles[mode]}
-          </p>
-        </div>
-        {action ? (
-          <Link
-            href={action.href}
-            className="flex w-fit items-center gap-1 rounded-lg border border-[#22c55e]/30 bg-[#ecfdf3] px-3 py-1.5 text-[12px] font-medium text-[#16a34a] transition-all hover:bg-[#dcfce7]"
-          >
-            <Plus size={12} />
-            {action.label}
-          </Link>
-        ) : null}
+      <div className="mb-5">
+        <h1 className="text-[20px] font-bold leading-tight text-[#1a1d2e]">
+          {labels.titles[mode]}
+        </h1>
+        <p className="mt-0.5 text-[13px] text-[#7c8099]">
+          {labels.subtitles[mode]}
+        </p>
+        <Link
+          href={action.href}
+          className="mt-3 flex w-fit items-center gap-1.5 rounded-xl border border-[#22c55e]/35 bg-[#ecfdf3] px-4 py-2 text-[13px] font-semibold text-[#16a34a] shadow-sm transition-all hover:bg-[#dcfce7]"
+        >
+          <Plus size={14} />
+          {action.label}
+        </Link>
       </div>
 
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
