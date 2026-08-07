@@ -264,7 +264,10 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    kind: "activity-duration",
+    kind:
+      input.metricKey === "activity_count"
+        ? "activity-count"
+        : "activity-duration",
     blockId,
     timeZone,
     sourceType: input.sourceType,

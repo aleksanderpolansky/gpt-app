@@ -130,6 +130,19 @@ export function isDashboardAnalyticsV2Supported(
     return true;
   }
 
+  if (
+    DASHBOARD_ANALYTICS_V1_SUPPORTED_VISUALIZATIONS.has(
+      input.visualizationType,
+    ) &&
+    input.sourceType === "activities" &&
+    input.metricKey === "activity_count" &&
+    input.aggregationKey === "count" &&
+    input.groupByKey === "day" &&
+    DASHBOARD_ANALYTICS_V1_SUPPORTED_PERIODS.has(input.periodDays)
+  ) {
+    return true;
+  }
+
   return isDashboardAnalyticsV1Supported(input);
 }
 

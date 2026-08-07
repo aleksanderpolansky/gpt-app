@@ -432,7 +432,7 @@ type DataPoint = {
 
 type BlockDataResponse = {
   readonly ok?: boolean;
-  readonly kind?: "activity-duration" | "certificate-map";
+  readonly kind?: "activity-duration" | "activity-count" | "certificate-map";
   readonly totalMinutes?: number;
   readonly activityCount?: number;
   readonly series?: DataPoint[];
@@ -525,6 +525,67 @@ const MAP_BUILDER_COPY: Record<
     adaptiveScope: "Okolí → město → svět",
     adaptiveScopeDescription: "Mapa nejprve zobrazí nejbližší oblast, potom město; pokud nic není poblíž, zobrazí všechny dostupné body na světě.",
     openCatalog: "Všechny certifikáty",
+  },
+};
+
+const ACTIVITY_COUNT_COPY: Record<
+  LocaleCode,
+  {
+    metric: string;
+    description: string;
+    title: string;
+    recorded: string;
+    noData: string;
+  }
+> = {
+  ru: {
+    metric: "Количество активностей",
+    description: "Количество фактических активностей текущего профиля.",
+    title: "Количество фактических активностей по дням",
+    recorded: "Фактические активности",
+    noData: "За выбранный период фактических активностей нет.",
+  },
+  pl: {
+    metric: "Liczba aktywności",
+    description: "Liczba rzeczywistych aktywności bieżącego profilu.",
+    title: "Liczba rzeczywistych aktywności według dni",
+    recorded: "Rzeczywiste aktywności",
+    noData: "Brak rzeczywistych aktywności w wybranym okresie.",
+  },
+  en: {
+    metric: "Activity count",
+    description: "Number of actual activities of the current profile.",
+    title: "Actual activity count by day",
+    recorded: "Actual activities",
+    noData: "No actual activities in the selected period.",
+  },
+  uk: {
+    metric: "Кількість активностей",
+    description: "Кількість фактичних активностей поточного профілю.",
+    title: "Кількість фактичних активностей за днями",
+    recorded: "Фактичні активності",
+    noData: "За вибраний період фактичних активностей немає.",
+  },
+  de: {
+    metric: "Anzahl der Aktivitäten",
+    description: "Anzahl der tatsächlichen Aktivitäten des aktuellen Profils.",
+    title: "Tatsächliche Aktivitäten nach Tagen",
+    recorded: "Tatsächliche Aktivitäten",
+    noData: "Im gewählten Zeitraum gibt es keine tatsächlichen Aktivitäten.",
+  },
+  es: {
+    metric: "Número de actividades",
+    description: "Número de actividades reales del perfil actual.",
+    title: "Número de actividades reales por día",
+    recorded: "Actividades reales",
+    noData: "No hay actividades reales en el período seleccionado.",
+  },
+  cs: {
+    metric: "Počet aktivit",
+    description: "Počet skutečných aktivit aktuálního profilu.",
+    title: "Počet skutečných aktivit podle dnů",
+    recorded: "Skutečné aktivity",
+    noData: "Ve zvoleném období nejsou žádné skutečné aktivity.",
   },
 };
 
@@ -698,12 +759,22 @@ function AnalyticsBlockCard({
     [data?.series, locale],
   );
 
-  const hasRecordedDuration = (data?.totalMinutes ?? 0) > 0;
+  const isActivityCount = block.metricKey === "activity_count";
+  const countCopy = ACTIVITY_COUNT_COPY[locale];
+  const hasRecordedData = isActivityCount
+    ? (data?.activityCount ?? 0) > 0
+    : (data?.totalMinutes ?? 0) > 0;
+  const chartDataKey = isActivityCount ? "activityCount" : "valueMinutes";
+  const chartValueName = isActivityCount
+    ? countCopy.recorded
+    : ui.recordedActivities;
   const title =
     block.title ||
     (block.visualizationType === "map"
       ? MAP_BUILDER_COPY[locale].title
-      : ui.totalDurationByDay);
+      : isActivityCount
+        ? countCopy.title
+        : ui.totalDurationByDay);
   const periodLabel =
     block.periodDays === 7
       ? ui.sevenDays
@@ -712,7 +783,11 @@ function AnalyticsBlockCard({
         : ui.thirtyDays;
 
   return (
-    <article className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+    <article
+      className={`self-start rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm ${
+        block.visualizationType === "map" ? "xl:row-span-2" : ""
+      }`}
+    >
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-[13px] font-semibold text-[#1a1d2e]">
@@ -780,10 +855,14 @@ function AnalyticsBlockCard({
         <div className="flex h-[160px] items-center gap-5">
           <div className="min-w-[145px]">
             <div className="text-[28px] font-bold leading-none text-[#1a1d2e]">
-              {formatDuration(data?.totalMinutes ?? 0, ui)}
+              {isActivityCount
+                ? new Intl.NumberFormat(NUMBER_LOCALE_MAP[locale]).format(
+                    data?.activityCount ?? 0,
+                  )
+                : formatDuration(data?.totalMinutes ?? 0, ui)}
             </div>
             <div className="mt-2 text-[11px] text-[#7c8099]">
-              {ui.recordedActivities}
+              {chartValueName}
             </div>
             <div className="mt-1 text-[10px] text-[#9ca3b8]">
               {periodLabel}
@@ -794,7 +873,7 @@ function AnalyticsBlockCard({
               <LineChart data={rows}>
                 <Line
                   type="monotone"
-                  dataKey="valueMinutes"
+                  dataKey={chartDataKey}
                   stroke="#3b6ef8"
                   strokeWidth={2.5}
                   dot={false}
@@ -803,9 +882,9 @@ function AnalyticsBlockCard({
             </ResponsiveContainer>
           </div>
         </div>
-      ) : !hasRecordedDuration ? (
+      ) : !hasRecordedData ? (
         <div className="flex h-[160px] items-center justify-center rounded-lg border border-dashed border-[#dfe3f1] bg-[#fbfcff] px-4 text-center text-[12px] font-medium text-[#7c8099]">
-          {ui.noData}
+          {isActivityCount ? countCopy.noData : ui.noData}
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={160}>
@@ -824,7 +903,9 @@ function AnalyticsBlockCard({
               />
               <YAxis
                 tickFormatter={(value) =>
-                  formatAxisDuration(Number(value), ui)
+                  isActivityCount
+                    ? String(Math.round(Number(value)))
+                    : formatAxisDuration(Number(value), ui)
                 }
                 tick={{ fontSize: 10, fill: "#9ca3b8" }}
                 axisLine={false}
@@ -833,8 +914,10 @@ function AnalyticsBlockCard({
               />
               <Tooltip
                 formatter={(value) => [
-                  formatDuration(Number(value), ui),
-                  ui.recordedActivities,
+                  isActivityCount
+                    ? String(Math.round(Number(value)))
+                    : formatDuration(Number(value), ui),
+                  chartValueName,
                 ]}
                 contentStyle={{
                   fontSize: 11,
@@ -844,10 +927,10 @@ function AnalyticsBlockCard({
                 }}
               />
               <Bar
-                dataKey="valueMinutes"
+                dataKey={chartDataKey}
                 fill="#3b6ef8"
                 radius={[4, 4, 0, 0]}
-                name={ui.recordedActivities}
+                name={chartValueName}
               />
             </BarChart>
           ) : (
@@ -861,7 +944,9 @@ function AnalyticsBlockCard({
               />
               <YAxis
                 tickFormatter={(value) =>
-                  formatAxisDuration(Number(value), ui)
+                  isActivityCount
+                    ? String(Math.round(Number(value)))
+                    : formatAxisDuration(Number(value), ui)
                 }
                 tick={{ fontSize: 10, fill: "#9ca3b8" }}
                 axisLine={false}
@@ -870,8 +955,10 @@ function AnalyticsBlockCard({
               />
               <Tooltip
                 formatter={(value) => [
-                  formatDuration(Number(value), ui),
-                  ui.recordedActivities,
+                  isActivityCount
+                    ? String(Math.round(Number(value)))
+                    : formatDuration(Number(value), ui),
+                  chartValueName,
                 ]}
                 contentStyle={{
                   fontSize: 11,
@@ -882,12 +969,12 @@ function AnalyticsBlockCard({
               />
               <Line
                 type="monotone"
-                dataKey="valueMinutes"
+                dataKey={chartDataKey}
                 stroke="#3b6ef8"
                 strokeWidth={2.5}
                 dot={{ r: 3, fill: "#3b6ef8" }}
                 activeDot={{ r: 4 }}
-                name={ui.recordedActivities}
+                name={chartValueName}
               />
             </LineChart>
           )}
@@ -912,6 +999,9 @@ function AnalyticsBuilderModal({
   const [visualizationType, setVisualizationType] =
     useState<DashboardAnalyticsVisualizationType>("line");
   const [periodDays, setPeriodDays] = useState(7);
+  const [activityMetric, setActivityMetric] = useState<
+    "duration_minutes" | "activity_count"
+  >("duration_minutes");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -934,8 +1024,11 @@ function AnalyticsBuilderModal({
           metricKey:
             visualizationType === "map"
               ? "available_certificates"
-              : "duration_minutes",
-          aggregationKey: visualizationType === "map" ? "count" : "sum",
+              : activityMetric,
+          aggregationKey:
+            visualizationType === "map" || activityMetric === "activity_count"
+              ? "count"
+              : "sum",
           groupByKey: visualizationType === "map" ? "location" : "day",
           periodDays: visualizationType === "map" ? 30 : periodDays,
         }),
@@ -1084,7 +1177,7 @@ function AnalyticsBuilderModal({
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-3">
                   <div className="rounded-xl border border-[#3b6ef8] bg-[#eef2ff] p-4">
                     <div className="flex items-center gap-2">
                       <Activity size={16} className="text-[#3b6ef8]" />
@@ -1098,13 +1191,50 @@ function AnalyticsBuilderModal({
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-[#dfe3f1] bg-white p-4">
-                    <div className="text-[13px] font-bold text-[#1a1d2e]">
-                      {ui.totalDuration}
-                    </div>
-                    <div className="mt-2 text-[11px] leading-5 text-[#7c8099]">
-                      {ui.totalDurationDescription}
-                    </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => setActivityMetric("duration_minutes")}
+                      className={`rounded-xl border p-4 text-left transition ${
+                        activityMetric === "duration_minutes"
+                          ? "border-[#3b6ef8] bg-[#eef2ff]"
+                          : "border-[#dfe3f1] bg-white hover:border-[#aebefc]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="text-[13px] font-bold text-[#1a1d2e]">
+                          {ui.totalDuration}
+                        </div>
+                        {activityMetric === "duration_minutes" ? (
+                          <Check size={15} className="ml-auto text-[#3b6ef8]" />
+                        ) : null}
+                      </div>
+                      <div className="mt-2 text-[11px] leading-5 text-[#7c8099]">
+                        {ui.totalDurationDescription}
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setActivityMetric("activity_count")}
+                      className={`rounded-xl border p-4 text-left transition ${
+                        activityMetric === "activity_count"
+                          ? "border-[#3b6ef8] bg-[#eef2ff]"
+                          : "border-[#dfe3f1] bg-white hover:border-[#aebefc]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="text-[13px] font-bold text-[#1a1d2e]">
+                          {ACTIVITY_COUNT_COPY[locale].metric}
+                        </div>
+                        {activityMetric === "activity_count" ? (
+                          <Check size={15} className="ml-auto text-[#3b6ef8]" />
+                        ) : null}
+                      </div>
+                      <div className="mt-2 text-[11px] leading-5 text-[#7c8099]">
+                        {ACTIVITY_COUNT_COPY[locale].description}
+                      </div>
+                    </button>
                   </div>
                 </div>
               )}
@@ -1164,10 +1294,16 @@ function AnalyticsBuilderModal({
 
                   <div className="rounded-xl border border-[#e4e8f4] bg-[#fbfcff] p-4">
                     <div className="text-[11px] font-bold uppercase tracking-wide text-[#7c8099]">
-                      {ui.totalDurationByDay}
+                      {activityMetric === "activity_count"
+                        ? ACTIVITY_COUNT_COPY[locale].title
+                        : ui.totalDurationByDay}
                     </div>
                     <div className="mt-2 text-[12px] leading-5 text-[#5a5f7a]">
-                      {ui.activities} · {ui.totalDuration} · {ui.byDay} ·{" "}
+                      {ui.activities} ·{" "}
+                      {activityMetric === "activity_count"
+                        ? ACTIVITY_COUNT_COPY[locale].metric
+                        : ui.totalDuration}{" "}
+                      · {ui.byDay} ·{" "}
                       {periodOptions.find((item) => item.value === periodDays)?.label}
                     </div>
                   </div>
@@ -1340,7 +1476,7 @@ export function DashboardAnalyticsWorkspace({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+          <div className="grid grid-cols-1 items-start gap-3 xl:grid-flow-row-dense xl:grid-cols-2">
             {blocks.map((block) => (
               <AnalyticsBlockCard
                 key={block.id}
