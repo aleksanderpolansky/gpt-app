@@ -1447,15 +1447,24 @@ export function CertificatesDashboardContent({
   const isAllScope = mode === "participants";
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const [visibleCount, setVisibleCount] = useState(4);
+  const filters = getFilterDefinitions(mode, labels);
+  const effectiveFilter = filters.some(([key]) => key === activeFilter)
+    ? activeFilter
+    : "all";
 
   const filteredItems = useMemo(
-    () => filterItems(items, activeFilter),
-    [activeFilter, items],
+    () => filterItems(items, effectiveFilter),
+    [effectiveFilter, items],
   );
 
   useEffect(() => {
+    setActiveFilter("all");
     setVisibleCount(4);
-  }, [activeFilter, items.length]);
+  }, [mode]);
+
+  useEffect(() => {
+    setVisibleCount(4);
+  }, [effectiveFilter, items.length]);
 
   const displayedItems = filteredItems.slice(0, visibleCount);
   const hasMore = visibleCount < filteredItems.length;
@@ -1552,8 +1561,6 @@ export function CertificatesDashboardContent({
       : awaitingCount > 0
         ? labels.awaiting
         : labels.noProblems;
-
-  const filters = getFilterDefinitions(mode, labels);
 
   return (
     <div className="p-5">

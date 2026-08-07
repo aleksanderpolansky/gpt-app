@@ -156,7 +156,7 @@ export function CertificateVisibilityButton({
         | null;
 
       if (!response.ok) {
-        throw new Error(payload?.error || payload?.errorCode || copy.genericError);
+        throw new Error(copy.genericError);
       }
 
       if (isHidden) {
