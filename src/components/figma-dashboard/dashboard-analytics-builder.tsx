@@ -9,6 +9,7 @@ import {
   Check,
   Hash,
   LineChart as LineChartIcon,
+  MapPinned,
   Plus,
   Target,
   Trash2,
@@ -31,6 +32,10 @@ import type {
   DashboardAnalyticsBlock,
   DashboardAnalyticsVisualizationType,
 } from "@/lib/dashboard/analytics-contract";
+import {
+  DashboardCertificateMap,
+  type CertificateMapMarker,
+} from "@/components/figma-dashboard/dashboard-certificate-map";
 
 type AnalyticsUi = {
   analytics: string;
@@ -427,9 +432,12 @@ type DataPoint = {
 
 type BlockDataResponse = {
   readonly ok?: boolean;
+  readonly kind?: "activity-duration" | "certificate-map";
   readonly totalMinutes?: number;
   readonly activityCount?: number;
   readonly series?: DataPoint[];
+  readonly availableCertificateCount?: number;
+  readonly markers?: CertificateMapMarker[];
   readonly error?: string;
 };
 
@@ -443,6 +451,83 @@ const NUMBER_LOCALE_MAP: Record<LocaleCode, string> = {
   cs: "cs-CZ",
 };
 
+const MAP_BUILDER_COPY: Record<
+  LocaleCode,
+  {
+    title: string;
+    description: string;
+    certificates: string;
+    certificatesDescription: string;
+    adaptiveScope: string;
+    adaptiveScopeDescription: string;
+    openCatalog: string;
+  }
+> = {
+  ru: {
+    title: "Карта сертификатов",
+    description: "Доступные подарочные сертификаты на карте с автоматическим выбором масштаба.",
+    certificates: "Подарочные сертификаты",
+    certificatesDescription: "Только публичные доступные сертификаты с публичной географией предоставляющего.",
+    adaptiveScope: "Рядом → город → мир",
+    adaptiveScopeDescription: "Если рядом есть сертификаты, карта показывает ближайшую область; затем город; если рядом ничего нет — все доступные точки мира.",
+    openCatalog: "Все сертификаты",
+  },
+  pl: {
+    title: "Mapa certyfikatów",
+    description: "Dostępne certyfikaty prezentowe na mapie z automatycznym doborem skali.",
+    certificates: "Certyfikaty prezentowe",
+    certificatesDescription: "Tylko publiczne, dostępne certyfikaty z publiczną lokalizacją dostawcy.",
+    adaptiveScope: "W pobliżu → miasto → świat",
+    adaptiveScopeDescription: "Mapa pokazuje najpierw najbliższą okolicę, potem miasto, a gdy nic nie ma blisko — wszystkie dostępne punkty na świecie.",
+    openCatalog: "Wszystkie certyfikaty",
+  },
+  en: {
+    title: "Certificate map",
+    description: "Available gift certificates on a map with adaptive geographic scope.",
+    certificates: "Gift certificates",
+    certificatesDescription: "Only public available certificates with a public provider location.",
+    adaptiveScope: "Nearby → city → world",
+    adaptiveScopeDescription: "The map shows the nearest area first, then the city; if nothing is nearby, it shows all available world locations.",
+    openCatalog: "All certificates",
+  },
+  uk: {
+    title: "Карта сертифікатів",
+    description: "Доступні подарункові сертифікати на карті з автоматичним вибором масштабу.",
+    certificates: "Подарункові сертифікати",
+    certificatesDescription: "Лише публічні доступні сертифікати з публічною географією надавача.",
+    adaptiveScope: "Поруч → місто → світ",
+    adaptiveScopeDescription: "Карта спочатку показує найближчу область, потім місто; якщо поруч нічого немає — усі доступні точки світу.",
+    openCatalog: "Усі сертифікати",
+  },
+  de: {
+    title: "Zertifikatskarte",
+    description: "Verfügbare Geschenkgutscheine auf einer Karte mit automatischem geografischem Ausschnitt.",
+    certificates: "Geschenkgutscheine",
+    certificatesDescription: "Nur öffentliche verfügbare Gutscheine mit öffentlichem Anbieterstandort.",
+    adaptiveScope: "Nähe → Stadt → Welt",
+    adaptiveScopeDescription: "Die Karte zeigt zuerst die nähere Umgebung, dann die Stadt; wenn nichts in der Nähe liegt, alle verfügbaren Punkte weltweit.",
+    openCatalog: "Alle Zertifikate",
+  },
+  es: {
+    title: "Mapa de certificados",
+    description: "Certificados regalo disponibles en un mapa con alcance geográfico adaptativo.",
+    certificates: "Certificados regalo",
+    certificatesDescription: "Solo certificados públicos disponibles con ubicación pública del proveedor.",
+    adaptiveScope: "Cerca → ciudad → mundo",
+    adaptiveScopeDescription: "El mapa muestra primero la zona cercana, después la ciudad y, si no hay nada cerca, todos los puntos disponibles del mundo.",
+    openCatalog: "Todos los certificados",
+  },
+  cs: {
+    title: "Mapa certifikátů",
+    description: "Dostupné dárkové certifikáty na mapě s automatickou volbou měřítka.",
+    certificates: "Dárkové certifikáty",
+    certificatesDescription: "Pouze veřejné dostupné certifikáty s veřejnou polohou poskytovatele.",
+    adaptiveScope: "Okolí → město → svět",
+    adaptiveScopeDescription: "Mapa nejprve zobrazí nejbližší oblast, potom město; pokud nic není poblíž, zobrazí všechny dostupné body na světě.",
+    openCatalog: "Všechny certifikáty",
+  },
+};
+
 const AVAILABLE_VISUALIZATIONS: readonly {
   readonly type: DashboardAnalyticsVisualizationType;
   readonly enabled: boolean;
@@ -450,6 +535,7 @@ const AVAILABLE_VISUALIZATIONS: readonly {
   { type: "line", enabled: true },
   { type: "bar", enabled: true },
   { type: "metric", enabled: true },
+  { type: "map", enabled: true },
   { type: "donut", enabled: false },
   { type: "radar", enabled: false },
   { type: "heatmap", enabled: false },
@@ -493,8 +579,14 @@ function formatAxisDuration(minutes: number, ui: AnalyticsUi): string {
 function visualizationLabel(
   type: DashboardAnalyticsVisualizationType,
   ui: AnalyticsUi,
+  locale: LocaleCode,
 ) {
-  const labels: Record<DashboardAnalyticsVisualizationType, string> = {
+  if (type === "map") return MAP_BUILDER_COPY[locale].title;
+
+  const labels: Record<
+    Exclude<DashboardAnalyticsVisualizationType, "map">,
+    string
+  > = {
     line: ui.line,
     bar: ui.bar,
     metric: ui.metric,
@@ -511,10 +603,12 @@ function visualizationLabel(
 function visualizationDescription(
   type: DashboardAnalyticsVisualizationType,
   ui: AnalyticsUi,
+  locale: LocaleCode,
 ) {
   if (type === "line") return ui.lineDescription;
   if (type === "bar") return ui.barDescription;
   if (type === "metric") return ui.metricDescription;
+  if (type === "map") return MAP_BUILDER_COPY[locale].description;
   return ui.later;
 }
 
@@ -522,6 +616,7 @@ function visualizationIcon(type: DashboardAnalyticsVisualizationType) {
   if (type === "line") return LineChartIcon;
   if (type === "bar") return BarChart3;
   if (type === "metric") return Hash;
+  if (type === "map") return MapPinned;
   if (type === "progress") return Target;
   return Activity;
 }
@@ -604,7 +699,11 @@ function AnalyticsBlockCard({
   );
 
   const hasRecordedDuration = (data?.totalMinutes ?? 0) > 0;
-  const title = block.title || ui.totalDurationByDay;
+  const title =
+    block.title ||
+    (block.visualizationType === "map"
+      ? MAP_BUILDER_COPY[locale].title
+      : ui.totalDurationByDay);
   const periodLabel =
     block.periodDays === 7
       ? ui.sevenDays
@@ -620,16 +719,28 @@ function AnalyticsBlockCard({
             {title}
           </h3>
           <div className="mt-0.5 text-[10px] text-[#9ca3b8]">
-            {periodLabel} · {visualizationLabel(block.visualizationType, ui)}
+            {block.visualizationType === "map"
+              ? MAP_BUILDER_COPY[locale].adaptiveScope
+              : `${periodLabel} · ${visualizationLabel(
+                  block.visualizationType,
+                  ui,
+                  locale,
+                )}`}
           </div>
         </div>
 
         <div className="flex flex-shrink-0 items-center gap-1">
           <Link
-            href={`/activity-today?locale=${locale}`}
+            href={
+              block.visualizationType === "map"
+                ? `/certificates?view=participants&locale=${locale}`
+                : `/activity-today?locale=${locale}`
+            }
             className="rounded-lg px-2 py-1 text-[11px] font-medium text-[#3b6ef8] hover:bg-[#eef2ff]"
           >
-            {ui.journal}
+            {block.visualizationType === "map"
+              ? MAP_BUILDER_COPY[locale].openCatalog
+              : ui.journal}
           </Link>
           <button
             type="button"
@@ -660,6 +771,11 @@ function AnalyticsBlockCard({
             {ui.retry}
           </button>
         </div>
+      ) : block.visualizationType === "map" ? (
+        <DashboardCertificateMap
+          markers={data?.markers ?? []}
+          locale={locale}
+        />
       ) : block.visualizationType === "metric" ? (
         <div className="flex h-[160px] items-center gap-5">
           <div className="min-w-[145px]">
@@ -813,11 +929,15 @@ function AnalyticsBuilderModal({
         },
         body: JSON.stringify({
           visualizationType,
-          sourceType: "activities",
-          metricKey: "duration_minutes",
-          aggregationKey: "sum",
-          groupByKey: "day",
-          periodDays,
+          sourceType:
+            visualizationType === "map" ? "certificates" : "activities",
+          metricKey:
+            visualizationType === "map"
+              ? "available_certificates"
+              : "duration_minutes",
+          aggregationKey: visualizationType === "map" ? "count" : "sum",
+          groupByKey: visualizationType === "map" ? "location" : "day",
+          periodDays: visualizationType === "map" ? 30 : periodDays,
         }),
       });
 
@@ -913,10 +1033,10 @@ function AnalyticsBuilderModal({
                       </div>
                       <div className="min-w-0">
                         <div className="text-[13px] font-bold text-[#1a1d2e]">
-                          {visualizationLabel(option.type, ui)}
+                          {visualizationLabel(option.type, ui, locale)}
                         </div>
                         <div className="mt-1 text-[11px] leading-5 text-[#7c8099]">
-                          {visualizationDescription(option.type, ui)}
+                          {visualizationDescription(option.type, ui, locale)}
                         </div>
                       </div>
                       <span
@@ -939,29 +1059,55 @@ function AnalyticsBuilderModal({
                 {ui.chooseData}
               </h3>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="rounded-xl border border-[#3b6ef8] bg-[#eef2ff] p-4">
-                  <div className="flex items-center gap-2">
-                    <Activity size={16} className="text-[#3b6ef8]" />
-                    <div className="text-[13px] font-bold text-[#1a1d2e]">
-                      {ui.activities}
+              {visualizationType === "map" ? (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-[#3b6ef8] bg-[#eef2ff] p-4">
+                    <div className="flex items-center gap-2">
+                      <MapPinned size={16} className="text-[#3b6ef8]" />
+                      <div className="text-[13px] font-bold text-[#1a1d2e]">
+                        {MAP_BUILDER_COPY[locale].certificates}
+                      </div>
+                      <Check size={15} className="ml-auto text-[#3b6ef8]" />
                     </div>
-                    <Check size={15} className="ml-auto text-[#3b6ef8]" />
+                    <div className="mt-2 text-[11px] leading-5 text-[#7c8099]">
+                      {MAP_BUILDER_COPY[locale].certificatesDescription}
+                    </div>
                   </div>
-                  <div className="mt-2 text-[11px] leading-5 text-[#7c8099]">
-                    {ui.activitiesDescription}
-                  </div>
-                </div>
 
-                <div className="rounded-xl border border-[#dfe3f1] bg-white p-4">
-                  <div className="text-[13px] font-bold text-[#1a1d2e]">
-                    {ui.totalDuration}
-                  </div>
-                  <div className="mt-2 text-[11px] leading-5 text-[#7c8099]">
-                    {ui.totalDurationDescription}
+                  <div className="rounded-xl border border-[#dfe3f1] bg-white p-4">
+                    <div className="text-[13px] font-bold text-[#1a1d2e]">
+                      {MAP_BUILDER_COPY[locale].adaptiveScope}
+                    </div>
+                    <div className="mt-2 text-[11px] leading-5 text-[#7c8099]">
+                      {MAP_BUILDER_COPY[locale].adaptiveScopeDescription}
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-[#3b6ef8] bg-[#eef2ff] p-4">
+                    <div className="flex items-center gap-2">
+                      <Activity size={16} className="text-[#3b6ef8]" />
+                      <div className="text-[13px] font-bold text-[#1a1d2e]">
+                        {ui.activities}
+                      </div>
+                      <Check size={15} className="ml-auto text-[#3b6ef8]" />
+                    </div>
+                    <div className="mt-2 text-[11px] leading-5 text-[#7c8099]">
+                      {ui.activitiesDescription}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-[#dfe3f1] bg-white p-4">
+                    <div className="text-[13px] font-bold text-[#1a1d2e]">
+                      {ui.totalDuration}
+                    </div>
+                    <div className="mt-2 text-[11px] leading-5 text-[#7c8099]">
+                      {ui.totalDurationDescription}
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <>
@@ -969,48 +1115,64 @@ function AnalyticsBuilderModal({
                 {ui.configure}
               </h3>
 
-              <div className="space-y-5">
-                <div>
-                  <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[#7c8099]">
-                    {ui.grouping}
+              {visualizationType === "map" ? (
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-[#3b6ef8] bg-[#eef2ff] p-4">
+                    <div className="text-[11px] font-bold uppercase tracking-wide text-[#3b6ef8]">
+                      {MAP_BUILDER_COPY[locale].adaptiveScope}
+                    </div>
+                    <div className="mt-2 text-[12px] leading-5 text-[#5a5f7a]">
+                      {MAP_BUILDER_COPY[locale].adaptiveScopeDescription}
+                    </div>
                   </div>
-                  <div className="inline-flex rounded-xl border border-[#3b6ef8] bg-[#eef2ff] px-4 py-2.5 text-[12px] font-bold text-[#3b6ef8]">
-                    {ui.byDay}
+                  <div className="rounded-xl border border-[#e4e8f4] bg-[#fbfcff] p-4 text-[12px] leading-5 text-[#5a5f7a]">
+                    {MAP_BUILDER_COPY[locale].certificatesDescription}
                   </div>
                 </div>
+              ) : (
+                <div className="space-y-5">
+                  <div>
+                    <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[#7c8099]">
+                      {ui.grouping}
+                    </div>
+                    <div className="inline-flex rounded-xl border border-[#3b6ef8] bg-[#eef2ff] px-4 py-2.5 text-[12px] font-bold text-[#3b6ef8]">
+                      {ui.byDay}
+                    </div>
+                  </div>
 
-                <div>
-                  <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[#7c8099]">
-                    {ui.period}
+                  <div>
+                    <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[#7c8099]">
+                      {ui.period}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {periodOptions.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => setPeriodDays(option.value)}
+                          className={`rounded-lg px-4 py-2 text-[12px] font-semibold transition ${
+                            periodDays === option.value
+                              ? "bg-[#3b6ef8] text-white shadow-sm"
+                              : "border border-[#dfe3f1] bg-white text-[#5a5f7a] hover:bg-[#f5f6fb]"
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {periodOptions.map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setPeriodDays(option.value)}
-                        className={`rounded-lg px-4 py-2 text-[12px] font-semibold transition ${
-                          periodDays === option.value
-                            ? "bg-[#3b6ef8] text-white shadow-sm"
-                            : "border border-[#dfe3f1] bg-white text-[#5a5f7a] hover:bg-[#f5f6fb]"
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
-                <div className="rounded-xl border border-[#e4e8f4] bg-[#fbfcff] p-4">
-                  <div className="text-[11px] font-bold uppercase tracking-wide text-[#7c8099]">
-                    {ui.totalDurationByDay}
-                  </div>
-                  <div className="mt-2 text-[12px] leading-5 text-[#5a5f7a]">
-                    {ui.activities} · {ui.totalDuration} · {ui.byDay} ·{" "}
-                    {periodOptions.find((item) => item.value === periodDays)?.label}
+                  <div className="rounded-xl border border-[#e4e8f4] bg-[#fbfcff] p-4">
+                    <div className="text-[11px] font-bold uppercase tracking-wide text-[#7c8099]">
+                      {ui.totalDurationByDay}
+                    </div>
+                    <div className="mt-2 text-[12px] leading-5 text-[#5a5f7a]">
+                      {ui.activities} · {ui.totalDuration} · {ui.byDay} ·{" "}
+                      {periodOptions.find((item) => item.value === periodDays)?.label}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </>
           )}
 

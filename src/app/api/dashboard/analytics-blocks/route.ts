@@ -6,7 +6,7 @@ import {
   isDashboardAnalyticsAggregation,
   isDashboardAnalyticsGrouping,
   isDashboardAnalyticsSourceType,
-  isDashboardAnalyticsV1Supported,
+  isDashboardAnalyticsV2Supported,
   isDashboardAnalyticsVisualizationType,
   type DashboardAnalyticsBlock,
   type DashboardAnalyticsCreateInput,
@@ -26,10 +26,7 @@ function asNumber(value: unknown): number {
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return {};
-  }
-
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
 }
 
@@ -37,15 +34,11 @@ function mapBlock(row: Row): DashboardAnalyticsBlock {
   return {
     id: String(row.id),
     title: asString(row.title),
-    visualizationType:
-      asString(row.visualization_type) as DashboardAnalyticsBlock["visualizationType"],
-    sourceType:
-      asString(row.source_type) as DashboardAnalyticsBlock["sourceType"],
+    visualizationType: asString(row.visualization_type) as DashboardAnalyticsBlock["visualizationType"],
+    sourceType: asString(row.source_type) as DashboardAnalyticsBlock["sourceType"],
     metricKey: String(row.metric_key),
-    aggregationKey:
-      asString(row.aggregation_key) as DashboardAnalyticsBlock["aggregationKey"],
-    groupByKey:
-      asString(row.group_by_key) as DashboardAnalyticsBlock["groupByKey"],
+    aggregationKey: asString(row.aggregation_key) as DashboardAnalyticsBlock["aggregationKey"],
+    groupByKey: asString(row.group_by_key) as DashboardAnalyticsBlock["groupByKey"],
     periodDays: asNumber(row.period_days),
     sortOrder: asNumber(row.sort_order),
     config: asRecord(row.config_json),
@@ -55,13 +48,8 @@ function mapBlock(row: Row): DashboardAnalyticsBlock {
 }
 
 async function resolveContext() {
-  const { appUser, personActor, errorResponse } =
-    await getActivityUserContext();
-
-  if (errorResponse) {
-    return { appUser: null, personActor: null, errorResponse };
-  }
-
+  const { appUser, personActor, errorResponse } = await getActivityUserContext();
+  if (errorResponse) return { appUser: null, personActor: null, errorResponse };
   if (!appUser || !personActor) {
     return {
       appUser: null,
@@ -72,16 +60,12 @@ async function resolveContext() {
       ),
     };
   }
-
   return { appUser, personActor, errorResponse: null };
 }
 
 export async function GET() {
   const { appUser, personActor, errorResponse } = await resolveContext();
-
-  if (errorResponse || !appUser || !personActor) {
-    return errorResponse;
-  }
+  if (errorResponse || !appUser || !personActor) return errorResponse;
 
   const { data, error } = await supabase
     .from("dashboard_analytics_blocks")
@@ -92,26 +76,16 @@ export async function GET() {
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
 
-  if (error) {
-    return NextResponse.json(
-      { ok: false, error: error.message },
-      { status: 500 },
-    );
-  }
+  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
 
   return NextResponse.json({
     ok: true,
-    blocks: (Array.isArray(data) ? data : []).map((row) =>
-      mapBlock(row as Row),
-    ),
+    blocks: (Array.isArray(data) ? data : []).map((row) => mapBlock(row as Row)),
   });
 }
 
 function parseCreateInput(value: unknown): DashboardAnalyticsCreateInput | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return null;
-  }
-
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const body = value as Record<string, unknown>;
 
   if (
@@ -119,21 +93,16 @@ function parseCreateInput(value: unknown): DashboardAnalyticsCreateInput | null 
     !isDashboardAnalyticsSourceType(body.sourceType) ||
     !isDashboardAnalyticsAggregation(body.aggregationKey) ||
     !isDashboardAnalyticsGrouping(body.groupByKey)
-  ) {
-    return null;
-  }
+  ) return null;
 
-  const metricKey =
-    typeof body.metricKey === "string" ? body.metricKey.trim() : "";
+  const metricKey = typeof body.metricKey === "string" ? body.metricKey.trim() : "";
   const periodDays = Number(body.periodDays);
   const title =
     typeof body.title === "string" && body.title.trim()
       ? body.title.trim().slice(0, 120)
       : null;
 
-  if (!metricKey || !Number.isFinite(periodDays)) {
-    return null;
-  }
+  if (!metricKey || !Number.isFinite(periodDays)) return null;
 
   return {
     title,
@@ -148,10 +117,7 @@ function parseCreateInput(value: unknown): DashboardAnalyticsCreateInput | null 
 
 export async function POST(request: Request) {
   const { appUser, personActor, errorResponse } = await resolveContext();
-
-  if (errorResponse || !appUser || !personActor) {
-    return errorResponse;
-  }
+  if (errorResponse || !appUser || !personActor) return errorResponse;
 
   const rawBody = await request.json().catch(() => null);
   const input = parseCreateInput(rawBody);
@@ -163,13 +129,9 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!isDashboardAnalyticsV1Supported(input)) {
+  if (!isDashboardAnalyticsV2Supported(input)) {
     return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "This analytics combination is not enabled in dashboard analytics v1",
-      },
+      { ok: false, error: "This analytics combination is not enabled in dashboard analytics v2" },
       { status: 422 },
     );
   }
@@ -183,10 +145,7 @@ export async function POST(request: Request) {
     .limit(1);
 
   if (previousError) {
-    return NextResponse.json(
-      { ok: false, error: previousError.message },
-      { status: 500 },
-    );
+    return NextResponse.json({ ok: false, error: previousError.message }, { status: 500 });
   }
 
   const previousSortOrder =
@@ -208,7 +167,8 @@ export async function POST(request: Request) {
       period_days: input.periodDays,
       sort_order: previousSortOrder + 1,
       config_json: {
-        contract: "dashboard-analytics-v1",
+        contract: "dashboard-analytics-v2",
+        layoutWidth: input.visualizationType === "map" ? "full" : "half",
       },
       is_visible: true,
     })
@@ -222,27 +182,17 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({
-    ok: true,
-    block: mapBlock(data as Row),
-  });
+  return NextResponse.json({ ok: true, block: mapBlock(data as Row) });
 }
 
 export async function DELETE(request: Request) {
   const { appUser, personActor, errorResponse } = await resolveContext();
-
-  if (errorResponse || !appUser || !personActor) {
-    return errorResponse;
-  }
+  if (errorResponse || !appUser || !personActor) return errorResponse;
 
   const url = new URL(request.url);
   const blockId = url.searchParams.get("id")?.trim();
-
   if (!blockId) {
-    return NextResponse.json(
-      { ok: false, error: "Analytics block id is required" },
-      { status: 400 },
-    );
+    return NextResponse.json({ ok: false, error: "Analytics block id is required" }, { status: 400 });
   }
 
   const { error } = await supabase
@@ -252,12 +202,6 @@ export async function DELETE(request: Request) {
     .eq("owner_user_id", appUser.id)
     .eq("owner_actor_id", personActor.id);
 
-  if (error) {
-    return NextResponse.json(
-      { ok: false, error: error.message },
-      { status: 500 },
-    );
-  }
-
+  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

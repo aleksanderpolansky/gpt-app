@@ -2,6 +2,7 @@ export const DASHBOARD_ANALYTICS_VISUALIZATION_TYPES = [
   "line",
   "bar",
   "metric",
+  "map",
   "donut",
   "radar",
   "heatmap",
@@ -45,6 +46,7 @@ export const DASHBOARD_ANALYTICS_GROUPINGS = [
   "category",
   "observation_object",
   "profile",
+  "location",
 ] as const;
 
 export type DashboardAnalyticsGrouping =
@@ -98,9 +100,7 @@ export function isDashboardAnalyticsV1Supported(
   >,
 ): boolean {
   return (
-    DASHBOARD_ANALYTICS_V1_SUPPORTED_VISUALIZATIONS.has(
-      input.visualizationType,
-    ) &&
+    DASHBOARD_ANALYTICS_V1_SUPPORTED_VISUALIZATIONS.has(input.visualizationType) &&
     input.sourceType === "activities" &&
     input.metricKey === "duration_minutes" &&
     input.aggregationKey === "sum" &&
@@ -109,40 +109,54 @@ export function isDashboardAnalyticsV1Supported(
   );
 }
 
+export function isDashboardAnalyticsV2Supported(
+  input: Pick<
+    DashboardAnalyticsCreateInput,
+    | "visualizationType"
+    | "sourceType"
+    | "metricKey"
+    | "aggregationKey"
+    | "groupByKey"
+    | "periodDays"
+  >,
+): boolean {
+  if (
+    input.visualizationType === "map" &&
+    input.sourceType === "certificates" &&
+    input.metricKey === "available_certificates" &&
+    input.aggregationKey === "count" &&
+    input.groupByKey === "location"
+  ) {
+    return true;
+  }
+
+  return isDashboardAnalyticsV1Supported(input);
+}
+
 export function isDashboardAnalyticsVisualizationType(
   value: unknown,
 ): value is DashboardAnalyticsVisualizationType {
-  return (
-    typeof value === "string" &&
-    (
-      DASHBOARD_ANALYTICS_VISUALIZATION_TYPES as readonly string[]
-    ).includes(value)
-  );
+  return typeof value === "string" &&
+    (DASHBOARD_ANALYTICS_VISUALIZATION_TYPES as readonly string[]).includes(value);
 }
 
 export function isDashboardAnalyticsSourceType(
   value: unknown,
 ): value is DashboardAnalyticsSourceType {
-  return (
-    typeof value === "string" &&
-    (DASHBOARD_ANALYTICS_SOURCE_TYPES as readonly string[]).includes(value)
-  );
+  return typeof value === "string" &&
+    (DASHBOARD_ANALYTICS_SOURCE_TYPES as readonly string[]).includes(value);
 }
 
 export function isDashboardAnalyticsAggregation(
   value: unknown,
 ): value is DashboardAnalyticsAggregation {
-  return (
-    typeof value === "string" &&
-    (DASHBOARD_ANALYTICS_AGGREGATIONS as readonly string[]).includes(value)
-  );
+  return typeof value === "string" &&
+    (DASHBOARD_ANALYTICS_AGGREGATIONS as readonly string[]).includes(value);
 }
 
 export function isDashboardAnalyticsGrouping(
   value: unknown,
 ): value is DashboardAnalyticsGrouping {
-  return (
-    typeof value === "string" &&
-    (DASHBOARD_ANALYTICS_GROUPINGS as readonly string[]).includes(value)
-  );
+  return typeof value === "string" &&
+    (DASHBOARD_ANALYTICS_GROUPINGS as readonly string[]).includes(value);
 }
