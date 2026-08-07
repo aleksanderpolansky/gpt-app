@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Activity,
   ArrowLeft,
@@ -1059,9 +1060,13 @@ function AnalyticsBuilderModal({
     { value: 30, label: ui.thirtyDays },
   ];
 
-  return (
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-[#1a1d2e]/35 p-4 backdrop-blur-[1px]"
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-[#1a1d2e]/35 p-4 backdrop-blur-[1px]"
       role="dialog"
       aria-modal="true"
       aria-label={ui.add}
@@ -1356,7 +1361,8 @@ function AnalyticsBuilderModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
