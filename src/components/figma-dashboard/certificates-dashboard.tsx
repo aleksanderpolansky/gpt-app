@@ -28,6 +28,7 @@ import { CertificateShareButton } from "./certificate-share-button";
 
 export type CertificateDashboardMode =
   | "participants"
+  | "mine"
   | "received"
   | "provided"
   | "archive";
@@ -51,6 +52,7 @@ export type CertificateDashboardItem = {
   readonly description: string | null;
   readonly objectKind: "product_type" | "service_type";
   readonly providerName: string;
+  readonly providerType: "personal" | "avatar" | "organization";
   readonly providerHref: string | null;
   readonly providerImageUrl: string | null;
   readonly productImageUrl: string | null;
@@ -75,6 +77,7 @@ export type CertificateDashboardItem = {
 
 type FilterKey =
   | "all"
+  | "draft"
   | "product"
   | "service"
   | "newest"
@@ -137,14 +140,17 @@ type Labels = {
 
 const EN: Labels = {
   titles: {
-    participants: "Participant offers",
+    participants: "All certificates",
+    mine: "My certificates",
     received: "My certificates",
-    provided: "My offers",
+    provided: "Provided certificates",
     archive: "Offer archive",
   },
   subtitles: {
     participants:
-      "Active and realized products, services and private offers from ARCTor participants.",
+      "Available and realized certificates from ARCTor participants.",
+    mine:
+      "All certificates connected with your account: provided and received.",
     received:
       "Certificates ordered by your account, their check-in and confirmation states.",
     provided:
@@ -154,7 +160,7 @@ const EN: Labels = {
   },
   total: "Certificates",
   allOffers: "All offers",
-  activeOffers: "Active offers",
+  activeOffers: "Available",
   realizedOffers: "Realized offers",
   realizedAt: "Realized",
   realizedDate: "Realization date",
@@ -186,7 +192,7 @@ const EN: Labels = {
   price: "Price",
   surcharge: "surcharge",
   recipientHidden: "Hidden recipient",
-  recipientPending: "Recipient not selected",
+  recipientPending: "Recipient not assigned yet",
   provider: "Provider",
   buyer: "Recipient",
   points: "points",
@@ -199,7 +205,7 @@ const EN: Labels = {
   searchSection: "Search and filters",
   states: {
     draft: "Draft",
-    available: "Published",
+    available: "Available to order",
     active: "Ordered and active",
     checked_in: "Arrival registered",
     awaiting_confirmation: "Awaiting buyer confirmation",
@@ -215,14 +221,17 @@ const EN: Labels = {
 const RU: Labels = {
   ...EN,
   titles: {
-    participants: "Предложения участников",
+    participants: "Все сертификаты",
+    mine: "Мои сертификаты",
     received: "Мои сертификаты",
-    provided: "Мои предложения",
+    provided: "Предоставленные сертификаты",
     archive: "Архив предложений",
   },
   subtitles: {
     participants:
-      "Активные и реализованные товары, услуги и частные предложения участников ARCTor.",
+      "Доступные и реализованные сертификаты всех участников ARCTor.",
+    mine:
+      "Все предоставленные и полученные сертификаты вашей учётной записи.",
     received:
       "Сертификаты, заказанные вашей учётной записью, и состояния их исполнения.",
     provided:
@@ -232,11 +241,11 @@ const RU: Labels = {
   },
   total: "Сертификаты",
   allOffers: "Все предложения",
-  activeOffers: "Активные предложения",
+  activeOffers: "Доступные",
   realizedOffers: "Реализованные предложения",
   realizedAt: "Реализовано",
   realizedDate: "Дата реализации",
-  available: "Опубликованы",
+  available: "Доступные",
   active: "Заказаны",
   awaiting: "Ожидают подтверждения",
   completed: "Подтверждены",
@@ -264,7 +273,7 @@ const RU: Labels = {
   price: "Цена",
   surcharge: "доплата",
   recipientHidden: "Скрытый получатель",
-  recipientPending: "Получатель не выбран",
+  recipientPending: "Получатель пока не назначен",
   provider: "Предоставляющий",
   buyer: "Получатель",
   points: "пункты",
@@ -277,8 +286,8 @@ const RU: Labels = {
   searchSection: "Поиск и фильтры",
   states: {
     draft: "Черновик",
-    available: "Опубликован",
-    active: "Заказан и активен",
+    available: "Доступен для заказа",
+    active: "Заказан",
     checked_in: "Приход зарегистрирован",
     awaiting_confirmation: "Ожидается подтверждение покупателя",
     confirmed_by_buyer: "Подтверждён покупателем",
@@ -293,14 +302,17 @@ const RU: Labels = {
 const PL: Labels = {
   ...EN,
   titles: {
-    participants: "Oferty uczestników",
+    participants: "Wszystkie certyfikaty",
+    mine: "Moje certyfikaty",
     received: "Moje bony",
-    provided: "Moje oferty",
+    provided: "Wydane certyfikaty",
     archive: "Archiwum ofert",
   },
   subtitles: {
     participants:
-      "Aktywne i zrealizowane produkty, usługi oraz prywatne oferty uczestników ARCTor.",
+      "Dostępne i zrealizowane certyfikaty wszystkich uczestników ARCTor.",
+    mine:
+      "Wszystkie wydane i otrzymane certyfikaty powiązane z Twoim kontem.",
     received:
       "Bony zamówione przez Twoje konto oraz stan ich realizacji.",
     provided:
@@ -310,11 +322,11 @@ const PL: Labels = {
   },
   total: "Bony",
   allOffers: "Wszystkie oferty",
-  activeOffers: "Aktywne oferty",
+  activeOffers: "Dostępne",
   realizedOffers: "Zrealizowane oferty",
   realizedAt: "Zrealizowano",
   realizedDate: "Data realizacji",
-  available: "Opublikowane",
+  available: "Dostępne",
   active: "Zamówione",
   awaiting: "Oczekują na potwierdzenie",
   completed: "Potwierdzone",
@@ -342,7 +354,7 @@ const PL: Labels = {
   price: "Cena",
   surcharge: "dopłata",
   recipientHidden: "Ukryty odbiorca",
-  recipientPending: "Odbiorca nie został wybrany",
+  recipientPending: "Odbiorca nie został jeszcze przypisany",
   provider: "Dostawca",
   buyer: "Odbiorca",
   points: "punkty",
@@ -355,8 +367,8 @@ const PL: Labels = {
   searchSection: "Wyszukiwanie i filtry",
   states: {
     draft: "Szkic",
-    available: "Opublikowany",
-    active: "Zamówiony i aktywny",
+    available: "Dostępny do zamówienia",
+    active: "Zamówiony",
     checked_in: "Przybycie zarejestrowane",
     awaiting_confirmation: "Oczekuje na potwierdzenie kupującego",
     confirmed_by_buyer: "Potwierdzony przez kupującego",
@@ -376,14 +388,17 @@ function getLabels(locale: LocaleCode): Labels {
     return {
       ...RU,
       titles: {
-        participants: "Пропозиції учасників",
+        participants: "Усі сертифікати",
+        mine: "Мої сертифікати",
         received: "Мої сертифікати",
-        provided: "Мої пропозиції",
+        provided: "Надані сертифікати",
         archive: "Архів пропозицій",
       },
       subtitles: {
         participants:
-          "Активні й реалізовані товари, послуги та приватні пропозиції учасників ARCTor.",
+          "Доступні й реалізовані сертифікати всіх учасників ARCTor.",
+        mine:
+          "Усі надані та отримані сертифікати вашого облікового запису.",
         received:
           "Сертифікати, замовлені вашим обліковим записом, і стани їх виконання.",
         provided:
@@ -393,11 +408,11 @@ function getLabels(locale: LocaleCode): Labels {
       },
       total: "Сертифікати",
       allOffers: "Усі пропозиції",
-      activeOffers: "Активні пропозиції",
+      activeOffers: "Доступні",
       realizedOffers: "Реалізовані пропозиції",
       realizedAt: "Реалізовано",
       realizedDate: "Дата реалізації",
-      available: "Опубліковані",
+      available: "Доступні",
       active: "Замовлені",
       awaiting: "Очікують підтвердження",
       completed: "Підтверджені",
@@ -425,7 +440,7 @@ function getLabels(locale: LocaleCode): Labels {
       price: "Ціна",
       surcharge: "доплата",
       recipientHidden: "Прихований отримувач",
-      recipientPending: "Отримувача не вибрано",
+      recipientPending: "Отримувача ще не призначено",
       provider: "Надавач",
       buyer: "Отримувач",
       points: "пункти",
@@ -438,8 +453,8 @@ function getLabels(locale: LocaleCode): Labels {
       searchSection: "Пошук і фільтри",
       states: {
         draft: "Чернетка",
-        available: "Опубліковано",
-        active: "Замовлено й активно",
+        available: "Доступний для замовлення",
+        active: "Замовлено",
         checked_in: "Прибуття зареєстровано",
         awaiting_confirmation: "Очікується підтвердження отримувача",
         confirmed_by_buyer: "Підтверджено отримувачем",
@@ -456,14 +471,17 @@ function getLabels(locale: LocaleCode): Labels {
     return {
       ...EN,
       titles: {
-        participants: "Angebote der Teilnehmer",
+        participants: "Alle Gutscheine",
+        mine: "Meine Gutscheine",
         received: "Meine Gutscheine",
-        provided: "Meine Angebote",
+        provided: "Bereitgestellte Gutscheine",
         archive: "Angebotsarchiv",
       },
       subtitles: {
         participants:
-          "Aktive und erfüllte Produkte, Dienstleistungen und private Angebote der ARCTor-Teilnehmer.",
+          "Verfügbare und erfüllte Gutscheine aller ARCTor-Teilnehmer.",
+        mine:
+          "Alle mit Ihrem Konto verbundenen bereitgestellten und erhaltenen Gutscheine.",
         received:
           "Von Ihrem Konto bestellte Gutscheine und der Stand ihrer Erfüllung.",
         provided:
@@ -473,11 +491,11 @@ function getLabels(locale: LocaleCode): Labels {
       },
       total: "Gutscheine",
       allOffers: "Alle Angebote",
-      activeOffers: "Aktive Angebote",
+      activeOffers: "Verfügbar",
       realizedOffers: "Erfüllte Angebote",
       realizedAt: "Erfüllt",
       realizedDate: "Datum der Erfüllung",
-      available: "Veröffentlicht",
+      available: "Zur Bestellung verfügbar",
       active: "Bestellt",
       awaiting: "Bestätigung ausstehend",
       completed: "Bestätigt",
@@ -505,7 +523,7 @@ function getLabels(locale: LocaleCode): Labels {
       price: "Preis",
       surcharge: "Zuzahlung",
       recipientHidden: "Verborgener Empfänger",
-      recipientPending: "Empfänger nicht ausgewählt",
+      recipientPending: "Empfänger noch nicht zugewiesen",
       provider: "Anbieter",
       buyer: "Empfänger",
       points: "Punkte",
@@ -518,8 +536,8 @@ function getLabels(locale: LocaleCode): Labels {
       searchSection: "Suche und Filter",
       states: {
         draft: "Entwurf",
-        available: "Veröffentlicht",
-        active: "Bestellt und aktiv",
+        available: "Zur Bestellung verfügbar",
+        active: "Bestellt",
         checked_in: "Ankunft registriert",
         awaiting_confirmation: "Bestätigung des Empfängers ausstehend",
         confirmed_by_buyer: "Vom Empfänger bestätigt",
@@ -536,14 +554,17 @@ function getLabels(locale: LocaleCode): Labels {
     return {
       ...EN,
       titles: {
-        participants: "Ofertas de participantes",
+        participants: "Todos los certificados",
+        mine: "Mis certificados",
         received: "Mis certificados",
-        provided: "Mis ofertas",
+        provided: "Certificados proporcionados",
         archive: "Archivo de ofertas",
       },
       subtitles: {
         participants:
-          "Productos, servicios y ofertas privadas activos y realizados por participantes de ARCTor.",
+          "Certificados disponibles y realizados por todos los participantes de ARCTor.",
+        mine:
+          "Todos los certificados proporcionados y recibidos vinculados a tu cuenta.",
         received:
           "Certificados solicitados por tu cuenta y el estado de su cumplimiento.",
         provided:
@@ -553,11 +574,11 @@ function getLabels(locale: LocaleCode): Labels {
       },
       total: "Certificados",
       allOffers: "Todas las ofertas",
-      activeOffers: "Ofertas activas",
+      activeOffers: "Disponibles",
       realizedOffers: "Ofertas realizadas",
       realizedAt: "Realizada",
       realizedDate: "Fecha de realización",
-      available: "Publicadas",
+      available: "Disponibles",
       active: "Solicitadas",
       awaiting: "Esperan confirmación",
       completed: "Confirmadas",
@@ -585,7 +606,7 @@ function getLabels(locale: LocaleCode): Labels {
       price: "Precio",
       surcharge: "pago adicional",
       recipientHidden: "Destinatario oculto",
-      recipientPending: "Destinatario no seleccionado",
+      recipientPending: "Destinatario aún no asignado",
       provider: "Proveedor",
       buyer: "Destinatario",
       points: "puntos",
@@ -598,8 +619,8 @@ function getLabels(locale: LocaleCode): Labels {
       searchSection: "Búsqueda y filtros",
       states: {
         draft: "Borrador",
-        available: "Publicada",
-        active: "Solicitada y activa",
+        available: "Disponible para solicitar",
+        active: "Solicitada",
         checked_in: "Llegada registrada",
         awaiting_confirmation: "Esperando confirmación del destinatario",
         confirmed_by_buyer: "Confirmada por el destinatario",
@@ -616,14 +637,17 @@ function getLabels(locale: LocaleCode): Labels {
     return {
       ...EN,
       titles: {
-        participants: "Nabídky účastníků",
+        participants: "Všechny certifikáty",
+        mine: "Moje certifikáty",
         received: "Moje certifikáty",
-        provided: "Moje nabídky",
+        provided: "Poskytnuté certifikáty",
         archive: "Archiv nabídek",
       },
       subtitles: {
         participants:
-          "Aktivní a realizované produkty, služby a soukromé nabídky účastníků ARCTor.",
+          "Dostupné a realizované certifikáty všech účastníků ARCTor.",
+        mine:
+          "Všechny poskytnuté a přijaté certifikáty spojené s vaším účtem.",
         received:
           "Certifikáty objednané vaším účtem a stav jejich splnění.",
         provided:
@@ -633,11 +657,11 @@ function getLabels(locale: LocaleCode): Labels {
       },
       total: "Certifikáty",
       allOffers: "Všechny nabídky",
-      activeOffers: "Aktivní nabídky",
+      activeOffers: "Dostupné",
       realizedOffers: "Realizované nabídky",
       realizedAt: "Realizováno",
       realizedDate: "Datum realizace",
-      available: "Publikované",
+      available: "Dostupné",
       active: "Objednané",
       awaiting: "Čekají na potvrzení",
       completed: "Potvrzené",
@@ -665,7 +689,7 @@ function getLabels(locale: LocaleCode): Labels {
       price: "Cena",
       surcharge: "doplatek",
       recipientHidden: "Skrytý příjemce",
-      recipientPending: "Příjemce nebyl vybrán",
+      recipientPending: "Příjemce zatím nebyl přiřazen",
       provider: "Poskytovatel",
       buyer: "Příjemce",
       points: "body",
@@ -678,8 +702,8 @@ function getLabels(locale: LocaleCode): Labels {
       searchSection: "Vyhledávání a filtry",
       states: {
         draft: "Koncept",
-        available: "Publikována",
-        active: "Objednána a aktivní",
+        available: "Dostupný k objednání",
+        active: "Objednáno",
         checked_in: "Příchod zaregistrován",
         awaiting_confirmation: "Čeká na potvrzení příjemce",
         confirmed_by_buyer: "Potvrzena příjemcem",
@@ -694,6 +718,105 @@ function getLabels(locale: LocaleCode): Labels {
 
   return EN;
 }
+
+type CertificateScopeCopy = {
+  readonly mine: string;
+  readonly all: string;
+  readonly roleAll: string;
+  readonly roleReceived: string;
+  readonly roleProvided: string;
+  readonly providerTypes: Record<
+    CertificateDashboardItem["providerType"],
+    string
+  >;
+};
+
+const CERTIFICATE_SCOPE_COPY: Record<LocaleCode, CertificateScopeCopy> = {
+  en: {
+    mine: "My certificates",
+    all: "All certificates",
+    roleAll: "All mine",
+    roleReceived: "Received",
+    roleProvided: "Provided",
+    providerTypes: {
+      personal: "Personal profile",
+      avatar: "Avatar",
+      organization: "Business",
+    },
+  },
+  ru: {
+    mine: "Мои сертификаты",
+    all: "Все сертификаты",
+    roleAll: "Все мои",
+    roleReceived: "Полученные",
+    roleProvided: "Предоставленные",
+    providerTypes: {
+      personal: "Личный профиль",
+      avatar: "Аватар",
+      organization: "Предприятие",
+    },
+  },
+  pl: {
+    mine: "Moje certyfikaty",
+    all: "Wszystkie certyfikaty",
+    roleAll: "Wszystkie moje",
+    roleReceived: "Otrzymane",
+    roleProvided: "Wydane",
+    providerTypes: {
+      personal: "Profil osobisty",
+      avatar: "Awatar",
+      organization: "Firma",
+    },
+  },
+  uk: {
+    mine: "Мої сертифікати",
+    all: "Усі сертифікати",
+    roleAll: "Усі мої",
+    roleReceived: "Отримані",
+    roleProvided: "Надані",
+    providerTypes: {
+      personal: "Особистий профіль",
+      avatar: "Аватар",
+      organization: "Підприємство",
+    },
+  },
+  de: {
+    mine: "Meine Gutscheine",
+    all: "Alle Gutscheine",
+    roleAll: "Alle meine",
+    roleReceived: "Erhalten",
+    roleProvided: "Bereitgestellt",
+    providerTypes: {
+      personal: "Persönliches Profil",
+      avatar: "Avatar",
+      organization: "Unternehmen",
+    },
+  },
+  es: {
+    mine: "Mis certificados",
+    all: "Todos los certificados",
+    roleAll: "Todos los míos",
+    roleReceived: "Recibidos",
+    roleProvided: "Proporcionados",
+    providerTypes: {
+      personal: "Perfil personal",
+      avatar: "Avatar",
+      organization: "Empresa",
+    },
+  },
+  cs: {
+    mine: "Moje certifikáty",
+    all: "Všechny certifikáty",
+    roleAll: "Všechny moje",
+    roleReceived: "Přijaté",
+    roleProvided: "Poskytnuté",
+    providerTypes: {
+      personal: "Osobní profil",
+      avatar: "Avatar",
+      organization: "Podnik",
+    },
+  },
+};
 
 function appendLocale(pathname: string, locale: LocaleCode): string {
   return locale === "en"
@@ -1108,16 +1231,14 @@ function CertificatePreview({
           {item.description?.trim() || item.title}
         </p>
 
-        {mode !== "provided" ? (
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span
-              className="rounded-lg px-2.5 py-1 text-[11px] font-semibold"
-              style={stateTone}
-            >
-              {displayedStateLabel}
-            </span>
-          </div>
-        ) : null}
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span
+            className="rounded-lg px-2.5 py-1 text-[11px] font-semibold"
+            style={stateTone}
+          >
+            {displayedStateLabel}
+          </span>
+        </div>
 
         <div className="mt-3 rounded-xl border border-[#e7eaf2] bg-[#f8fafc] px-3 py-3">
           <CertificateCommercialPrice
@@ -1137,7 +1258,9 @@ function CertificatePreview({
               href={item.providerHref}
               locale={locale}
             />
-            <div className="text-[10px] text-[#9ca3b8]">{labels.provider}</div>
+            <div className="text-[10px] text-[#9ca3b8]">
+              {CERTIFICATE_SCOPE_COPY[locale].providerTypes[item.providerType]}
+            </div>
           </div>
 
           {mode !== "participants" || isRealized ? (
@@ -1176,6 +1299,10 @@ function filterItems(
   items: readonly CertificateDashboardItem[],
   filter: FilterKey,
 ): CertificateDashboardItem[] {
+  if (filter === "draft") {
+    return items.filter((item) => item.state === "draft");
+  }
+
   if (filter === "product") {
     return items.filter((item) => item.objectKind === "product_type");
   }
@@ -1248,6 +1375,18 @@ function getFilterDefinitions(
     ];
   }
 
+  if (mode === "mine") {
+    return [
+      ["all", labels.total],
+      ["available", labels.available],
+      ["active", labels.active],
+      ["awaiting", labels.awaiting],
+      ["completed", labels.completed],
+      ["problem", labels.problems],
+      ["newest", labels.newest],
+    ];
+  }
+
   if (mode === "received") {
     return [
       ["all", labels.total],
@@ -1255,6 +1394,7 @@ function getFilterDefinitions(
       ["awaiting", labels.awaiting],
       ["completed", labels.completed],
       ["problem", labels.problems],
+      ["newest", labels.newest],
     ];
   }
 
@@ -1274,6 +1414,7 @@ function getFilterDefinitions(
     ["awaiting", labels.awaiting],
     ["completed", labels.realizedOffers],
     ["problem", labels.problems],
+    ["newest", labels.newest],
   ];
 }
 
@@ -1290,6 +1431,8 @@ export function CertificatesDashboardContent({
 }) {
   const locale = initialLocale;
   const labels = getLabels(locale);
+  const scopeCopy = CERTIFICATE_SCOPE_COPY[locale];
+  const isAllScope = mode === "participants";
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const [visibleCount, setVisibleCount] = useState(4);
 
@@ -1328,20 +1471,12 @@ export function CertificatesDashboardContent({
   const completionPercent = getPercent(completedCount, items.length);
 
   const action =
-    mode === "participants"
+    mode === "provided"
       ? {
-          href: appendLocale("/certificates?view=received", locale),
-          label: labels.myCertificates,
+          href: appendLocale("/offers/new", locale),
+          label: labels.createCertificate,
         }
-      : mode === "received" || mode === "archive"
-        ? {
-            href: appendLocale("/certificates?view=participants", locale),
-            label: labels.catalog,
-          }
-        : {
-            href: appendLocale("/offers/new", locale),
-            label: labels.createCertificate,
-          };
+      : null;
 
   const rightAction =
     mode === "provided"
@@ -1349,10 +1484,15 @@ export function CertificatesDashboardContent({
           href: appendLocale("/offers/new", locale),
           label: labels.createCertificate,
         }
-      : {
-          href: appendLocale("/certificates?view=participants", locale),
-          label: labels.findCertificate,
-        };
+      : mode === "participants"
+        ? {
+            href: appendLocale("/certificates?scope=mine", locale),
+            label: scopeCopy.mine,
+          }
+        : {
+            href: appendLocale("/certificates?scope=all", locale),
+            label: scopeCopy.all,
+          };
 
   const breakdownRows: ReadonlyArray<readonly [string, number]> =
     mode === "participants"
@@ -1361,13 +1501,19 @@ export function CertificatesDashboardContent({
           [labels.realizedOffers, completedCount],
           [labels.products, productsCount],
         ]
-      : mode === "received"
+      : mode === "mine"
         ? [
+            [labels.available, availableCount],
             [labels.active, activeCount],
-            [labels.awaiting, awaitingCount],
             [labels.completed, completedCount],
           ]
-        : mode === "archive"
+        : mode === "received"
+          ? [
+              [labels.active, activeCount],
+              [labels.awaiting, awaitingCount],
+              [labels.completed, completedCount],
+            ]
+          : mode === "archive"
           ? [
               [labels.products, productsCount],
               [labels.services, servicesCount],
@@ -1401,6 +1547,59 @@ export function CertificatesDashboardContent({
 
   return (
     <div className="p-5">
+      <div className="mb-4 inline-flex rounded-xl border border-[#dfe3f1] bg-white p-1 shadow-sm">
+        <Link
+          href={appendLocale("/certificates?scope=mine", locale)}
+          className={`rounded-lg px-4 py-2 text-[13px] font-semibold transition-all ${
+            !isAllScope
+              ? "bg-[#3b6ef8] text-white shadow-sm"
+              : "text-[#5a5f7a] hover:bg-[#f5f6fb]"
+          }`}
+        >
+          {scopeCopy.mine}
+        </Link>
+        <Link
+          href={appendLocale("/certificates?scope=all", locale)}
+          className={`rounded-lg px-4 py-2 text-[13px] font-semibold transition-all ${
+            isAllScope
+              ? "bg-[#3b6ef8] text-white shadow-sm"
+              : "text-[#5a5f7a] hover:bg-[#f5f6fb]"
+          }`}
+        >
+          {scopeCopy.all}
+        </Link>
+      </div>
+
+      {!isAllScope ? (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {[
+            ["mine", scopeCopy.roleAll, "/certificates?scope=mine"],
+            [
+              "received",
+              scopeCopy.roleReceived,
+              "/certificates?scope=mine&role=received",
+            ],
+            [
+              "provided",
+              scopeCopy.roleProvided,
+              "/certificates?scope=mine&role=provided",
+            ],
+          ].map(([roleMode, label, href]) => (
+            <Link
+              key={roleMode}
+              href={appendLocale(href, locale)}
+              className={`rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all ${
+                mode === roleMode || (mode === "archive" && roleMode === "mine")
+                  ? "bg-[#eef2ff] text-[#315bd0] ring-1 ring-[#c7d2fe]"
+                  : "border border-[rgba(0,0,0,0.07)] bg-white text-[#5a5f7a] hover:bg-[#f5f6fb]"
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
+      ) : null}
+
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-[20px] font-bold leading-tight text-[#1a1d2e]">
@@ -1410,13 +1609,15 @@ export function CertificatesDashboardContent({
             {labels.subtitles[mode]}
           </p>
         </div>
-        <Link
-          href={action.href}
-          className="flex w-fit items-center gap-1 rounded-lg border border-[#22c55e]/30 bg-[#ecfdf3] px-3 py-1.5 text-[12px] font-medium text-[#16a34a] transition-all hover:bg-[#dcfce7]"
-        >
-          <Plus size={12} />
-          {action.label}
-        </Link>
+        {action ? (
+          <Link
+            href={action.href}
+            className="flex w-fit items-center gap-1 rounded-lg border border-[#22c55e]/30 bg-[#ecfdf3] px-3 py-1.5 text-[12px] font-medium text-[#16a34a] transition-all hover:bg-[#dcfce7]"
+          >
+            <Plus size={12} />
+            {action.label}
+          </Link>
+        ) : null}
       </div>
 
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">

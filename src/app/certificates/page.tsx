@@ -25,6 +25,8 @@ type CertificatesPageProps = {
   readonly searchParams?: Promise<{
     readonly locale?: string | string[];
     readonly lang?: string | string[];
+    readonly scope?: string | string[];
+    readonly role?: string | string[];
     readonly view?: string | string[];
   }>;
 };
@@ -41,12 +43,27 @@ function firstParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function normalizeView(value: string | string[] | undefined): CertificateDashboardMode {
-  const normalized = firstParam(value)?.trim().toLowerCase();
+function normalizeView(
+  scopeValue: string | string[] | undefined,
+  roleValue: string | string[] | undefined,
+  legacyViewValue: string | string[] | undefined,
+): CertificateDashboardMode {
+  const scope = firstParam(scopeValue)?.trim().toLowerCase();
+  const role = firstParam(roleValue)?.trim().toLowerCase();
+  const legacyView = firstParam(legacyViewValue)?.trim().toLowerCase();
 
-  if (normalized === "received" || normalized === "buyer") return "received";
-  if (normalized === "provided" || normalized === "provider") return "provided";
-  if (normalized === "archive" || normalized === "archived") return "archive";
+  if (scope === "all") return "participants";
+
+  if (scope === "mine") {
+    if (role === "received" || role === "buyer") return "received";
+    if (role === "provided" || role === "provider") return "provided";
+    return "mine";
+  }
+
+  if (legacyView === "received" || legacyView === "buyer") return "received";
+  if (legacyView === "provided" || legacyView === "provider") return "provided";
+  if (legacyView === "archive" || legacyView === "archived") return "archive";
+  if (legacyView === "mine") return "mine";
   return "participants";
 }
 
@@ -59,36 +76,43 @@ function getAuthenticationMessage(
     Record<Exclude<CertificateDashboardMode, "participants">, string>
   > = {
     en: {
+      mine: "Sign in to see all certificates connected with your account.",
       received: "Sign in to see your received certificates.",
       provided: "Sign in to see your provided certificates.",
       archive: "Sign in to see your offer archive.",
     },
     ru: {
+      mine: "Войдите в учётную запись, чтобы увидеть все свои сертификаты.",
       received: "Войдите в учётную запись, чтобы увидеть полученные сертификаты.",
       provided: "Войдите в учётную запись, чтобы увидеть предоставленные сертификаты.",
       archive: "Войдите в учётную запись, чтобы открыть архив предложений.",
     },
     pl: {
+      mine: "Zaloguj się, aby zobaczyć wszystkie certyfikaty powiązane z Twoim kontem.",
       received: "Zaloguj się, aby zobaczyć otrzymane certyfikaty.",
       provided: "Zaloguj się, aby zobaczyć wydane certyfikaty.",
       archive: "Zaloguj się, aby zobaczyć archiwum ofert.",
     },
     uk: {
+      mine: "Увійдіть, щоб побачити всі сертифікати, пов’язані з вашим обліковим записом.",
       received: "Увійдіть, щоб побачити отримані сертифікати.",
       provided: "Увійдіть, щоб побачити надані сертифікати.",
       archive: "Увійдіть, щоб відкрити архів пропозицій.",
     },
     de: {
+      mine: "Melden Sie sich an, um alle mit Ihrem Konto verbundenen Gutscheine zu sehen.",
       received: "Melden Sie sich an, um erhaltene Gutscheine zu sehen.",
       provided: "Melden Sie sich an, um bereitgestellte Gutscheine zu sehen.",
       archive: "Melden Sie sich an, um das Angebotsarchiv zu sehen.",
     },
     es: {
+      mine: "Inicia sesión para ver todos los certificados vinculados a tu cuenta.",
       received: "Inicia sesión para ver los certificados recibidos.",
       provided: "Inicia sesión para ver los certificados proporcionados.",
       archive: "Inicia sesión para ver el archivo de ofertas.",
     },
     cs: {
+      mine: "Přihlaste se, abyste viděli všechny certifikáty spojené s vaším účtem.",
       received: "Přihlaste se, abyste viděli přijaté certifikáty.",
       provided: "Přihlaste se, abyste viděli poskytnuté certifikáty.",
       archive: "Přihlaste se, abyste viděli archiv nabídek.",
@@ -115,6 +139,7 @@ function toDashboardItem(
     description: certificate.description,
     objectKind: certificate.objectKind,
     providerName: certificate.providerDisplayName,
+    providerType: certificate.providerType,
     providerHref: certificate.providerPublicHref,
     providerImageUrl: certificate.providerImageUrl,
     productImageUrl: certificate.productImageUrl,
@@ -165,7 +190,11 @@ export default async function CertificatesPage({
   const locale = normalizeGiftCertificateLocale(
     resolvedSearchParams?.locale ?? resolvedSearchParams?.lang,
   );
-  const view = normalizeView(resolvedSearchParams?.view);
+  const view = normalizeView(
+    resolvedSearchParams?.scope,
+    resolvedSearchParams?.role,
+    resolvedSearchParams?.view,
+  );
 
   if (view === "participants") {
     const certificates = await listPublicGiftCertificates();
@@ -203,9 +232,13 @@ export default async function CertificatesPage({
         listBuyerGiftCertificates(actorContext.appUserId),
         listProviderGiftCertificates(actorContext.appUserId),
       ]);
-      certificates = deduplicateCertificates([...received, ...provided]).filter(
-        (certificate) => ARCHIVE_STATES.has(certificate.flowState),
-      );
+      const combined = deduplicateCertificates([...received, ...provided]);
+      certificates =
+        view === "archive"
+          ? combined.filter((certificate) =>
+              ARCHIVE_STATES.has(certificate.flowState),
+            )
+          : combined;
     }
 
     return (

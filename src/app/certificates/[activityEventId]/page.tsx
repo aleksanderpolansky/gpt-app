@@ -48,7 +48,6 @@ import { GiftCertificateFulfillmentConfirmation } from "./gift-certificate-fulfi
 import { GiftCertificateLocalDateTime } from "./gift-certificate-local-date-time";
 import { GiftCertificateQr } from "./gift-certificate-qr";
 import { OrderGiftCertificateButton } from "./order-gift-certificate-button";
-import { PublishGiftCertificateButton } from "../../gift-certificates/[activityEventId]/publish-gift-certificate-button";
 
 export const dynamic = "force-dynamic";
 
@@ -109,7 +108,7 @@ const OFFER_PAGE_COPY: Record<LocaleCode, OfferPageCopy> = {
     lockedTerms: "The terms of an ordered or completed offer are fixed.",
     immutableNotice: "This offer has already been ordered or completed. Its terms and public snapshot are fixed. Changes to the source object affect only future offers; create a new offer for new terms.",
     offerType: "ARCTor offer",
-    placed: "Published",
+    placed: "Available since",
     offer: "Offer",
     address: "Address",
     provider: "Provider",
@@ -144,7 +143,7 @@ const OFFER_PAGE_COPY: Record<LocaleCode, OfferPageCopy> = {
     lockedTerms: "Warunki zamówionej lub zrealizowanej oferty są zablokowane.",
     immutableNotice: "Ta oferta została już zamówiona lub zrealizowana. Jej warunki i publiczny zapis są stałe. Zmiany obiektu źródłowego dotyczą tylko przyszłych ofert; dla nowych warunków utwórz nową ofertę.",
     offerType: "Oferta ARCTor",
-    placed: "Opublikowano",
+    placed: "Dostępny od",
     offer: "Oferta",
     address: "Adres",
     provider: "Dostawca",
@@ -179,7 +178,7 @@ const OFFER_PAGE_COPY: Record<LocaleCode, OfferPageCopy> = {
     lockedTerms: "Условия заказанного или реализованного предложения зафиксированы.",
     immutableNotice: "Это предложение уже заказано или реализовано. Его условия и публичный снимок зафиксированы. Изменения исходного объекта повлияют только на будущие предложения; для новых условий создайте новое предложение.",
     offerType: "Предложение ARCTor",
-    placed: "Опубликовано",
+    placed: "Доступен с",
     offer: "Предложение",
     address: "Адрес",
     provider: "Предоставляющий",
@@ -214,7 +213,7 @@ const OFFER_PAGE_COPY: Record<LocaleCode, OfferPageCopy> = {
     lockedTerms: "Умови замовленої або реалізованої пропозиції зафіксовано.",
     immutableNotice: "Цю пропозицію вже замовлено або реалізовано. Її умови та публічний знімок зафіксовано. Зміни вихідного об’єкта впливають лише на майбутні пропозиції; для нових умов створіть нову пропозицію.",
     offerType: "Пропозиція ARCTor",
-    placed: "Опубліковано",
+    placed: "Доступний з",
     offer: "Пропозиція",
     address: "Адреса",
     provider: "Надавач",
@@ -249,7 +248,7 @@ const OFFER_PAGE_COPY: Record<LocaleCode, OfferPageCopy> = {
     lockedTerms: "Die Bedingungen eines bestellten oder abgeschlossenen Angebots sind festgeschrieben.",
     immutableNotice: "Dieses Angebot wurde bereits bestellt oder abgeschlossen. Bedingungen und öffentlicher Stand sind festgeschrieben. Änderungen am Quellobjekt gelten nur für künftige Angebote; für neue Bedingungen erstellen Sie ein neues Angebot.",
     offerType: "ARCTor-Angebot",
-    placed: "Veröffentlicht",
+    placed: "Verfügbar seit",
     offer: "Angebot",
     address: "Adresse",
     provider: "Anbieter",
@@ -284,7 +283,7 @@ const OFFER_PAGE_COPY: Record<LocaleCode, OfferPageCopy> = {
     lockedTerms: "Las condiciones de una oferta pedida o realizada están fijadas.",
     immutableNotice: "Esta oferta ya fue pedida o realizada. Sus condiciones y su versión pública están fijadas. Los cambios del objeto de origen solo afectan a ofertas futuras; cree una oferta nueva para condiciones nuevas.",
     offerType: "Oferta ARCTor",
-    placed: "Publicado",
+    placed: "Disponible desde",
     offer: "Oferta",
     address: "Dirección",
     provider: "Proveedor",
@@ -319,7 +318,7 @@ const OFFER_PAGE_COPY: Record<LocaleCode, OfferPageCopy> = {
     lockedTerms: "Podmínky objednané nebo dokončené nabídky jsou uzamčeny.",
     immutableNotice: "Tato nabídka již byla objednána nebo dokončena. Její podmínky a veřejný snímek jsou pevně dané. Změny zdrojového objektu ovlivní jen budoucí nabídky; pro nové podmínky vytvořte novou nabídku.",
     offerType: "Nabídka ARCTor",
-    placed: "Publikováno",
+    placed: "Dostupný od",
     offer: "Nabídka",
     address: "Adresa",
     provider: "Poskytovatel",
@@ -470,6 +469,24 @@ function buildOfferPageHref(
   return query ? `${pathname}?${query}` : pathname;
 }
 
+function buildCertificateListHref(
+  locale: LocaleCode,
+  scope: "mine" | "all",
+  role?: "received" | "provided",
+): string {
+  const params = new URLSearchParams({ scope });
+
+  if (role) {
+    params.set("role", role);
+  }
+
+  if (locale !== "en") {
+    params.set("locale", locale);
+  }
+
+  return `/certificates?${params.toString()}`;
+}
+
 function getHiddenRecipientLabel(locale: LocaleCode): string {
   const labels: Record<LocaleCode, string> = {
     en: "Hidden recipient",
@@ -581,14 +598,17 @@ export default async function CertificateCatalogDetailPage({
       ? certificate.recipientDisplayName
       : getHiddenRecipientLabel(locale)
     : null;
+  const backHref = isAccountProvider
+    ? buildCertificateListHref(locale, "mine", "provided")
+    : isRecipient
+      ? buildCertificateListHref(locale, "mine", "received")
+      : buildCertificateListHref(locale, "all");
 
   return (
     <main className="min-h-full bg-[#f5f6fb] text-[#1a1d2e]">
       <div className="p-5">
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <CertificateProfileNavLink
-            href={buildGiftCertificateLocaleHref("/certificates", locale)}
-          >
+          <CertificateProfileNavLink href={backHref}>
             {pageCopy.back}
           </CertificateProfileNavLink>
 
@@ -761,12 +781,7 @@ export default async function CertificateCatalogDetailPage({
             </div>
 
             <div className="mt-auto pt-5">
-              {certificate.lifecycleStatus === "draft" && isProviderManager ? (
-                <PublishGiftCertificateButton
-                  activityEventId={certificate.activityEventId}
-                  locale={locale}
-                />
-              ) : certificate.lifecycleStatus === "available" ? (
+              {certificate.lifecycleStatus === "available" ? (
                 viewer && !isAccountProvider ? (
                   <OrderGiftCertificateButton
                     activityEventId={certificate.activityEventId}

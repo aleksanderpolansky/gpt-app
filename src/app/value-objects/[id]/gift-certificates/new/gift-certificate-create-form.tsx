@@ -99,7 +99,7 @@ const COPY: Record<LocaleCode, Copy> = {
     eyebrow: "Gift certificate",
     title: "Create a gift certificate",
     intro:
-      "Set the validity period, usage conditions and the part of the ordinary price you are ready to give to the visitor. After saving, you can review the details and publish the certificate.",
+      "Set the validity period, usage conditions and the part of the ordinary price you are ready to give to the visitor. After creation, the certificate immediately becomes available for other ARCTor participants to order.",
     back: "Back to product or service",
     provider: "Provider",
     item: "Product or service",
@@ -147,18 +147,18 @@ const COPY: Record<LocaleCode, Copy> = {
     remainder: "Buyer will pay the remainder",
     externalPayment:
       "The remaining amount is paid to the provider outside ARCTor. Points confirm the visitor's right to the gift and are not transferred to the provider.",
-    create: "Save and review",
-    creating: "Saving…",
+    create: "Create available certificate",
+    creating: "Creating…",
     errorPrefix: "Could not create:",
-    saveError: "The certificate could not be saved. Check the entered data and try again.",
+    saveError: "The certificate could not be created and made available. Check the entered data and try again.",
     individualTimeSaveError:
-      "The certificate could not be saved with an individually arranged visit time. Refresh the page and try again.",
+      "The certificate could not be created with an individually arranged visit time and made available. Refresh the page and try again.",
   },
   pl: {
     eyebrow: "Bon podarunkowy",
     title: "Utwórz bon podarunkowy",
     intro:
-      "Ustaw okres ważności, warunki wykorzystania i część zwykłej ceny, którą chcesz podarować odwiedzającemu. Po zapisaniu sprawdzisz dane i opublikujesz bon.",
+      "Ustaw okres ważności, warunki wykorzystania i część zwykłej ceny, którą chcesz podarować odwiedzającemu. Po utworzeniu bon od razu będzie dostępny do zamówienia dla innych uczestników ARCTor.",
     back: "Wróć do produktu lub usługi",
     provider: "Dostawca",
     item: "Produkt lub usługa",
@@ -206,18 +206,18 @@ const COPY: Record<LocaleCode, Copy> = {
     remainder: "Kupujący dopłaci",
     externalPayment:
       "Pozostałą kwotę odwiedzający płaci dostawcy poza ARCTor. Punkty potwierdzają prawo do prezentu i nie są przekazywane dostawcy.",
-    create: "Zapisz i sprawdź",
-    creating: "Zapisywanie…",
+    create: "Utwórz dostępny bon",
+    creating: "Tworzenie…",
     errorPrefix: "Nie udało się utworzyć:",
-    saveError: "Nie udało się zapisać bonu. Sprawdź wprowadzone dane i spróbuj ponownie.",
+    saveError: "Nie udało się utworzyć bonu i udostępnić go do zamówienia. Sprawdź dane i spróbuj ponownie.",
     individualTimeSaveError:
-      "Nie udało się zapisać bonu z terminem ustalanym indywidualnie. Odśwież stronę i spróbuj ponownie.",
+      "Nie udało się utworzyć bonu z terminem ustalanym indywidualnie i udostępnić go do zamówienia. Odśwież stronę i spróbuj ponownie.",
   },
   ru: {
     eyebrow: "Подарочный сертификат",
     title: "Создать подарочный сертификат",
     intro:
-      "Укажите срок действия, условия использования и часть обычной стоимости, которую вы готовы подарить посетителю. После сохранения вы сможете проверить данные и опубликовать сертификат.",
+      "Укажите срок действия, условия использования и часть обычной стоимости, которую вы готовы подарить посетителю. После создания сертификат сразу станет доступен для заказа другим участникам ARCTor.",
     back: "Назад к товару или услуге",
     provider: "Предоставляющий",
     item: "Товар или услуга",
@@ -265,18 +265,18 @@ const COPY: Record<LocaleCode, Copy> = {
     remainder: "Покупатель доплатит",
     externalPayment:
       "Оставшаяся сумма оплачивается предоставляющему вне ARCTor. Пункты подтверждают право посетителя на подарок и не переводятся предоставляющему.",
-    create: "Сохранить и проверить",
-    creating: "Сохраняется…",
+    create: "Создать доступный сертификат",
+    creating: "Создание…",
     errorPrefix: "Не удалось создать:",
-    saveError: "Не удалось сохранить сертификат. Проверьте введённые данные и повторите попытку.",
+    saveError: "Не удалось создать сертификат и сделать его доступным для заказа. Проверьте данные и повторите попытку.",
     individualTimeSaveError:
-      "Не удалось сохранить сертификат с индивидуальным согласованием времени. Обновите страницу и повторите попытку.",
+      "Не удалось создать сертификат с индивидуальным согласованием времени и сделать его доступным. Обновите страницу и повторите попытку.",
   },
   uk: {
     eyebrow: "Подарунковий сертифікат",
     title: "Створити подарунковий сертифікат",
     intro:
-      "Укажіть строк дії, умови використання та частину звичайної вартості, яку ви готові подарувати відвідувачу. Після збереження ви зможете перевірити дані й опублікувати сертифікат.",
+      "Укажіть строк дії, умови використання та частину звичайної вартості, яку ви готові подарувати відвідувачу. Після створення сертифікат одразу стане доступним для замовлення іншим учасникам ARCTor.",
     back: "Назад до товару або послуги",
     provider: "Надавач",
     item: "Товар або послуга",
@@ -324,18 +324,18 @@ const COPY: Record<LocaleCode, Copy> = {
     remainder: "Покупець доплатить",
     externalPayment:
       "Залишок сплачується надавачу поза ARCTor. Пункти підтверджують право відвідувача на подарунок і не переказуються надавачу.",
-    create: "Зберегти й перевірити",
-    creating: "Збереження…",
+    create: "Створити доступний сертифікат",
+    creating: "Створення…",
     errorPrefix: "Не вдалося створити:",
-    saveError: "Не вдалося зберегти сертифікат. Перевірте введені дані та повторіть спробу.",
+    saveError: "Не вдалося створити сертифікат і зробити його доступним для замовлення. Перевірте дані та повторіть спробу.",
     individualTimeSaveError:
-      "Не вдалося зберегти сертифікат з індивідуальним узгодженням часу. Оновіть сторінку та повторіть спробу.",
+      "Не вдалося створити сертифікат з індивідуальним узгодженням часу та зробити його доступним. Оновіть сторінку та повторіть спробу.",
   },
   de: {
     eyebrow: "Geschenkgutschein",
     title: "Geschenkgutschein erstellen",
     intro:
-      "Legen Sie Gültigkeit, Nutzungsbedingungen und den Teil des regulären Preises fest, den Sie dem Besucher schenken möchten. Nach dem Speichern können Sie die Angaben prüfen und den Gutschein veröffentlichen.",
+      "Legen Sie Gültigkeit, Nutzungsbedingungen und den Teil des regulären Preises fest, den Sie dem Besucher schenken möchten. Nach der Erstellung ist der Gutschein sofort für andere ARCTor-Teilnehmer bestellbar.",
     back: "Zurück zum Produkt oder zur Dienstleistung",
     provider: "Anbieter",
     item: "Produkt oder Dienstleistung",
@@ -383,18 +383,18 @@ const COPY: Record<LocaleCode, Copy> = {
     remainder: "Der Käufer zahlt den Rest",
     externalPayment:
       "Der Restbetrag wird außerhalb von ARCTor an den Anbieter gezahlt. Punkte bestätigen das Recht auf das Geschenk und werden nicht an den Anbieter übertragen.",
-    create: "Speichern und prüfen",
-    creating: "Wird gespeichert…",
+    create: "Verfügbaren Gutschein erstellen",
+    creating: "Wird erstellt…",
     errorPrefix: "Erstellung fehlgeschlagen:",
-    saveError: "Der Gutschein konnte nicht gespeichert werden. Prüfen Sie die eingegebenen Daten und versuchen Sie es erneut.",
+    saveError: "Der Gutschein konnte nicht erstellt und zur Bestellung freigegeben werden. Prüfen Sie die Daten und versuchen Sie es erneut.",
     individualTimeSaveError:
-      "Der Gutschein mit individuell vereinbarter Besuchszeit konnte nicht gespeichert werden. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "Der Gutschein mit individuell vereinbarter Besuchszeit konnte nicht erstellt und verfügbar gemacht werden. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
   },
   es: {
     eyebrow: "Certificado de regalo",
     title: "Crear certificado de regalo",
     intro:
-      "Indique el período de validez, las condiciones de uso y la parte del precio habitual que desea regalar al visitante. Después de guardar podrá revisar los datos y publicar el certificado.",
+      "Indique el período de validez, las condiciones de uso y la parte del precio habitual que desea regalar al visitante. Después de crearlo, el certificado quedará disponible de inmediato para que otros participantes de ARCTor lo soliciten.",
     back: "Volver al producto o servicio",
     provider: "Proveedor",
     item: "Producto o servicio",
@@ -442,18 +442,18 @@ const COPY: Record<LocaleCode, Copy> = {
     remainder: "El comprador pagará el resto",
     externalPayment:
       "El importe restante se paga al proveedor fuera de ARCTor. Los puntos confirman el derecho al regalo y no se transfieren al proveedor.",
-    create: "Guardar y revisar",
-    creating: "Guardando…",
+    create: "Crear certificado disponible",
+    creating: "Creando…",
     errorPrefix: "No se pudo crear:",
-    saveError: "No se pudo guardar el certificado. Revise los datos introducidos e inténtelo de nuevo.",
+    saveError: "No se pudo crear el certificado y dejarlo disponible. Revise los datos e inténtelo de nuevo.",
     individualTimeSaveError:
-      "No se pudo guardar el certificado con la hora de visita acordada individualmente. Actualice la página e inténtelo de nuevo.",
+      "No se pudo crear el certificado con la hora de visita acordada individualmente y dejarlo disponible. Actualice la página e inténtelo de nuevo.",
   },
   cs: {
     eyebrow: "Dárkový certifikát",
     title: "Vytvořit dárkový certifikát",
     intro:
-      "Nastavte dobu platnosti, podmínky využití a část běžné ceny, kterou chcete návštěvníkovi darovat. Po uložení můžete údaje zkontrolovat a certifikát zveřejnit.",
+      "Nastavte dobu platnosti, podmínky využití a část běžné ceny, kterou chcete návštěvníkovi darovat. Po vytvoření bude certifikát okamžitě dostupný k objednání ostatním účastníkům ARCTor.",
     back: "Zpět k produktu nebo službě",
     provider: "Poskytovatel",
     item: "Produkt nebo služba",
@@ -501,12 +501,12 @@ const COPY: Record<LocaleCode, Copy> = {
     remainder: "Kupující doplatí",
     externalPayment:
       "Zbývající částka se platí poskytovateli mimo ARCTor. Body potvrzují nárok na dárek a poskytovateli se nepřevádějí.",
-    create: "Uložit a zkontrolovat",
-    creating: "Ukládání…",
+    create: "Vytvořit dostupný certifikát",
+    creating: "Vytváření…",
     errorPrefix: "Nepodařilo se vytvořit:",
-    saveError: "Certifikát se nepodařilo uložit. Zkontrolujte zadané údaje a zkuste to znovu.",
+    saveError: "Certifikát se nepodařilo vytvořit a zpřístupnit k objednání. Zkontrolujte údaje a zkuste to znovu.",
     individualTimeSaveError:
-      "Certifikát s individuálně domluveným časem návštěvy se nepodařilo uložit. Obnovte stránku a zkuste to znovu.",
+      "Certifikát s individuálně domluveným časem návštěvy se nepodařilo vytvořit a zpřístupnit. Obnovte stránku a zkuste to znovu.",
   },
 
 };
@@ -792,20 +792,49 @@ export function GiftCertificateCreateForm({
 
       const data = (await response.json()) as CreateResponse;
 
-      if (!response.ok || !data.ok || !data.redirectUrl) {
+      if (
+        !response.ok ||
+        !data.ok ||
+        !data.activityEventId ||
+        !data.redirectUrl
+      ) {
         const technicalCode =
           data.errorCode === "PGC3B_SERVICE_REQUIRES_EXACT_SCHEDULE" ||
           data.error === "PGC3B_SERVICE_REQUIRES_EXACT_SCHEDULE"
             ? "PGC3B_SERVICE_REQUIRES_EXACT_SCHEDULE"
             : `HTTP ${response.status}`;
 
-        console.error("Gift certificate draft save failed", {
+        console.error("Gift certificate creation failed", {
           status: response.status,
           error: data.error,
           errorCode: data.errorCode,
         });
 
         throw new Error(technicalCode);
+      }
+
+      const publishResponse = await fetch(
+        `/api/gift-certificates/${data.activityEventId}/publish`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ locale }),
+        },
+      );
+      const publishData = (await publishResponse.json()) as CreateResponse;
+
+      if (!publishResponse.ok || !publishData.ok) {
+        console.error("Gift certificate availability activation failed", {
+          status: publishResponse.status,
+          error: publishData.error,
+          errorCode: publishData.errorCode,
+          activityEventId: data.activityEventId,
+        });
+
+        throw new Error(`PUBLISH_HTTP_${publishResponse.status}`);
       }
 
       setIdempotencyKey(makeIdempotencyKey());
