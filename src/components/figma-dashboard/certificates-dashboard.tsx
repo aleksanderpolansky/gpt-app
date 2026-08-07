@@ -77,7 +77,7 @@ export type CertificateDashboardItem = {
 
 type FilterKey =
   | "all"
-  | "draft"
+  | "hidden"
   | "product"
   | "service"
   | "newest"
@@ -94,6 +94,7 @@ type Labels = {
   readonly allOffers: string;
   readonly activeOffers: string;
   readonly realizedOffers: string;
+  readonly hiddenOffers: string;
   readonly realizedAt: string;
   readonly realizedDate: string;
   readonly available: string;
@@ -162,6 +163,7 @@ const EN: Labels = {
   allOffers: "All offers",
   activeOffers: "Available",
   realizedOffers: "Realized offers",
+  hiddenOffers: "Hidden offers",
   realizedAt: "Realized",
   realizedDate: "Realization date",
   available: "Available",
@@ -204,7 +206,7 @@ const EN: Labels = {
   service: "Service",
   searchSection: "Search and filters",
   states: {
-    draft: "Draft",
+    draft: "Hidden",
     available: "Available to order",
     active: "Ordered and active",
     checked_in: "Arrival registered",
@@ -243,6 +245,7 @@ const RU: Labels = {
   allOffers: "Все предложения",
   activeOffers: "Доступные",
   realizedOffers: "Реализованные предложения",
+  hiddenOffers: "Скрытые предложения",
   realizedAt: "Реализовано",
   realizedDate: "Дата реализации",
   available: "Доступные",
@@ -285,7 +288,7 @@ const RU: Labels = {
   service: "Услуга",
   searchSection: "Поиск и фильтры",
   states: {
-    draft: "Черновик",
+    draft: "Скрыто",
     available: "Доступен для заказа",
     active: "Заказан",
     checked_in: "Приход зарегистрирован",
@@ -324,6 +327,7 @@ const PL: Labels = {
   allOffers: "Wszystkie oferty",
   activeOffers: "Dostępne",
   realizedOffers: "Zrealizowane oferty",
+  hiddenOffers: "Ukryte oferty",
   realizedAt: "Zrealizowano",
   realizedDate: "Data realizacji",
   available: "Dostępne",
@@ -366,7 +370,7 @@ const PL: Labels = {
   service: "Usługa",
   searchSection: "Wyszukiwanie i filtry",
   states: {
-    draft: "Szkic",
+    draft: "Ukryta",
     available: "Dostępny do zamówienia",
     active: "Zamówiony",
     checked_in: "Przybycie zarejestrowane",
@@ -410,6 +414,7 @@ function getLabels(locale: LocaleCode): Labels {
       allOffers: "Усі пропозиції",
       activeOffers: "Доступні",
       realizedOffers: "Реалізовані пропозиції",
+      hiddenOffers: "Приховані пропозиції",
       realizedAt: "Реалізовано",
       realizedDate: "Дата реалізації",
       available: "Доступні",
@@ -452,7 +457,7 @@ function getLabels(locale: LocaleCode): Labels {
       service: "Послуга",
       searchSection: "Пошук і фільтри",
       states: {
-        draft: "Чернетка",
+        draft: "Приховано",
         available: "Доступний для замовлення",
         active: "Замовлено",
         checked_in: "Прибуття зареєстровано",
@@ -493,6 +498,7 @@ function getLabels(locale: LocaleCode): Labels {
       allOffers: "Alle Angebote",
       activeOffers: "Verfügbar",
       realizedOffers: "Erfüllte Angebote",
+      hiddenOffers: "Ausgeblendete Angebote",
       realizedAt: "Erfüllt",
       realizedDate: "Datum der Erfüllung",
       available: "Zur Bestellung verfügbar",
@@ -535,7 +541,7 @@ function getLabels(locale: LocaleCode): Labels {
       service: "Dienstleistung",
       searchSection: "Suche und Filter",
       states: {
-        draft: "Entwurf",
+        draft: "Ausgeblendet",
         available: "Zur Bestellung verfügbar",
         active: "Bestellt",
         checked_in: "Ankunft registriert",
@@ -576,6 +582,7 @@ function getLabels(locale: LocaleCode): Labels {
       allOffers: "Todas las ofertas",
       activeOffers: "Disponibles",
       realizedOffers: "Ofertas realizadas",
+      hiddenOffers: "Ofertas ocultas",
       realizedAt: "Realizada",
       realizedDate: "Fecha de realización",
       available: "Disponibles",
@@ -618,7 +625,7 @@ function getLabels(locale: LocaleCode): Labels {
       service: "Servicio",
       searchSection: "Búsqueda y filtros",
       states: {
-        draft: "Borrador",
+        draft: "Oculta",
         available: "Disponible para solicitar",
         active: "Solicitada",
         checked_in: "Llegada registrada",
@@ -659,6 +666,7 @@ function getLabels(locale: LocaleCode): Labels {
       allOffers: "Všechny nabídky",
       activeOffers: "Dostupné",
       realizedOffers: "Realizované nabídky",
+      hiddenOffers: "Skryté nabídky",
       realizedAt: "Realizováno",
       realizedDate: "Datum realizace",
       available: "Dostupné",
@@ -701,7 +709,7 @@ function getLabels(locale: LocaleCode): Labels {
       service: "Služba",
       searchSection: "Vyhledávání a filtry",
       states: {
-        draft: "Koncept",
+        draft: "Skryto",
         available: "Dostupný k objednání",
         active: "Objednáno",
         checked_in: "Příchod zaregistrován",
@@ -1212,18 +1220,20 @@ function CertificatePreview({
           ) : null}
         </div>
 
-        <div className="mt-1.5 flex w-full justify-start pl-1">
-          <CertificateShareButton
-            locale={locale}
-            title={item.title}
-            description={item.description}
-            href={item.shareHref}
-            providerName={item.providerName}
-            pointsPrice={item.pointsPrice}
-            moneyRemainder={item.moneyRemainder}
-            currency={item.currency}
-          />
-        </div>
+        {item.state !== "draft" ? (
+          <div className="mt-1.5 flex w-full justify-start pl-1">
+            <CertificateShareButton
+              locale={locale}
+              title={item.title}
+              description={item.description}
+              href={item.shareHref}
+              providerName={item.providerName}
+              pointsPrice={item.pointsPrice}
+              moneyRemainder={item.moneyRemainder}
+              currency={item.currency}
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className="min-w-0 flex-1">
@@ -1299,7 +1309,7 @@ function filterItems(
   items: readonly CertificateDashboardItem[],
   filter: FilterKey,
 ): CertificateDashboardItem[] {
-  if (filter === "draft") {
+  if (filter === "hidden") {
     return items.filter((item) => item.state === "draft");
   }
 
@@ -1379,6 +1389,7 @@ function getFilterDefinitions(
     return [
       ["all", labels.total],
       ["available", labels.available],
+      ["hidden", labels.hiddenOffers],
       ["active", labels.active],
       ["awaiting", labels.awaiting],
       ["completed", labels.completed],
@@ -1410,6 +1421,7 @@ function getFilterDefinitions(
   return [
     ["all", labels.allOffers],
     ["available", labels.activeOffers],
+    ["hidden", labels.hiddenOffers],
     ["active", labels.active],
     ["awaiting", labels.awaiting],
     ["completed", labels.realizedOffers],
@@ -1456,6 +1468,7 @@ export function CertificatesDashboardContent({
   const availableCount = items.filter(
     (item) => item.state === "available",
   ).length;
+  const hiddenCount = items.filter((item) => item.state === "draft").length;
   const activeCount = items.filter((item) =>
     ["active", "checked_in"].includes(item.state),
   ).length;
@@ -1619,7 +1632,7 @@ export function CertificatesDashboardContent({
             <KpiCard
               label={labels.allOffers}
               value={String(items.length)}
-              sub={`${labels.activeOffers}: ${availableCount} · ${labels.realizedOffers}: ${completedCount}`}
+              sub={`${labels.activeOffers}: ${availableCount} · ${labels.hiddenOffers}: ${hiddenCount} · ${labels.realizedOffers}: ${completedCount}`}
               accent="#3b6ef8"
               icon={Star}
             />

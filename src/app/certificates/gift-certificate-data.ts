@@ -804,7 +804,6 @@ export async function listProviderGiftCertificates(
     .from("activity_gift_certificate_terms")
     .select(TERMS_SELECT)
     .eq("provider_owner_user_id", providerOwnerUserId)
-    .neq("lifecycle_status", "draft")
     .order("updated_at", { ascending: false })
     .limit(500);
 

@@ -43,6 +43,10 @@ import {
   getGiftCertificateCatalogItem,
   type GiftCertificateCatalogItem,
 } from "../gift-certificate-data";
+import {
+  CertificateEditToolbar,
+  CertificateVisibilityButton,
+} from "./certificate-edit-toolbar";
 import { CertificateTermsEditor } from "./certificate-terms-editor";
 import { GiftCertificateFulfillmentConfirmation } from "./gift-certificate-fulfillment-confirmation";
 import { GiftCertificateLocalDateTime } from "./gift-certificate-local-date-time";
@@ -501,6 +505,21 @@ function getHiddenRecipientLabel(locale: LocaleCode): string {
   return labels[locale];
 }
 
+
+function getHiddenOfferStatusLabel(locale: LocaleCode): string {
+  const labels: Record<LocaleCode, string> = {
+    en: "Hidden",
+    pl: "Ukryta",
+    ru: "Скрыто",
+    uk: "Приховано",
+    de: "Ausgeblendet",
+    es: "Oculta",
+    cs: "Skryto",
+  };
+
+  return labels[locale];
+}
+
 function formatPlacedDate(value: string | null, locale: LocaleCode): string {
   if (!value) return "—";
 
@@ -603,28 +622,51 @@ export default async function CertificateCatalogDetailPage({
     : isRecipient
       ? buildCertificateListHref(locale, "mine", "received")
       : buildCertificateListHref(locale, "all");
+  const offerStatusLabel =
+    certificate.lifecycleStatus === "draft"
+      ? getHiddenOfferStatusLabel(locale)
+      : getGiftCertificateStatusLabel(certificate.lifecycleStatus, copy);
 
   return (
     <main className="min-h-full bg-[#f5f6fb] text-[#1a1d2e]">
       <div className="p-5">
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <CertificateProfileNavLink href={backHref}>
-            {pageCopy.back}
-          </CertificateProfileNavLink>
+        {editMode && isProviderManager ? (
+          <CertificateEditToolbar
+            viewHref={viewHref}
+            activityEventId={certificate.activityEventId}
+            locale={locale}
+            lifecycleStatus={
+              certificate.lifecycleStatus === "draft" ? "draft" : "available"
+            }
+          />
+        ) : (
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <CertificateProfileNavLink href={backHref}>
+              {pageCopy.back}
+            </CertificateProfileNavLink>
 
-          {isProviderManager ? (
-            canEditOfferTerms ? (
-              <CertificateProfileNavLink href={editMode ? viewHref : editHref}>
-                {editMode ? pageCopy.viewMode : pageCopy.editMode}
-              </CertificateProfileNavLink>
-            ) : (
-              <CertificateLockedEditButton
-                label={pageCopy.editMode}
-                message={pageCopy.immutableNotice}
+            {isProviderManager ? (
+              canEditOfferTerms ? (
+                <CertificateProfileNavLink href={editHref}>
+                  {pageCopy.editMode}
+                </CertificateProfileNavLink>
+              ) : (
+                <CertificateLockedEditButton
+                  label={pageCopy.editMode}
+                  message={pageCopy.immutableNotice}
+                />
+              )
+            ) : null}
+
+            {isProviderManager && certificate.lifecycleStatus === "draft" ? (
+              <CertificateVisibilityButton
+                activityEventId={certificate.activityEventId}
+                locale={locale}
+                lifecycleStatus="draft"
               />
-            )
-          ) : null}
-        </div>
+            ) : null}
+          </div>
+        )}
 
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -682,16 +724,18 @@ export default async function CertificateCatalogDetailPage({
                     {pageCopy.offerType}
                   </div>
                 </div>
-                <CertificateShareButton
-                  locale={locale}
-                  title={certificate.title}
-                  description={certificate.description}
-                  href={shareHref}
-                  providerName={certificate.providerDisplayName}
-                  pointsPrice={certificate.pointsPrice}
-                  moneyRemainder={certificate.moneyRemainder}
-                  currency={certificate.providerCurrency}
-                />
+                {isPubliclyShareable ? (
+                  <CertificateShareButton
+                    locale={locale}
+                    title={certificate.title}
+                    description={certificate.description}
+                    href={shareHref}
+                    providerName={certificate.providerDisplayName}
+                    pointsPrice={certificate.pointsPrice}
+                    moneyRemainder={certificate.moneyRemainder}
+                    currency={certificate.providerCurrency}
+                  />
+                ) : null}
               </div>
             </div>
           </CertificateProfileTopCard>
@@ -774,7 +818,7 @@ export default async function CertificateCatalogDetailPage({
               />
             </div>
             <div className="mt-4 rounded-xl bg-[#f5f7ff] px-3 py-2 text-[12px] font-medium text-[#42507a]">
-              {pageCopy.status}: {getGiftCertificateStatusLabel(certificate.lifecycleStatus, copy)}
+              {pageCopy.status}: {offerStatusLabel}
             </div>
             <div className="mt-3 text-[12px] leading-5 text-[#7c8099]">
               {getGiftCertificateDeliveryLabel(certificate.deliveryMode, copy)}
@@ -794,7 +838,7 @@ export default async function CertificateCatalogDetailPage({
                 )
               ) : (
                 <div className="text-[13px] font-semibold text-[#42507a]">
-                  {getGiftCertificateStatusLabel(certificate.lifecycleStatus, copy)}
+                  {offerStatusLabel}
                 </div>
               )}
             </div>
@@ -934,7 +978,7 @@ export default async function CertificateCatalogDetailPage({
           <div className="grid items-stretch gap-4 lg:auto-rows-fr lg:grid-cols-4">
             <CertificateProfileDirectionCard
               label={pageCopy.status}
-              value={getGiftCertificateStatusLabel(certificate.lifecycleStatus, copy)}
+              value={offerStatusLabel}
               color="#3b6ef8"
               sub={getGiftCertificateDeliveryLabel(certificate.deliveryMode, copy)}
             />
