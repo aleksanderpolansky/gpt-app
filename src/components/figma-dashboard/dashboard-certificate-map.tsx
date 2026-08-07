@@ -424,7 +424,7 @@ export function DashboardCertificateMap({
 
       <div
         ref={containerRef}
-        className="h-[320px] w-full overflow-hidden rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#eef2ff] xl:h-[360px]"
+        className="relative z-0 isolate h-[320px] w-full overflow-hidden rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#eef2ff] xl:h-[360px]"
       />
 
       <div className="text-[9px] leading-4 text-[#9ca3b8]">
