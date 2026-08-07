@@ -9,16 +9,20 @@ import {
   type ReactNode,
 } from "react";
 import {
+  Activity,
+  ArrowLeftRight,
+  Building2,
+  CalendarDays,
   ChevronDown,
   ChevronRight,
-  Clock,
-  Globe2,
-  Heart,
+  ClipboardList,
+  Eye,
+  Gift,
   LayoutDashboard,
   Menu,
   Plus,
-  ShoppingBag,
-  Wallet,
+  UserRoundCog,
+  Users,
 } from "lucide-react";
 
 import {
@@ -289,6 +293,7 @@ function SidebarMainItem({
   return (
     <a
       href={href}
+      aria-current={active ? "page" : undefined}
       className={baseClassName}
     >
       {content}
@@ -301,11 +306,13 @@ function ExpandableSidebarItem({
   label,
   children,
   defaultOpen,
+  active,
 }: {
   readonly icon: IconComponent;
   readonly label: string;
   readonly children: ReactNode;
   readonly defaultOpen?: boolean;
+  readonly active?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen ?? false);
 
@@ -313,11 +320,19 @@ function ExpandableSidebarItem({
     <div>
       <button
         type="button"
+        aria-expanded={open}
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-semibold text-[#4a4f6a] transition-all hover:bg-gray-50 hover:text-[#1a1d2e]"
+        className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-semibold transition-all ${
+          active
+            ? "bg-[#eef2ff] text-[#3b6ef8]"
+            : "text-[#4a4f6a] hover:bg-gray-50 hover:text-[#1a1d2e]"
+        }`}
       >
-        <Icon size={16} className="text-[#7c8099]" />
-        <span className="flex-1 text-left">{label}</span>
+        <Icon
+          size={16}
+          className={active ? "text-[#3b6ef8]" : "text-[#7c8099]"}
+        />
+        <span className="min-w-0 flex-1 truncate text-left">{label}</span>
         {open ? (
           <ChevronDown size={13} className="text-[#b0b4c8]" />
         ) : (
@@ -327,6 +342,71 @@ function ExpandableSidebarItem({
 
       {open ? <div className="mt-0.5">{children}</div> : null}
     </div>
+  );
+}
+
+function ExpandableSidebarLinkItem({
+  icon: Icon,
+  label,
+  href,
+  children,
+  defaultOpen,
+  active,
+  current,
+}: {
+  readonly icon: IconComponent;
+  readonly label: string;
+  readonly href: string;
+  readonly children: ReactNode;
+  readonly defaultOpen?: boolean;
+  readonly active?: boolean;
+  readonly current?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen ?? false);
+
+  return (
+    <div>
+      <div
+        className={`flex w-full items-center rounded-lg text-[13px] font-semibold transition-all ${
+          active
+            ? "bg-[#eef2ff] text-[#3b6ef8]"
+            : "text-[#4a4f6a] hover:bg-gray-50 hover:text-[#1a1d2e]"
+        }`}
+      >
+        <a
+          href={href}
+          aria-current={current ? "page" : undefined}
+          className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2"
+        >
+          <Icon
+            size={16}
+            className={active ? "text-[#3b6ef8]" : "text-[#7c8099]"}
+          />
+          <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+        </a>
+
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-label={label}
+          onClick={() => setOpen(!open)}
+          className="mr-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-[#b0b4c8] transition-colors hover:bg-white/70 hover:text-[#3b6ef8]"
+        >
+          {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+        </button>
+      </div>
+
+      {open ? <div className="mt-0.5">{children}</div> : null}
+    </div>
+  );
+}
+
+function SidebarDivider() {
+  return (
+    <div
+      aria-hidden="true"
+      className="mx-3 my-2 h-px bg-[rgba(0,0,0,0.06)]"
+    />
   );
 }
 
@@ -555,7 +635,7 @@ function ProfileNavigationTreeItem({
     <a
       href={href}
       title={profile.displayName}
-      className="group ml-12 flex min-w-0 items-center gap-2 rounded-md py-1.5 pl-2 pr-2 text-[11.5px] font-normal text-[#7c8099] transition-all hover:bg-gray-50 hover:text-[#1a1d2e]"
+      className="group ml-9 flex min-w-0 items-center gap-2 rounded-md py-1.5 pl-2 pr-2 text-[11.5px] font-normal text-[#7c8099] transition-all hover:bg-gray-50 hover:text-[#1a1d2e]"
     >
       {profile.imageUrl ? (
         <img
@@ -601,116 +681,28 @@ export function GlobalSidebar({
 }: {
   readonly className?: string;
 }) {
-  const [organizations, setOrganizations] = useState<SidebarOrganization[]>([]);
-  const [isLoadingOrganizations, setIsLoadingOrganizations] = useState(false);
-  const [organizationsError, setOrganizationsError] = useState<string | null>(null);
-  const [isCreatingBusiness, setIsCreatingBusiness] = useState(false);
   const [profiles, setProfiles] = useState<SidebarProfile[]>([]);
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
   const [profilesError, setProfilesError] = useState<string | null>(null);
+  const [currentPathname, setCurrentPathname] = useState("");
+  const [currentSearch, setCurrentSearch] = useState("");
+
   const t = useNavigationTranslator();
   const locale = useInterfaceLocale();
   const certificateView = useUnifiedCertificateView();
   const localeHref = (pathname: string) => buildLocaleAwareHref(pathname, locale);
 
-  async function createBusinessAndOpenEditor() {
-    if (isCreatingBusiness) {
-      return;
-    }
-
-    setIsCreatingBusiness(true);
-
-    try {
-      const response = await fetch("/api/organizations/draft", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-        body: JSON.stringify({
-          organizationName: getDraftOrganizationName(locale),
-          organizationType: "private_business",
-          locale,
-        }),
-      });
-
-      const data = (await response.json()) as OrganizationCreateResponse;
-
-      if (!response.ok || !data.ok || !data.organization?.id) {
-        throw new Error(data.error ?? t("navigation.businessesLoadError"));
-      }
-
-      window.location.href = buildLocaleAwareHref(
-        `/organizations/${encodeURIComponent(data.organization.id)}/edit`,
-        locale,
-      );
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error && error.message
-          ? error.message
-          : t("navigation.businessesLoadError");
-
-      window.alert(errorMessage);
-      setIsCreatingBusiness(false);
-    }
-  }
-
-  function handleCreateBusinessAction(event: MouseEvent<HTMLButtonElement>) {
-    event.preventDefault();
-    event.stopPropagation();
-    void createBusinessAndOpenEditor();
-  }
-
-  function handleCreateBusinessLink(event: MouseEvent<HTMLAnchorElement>) {
-    event.preventDefault();
-    void createBusinessAndOpenEditor();
-  }
-
   useEffect(() => {
-    let isMounted = true;
-
-    async function loadOrganizations() {
-      setIsLoadingOrganizations(true);
-      setOrganizationsError(null);
-
-      try {
-        const response = await fetch("/api/organizations", {
-          method: "GET",
-          cache: "no-store",
-        });
-
-        const data = (await response.json()) as SidebarOrganizationsResponse;
-
-        if (!response.ok || !data.ok) {
-          if (isMounted) {
-            setOrganizationsError(data.error ?? t("navigation.businessesLoadError"));
-          }
-
-          return;
-        }
-
-        if (isMounted) {
-          setOrganizations(Array.isArray(data.organizations) ? data.organizations : []);
-        }
-      } catch (error) {
-        if (isMounted) {
-          setOrganizationsError(
-            error instanceof Error ? error.message : t("navigation.businessesLoadError"),
-          );
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingOrganizations(false);
-        }
-      }
-    }
-
-    void loadOrganizations();
-
-    return () => {
-      isMounted = false;
+    const readLocation = () => {
+      if (typeof window === "undefined") return;
+      setCurrentPathname(window.location.pathname);
+      setCurrentSearch(window.location.search);
     };
-  }, [t]);
+
+    readLocation();
+    window.addEventListener("popstate", readLocation);
+    return () => window.removeEventListener("popstate", readLocation);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -734,7 +726,6 @@ export function GlobalSidebar({
                 t("navigation.profilesLoadError"),
             );
           }
-
           return;
         }
 
@@ -763,7 +754,47 @@ export function GlobalSidebar({
     };
   }, [t]);
 
-  const visibleOrganizations = useMemo(() => organizations.slice(0, 8), [organizations]);
+  const certificateSearch = useMemo(
+    () => new URLSearchParams(currentSearch),
+    [currentSearch],
+  );
+  const certificateScope = certificateSearch.get("scope");
+
+  const isDashboardActive = currentPathname === "/";
+  const isCalendarActive = currentPathname.startsWith("/calendar");
+  const isObservationObjectsActive = currentPathname.startsWith("/value-objects");
+  const isActivityJournalActive =
+    currentPathname === "/activity-today" ||
+    currentPathname === "/activity-log";
+  const isFactsActive = currentPathname.startsWith("/activity-facts");
+
+  const isPurchasesActive = currentPathname === "/my-purchase-confirmations";
+  const isReceivedCertificatesActive = certificateView === "received";
+  const isSalesActive = currentPathname === "/purchase-confirmations";
+  const isProvidedCertificatesActive = certificateView === "provided";
+  const isPurchasesAndSalesActive =
+    isPurchasesActive ||
+    isReceivedCertificatesActive ||
+    isSalesActive ||
+    isProvidedCertificatesActive;
+
+  const isBusinessCatalogActive = currentPathname === "/directory";
+  const isMyBusinessesActive = currentPathname.startsWith("/organizations");
+  const isBusinessesActive = isBusinessCatalogActive || isMyBusinessesActive;
+
+  const isAllOffersActive =
+    currentPathname === "/certificates" &&
+    (certificateScope === "all" ||
+      (certificateScope === null && certificateView === "participants"));
+  const isMyOffersActive =
+    currentPathname === "/certificates" && certificateScope === "mine";
+  const isOffersActive = isAllOffersActive || isMyOffersActive;
+
+  const isPeopleActive =
+    currentPathname === "/people" || currentPathname.startsWith("/people/");
+  const isProfilesActive =
+    currentPathname === "/profiles/new" ||
+    currentPathname.startsWith("/profiles/");
 
   return (
     <aside className={className}>
@@ -796,198 +827,153 @@ export function GlobalSidebar({
         </div>
       </div>
 
-      <nav className="scrollbar-hide flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
-        <SidebarMainItem icon={LayoutDashboard} label={t("navigation.dashboard")} active href={localeHref("/")} />
+      <nav
+        aria-label="ARCTor"
+        className="scrollbar-hide flex-1 space-y-0.5 overflow-y-auto px-2 py-3"
+      >
+        <SidebarMainItem
+          icon={LayoutDashboard}
+          label={t("navigation.dashboard")}
+          active={isDashboardActive}
+          href={localeHref("/")}
+        />
 
-        <div className="pb-0.5 pt-1">
-          <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#b0b4c8]">
-            {t("navigation.catalogAndServices")}
-          </p>
-        </div>
+        <SidebarDivider />
 
-        <ExpandableSidebarItem icon={ShoppingBag} label={t("navigation.catalog")} defaultOpen>
-          <TreeItem
-            label={t("navigation.businesses")}
-            depth={1}
-            href={localeHref("/directory")}
-            actionOnClick={handleCreateBusinessAction}
-            actionDisabled={isCreatingBusiness}
-            actionTitle={t("navigation.createBusiness")}
-          />
-          <TreeItem
-            label={t("navigation.enterpriseOffers")}
-            depth={2}
-            href={localeHref("/offers")}
-            actionHref={localeHref("/offers/new")}
-            actionTitle={t("navigation.createEnterpriseOffer")}
-            comingSoon comingSoonSuffix={getComingSoonSuffix(locale)}
-          />
-          <TreeItem
-            label={t("navigation.giftCertificates")}
-            depth={2}
-            href={localeHref("/certificates?view=participants")}
-            active={certificateView === "participants"}
-          />
-          <TreeItem label={t("navigation.events")} depth={2} href={localeHref("/calendar")} comingSoon comingSoonSuffix={getComingSoonSuffix(locale)} />
+        <SidebarMainItem
+          icon={CalendarDays}
+          label={t("navigation.calendar")}
+          active={isCalendarActive}
+          href={localeHref("/calendar")}
+        />
+        <SidebarMainItem
+          icon={Eye}
+          label={t("navigation.observationObjects")}
+          active={isObservationObjectsActive}
+          href={localeHref("/value-objects")}
+        />
+        <SidebarMainItem
+          icon={Activity}
+          label={t("navigation.activityJournal")}
+          active={isActivityJournalActive}
+          href={localeHref("/activity-today")}
+        />
+        <SidebarMainItem
+          icon={ClipboardList}
+          label={t("navigation.facts")}
+          active={isFactsActive}
+          href={localeHref("/activity-facts")}
+        />
 
-        </ExpandableSidebarItem>
+        <SidebarDivider />
 
-        <div className="pb-0.5 pt-1">
-          <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#b0b4c8]">
-            {t("navigation.directions")}
-          </p>
-        </div>
-
-        <ExpandableSidebarItem icon={Clock} label={t("navigation.time")} defaultOpen>
+        <ExpandableSidebarItem
+          icon={ArrowLeftRight}
+          label={t("navigation.purchasesAndSales")}
+          active={isPurchasesAndSalesActive}
+          defaultOpen={isPurchasesAndSalesActive}
+        >
           <TreeItem
-            label={t("navigation.calendar")}
-            depth={1}
-            href={localeHref("/calendar")}
-            actionHref={localeHref("/calendar/add")}
-            actionTitle={t("navigation.addCalendarEvent")}
-          />
-          <TreeItem
-            label={t("navigation.myValueObjects")}
-            depth={1}
-            href={localeHref("/value-objects")}
-            actionHref={localeHref("/value-objects/new")}
-            actionTitle={t("navigation.addPrivateValueObject")}
-            comingSoon comingSoonSuffix={getComingSoonSuffix(locale)}
-          />
-          <TreeItem
-            label={t("navigation.myActivityLog")}
-            depth={1}
-            href={localeHref("/activity-today")}
-            actionHref={localeHref("/activity-capture")}
-            actionTitle={t("navigation.addActivity")}
-          />
-          <TreeItem
-            label={t("navigation.activityFactsTable")}
-            depth={2}
-            href={localeHref("/activity-facts")}
-          />
-        </ExpandableSidebarItem>
-
-        <ExpandableSidebarItem icon={Wallet} label={t("navigation.money")} defaultOpen>
-                    <TreeItem
-            label={t("navigation.myPurchases")}
+            label={t("navigation.purchases")}
             depth={1}
             href={localeHref("/my-purchase-confirmations")}
-          />
-          <TreeItem
-            label={t("navigation.myPurchaseRequests")}
-            depth={2}
-            href={localeHref("/my-purchase-confirmations")}
+            active={isPurchasesActive}
           />
           <TreeItem
             label={t("navigation.myCertificates")}
-            depth={2}
+            depth={1}
             href={localeHref("/certificates?view=received")}
-            active={certificateView === "received"}
+            active={isReceivedCertificatesActive}
           />
           <TreeItem
-            label={t("navigation.purchaseConfirmationsInbox")}
-            depth={2}
+            label={t("navigation.sales")}
+            depth={1}
             href={localeHref("/purchase-confirmations")}
+            active={isSalesActive}
           />
           <TreeItem
             label={t("navigation.sellerCertificates")}
-            depth={2}
-            href={localeHref("/certificates?view=provided")}
-            active={certificateView === "provided"}
-          />
-          <TreeItem
-            label={t("navigation.offerArchive")}
-            depth={2}
-            href={localeHref("/certificates?view=archive")}
-            active={certificateView === "archive"}
-          />
-          <TreeItem label={t("navigation.business")} depth={1} defaultOpen>
-            {isLoadingOrganizations ? (
-              <TreeItem label={t("navigation.loadingBusinesses")} depth={2} href={localeHref("/organizations")} />
-            ) : organizationsError ? (
-              <TreeItem label={t("navigation.businessesLoadError")} depth={2} href={localeHref("/organizations")} />
-            ) : visibleOrganizations.length > 0 ? (
-              <>
-                {visibleOrganizations.map((organization) => (
-                  <BusinessOrganizationTreeItem
-                    key={organization.id}
-                    organization={organization}
-                    locale={locale}
-                  />
-                ))}
-
-                {organizations.length > visibleOrganizations.length ? (
-                  <TreeItem
-                    label={t("navigation.showAllBusinesses", {
-                      count: organizations.length,
-                    })}
-                    depth={2}
-                    href={localeHref("/organizations")}
-                  />
-                ) : null}
-              </>
-            ) : (
-              <TreeItem
-                label={t("navigation.noBusinessesCreate")}
-                depth={2}
-                href={localeHref("/organizations/new")}
-                onClick={handleCreateBusinessLink}
-              />
-            )}
-          <TreeItem
-            label={t("navigation.deletedBusinesses")}
-            depth={2}
-            href={localeHref("/organizations/deleted")}
-          />
-
-          </TreeItem>
-          <TreeItem label={t("navigation.career")} depth={1} href={localeHref("/next")} comingSoon comingSoonSuffix={getComingSoonSuffix(locale)} />
-          <TreeItem label={t("navigation.salesManager")} depth={2} href={localeHref("/next")} comingSoon comingSoonSuffix={getComingSoonSuffix(locale)} />
-          <TreeItem label={t("navigation.careerOpportunities")} depth={2} defaultOpen comingSoon comingSoonSuffix={getComingSoonSuffix(locale)}>
-            <TreeItem label={t("navigation.hardSkills")} depth={3} href={localeHref("/value-objects")} comingSoon comingSoonSuffix={getComingSoonSuffix(locale)} />
-            <TreeItem label={t("navigation.germanLanguage")} depth={3} href={localeHref("/value-objects")} comingSoon comingSoonSuffix={getComingSoonSuffix(locale)} />
-            <TreeItem label={t("navigation.softSkills")} depth={3} href={localeHref("/value-objects")} comingSoon comingSoonSuffix={getComingSoonSuffix(locale)} />
-          </TreeItem>
-        </ExpandableSidebarItem>
-
-        <SidebarMainItem icon={Heart} label={t("navigation.health")} href={localeHref("/analytics")} comingSoon comingSoonSuffix={getComingSoonSuffix(locale)} />
-
-        <ExpandableSidebarItem icon={Globe2} label={t("navigation.world")} defaultOpen>
-          <TreeItem
-            label={t("navigation.peopleAndAvatars")}
             depth={1}
-            href={localeHref("/people")}
+            href={localeHref("/certificates?view=provided")}
+            active={isProvidedCertificatesActive}
           />
-          <TreeItem label={t("navigation.myProfiles")} depth={1} defaultOpen>
-            {isLoadingProfiles ? (
-              <div className="py-1.5 pl-12 pr-3 text-[11px] text-[#9ca3b8]">
-                {t("navigation.loadingProfiles")}
-              </div>
-            ) : profilesError ? (
-              <div
-                className="py-1.5 pl-12 pr-3 text-[11px] text-[#ef4444]"
-                title={profilesError}
-              >
-                {t("navigation.profilesLoadError")}
-              </div>
-            ) : (
-              profiles.map((profile) => (
-                <ProfileNavigationTreeItem
-                  key={profile.profileId}
-                  profile={profile}
-                  locale={locale}
-                />
-              ))
-            )}
-            <TreeItem
-              label={t("navigation.createAvatar")}
-              depth={2}
-              href={localeHref("/profiles/new")}
-            />
-          </TreeItem>
         </ExpandableSidebarItem>
 
+        <ExpandableSidebarLinkItem
+          icon={Building2}
+          label={t("navigation.businesses")}
+          href={localeHref("/directory")}
+          active={isBusinessesActive}
+          current={isBusinessCatalogActive}
+          defaultOpen={isMyBusinessesActive}
+        >
+          <TreeItem
+            label={t("navigation.myBusinesses")}
+            depth={1}
+            href={localeHref("/organizations")}
+            active={isMyBusinessesActive}
+          />
+        </ExpandableSidebarLinkItem>
+
+        <ExpandableSidebarLinkItem
+          icon={Gift}
+          label={t("navigation.offers")}
+          href={localeHref("/certificates?scope=all")}
+          active={isOffersActive}
+          current={isAllOffersActive}
+          defaultOpen={isMyOffersActive}
+        >
+          <TreeItem
+            label={t("navigation.myOffers")}
+            depth={1}
+            href={localeHref("/certificates?scope=mine")}
+            active={isMyOffersActive}
+          />
+        </ExpandableSidebarLinkItem>
+
+        <SidebarDivider />
+
+        <SidebarMainItem
+          icon={Users}
+          label={t("navigation.peopleAndAvatars")}
+          active={isPeopleActive}
+          href={localeHref("/people")}
+        />
+
+        <ExpandableSidebarItem
+          icon={UserRoundCog}
+          label={t("navigation.myProfiles")}
+          active={isProfilesActive}
+          defaultOpen={isProfilesActive}
+        >
+          {isLoadingProfiles ? (
+            <div className="py-1.5 pl-9 pr-3 text-[11px] text-[#9ca3b8]">
+              {t("navigation.loadingProfiles")}
+            </div>
+          ) : profilesError ? (
+            <div
+              className="py-1.5 pl-9 pr-3 text-[11px] text-[#ef4444]"
+              title={profilesError}
+            >
+              {t("navigation.profilesLoadError")}
+            </div>
+          ) : (
+            profiles.map((profile) => (
+              <ProfileNavigationTreeItem
+                key={profile.profileId}
+                profile={profile}
+                locale={locale}
+              />
+            ))
+          )}
+
+          <TreeItem
+            label={t("navigation.createAvatar")}
+            depth={1}
+            href={localeHref("/profiles/new")}
+            active={currentPathname === "/profiles/new"}
+          />
+        </ExpandableSidebarItem>
       </nav>
     </aside>
   );
