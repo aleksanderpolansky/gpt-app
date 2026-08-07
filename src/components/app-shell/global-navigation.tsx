@@ -871,7 +871,7 @@ export function GlobalSidebar({
           icon={ArrowLeftRight}
           label={t("navigation.purchasesAndSales")}
           active={isPurchasesAndSalesActive}
-          defaultOpen={isPurchasesAndSalesActive}
+          defaultOpen
         >
           <TreeItem
             label={t("navigation.purchases")}
@@ -905,7 +905,7 @@ export function GlobalSidebar({
           href={localeHref("/directory")}
           active={isBusinessesActive}
           current={isBusinessCatalogActive}
-          defaultOpen={isMyBusinessesActive}
+          defaultOpen
         >
           <TreeItem
             label={t("navigation.myBusinesses")}
@@ -921,7 +921,7 @@ export function GlobalSidebar({
           href={localeHref("/certificates?scope=all")}
           active={isOffersActive}
           current={isAllOffersActive}
-          defaultOpen={isMyOffersActive}
+          defaultOpen
         >
           <TreeItem
             label={t("navigation.myOffers")}
@@ -944,7 +944,7 @@ export function GlobalSidebar({
           icon={UserRoundCog}
           label={t("navigation.myProfiles")}
           active={isProfilesActive}
-          defaultOpen={isProfilesActive}
+          defaultOpen
         >
           {isLoadingProfiles ? (
             <div className="py-1.5 pl-9 pr-3 text-[11px] text-[#9ca3b8]">
