@@ -120,16 +120,19 @@ export function CertificateVisibilityButton({
   activityEventId,
   locale,
   lifecycleStatus,
+  publicVisibilityStatus,
 }: {
   readonly activityEventId: string;
   readonly locale: LocaleCode;
-  readonly lifecycleStatus: "draft" | "available";
+  readonly lifecycleStatus: string;
+  readonly publicVisibilityStatus: "visible" | "hidden";
 }) {
   const router = useRouter();
   const copy = COPY[locale];
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const isHidden = lifecycleStatus === "draft";
+  const isHidden = publicVisibilityStatus === "hidden";
+  const isLegacyDraft = lifecycleStatus === "draft";
 
   async function changeVisibility() {
     if (busy) return;
@@ -138,15 +141,18 @@ export function CertificateVisibilityButton({
     setError(null);
 
     try {
+      const useLegacyPublish = isHidden && isLegacyDraft;
       const response = await fetch(
-        isHidden
+        useLegacyPublish
           ? `/api/gift-certificates/${activityEventId}/publish`
           : `/api/gift-certificates/${activityEventId}/visibility`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(
-            isHidden ? { locale } : { locale, action: "hide" },
+            useLegacyPublish
+              ? { locale }
+              : { locale, action: isHidden ? "show" : "hide" },
           ),
         },
       );
@@ -211,11 +217,13 @@ export function CertificateEditToolbar({
   activityEventId,
   locale,
   lifecycleStatus,
+  publicVisibilityStatus,
 }: {
   readonly viewHref: string;
   readonly activityEventId: string;
   readonly locale: LocaleCode;
-  readonly lifecycleStatus: "draft" | "available";
+  readonly lifecycleStatus: string;
+  readonly publicVisibilityStatus: "visible" | "hidden";
 }) {
   const copy = COPY[locale];
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -259,6 +267,7 @@ export function CertificateEditToolbar({
             activityEventId={activityEventId}
             locale={locale}
             lifecycleStatus={lifecycleStatus}
+            publicVisibilityStatus={publicVisibilityStatus}
           />
         </div>
 

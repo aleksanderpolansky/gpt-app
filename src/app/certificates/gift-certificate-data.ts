@@ -14,6 +14,7 @@ type TermsRow = {
   provider_type: "personal" | "avatar" | "organization";
   delivery_mode: string;
   lifecycle_status: string;
+  public_visibility_status: "visible" | "hidden";
   published_at: string | null;
   available_from: string;
   available_until: string;
@@ -188,6 +189,7 @@ export type GiftCertificateCatalogItem = {
   readonly recipientPublicHref: string | null;
   readonly deliveryMode: string;
   readonly lifecycleStatus: string;
+  readonly publicVisibilityStatus: "visible" | "hidden";
   readonly flowState: GiftCertificateFlowState;
   readonly publishedAt: string | null;
   readonly availableFrom: string;
@@ -232,6 +234,7 @@ const TERMS_SELECT = `
   provider_type,
   delivery_mode,
   lifecycle_status,
+  public_visibility_status,
   published_at,
   available_from,
   available_until,
@@ -649,6 +652,7 @@ async function hydrateTerms(
           : null,
         deliveryMode: terms.delivery_mode,
         lifecycleStatus: terms.lifecycle_status,
+        publicVisibilityStatus: terms.public_visibility_status,
         flowState: resolveFlowState(terms, checkin, confirmation),
         publishedAt: terms.published_at,
         availableFrom: terms.available_from,
@@ -726,6 +730,7 @@ export async function listPublicGiftCertificates(): Promise<
     .from("activity_gift_certificate_terms")
     .select(TERMS_SELECT)
     .in("lifecycle_status", ["available", "redeemed"])
+    .eq("public_visibility_status", "visible")
     .not("published_at", "is", null)
     .order("updated_at", { ascending: false })
     .limit(500);

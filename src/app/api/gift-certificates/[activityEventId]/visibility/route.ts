@@ -23,6 +23,7 @@ type TermsRow = {
   readonly provider_owner_user_id: string;
   readonly provider_manager_actor_id: string;
   readonly lifecycle_status: string;
+  readonly public_visibility_status: "visible" | "hidden";
 };
 
 type VisibilityPayload = {
@@ -30,8 +31,8 @@ type VisibilityPayload = {
   disposition?: string;
   activityEventId?: string;
   lifecycleStatus?: string;
-  activityStatus?: string;
-  hiddenAt?: string;
+  publicVisibilityStatus?: string;
+  visibilityChangedAt?: string;
 };
 
 function normalizeUuid(value: unknown): string | null {
@@ -45,7 +46,7 @@ function normalizeUuid(value: unknown): string | null {
     : null;
 }
 
-function getHideErrorStatus(errorCode: string): number {
+function getVisibilityErrorStatus(errorCode: string): number {
   if (
     errorCode.includes("CERTIFICATE_NOT_FOUND") ||
     errorCode.includes("ACTIVITY_NOT_FOUND")
@@ -61,9 +62,8 @@ function getHideErrorStatus(errorCode: string): number {
   }
 
   if (
-    errorCode.includes("ONLY_AVAILABLE_CAN_BE_HIDDEN") ||
-    errorCode.includes("RECIPIENT_ALREADY_ASSIGNED") ||
-    errorCode.includes("HIDDEN_STATE_INCONSISTENT")
+    errorCode.includes("VISIBILITY_INVALID") ||
+    errorCode.includes("LEGACY_DRAFT_REQUIRES_PUBLISH")
   ) {
     return 409;
   }
@@ -83,7 +83,7 @@ export async function POST(
       {
         ok: false,
         error: "Invalid activity event id",
-        errorCode: "GCR6F_ACTIVITY_EVENT_ID_INVALID",
+        errorCode: "GCR6H_ACTIVITY_EVENT_ID_INVALID",
       },
       { status: 400 },
     );
@@ -96,12 +96,13 @@ export async function POST(
     body = {};
   }
 
-  if (body.action !== "hide") {
+  const action = body.action === "show" ? "show" : body.action === "hide" ? "hide" : null;
+  if (!action) {
     return NextResponse.json(
       {
         ok: false,
         error: "Unsupported visibility action",
-        errorCode: "GCR6F_VISIBILITY_ACTION_INVALID",
+        errorCode: "GCR6H_VISIBILITY_ACTION_INVALID",
       },
       { status: 400 },
     );
@@ -113,7 +114,7 @@ export async function POST(
       {
         ok: false,
         error: "Not authenticated",
-        errorCode: "GCR6F_NOT_AUTHENTICATED",
+        errorCode: "GCR6H_NOT_AUTHENTICATED",
       },
       { status: 401 },
     );
@@ -139,7 +140,7 @@ export async function POST(
       {
         ok: false,
         error: "Could not resolve active actor context",
-        errorCode: "GCR6F_ACTOR_CONTEXT_FAILED",
+        errorCode: "GCR6H_ACTOR_CONTEXT_FAILED",
       },
       { status: 500 },
     );
@@ -147,7 +148,9 @@ export async function POST(
 
   const { data: termsData, error: termsError } = await supabase
     .from("activity_gift_certificate_terms")
-    .select("provider_owner_user_id,provider_manager_actor_id,lifecycle_status")
+    .select(
+      "provider_owner_user_id,provider_manager_actor_id,lifecycle_status,public_visibility_status",
+    )
     .eq("activity_event_id", activityEventId)
     .maybeSingle();
 
@@ -156,7 +159,7 @@ export async function POST(
       {
         ok: false,
         error: termsError.message,
-        errorCode: "GCR6F_VISIBILITY_TERMS_READ_FAILED",
+        errorCode: "GCR6H_VISIBILITY_TERMS_READ_FAILED",
       },
       { status: 500 },
     );
@@ -168,7 +171,7 @@ export async function POST(
       {
         ok: false,
         error: "Certificate not found",
-        errorCode: "GCR6F_CERTIFICATE_NOT_FOUND",
+        errorCode: "GCR6H_CERTIFICATE_NOT_FOUND",
       },
       { status: 404 },
     );
@@ -182,18 +185,31 @@ export async function POST(
       {
         ok: false,
         error: "Certificate owner mismatch",
-        errorCode: "GCR6F_CERTIFICATE_OWNER_MISMATCH",
+        errorCode: "GCR6H_CERTIFICATE_OWNER_MISMATCH",
       },
       { status: 403 },
     );
   }
 
+  if (action === "show" && terms.lifecycle_status === "draft") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Legacy hidden draft must use the publication path",
+        errorCode: "GCR6H_LEGACY_DRAFT_REQUIRES_PUBLISH",
+      },
+      { status: 409 },
+    );
+  }
+
+  const targetVisibility = action === "show" ? "visible" : "hidden";
   const { data, error } = await supabase.rpc(
-    "hide_gift_certificate_activity_v1",
+    "set_gift_certificate_public_visibility_v1",
     {
       p_owner_user_id: actorContext.appUserId,
       p_manager_actor_id: actorContext.actorId,
       p_activity_event_id: activityEventId,
+      p_visibility_status: targetVisibility,
     },
   );
 
@@ -201,7 +217,7 @@ export async function POST(
     const errorCode =
       typeof error.message === "string" && error.message.trim()
         ? error.message.trim()
-        : error.code ?? "GCR6F_HIDE_FAILED";
+        : error.code ?? "GCR6H_VISIBILITY_FAILED";
 
     return NextResponse.json(
       {
@@ -210,7 +226,7 @@ export async function POST(
         errorCode,
       },
       {
-        status: getHideErrorStatus(errorCode),
+        status: getVisibilityErrorStatus(errorCode),
         headers: { "Cache-Control": "no-store" },
       },
     );
@@ -220,14 +236,13 @@ export async function POST(
   if (
     !payload?.ok ||
     payload.activityEventId !== activityEventId ||
-    payload.lifecycleStatus !== "draft" ||
-    payload.activityStatus !== "draft"
+    payload.publicVisibilityStatus !== targetVisibility
   ) {
     return NextResponse.json(
       {
         ok: false,
         error: "Visibility operation returned an invalid result",
-        errorCode: "GCR6F_HIDE_RESULT_INVALID",
+        errorCode: "GCR6H_VISIBILITY_RESULT_INVALID",
       },
       { status: 500 },
     );
@@ -238,9 +253,9 @@ export async function POST(
       ok: true,
       disposition: payload.disposition ?? null,
       activityEventId,
-      lifecycleStatus: payload.lifecycleStatus,
-      activityStatus: payload.activityStatus,
-      hiddenAt: payload.hiddenAt ?? null,
+      lifecycleStatus: payload.lifecycleStatus ?? terms.lifecycle_status,
+      publicVisibilityStatus: payload.publicVisibilityStatus,
+      visibilityChangedAt: payload.visibilityChangedAt ?? null,
     },
     {
       headers: { "Cache-Control": "no-store" },

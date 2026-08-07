@@ -60,6 +60,7 @@ export type CertificateDashboardItem = {
   readonly recipientHref: string | null;
   readonly providerReputation: number;
   readonly state: CertificateDashboardState;
+  readonly publicVisibilityStatus: "visible" | "hidden";
   readonly regularPrice: number;
   readonly pointsPrice: number;
   readonly moneyRemainder: number;
@@ -1220,7 +1221,7 @@ function CertificatePreview({
           ) : null}
         </div>
 
-        {item.state !== "draft" ? (
+        {item.state !== "draft" && item.publicVisibilityStatus === "visible" ? (
           <div className="mt-1.5 flex w-full justify-start pl-1">
             <CertificateShareButton
               locale={locale}
@@ -1248,6 +1249,11 @@ function CertificatePreview({
           >
             {displayedStateLabel}
           </span>
+          {item.publicVisibilityStatus === "hidden" && item.state !== "draft" ? (
+            <span className="rounded-lg bg-[#f5f6fb] px-2.5 py-1 text-[11px] font-semibold text-[#5a5f7a]">
+              {labels.states.draft}
+            </span>
+          ) : null}
         </div>
 
         <div className="mt-3 rounded-xl border border-[#e7eaf2] bg-[#f8fafc] px-3 py-3">
@@ -1310,7 +1316,7 @@ function filterItems(
   filter: FilterKey,
 ): CertificateDashboardItem[] {
   if (filter === "hidden") {
-    return items.filter((item) => item.state === "draft");
+    return items.filter((item) => item.publicVisibilityStatus === "hidden");
   }
 
   if (filter === "product") {
@@ -1477,7 +1483,9 @@ export function CertificatesDashboardContent({
   const availableCount = items.filter(
     (item) => item.state === "available",
   ).length;
-  const hiddenCount = items.filter((item) => item.state === "draft").length;
+  const hiddenCount = items.filter(
+    (item) => item.publicVisibilityStatus === "hidden",
+  ).length;
   const activeCount = items.filter((item) =>
     ["active", "checked_in"].includes(item.state),
   ).length;

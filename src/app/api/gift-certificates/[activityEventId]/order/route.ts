@@ -26,6 +26,11 @@ type RequestBody = {
   readonly locale?: unknown;
 };
 
+type VisibilityTermsRow = {
+  readonly lifecycle_status: string;
+  readonly public_visibility_status: "visible" | "hidden";
+};
+
 type OrderPayload = {
   readonly ok?: boolean;
   readonly disposition?: string;
@@ -99,7 +104,8 @@ function getOrderErrorStatus(errorCode: string): number {
     errorCode.includes("BUYER_ALREADY_HAS_ACTIVE_CERTIFICATE_FOR_PROVIDER") ||
     errorCode.includes("ONLY_AVAILABLE_CERTIFICATE_CAN_BE_ORDERED") ||
     errorCode.includes("CERTIFICATE_VALIDITY_ENDED") ||
-    errorCode.includes("ORDER_IDEMPOTENCY_CONFLICT")
+    errorCode.includes("ORDER_IDEMPOTENCY_CONFLICT") ||
+    errorCode.includes("HIDDEN_CERTIFICATE_CANNOT_BE_ORDERED")
   ) {
     return 409;
   }
@@ -174,6 +180,46 @@ export async function POST(
     locale = normalizeLocale(body.locale);
   } catch {
     locale = "en";
+  }
+
+  const { data: visibilityData, error: visibilityError } = await supabase
+    .from("activity_gift_certificate_terms")
+    .select("lifecycle_status,public_visibility_status")
+    .eq("activity_event_id", activityEventId)
+    .maybeSingle();
+
+  if (visibilityError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: visibilityError.message,
+        errorCode: "GCR6H_ORDER_VISIBILITY_READ_FAILED",
+      },
+      { status: 500 },
+    );
+  }
+
+  const visibilityTerms = visibilityData as VisibilityTermsRow | null;
+  if (!visibilityTerms) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Certificate not found",
+        errorCode: "PGC7D_CERTIFICATE_NOT_FOUND",
+      },
+      { status: 404 },
+    );
+  }
+
+  if (visibilityTerms.public_visibility_status === "hidden") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Certificate is hidden",
+        errorCode: "GCR6H_HIDDEN_CERTIFICATE_CANNOT_BE_ORDERED",
+      },
+      { status: 409 },
+    );
   }
 
   let security: ReturnType<

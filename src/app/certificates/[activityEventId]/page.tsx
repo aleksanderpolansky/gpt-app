@@ -367,6 +367,7 @@ export async function generateMetadata({
   if (
     !certificate ||
     certificate.activity.status !== "planned" ||
+    certificate.publicVisibilityStatus !== "visible" ||
     !isPubliclyShareableLifecycle(certificate.lifecycleStatus)
   ) {
     return {
@@ -579,6 +580,7 @@ export default async function CertificateCatalogDetailPage({
     notFound();
   }
   const isPubliclyShareable =
+    certificate.publicVisibilityStatus === "visible" &&
     isPubliclyShareableLifecycle(certificate.lifecycleStatus) &&
     certificate.activity.status === "planned";
 
@@ -635,9 +637,8 @@ export default async function CertificateCatalogDetailPage({
             viewHref={viewHref}
             activityEventId={certificate.activityEventId}
             locale={locale}
-            lifecycleStatus={
-              certificate.lifecycleStatus === "draft" ? "draft" : "available"
-            }
+            lifecycleStatus={certificate.lifecycleStatus}
+            publicVisibilityStatus={certificate.publicVisibilityStatus}
           />
         ) : (
           <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -658,11 +659,12 @@ export default async function CertificateCatalogDetailPage({
               )
             ) : null}
 
-            {isProviderManager && certificate.lifecycleStatus === "draft" ? (
+            {isProviderManager ? (
               <CertificateVisibilityButton
                 activityEventId={certificate.activityEventId}
                 locale={locale}
-                lifecycleStatus="draft"
+                lifecycleStatus={certificate.lifecycleStatus}
+                publicVisibilityStatus={certificate.publicVisibilityStatus}
               />
             ) : null}
           </div>

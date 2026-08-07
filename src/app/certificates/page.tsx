@@ -147,6 +147,7 @@ function toDashboardItem(
     recipientHref: certificate.recipientPublicHref,
     providerReputation: certificate.providerReputation,
     state: certificate.flowState,
+    publicVisibilityStatus: certificate.publicVisibilityStatus,
     regularPrice: certificate.regularPrice,
     pointsPrice: certificate.pointsPrice,
     moneyRemainder: certificate.moneyRemainder,
