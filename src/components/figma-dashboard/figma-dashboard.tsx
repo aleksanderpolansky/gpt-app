@@ -44,6 +44,7 @@ import {
 } from "@/i18n";
 
 import { useUserSessionClient } from "../auth/user-session-client";
+import { DashboardAnalyticsWorkspace } from "./dashboard-analytics-builder";
 
 type IconComponent = ElementType;
 
@@ -837,6 +838,8 @@ export function FigmaDashboardContent() {
         />
         <ProgressKpi t={t} />
       </div>
+
+      <DashboardAnalyticsWorkspace locale={locale} />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {FILTER_KEYS.map((filterKey) => (
