@@ -9,6 +9,7 @@ import {
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import { ValueObjectInlineEditor } from "@/components/workspace/value-objects/value-object-inline-editor";
+import { ValueObjectSemanticDefinitionEditor } from "@/components/workspace/value-objects/value-object-semantic-definition-editor";
 import {
   ValueObjectProfileTopGrid,
   type ValueObjectOwnerPresentation,
@@ -57,6 +58,14 @@ type ValueObjectRow = {
   owner_actor_id: string;
   organization_id: string | null;
   metadata_json: Record<string, unknown> | null;
+  canonical_key: string | null;
+  facet_code: string | null;
+  object_kind_code: string | null;
+  ontology_node_role_code: string | null;
+  hierarchy_relation_code: string | null;
+  visibility_code: string | null;
+  privacy_class_code: string | null;
+  definition_version: number | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -1072,6 +1081,14 @@ export default async function ValueObjectDetailPage({
       owner_actor_id,
       organization_id,
       metadata_json,
+      canonical_key,
+      facet_code,
+      object_kind_code,
+      ontology_node_role_code,
+      hierarchy_relation_code,
+      visibility_code,
+      privacy_class_code,
+      definition_version,
       created_at,
       updated_at
     `,
@@ -1204,7 +1221,18 @@ export default async function ValueObjectDetailPage({
     valueObject.object_kind === "product_type" ||
     valueObject.object_kind === "service_type";
   const isService = valueObject.object_kind === "service_type";
-  const canEdit = valueObject.status === "draft";
+  const isSemanticOntologyObject = Boolean(
+    valueObject.canonical_key &&
+      valueObject.facet_code &&
+      valueObject.object_kind_code &&
+      valueObject.ontology_node_role_code &&
+      valueObject.definition_version !== null,
+  );
+  const canEdit = isSemanticOntologyObject
+    ? valueObject.status === "draft" ||
+      valueObject.status === "active" ||
+      valueObject.status === "inactive"
+    : valueObject.status === "draft";
   const viewHref = buildValueObjectModeHref(valueObject.id, locale, "view");
   const editHref = buildValueObjectModeHref(valueObject.id, locale, "edit");
 
@@ -1444,18 +1472,39 @@ export default async function ValueObjectDetailPage({
                     : copy.genericEyebrow}
             </div>
 
-            <ValueObjectInlineEditor
-              valueObjectId={valueObject.id}
-              locale={locale}
-              initialTitle={valueObject.title}
-              initialDescription={valueObject.description}
-              isProductOrService={isProductOrService}
-              isService={isService}
-              initialPrice={valueObject.default_price}
-              currency={valueObject.default_currency}
-              initialDurationMinutes={valueObject.default_duration_minutes}
-              viewHref={viewHref}
-            />
+            {isSemanticOntologyObject ? (
+              <ValueObjectSemanticDefinitionEditor
+                valueObjectId={valueObject.id}
+                locale={locale}
+                initialTitle={valueObject.title}
+                initialDescription={valueObject.description}
+                initialHierarchyRelationCode={
+                  valueObject.hierarchy_relation_code
+                }
+                nodeRoleCode={valueObject.ontology_node_role_code ?? ""}
+                initialVisibilityCode={
+                  valueObject.visibility_code ?? "private"
+                }
+                initialPrivacyClassCode={
+                  valueObject.privacy_class_code ?? "standard"
+                }
+                definitionVersion={valueObject.definition_version ?? 1}
+                viewHref={viewHref}
+              />
+            ) : (
+              <ValueObjectInlineEditor
+                valueObjectId={valueObject.id}
+                locale={locale}
+                initialTitle={valueObject.title}
+                initialDescription={valueObject.description}
+                isProductOrService={isProductOrService}
+                isService={isService}
+                initialPrice={valueObject.default_price}
+                currency={valueObject.default_currency}
+                initialDurationMinutes={valueObject.default_duration_minutes}
+                viewHref={viewHref}
+              />
+            )}
 
             {pathNodes.length > 1 && (
               <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] font-semibold text-[#5a5f7a]">

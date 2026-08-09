@@ -42,6 +42,9 @@ type ValueObjectRow = {
   source?: string | null;
   status?: string | null;
   metadata_json?: Record<string, unknown> | null;
+  canonical_key?: string | null;
+  ontology_node_role_code?: string | null;
+  definition_version?: number | null;
   organizations?: {
     id: string;
     organization_name?: string | null;
@@ -104,6 +107,9 @@ const VALUE_OBJECT_SELECT = `
   source,
   status,
   metadata_json,
+  canonical_key,
+  ontology_node_role_code,
+  definition_version,
   organizations (
     id,
     organization_name,
@@ -950,6 +956,24 @@ export async function PATCH(request: Request, context: ValueObjectRouteContext) 
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  if (
+    valueObject.canonical_key &&
+    valueObject.ontology_node_role_code &&
+    isRecord(body) &&
+    (Object.prototype.hasOwnProperty.call(body, "title") ||
+      Object.prototype.hasOwnProperty.call(body, "description"))
+  ) {
+    return NextResponse.json(
+      {
+        error: "P2C_SEMANTIC_WRITE_REQUIRES_ONTOLOGY_EDITOR",
+        editorEndpoint: `/api/value-objects/${encodeURIComponent(
+          valueObject.id,
+        )}/ontology-definition`,
+      },
+      { status: 409 },
+    );
   }
 
   const {
