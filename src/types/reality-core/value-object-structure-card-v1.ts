@@ -71,7 +71,7 @@ export type ValueObjectStructureCardV1 = {
   recognition: {
     aliasCount: number;
     aliasStore: "concept_aliases";
-    writeEnabled: false;
+    writeEnabled: true;
   };
   capabilities: ValueObjectStructureCapabilitiesV1;
 };

@@ -10,6 +10,7 @@ import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import { ValueObjectInlineEditor } from "@/components/workspace/value-objects/value-object-inline-editor";
 import { ValueObjectSemanticDefinitionEditor } from "@/components/workspace/value-objects/value-object-semantic-definition-editor";
+import { ValueObjectAliasEditor } from "@/components/workspace/value-objects/value-object-alias-editor";
 import {
   ValueObjectProfileTopGrid,
   type ValueObjectOwnerPresentation,
@@ -1473,24 +1474,31 @@ export default async function ValueObjectDetailPage({
             </div>
 
             {isSemanticOntologyObject ? (
-              <ValueObjectSemanticDefinitionEditor
-                valueObjectId={valueObject.id}
-                locale={locale}
-                initialTitle={valueObject.title}
-                initialDescription={valueObject.description}
-                initialHierarchyRelationCode={
-                  valueObject.hierarchy_relation_code
-                }
-                nodeRoleCode={valueObject.ontology_node_role_code ?? ""}
-                initialVisibilityCode={
-                  valueObject.visibility_code ?? "private"
-                }
-                initialPrivacyClassCode={
-                  valueObject.privacy_class_code ?? "standard"
-                }
-                definitionVersion={valueObject.definition_version ?? 1}
-                viewHref={viewHref}
-              />
+              <div className="grid gap-5">
+                <ValueObjectSemanticDefinitionEditor
+                  valueObjectId={valueObject.id}
+                  locale={locale}
+                  initialTitle={valueObject.title}
+                  initialDescription={valueObject.description}
+                  initialHierarchyRelationCode={
+                    valueObject.hierarchy_relation_code
+                  }
+                  nodeRoleCode={valueObject.ontology_node_role_code ?? ""}
+                  initialVisibilityCode={
+                    valueObject.visibility_code ?? "private"
+                  }
+                  initialPrivacyClassCode={
+                    valueObject.privacy_class_code ?? "standard"
+                  }
+                  definitionVersion={valueObject.definition_version ?? 1}
+                  viewHref={viewHref}
+                />
+
+                <ValueObjectAliasEditor
+                  valueObjectId={valueObject.id}
+                  locale={locale}
+                />
+              </div>
             ) : (
               <ValueObjectInlineEditor
                 valueObjectId={valueObject.id}
