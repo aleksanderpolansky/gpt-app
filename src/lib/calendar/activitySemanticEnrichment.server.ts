@@ -3,6 +3,9 @@ import {
   normalizeCalendarAiRuleLocale,
   readEffectiveCalendarAiRules,
 } from "@/lib/calendar/aiInterpretationRules.server";
+import {
+  persistActivityAiProcessingProvenanceP5b2,
+} from "@/lib/ai/methodology/methodologyProvenance.server";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -293,6 +296,16 @@ export async function processActivitySemanticEnrichmentRunCux4(
       );
     }
 
+    const provenance = await persistActivityAiProcessingProvenanceP5b2({
+      ownerUserId: params.ownerUserId,
+      ownerActorId: params.ownerActorId,
+      semanticEnrichmentRunId: params.runId,
+      aiUsageEventId: null,
+      provider: payload.modelBacked === true ? "openai" : null,
+      modelName: asString(payload.modelName),
+      methodologyTrace: payload.methodologyTrace,
+    });
+
     const resultJson: JsonRecord = {
       ...payload,
       cux4: {
@@ -301,6 +314,7 @@ export async function processActivitySemanticEnrichmentRunCux4(
         rulesLocale: rules.locale,
         rulesFallbackLocale: rules.fallbackLocale,
         rulesVersion: rules.ruleVersion,
+        processingProvenanceDisposition: provenance.disposition,
       },
     };
     const finalStatus =
