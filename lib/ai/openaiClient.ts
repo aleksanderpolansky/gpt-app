@@ -15,11 +15,18 @@ export const openai = new OpenAI({
   apiKey,
 });
 
+export type RunAiStructuredOutputContract = {
+  name: string;
+  schema: Record<string, unknown>;
+  strict?: boolean;
+};
+
 type RunAiJsonRequest = {
   system: string;
   user: unknown;
   model?: string;
   maxOutputTokens?: number;
+  structuredOutput?: RunAiStructuredOutputContract;
 };
 
 export type RunAiJsonUsageMetadata = {
@@ -196,6 +203,7 @@ export async function runAiJsonWithUsageMetadata<T = unknown>({
   user,
   model,
   maxOutputTokens,
+  structuredOutput,
 }: RunAiJsonRequest): Promise<RunAiJsonWithUsageMetadataResult<T>> {
   if (!AI_ENABLED) {
     throw new Error("AI is disabled by AI_ENABLED=false");
@@ -220,9 +228,16 @@ export async function runAiJsonWithUsageMetadata<T = unknown>({
     ],
     max_output_tokens: getSafeMaxOutputTokens(maxOutputTokens),
     text: {
-      format: {
-        type: "json_object",
-      },
+      format: structuredOutput
+        ? {
+            type: "json_schema",
+            name: structuredOutput.name,
+            schema: structuredOutput.schema,
+            strict: structuredOutput.strict ?? true,
+          }
+        : {
+            type: "json_object",
+          },
     },
   });
 
@@ -251,12 +266,14 @@ export async function runAiJson<T = unknown>({
   user,
   model,
   maxOutputTokens,
+  structuredOutput,
 }: RunAiJsonRequest): Promise<T> {
   const result = await runAiJsonWithUsageMetadata<T>({
     system,
     user,
     model,
     maxOutputTokens,
+    structuredOutput,
   });
 
   return result.parsed;

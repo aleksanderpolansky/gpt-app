@@ -792,6 +792,7 @@ export async function POST(request: Request) {
       user: modelUserPayload,
       model: preflightResult.preflight.modelName,
       maxOutputTokens: CHAT_MAX_OUTPUT_TOKENS,
+      structuredOutput: methodologyContext.structuredOutput,
     });
 
     const aiResult = aiCall.parsed;

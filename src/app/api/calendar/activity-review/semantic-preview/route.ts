@@ -912,7 +912,14 @@ async function runModelPreview(
     body: JSON.stringify({
       model: modelName,
       temperature: 0.1,
-      response_format: { type: "json_object" },
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: methodologyContext.structuredOutput.name,
+          schema: methodologyContext.structuredOutput.schema,
+          strict: methodologyContext.structuredOutput.strict,
+        },
+      },
       messages: [
         {
           role: "system",

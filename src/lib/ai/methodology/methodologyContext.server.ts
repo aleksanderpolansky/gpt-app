@@ -7,6 +7,10 @@ import {
   type MethodologyRuntimeCode,
 } from "./methodologyRegistry";
 import { ARCTOR_AI_RUNTIME_CORE_RUNTIME_INSTRUCTION_V1 } from "./coreProtocolRuntime";
+import {
+  getRuntimeStructuredOutputContract,
+  type RuntimeStructuredOutputContract,
+} from "./runtimeOutputSchemas";
 
 export type RuntimeMethodologyRuleRef = {
   readonly registryCode: string;
@@ -73,6 +77,7 @@ export type RuntimeMethodologyContext = {
     } | null;
   };
   readonly methodologyTrace: PublicMethodologyTrace;
+  readonly structuredOutput: RuntimeStructuredOutputContract;
 };
 
 function assertDeclaredRuleRegistries(
@@ -118,6 +123,10 @@ export async function resolveRuntimeMethodologyContext(params: {
   assertDeclaredKnowledgePackages(
     binding.knowledgePackageCodes,
     knowledgePackages,
+  );
+
+  const structuredOutput = getRuntimeStructuredOutputContract(
+    params.runtimeCode,
   );
 
   const processingContext = await resolveCurrentActorAiProcessingContext({
@@ -177,5 +186,6 @@ export async function resolveRuntimeMethodologyContext(params: {
     actorInstructionText: processingContext.actorInstructionText,
     processingInstructionContext: processingContext.publicMetadata,
     methodologyTrace,
+    structuredOutput,
   };
 }
