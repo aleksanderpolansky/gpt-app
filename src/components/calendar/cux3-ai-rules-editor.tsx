@@ -241,14 +241,16 @@ function sourceLabel(copy: Copy, source: RuleSource) {
 
 export function Cux3AiRulesEditor({
   locale,
+  uiLocale = locale,
   sourceText,
   onRulesChanged,
 }: {
   locale: ActivityTimingLocalePp1;
+  uiLocale?: ActivityTimingLocalePp1;
   sourceText: string;
   onRulesChanged: () => void;
 }) {
-  const copy = copyFor(locale);
+  const copy = copyFor(uiLocale);
   const [preference, setPreference] = useState<RulePreference | null>(null);
   const [draftText, setDraftText] = useState("");
   const [status, setStatus] = useState<Status>("loading");
@@ -410,7 +412,7 @@ export function Cux3AiRulesEditor({
   }
 
   const testTiming = testResult?.timingDraft
-    ? formatActivityTimingDraftPp1(testResult.timingDraft, "future", locale)
+    ? formatActivityTimingDraftPp1(testResult.timingDraft, "future", uiLocale)
     : null;
 
   return (

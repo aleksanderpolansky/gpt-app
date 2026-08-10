@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   createContext,
@@ -2638,12 +2638,17 @@ async function askLegacyAi(
     return buildClarificationReply(classification);
   }
 
+  const interfaceSearchParams = new URLSearchParams(window.location.search);
+  const interfaceLocale =
+    interfaceSearchParams.get("locale") ??
+    interfaceSearchParams.get("lang");
+
   const response = await fetch("/api/test", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ message, selectedTier }),
+    body: JSON.stringify({ message, selectedTier, locale: interfaceLocale }),
   });
 
   let data: ApiTestResponse = {};

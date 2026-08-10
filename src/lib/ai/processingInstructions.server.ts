@@ -57,7 +57,6 @@ export type ActorAiProcessingResolution = {
   readonly source:
     | "personal_exact"
     | "personal_global"
-    | "personal_en"
     | "none";
   readonly sourceLocale: AiProcessingLocale | null;
   readonly preferenceId: string | null;
@@ -654,25 +653,6 @@ export async function readActorProcessingResolution(params: {
         preferenceId: globalRow.id,
         revision: globalRow.current_revision,
         updatedAt: globalRow.updated_at,
-      };
-    }
-  }
-
-  if (params.localeCode !== "en") {
-    const englishRow = await readActorPreferenceRow({
-      ...params,
-      localeCode: "en",
-    });
-
-    if (englishRow?.custom_instruction_text?.trim()) {
-      return {
-        requestedLocale: params.localeCode,
-        text: englishRow.custom_instruction_text,
-        source: "personal_en",
-        sourceLocale: "en",
-        preferenceId: englishRow.id,
-        revision: englishRow.current_revision,
-        updatedAt: englishRow.updated_at,
       };
     }
   }
