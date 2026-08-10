@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { auth0 } from "../../../lib/auth0";
 import { supabase } from "../../../lib/supabase";
 
@@ -33,6 +33,12 @@ type PageData = {
 
 const ADMIN_CARDS: AdminCard[] = [
   {
+    title: "AI Instructions",
+    href: "/admin/ai-instructions",
+    description:
+      "View and revise the versioned operational instructions used by ARCTor AI processing.",
+    badge: "AI Rules",
+  },{
     title: "AI EUR Billing",
     href: "/admin/ai-billing",
     description:

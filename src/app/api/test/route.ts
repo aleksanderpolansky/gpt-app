@@ -2,6 +2,7 @@ import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import { runAiJsonWithUsageMetadata } from "../../../../lib/ai/openaiClient";
 import type { RunAiJsonUsageMetadata } from "../../../../lib/ai/openaiClient";
+import { resolveCurrentActorAiProcessingContext } from "@/lib/ai/processingInstructions.server";
 
 export const dynamic = "force-dynamic";
 
@@ -267,7 +268,7 @@ async function buildBillingPreflight(params: {
       response: billingErrorResponse({
         status: 400,
         code: "ai_tier_unavailable",
-        message: "Выбранный уровень AI сейчас недоступен.",
+        message: "Ð’Ñ‹Ð±Ñ€Ð°Ð½Ð½Ñ‹Ð¹ ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ AI ÑÐµÐ¹Ñ‡Ð°Ñ Ð½ÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿ÐµÐ½.",
         selectedTier: params.selectedTier,
       }),
     };
@@ -292,7 +293,7 @@ async function buildBillingPreflight(params: {
       response: billingErrorResponse({
         status: 503,
         code: "missing_active_price_snapshot",
-        message: "Для выбранной модели пока нет активной цены. Попробуйте другой уровень AI.",
+        message: "Ð”Ð»Ñ Ð²Ñ‹Ð±Ñ€Ð°Ð½Ð½Ð¾Ð¹ Ð¼Ð¾Ð´ÐµÐ»Ð¸ Ð¿Ð¾ÐºÐ° Ð½ÐµÑ‚ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾Ð¹ Ñ†ÐµÐ½Ñ‹. ÐŸÐ¾Ð¿Ñ€Ð¾Ð±ÑƒÐ¹Ñ‚Ðµ Ð´Ñ€ÑƒÐ³Ð¾Ð¹ ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ AI.",
         selectedTier: params.selectedTier,
       }),
     };
@@ -313,7 +314,7 @@ async function buildBillingPreflight(params: {
       response: billingErrorResponse({
         status: 402,
         code: "missing_ai_wallet",
-        message: "AI-баланс не найден. Нужно пополнить AI-пакет через администратора.",
+        message: "AI-Ð±Ð°Ð»Ð°Ð½Ñ Ð½Ðµ Ð½Ð°Ð¹Ð´ÐµÐ½. ÐÑƒÐ¶Ð½Ð¾ Ð¿Ð¾Ð¿Ð¾Ð»Ð½Ð¸Ñ‚ÑŒ AI-Ð¿Ð°ÐºÐµÑ‚ Ñ‡ÐµÑ€ÐµÐ· Ð°Ð´Ð¼Ð¸Ð½Ð¸ÑÑ‚Ñ€Ð°Ñ‚Ð¾Ñ€Ð°.",
         selectedTier: params.selectedTier,
         modelName: resolvedModelName,
       }),
@@ -329,7 +330,7 @@ async function buildBillingPreflight(params: {
       response: billingErrorResponse({
         status: 503,
         code: "invalid_ai_wallet_balance",
-        message: "AI-баланс временно недоступен для расчёта.",
+        message: "AI-Ð±Ð°Ð»Ð°Ð½Ñ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð½Ð¾ Ð½ÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿ÐµÐ½ Ð´Ð»Ñ Ñ€Ð°ÑÑ‡Ñ‘Ñ‚Ð°.",
         selectedTier: params.selectedTier,
         modelName: resolvedModelName,
       }),
@@ -351,7 +352,7 @@ async function buildBillingPreflight(params: {
       response: billingErrorResponse({
         status: 503,
         code: "invalid_price_snapshot",
-        message: "Цена выбранной модели временно недоступна для расчёта.",
+        message: "Ð¦ÐµÐ½Ð° Ð²Ñ‹Ð±Ñ€Ð°Ð½Ð½Ð¾Ð¹ Ð¼Ð¾Ð´ÐµÐ»Ð¸ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð½Ð¾ Ð½ÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð° Ð´Ð»Ñ Ñ€Ð°ÑÑ‡Ñ‘Ñ‚Ð°.",
         selectedTier: params.selectedTier,
         modelName: resolvedModelName,
       }),
@@ -364,7 +365,7 @@ async function buildBillingPreflight(params: {
       response: billingErrorResponse({
         status: 402,
         code: "insufficient_ai_balance",
-        message: "Недостаточно AI-баланса для выбранной модели. Выберите более экономный уровень или пополните AI-пакет.",
+        message: "ÐÐµÐ´Ð¾ÑÑ‚Ð°Ñ‚Ð¾Ñ‡Ð½Ð¾ AI-Ð±Ð°Ð»Ð°Ð½ÑÐ° Ð´Ð»Ñ Ð²Ñ‹Ð±Ñ€Ð°Ð½Ð½Ð¾Ð¹ Ð¼Ð¾Ð´ÐµÐ»Ð¸. Ð’Ñ‹Ð±ÐµÑ€Ð¸Ñ‚Ðµ Ð±Ð¾Ð»ÐµÐµ ÑÐºÐ¾Ð½Ð¾Ð¼Ð½Ñ‹Ð¹ ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ Ð¸Ð»Ð¸ Ð¿Ð¾Ð¿Ð¾Ð»Ð½Ð¸Ñ‚Ðµ AI-Ð¿Ð°ÐºÐµÑ‚.",
         selectedTier: params.selectedTier,
         modelName: resolvedModelName,
         availableBalanceEur,
@@ -754,15 +755,27 @@ export async function POST(request: Request) {
       );
     }
 
-    const systemPrompt =
-      'You are a simple AI assistant inside a web platform that is currently in development. Return only valid compact JSON in this exact shape: {"reply":"string"}. Keep the reply short and practical.';
+    const processingContext = await resolveCurrentActorAiProcessingContext({
+      runtimeCode: "navigator_chat",
+      locale: body.locale,
+    });
 
+    const systemPrompt = processingContext.systemPrompt;
+    const modelUserPayload = {
+      message: userMessage,
+      personalProcessingGuidance: processingContext.actorInstructionText,
+      instructionPriority: [
+        "database_and_security_invariants",
+        "explicit_current_message_data",
+        "active_ARCTor_system_instructions",
+        "personal_processing_defaults_for_missing_context",
+      ],
+    };
     const preflightResult = await buildBillingPreflight({
       appUserId: appUser.id,
       selectedTier,
       systemPrompt,
-      userMessage,
-    });
+      userMessage: JSON.stringify(modelUserPayload),});
 
     if (!preflightResult.ok) {
       return preflightResult.response;
@@ -776,9 +789,7 @@ export async function POST(request: Request) {
 
     const aiCall = await runAiJsonWithUsageMetadata<ChatAiResponse>({
       system: systemPrompt,
-      user: {
-        message: userMessage,
-      },
+      user: modelUserPayload,
       model: preflightResult.preflight.modelName,
       maxOutputTokens: CHAT_MAX_OUTPUT_TOKENS,
     });
@@ -787,7 +798,7 @@ export async function POST(request: Request) {
     const reply =
       typeof aiResult.reply === "string" && aiResult.reply.trim()
         ? aiResult.reply.trim()
-        : "Пустой ответ";
+        : "ÐŸÑƒÑÑ‚Ð¾Ð¹ Ð¾Ñ‚Ð²ÐµÑ‚";
 
     await supabase.from("chat_messages").insert({
       user_id: appUser.id,
@@ -806,6 +817,7 @@ export async function POST(request: Request) {
       model: preflightResult.preflight.modelName,
       selectedTier,
       reply,
+      instructionContext: processingContext.publicMetadata,
       billing: {
         status: settlement.status,
         walletId: settlement.walletId,
@@ -834,7 +846,7 @@ export async function POST(request: Request) {
         success: false,
         model: null,
         selectedTier,
-        reply: "Ошибка на сервере",
+        reply: "ÐžÑˆÐ¸Ð±ÐºÐ° Ð½Ð° ÑÐµÑ€Ð²ÐµÑ€Ðµ",
         error: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 },
