@@ -1,0 +1,113 @@
+{
+  "contractVersion": "p5a_v1",
+  "purpose": "Methodology-layer acceptance examples. These are not canonical fact outputs.",
+  "cases": [
+    {
+      "caseId": "navigator_ordinary_question",
+      "runtimeCode": "navigator_chat",
+      "inputText": "Как дела?",
+      "mustUseProtocol": "arctor_ai_runtime_core@1",
+      "mustUseSchema": "navigator_chat_output@1",
+      "mustNotInvent": [
+        "user facts",
+        "measurements"
+      ]
+    },
+    {
+      "caseId": "activity_dentist_no_duration_invention",
+      "runtimeCode": "activity_semantic_preview",
+      "inputText": "полчаса был на профилактическом приеме у стоматолога",
+      "mustUseProtocol": "arctor_ai_runtime_core@1",
+      "mustUseSchema": "activity_semantic_preview_model_output@1",
+      "mustPreserveExplicit": [
+        "duration=30 minutes"
+      ]
+    },
+    {
+      "caseId": "food_generic_eclair",
+      "runtimeCode": "activity_semantic_preview",
+      "inputText": "съел эклер",
+      "mustNotInvent": [
+        "manufacturer",
+        "exact recipe",
+        "exact nutrition"
+      ],
+      "allowedState": [
+        "candidate",
+        "typical_reference_if_workflow_allows"
+      ]
+    },
+    {
+      "caseId": "food_named_store_still_no_fake_catalogue",
+      "runtimeCode": "activity_semantic_preview",
+      "inputText": "купил эклер в Auchan и съел его",
+      "mustNotClaim": [
+        "external catalogue checked"
+      ],
+      "allowedState": [
+        "candidate_product_identity",
+        "clarification_or_reference"
+      ]
+    },
+    {
+      "caseId": "exercise_explicit_repetitions",
+      "runtimeCode": "activity_semantic_preview",
+      "inputText": "сделал 15 отжиманий широким хватом",
+      "mustPreserveExplicit": [
+        "repetitions=15"
+      ],
+      "mustNotInvent": [
+        "bodyweight load",
+        "calories"
+      ]
+    },
+    {
+      "caseId": "language_repetition_count",
+      "runtimeCode": "activity_semantic_preview",
+      "inputText": "повторил фразу warum gehst du? 20 раз",
+      "mustPreserveExplicit": [
+        "repetitions=20"
+      ]
+    },
+    {
+      "caseId": "shared_benefit_single_activity",
+      "runtimeCode": "activity_semantic_preview",
+      "inputText": "18 минут разговаривал с дочерью по-немецки",
+      "mustPreserveExplicit": [
+        "duration=18 minutes"
+      ],
+      "mustNotDuplicatePhysicalTime": true
+    },
+    {
+      "caseId": "multiple_parallel_or_separate_activities",
+      "runtimeCode": "activity_semantic_preview",
+      "inputText": "75 минут переносил тяжести, 18 минут разговаривал, 50 минут занимался немецким",
+      "mustKeepDistinctActivities": true,
+      "mustNotCollapseToOnePhysicalEvent": true
+    },
+    {
+      "caseId": "planned_run",
+      "runtimeCode": "activity_semantic_preview",
+      "inputText": "завтра хочу пробежать 5 км",
+      "mustPreserveExplicit": [
+        "distance=5 km"
+      ],
+      "mustMarkAsPlanned": true
+    },
+    {
+      "caseId": "overtime_computer_work",
+      "runtimeCode": "activity_semantic_preview",
+      "inputText": "два часа работал за компьютером сверхурочно",
+      "mustPreserveExplicit": [
+        "duration=120 minutes"
+      ],
+      "mustNotInvent": [
+        "income",
+        "sitting duration",
+        "family time displacement",
+        "physiological change"
+      ],
+      "requiresRuleOrSourceForDerivedNumbers": true
+    }
+  ]
+}

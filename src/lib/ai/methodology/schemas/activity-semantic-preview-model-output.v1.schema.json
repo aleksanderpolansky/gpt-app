@@ -1,0 +1,368 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "arctor://schemas/activity-semantic-preview-model-output/v1",
+  "title": "ARCTor Activity Semantic Preview Model Output v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "intent",
+    "activityTitle",
+    "schedule",
+    "date",
+    "time",
+    "duration",
+    "categories",
+    "valueObjectCandidates",
+    "factPreviews",
+    "summary",
+    "missingFields",
+    "warnings"
+  ],
+  "properties": {
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "status",
+        "confidence",
+        "note"
+      ],
+      "properties": {
+        "value": {
+          "type": "string",
+          "enum": [
+            "planned_activity",
+            "actual_fact",
+            "ambiguous_activity",
+            "ordinary_chat"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "candidate",
+            "missing"
+          ]
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "activityTitle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "status",
+        "confidence",
+        "note"
+      ],
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "candidate",
+            "missing"
+          ]
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "schedule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scheduleModeCode",
+        "scheduledDate",
+        "scheduleStartDate",
+        "scheduleEndDate",
+        "deadlineLocal",
+        "startedAtLocal",
+        "endedAtLocal",
+        "durationMinutes",
+        "observedDate",
+        "confidence",
+        "note"
+      ],
+      "properties": {
+        "scheduleModeCode": {
+          "type": "string",
+          "enum": [
+            "unscheduled",
+            "date_only",
+            "date_range",
+            "deadline",
+            "exact"
+          ]
+        },
+        "scheduledDate": {
+          "type": "string"
+        },
+        "scheduleStartDate": {
+          "type": "string"
+        },
+        "scheduleEndDate": {
+          "type": "string"
+        },
+        "deadlineLocal": {
+          "type": "string"
+        },
+        "startedAtLocal": {
+          "type": "string"
+        },
+        "endedAtLocal": {
+          "type": "string"
+        },
+        "durationMinutes": {
+          "type": "string",
+          "pattern": "^$|^[1-9][0-9]*$"
+        },
+        "observedDate": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "date": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "status",
+        "confidence",
+        "note"
+      ],
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "candidate",
+            "missing"
+          ]
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "time": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "status",
+        "confidence",
+        "note"
+      ],
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "candidate",
+            "missing"
+          ]
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "duration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "status",
+        "confidence",
+        "note"
+      ],
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "candidate",
+            "missing"
+          ]
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "categories": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "label",
+          "status",
+          "confidence",
+          "note"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "candidate"
+            ]
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "valueObjectCandidates": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "status",
+          "confidence",
+          "note"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "candidate"
+            ]
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "factPreviews": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "value",
+          "unit",
+          "status",
+          "confidence",
+          "note"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "candidate"
+            ]
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "string"
+    },
+    "missingFields": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
