@@ -18,7 +18,7 @@ import {
   type CalendarAiRuleResolution,
   type CalendarAiRuleShortcut,
 } from "@/lib/calendar/aiInterpretationRules.server";
-import { resolveCurrentActorAiProcessingContext } from "@/lib/ai/processingInstructions.server";
+import { resolveRuntimeMethodologyContext } from "@/lib/ai/methodology/methodologyContext.server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -76,6 +76,20 @@ type ReviewPayload = {
   warnings: string[];
   rules: RuleApplicationPayload;
 };
+
+type RuntimeMethodologyContext = Awaited<
+  ReturnType<typeof resolveRuntimeMethodologyContext>
+>;
+
+function withMethodologyTrace<T extends object>(
+  payload: T,
+  methodologyContext: RuntimeMethodologyContext,
+) {
+  return {
+    ...payload,
+    methodologyTrace: methodologyContext.methodologyTrace,
+  };
+}
 
 type ModelShape = {
   intent?: Partial<{
@@ -871,7 +885,7 @@ async function runModelPreview(
   locale: Locale,
   temporalDirection: ActivityTemporalDirectionPp1,
   rules: CalendarAiRuleResolution,
-  processingContext: Awaited<ReturnType<typeof resolveCurrentActorAiProcessingContext>>,
+  methodologyContext: Awaited<ReturnType<typeof resolveRuntimeMethodologyContext>>,
   now: Date,
 ): Promise<ReviewPayload | null> {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -902,7 +916,7 @@ async function runModelPreview(
       messages: [
         {
           role: "system",
-          content: processingContext.systemPrompt,
+          content: methodologyContext.systemPrompt,
         },
         {
           role: "user",
@@ -913,8 +927,8 @@ async function runModelPreview(
             currentDate,
             timeZone,
             personalRuleGuidance: buildCalendarAiRulePrompt(rules),
-            personalProcessingGuidance: processingContext.actorInstructionText,
-            processingInstructionContext: processingContext.publicMetadata,
+            personalProcessingGuidance: methodologyContext.actorInstructionText,
+            processingInstructionContext: methodologyContext.processingInstructionContext,
             interpretationPriority: [
               "explicit_current_message",
               "personal_user_rules",
@@ -1078,19 +1092,29 @@ export async function POST(request: Request) {
   const now = new Date();
   const rules = await resolveRulesForPreview(body, locale);
 
-  const processingContext = await resolveCurrentActorAiProcessingContext({
+  const methodologyContext = await resolveRuntimeMethodologyContext({
     runtimeCode: "activity_semantic_preview",
     locale,
+    deterministicRules: [
+      {
+        registryCode: "calendar_ai_rule_preferences",
+        ruleCode: "effective_calendar_ai_rule",
+        version: rules.ruleVersion,
+      },
+    ],
   });
   if (!rawText) {
     return NextResponse.json(
-      buildFallbackPackage(
-        "",
-        locale,
-        "empty input",
-        temporalDirection,
-        rules,
-        now,
+      withMethodologyTrace(
+        buildFallbackPackage(
+          "",
+          locale,
+          "empty input",
+          temporalDirection,
+          rules,
+          now,
+        ),
+        methodologyContext,
       ),
       { status: 200 },
     );
@@ -1102,36 +1126,44 @@ export async function POST(request: Request) {
       locale,
       temporalDirection,
       rules,
-      processingContext,
-
+      methodologyContext,
       now,
     );
 
     if (modelPackage) {
-      return NextResponse.json(modelPackage, { status: 200 });
+      return NextResponse.json(
+        withMethodologyTrace(modelPackage, methodologyContext),
+        { status: 200 },
+      );
     }
 
     return NextResponse.json(
-      buildFallbackPackage(
-        rawText,
-        locale,
-        "OPENAI_API_KEY is not configured; model-backed preview was skipped.",
-        temporalDirection,
-        rules,
-        now,
+      withMethodologyTrace(
+        buildFallbackPackage(
+          rawText,
+          locale,
+          "OPENAI_API_KEY is not configured; model-backed preview was skipped.",
+          temporalDirection,
+          rules,
+          now,
+        ),
+        methodologyContext,
       ),
       { status: 200 },
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown model error";
     return NextResponse.json(
-      buildFallbackPackage(
-        rawText,
-        locale,
-        message,
-        temporalDirection,
-        rules,
-        now,
+      withMethodologyTrace(
+        buildFallbackPackage(
+          rawText,
+          locale,
+          message,
+          temporalDirection,
+          rules,
+          now,
+        ),
+        methodologyContext,
       ),
       { status: 200 },
     );

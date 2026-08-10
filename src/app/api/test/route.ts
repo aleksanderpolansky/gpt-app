@@ -2,7 +2,7 @@ import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import { runAiJsonWithUsageMetadata } from "../../../../lib/ai/openaiClient";
 import type { RunAiJsonUsageMetadata } from "../../../../lib/ai/openaiClient";
-import { resolveCurrentActorAiProcessingContext } from "@/lib/ai/processingInstructions.server";
+import { resolveRuntimeMethodologyContext } from "@/lib/ai/methodology/methodologyContext.server";
 
 export const dynamic = "force-dynamic";
 
@@ -755,15 +755,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const processingContext = await resolveCurrentActorAiProcessingContext({
+    const methodologyContext = await resolveRuntimeMethodologyContext({
       runtimeCode: "navigator_chat",
       locale: body.locale,
     });
 
-    const systemPrompt = processingContext.systemPrompt;
+    const systemPrompt = methodologyContext.systemPrompt;
     const modelUserPayload = {
       message: userMessage,
-      personalProcessingGuidance: processingContext.actorInstructionText,
+      personalProcessingGuidance: methodologyContext.actorInstructionText,
       instructionPriority: [
         "database_and_security_invariants",
         "explicit_current_message_data",
@@ -817,7 +817,8 @@ export async function POST(request: Request) {
       model: preflightResult.preflight.modelName,
       selectedTier,
       reply,
-      instructionContext: processingContext.publicMetadata,
+      instructionContext: methodologyContext.processingInstructionContext,
+      methodologyTrace: methodologyContext.methodologyTrace,
       billing: {
         status: settlement.status,
         walletId: settlement.walletId,
