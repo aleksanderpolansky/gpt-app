@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "fixtureSetCode": "p6a1_reality_context_statement_routing_v1",
+  "cases": [
+    {
+      "caseCode": "german_business_mixed_answer",
+      "input": "I speak German at C1, can invest up to 20,000 EUR in this business, and my wife wants the children to finish the school year before we move.",
+      "expectedStatements": [
+        {
+          "meaning": "German C1",
+          "routingScope": "reality_candidate",
+          "semanticCode": "capability_state"
+        },
+        {
+          "meaning": "20,000 EUR project allocation",
+          "routingScope": "goal_specific",
+          "semanticCode": "resource"
+        },
+        {
+          "meaning": "family move timing condition",
+          "routingScope": "both",
+          "semanticCode": "constraint"
+        }
+      ]
+    },
+    {
+      "caseCode": "salary_effective_date",
+      "input": "Since 1 July my salary is 5,000 EUR.",
+      "expected": {
+        "routingScope": "reality_candidate",
+        "semanticCode": "measurement",
+        "mustPreserveEffectiveDate": true,
+        "knownAtSeparateFromEffectiveAt": true
+      }
+    },
+    {
+      "caseCode": "situational_preference_not_trait",
+      "input": "For this project I do not want to travel more than twice per month.",
+      "expected": {
+        "routingScope": "goal_specific",
+        "semanticCode": "constraint",
+        "mustNotCreatePermanentPersonalityTrait": true
+      }
+    },
+    {
+      "caseCode": "derived_state_snapshot",
+      "input": "Use my current German level while evaluating a German career option.",
+      "expected": {
+        "runtimePurpose": "suitability_analysis",
+        "derivedStateAllowed": true,
+        "derivationReferenceRequired": true
+      }
+    },
+    {
+      "caseCode": "same_goal_different_people",
+      "input": "I want to start a business in Germany.",
+      "expected": {
+        "principle": "same_goal_may_compile_differently",
+        "mustUseRealitySnapshot": true,
+        "mustNotAssumeUniversalBottleneck": true
+      }
+    },
+    {
+      "caseCode": "rock_star_lifestyle_tension",
+      "input": "I want to be a rock star and I love applause, but I repeatedly recover badly after travel and I hate living in hotels.",
+      "expected": {
+        "runtimePurpose": "suitability_analysis",
+        "mustKeepDesireSeparateFromObservedBehavior": true,
+        "mustExposeLifestyleFriction": true,
+        "mustNotReturnBinaryUnsuitable": true,
+        "mustOfferAdaptationsOrSmallExperiments": true
+      }
+    }
+  ]
+}
