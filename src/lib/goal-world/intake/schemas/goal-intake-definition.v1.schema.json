@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arctor.app/schemas/goal-intake-definition.v1.schema.json",
+  "title": "ARCTor Goal Intake Definition v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sourceGoalText",
+    "goalFormCode",
+    "domainModuleCodes",
+    "goal",
+    "successDefinition",
+    "currentState",
+    "timeframe",
+    "resources",
+    "constraints",
+    "motivation",
+    "nonNegotiables",
+    "context"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "sourceGoalText": {
+      "type": "string",
+      "minLength": 1
+    },
+    "goalFormCode": {
+      "type": "string",
+      "enum": [
+        "achieve_outcome",
+        "reach_state",
+        "maintain_state",
+        "execute_project",
+        "build_routine",
+        "make_decision",
+        "explore",
+        "avoid_outcome",
+        "unknown"
+      ]
+    },
+    "domainModuleCodes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "learning",
+          "health",
+          "relationship",
+          "career_business",
+          "financial",
+          "location_transition",
+          "creative",
+          "other"
+        ]
+      }
+    },
+    "successDefinition": {
+      "$ref": "#/$defs/field"
+    },
+    "currentState": {
+      "$ref": "#/$defs/field"
+    },
+    "timeframe": {
+      "$ref": "#/$defs/field"
+    },
+    "resources": {
+      "$ref": "#/$defs/field"
+    },
+    "constraints": {
+      "$ref": "#/$defs/field"
+    },
+    "motivation": {
+      "$ref": "#/$defs/field"
+    },
+    "nonNegotiables": {
+      "$ref": "#/$defs/field"
+    },
+    "context": {
+      "$ref": "#/$defs/field"
+    },
+    "goal": {
+      "$ref": "#/$defs/goalField"
+    }
+  },
+  "$defs": {
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "statusCode",
+        "summary",
+        "items",
+        "evidenceOriginCodes",
+        "missingAspects"
+      ],
+      "properties": {
+        "statusCode": {
+          "type": "string",
+          "enum": [
+            "known",
+            "partial",
+            "unknown",
+            "clarification_required"
+          ]
+        },
+        "summary": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidenceOriginCodes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "current_message",
+              "user_confirmed_prior",
+              "trusted_actor_context",
+              "existing_reality_graph",
+              "deterministic_derivation",
+              "none"
+            ]
+          }
+        },
+        "missingAspects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "goalField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "statusCode",
+        "normalizedTitle",
+        "normalizedStatement",
+        "evidenceOriginCodes",
+        "missingAspects"
+      ],
+      "properties": {
+        "statusCode": {
+          "type": "string",
+          "enum": [
+            "known",
+            "partial",
+            "unknown",
+            "clarification_required"
+          ]
+        },
+        "normalizedTitle": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "normalizedStatement": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "evidenceOriginCodes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "current_message",
+              "user_confirmed_prior",
+              "trusted_actor_context",
+              "existing_reality_graph",
+              "deterministic_derivation",
+              "none"
+            ]
+          }
+        },
+        "missingAspects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

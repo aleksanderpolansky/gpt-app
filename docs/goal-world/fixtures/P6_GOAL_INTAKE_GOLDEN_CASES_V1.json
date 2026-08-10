@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "fixtureSetCode": "p6_goal_intake_golden_cases_v1",
+  "cases": [
+    {
+      "caseCode": "short_business_location_goal",
+      "input": "I want to open a business in Germany.",
+      "expected": {
+        "goalFormCode": "execute_project",
+        "domainModuleCodes": [
+          "career_business",
+          "location_transition"
+        ],
+        "fieldStatuses": {
+          "goal": "known",
+          "successDefinition": "unknown",
+          "currentState": "unknown",
+          "timeframe": "unknown",
+          "resources": "unknown",
+          "constraints": "unknown",
+          "motivation": "unknown",
+          "nonNegotiables": "unknown",
+          "context": "partial"
+        },
+        "requiredFields": [
+          "goal",
+          "successDefinition",
+          "currentState",
+          "timeframe",
+          "resources",
+          "constraints"
+        ],
+        "requiredKnown": 1,
+        "requiredTotal": 6,
+        "requiredCompletenessPercent": 16,
+        "note": "Germany is context, not evidence that legal, financial or resource constraints are known."
+      }
+    },
+    {
+      "caseCode": "detailed_learning_goal",
+      "input": "I am at B2 German now and want to pass a C1 exam by 1 December. I can study one hour on weekdays.",
+      "expected": {
+        "goalFormCode": "achieve_outcome",
+        "domainModuleCodes": [
+          "learning"
+        ],
+        "fieldStatuses": {
+          "goal": "known",
+          "successDefinition": "known",
+          "currentState": "known",
+          "timeframe": "known",
+          "resources": "known",
+          "constraints": "partial",
+          "motivation": "unknown",
+          "nonNegotiables": "unknown",
+          "context": "known"
+        },
+        "requiredFields": [
+          "goal",
+          "successDefinition",
+          "currentState",
+          "timeframe",
+          "resources"
+        ],
+        "requiredKnown": 5,
+        "requiredTotal": 5,
+        "requiredCompletenessPercent": 100,
+        "note": "100% means required intake coverage, not probability of passing the exam."
+      }
+    },
+    {
+      "caseCode": "avoidance_relationship_goal",
+      "input": "I do not want my marriage to end in divorce.",
+      "expected": {
+        "goalFormCode": "avoid_outcome",
+        "domainModuleCodes": [
+          "relationship"
+        ],
+        "fieldStatuses": {
+          "goal": "known",
+          "successDefinition": "partial",
+          "currentState": "unknown",
+          "timeframe": "unknown",
+          "resources": "unknown",
+          "constraints": "unknown",
+          "motivation": "partial",
+          "nonNegotiables": "unknown",
+          "context": "unknown"
+        },
+        "requiredFields": [
+          "goal",
+          "successDefinition",
+          "currentState",
+          "timeframe",
+          "constraints",
+          "nonNegotiables",
+          "context"
+        ],
+        "requiredKnown": 1,
+        "requiredTotal": 7,
+        "requiredCompletenessPercent": 14,
+        "note": "The protocol must not silently rewrite this into a different positive goal."
+      }
+    },
+    {
+      "caseCode": "decision_goal",
+      "input": "I need to decide whether to accept the job offer or stay where I am.",
+      "expected": {
+        "goalFormCode": "make_decision",
+        "domainModuleCodes": [
+          "career_business"
+        ],
+        "fieldStatuses": {
+          "goal": "known",
+          "successDefinition": "partial",
+          "currentState": "partial",
+          "timeframe": "unknown",
+          "resources": "unknown",
+          "constraints": "unknown",
+          "motivation": "unknown",
+          "nonNegotiables": "unknown",
+          "context": "partial"
+        },
+        "requiredFields": [
+          "goal",
+          "successDefinition",
+          "currentState",
+          "timeframe",
+          "resources",
+          "constraints",
+          "context"
+        ],
+        "requiredKnown": 1,
+        "requiredTotal": 7,
+        "requiredCompletenessPercent": 14,
+        "note": "The system asks for decision criteria/context instead of pretending one option is better."
+      }
+    },
+    {
+      "caseCode": "vague_state_goal",
+      "input": "I want to be happier.",
+      "expected": {
+        "goalFormCode": "reach_state",
+        "domainModuleCodes": [],
+        "fieldStatuses": {
+          "goal": "partial",
+          "successDefinition": "clarification_required",
+          "currentState": "unknown",
+          "timeframe": "unknown",
+          "resources": "unknown",
+          "constraints": "unknown",
+          "motivation": "partial",
+          "nonNegotiables": "unknown",
+          "context": "unknown"
+        },
+        "requiredFields": [
+          "goal",
+          "successDefinition",
+          "currentState",
+          "timeframe"
+        ],
+        "requiredKnown": 0,
+        "requiredTotal": 4,
+        "requiredCompletenessPercent": 0,
+        "note": "A vague but valid human goal is preserved; the missing definition is made explicit."
+      }
+    }
+  ]
+}
