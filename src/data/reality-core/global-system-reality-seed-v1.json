@@ -1,0 +1,4835 @@
+{
+  "contractVersion": "arctor-global-system-reality-seed-v1",
+  "designSource": "ARCTor_System_Reality_Seed_Global_Layer_v0_2_RU_20260811",
+  "layer": "global_system",
+  "scopeCode": "global",
+  "status": "design_locked_machine_candidate",
+  "rules": {
+    "oneStructuralParent": true,
+    "rawFactsOnlyToLeaves": true,
+    "crossFacetViaRelationsOnly": true,
+    "aiMayCreateCanonicalObjects": false,
+    "unknownLeafAction": "PROPOSE",
+    "unknownParameterAction": "PROPOSE",
+    "maxRootCandidates": 3,
+    "maxLeafCandidates": 20,
+    "maxRelationCandidates": 12,
+    "causalPromotionFromPassiveObservation": false
+  },
+  "roots": [
+    {
+      "order": 1,
+      "canonicalKey": "domain.body_physiology",
+      "titleRu": "Тело и физиологическое состояние",
+      "facetCode": "DOMAIN",
+      "objectKindCode": "domain_root",
+      "nodeRoleCode": "root",
+      "hierarchyRelationCode": null,
+      "parentCanonicalKey": null,
+      "rootCanonicalKey": "domain.body_physiology",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active",
+      "facetEntrypoints": [
+        "ENTITY",
+        "STATE",
+        "PROCESS"
+      ],
+      "pilotCoverageRu": "вес, пульс, давление, боль, усталость, анатомическая локализация"
+    },
+    {
+      "order": 2,
+      "canonicalKey": "domain.sleep_recovery",
+      "titleRu": "Сон и восстановление",
+      "facetCode": "DOMAIN",
+      "objectKindCode": "domain_root",
+      "nodeRoleCode": "root",
+      "hierarchyRelationCode": null,
+      "parentCanonicalKey": null,
+      "rootCanonicalKey": "domain.sleep_recovery",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active",
+      "facetEntrypoints": [
+        "PROCESS",
+        "STATE",
+        "CONTEXT"
+      ],
+      "pilotCoverageRu": "ночной сон, дневной сон, отдых, сонливость, восстановленность"
+    },
+    {
+      "order": 3,
+      "canonicalKey": "domain.nutrition_consumption",
+      "titleRu": "Питание и потребление",
+      "facetCode": "DOMAIN",
+      "objectKindCode": "domain_root",
+      "nodeRoleCode": "root",
+      "hierarchyRelationCode": null,
+      "parentCanonicalKey": null,
+      "rootCanonicalKey": "domain.nutrition_consumption",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active",
+      "facetEntrypoints": [
+        "PROCESS",
+        "ENTITY",
+        "STATE"
+      ],
+      "pilotCoverageRu": "приём пищи, вода, кофеин, алкоголь, голод, сытость, жажда"
+    },
+    {
+      "order": 4,
+      "canonicalKey": "domain.movement_physical_activity",
+      "titleRu": "Движение и физическая активность",
+      "facetCode": "DOMAIN",
+      "objectKindCode": "domain_root",
+      "nodeRoleCode": "root",
+      "hierarchyRelationCode": null,
+      "parentCanonicalKey": null,
+      "rootCanonicalKey": "domain.movement_physical_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active",
+      "facetEntrypoints": [
+        "PROCESS",
+        "BEHAVIOR"
+      ],
+      "pilotCoverageRu": "ходьба, бег, тренировка, планка, обратная планка, силовые упражнения, сидение"
+    },
+    {
+      "order": 5,
+      "canonicalKey": "domain.mental_cognitive_state",
+      "titleRu": "Психическое и когнитивное состояние",
+      "facetCode": "DOMAIN",
+      "objectKindCode": "domain_root",
+      "nodeRoleCode": "root",
+      "hierarchyRelationCode": null,
+      "parentCanonicalKey": null,
+      "rootCanonicalKey": "domain.mental_cognitive_state",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active",
+      "facetEntrypoints": [
+        "STATE",
+        "PROCESS",
+        "BEHAVIOR"
+      ],
+      "pilotCoverageRu": "настроение, стресс, тревога, спокойствие, внимание, концентрация, умственная нагрузка"
+    },
+    {
+      "order": 6,
+      "canonicalKey": "domain.relationships_social_life",
+      "titleRu": "Отношения, семья и социальная жизнь",
+      "facetCode": "DOMAIN",
+      "objectKindCode": "domain_root",
+      "nodeRoleCode": "root",
+      "hierarchyRelationCode": null,
+      "parentCanonicalKey": null,
+      "rootCanonicalKey": "domain.relationships_social_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active",
+      "facetEntrypoints": [
+        "RELATIONSHIP",
+        "PROCESS",
+        "ROLE"
+      ],
+      "pilotCoverageRu": "разговор, совместное время, конфликт, поддержка, забота, родительская/партнёрская роль"
+    },
+    {
+      "order": 7,
+      "canonicalKey": "domain.work_professional_activity",
+      "titleRu": "Работа и профессиональная деятельность",
+      "facetCode": "DOMAIN",
+      "objectKindCode": "domain_root",
+      "nodeRoleCode": "root",
+      "hierarchyRelationCode": null,
+      "parentCanonicalKey": null,
+      "rootCanonicalKey": "domain.work_professional_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active",
+      "facetEntrypoints": [
+        "PROCESS",
+        "ROLE",
+        "STATE"
+      ],
+      "pilotCoverageRu": "рабочая сессия, встреча, клиентское взаимодействие, административная работа, рабочая нагрузка"
+    },
+    {
+      "order": 8,
+      "canonicalKey": "domain.learning_knowledge_development",
+      "titleRu": "Обучение, знания и развитие",
+      "facetCode": "DOMAIN",
+      "objectKindCode": "domain_root",
+      "nodeRoleCode": "root",
+      "hierarchyRelationCode": null,
+      "parentCanonicalKey": null,
+      "rootCanonicalKey": "domain.learning_knowledge_development",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active",
+      "facetEntrypoints": [
+        "KNOWLEDGE",
+        "PROCESS",
+        "STATE"
+      ],
+      "pilotCoverageRu": "учёба, практика, повторение, языковая практика, тест/экзамен, понимание"
+    },
+    {
+      "order": 9,
+      "canonicalKey": "domain.finance_material_resources",
+      "titleRu": "Финансы и материальные ресурсы",
+      "facetCode": "DOMAIN",
+      "objectKindCode": "domain_root",
+      "nodeRoleCode": "root",
+      "hierarchyRelationCode": null,
+      "parentCanonicalKey": null,
+      "rootCanonicalKey": "domain.finance_material_resources",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active",
+      "facetEntrypoints": [
+        "ENTITY",
+        "PROCESS",
+        "STATE"
+      ],
+      "pilotCoverageRu": "деньги, покупка, расход, доход, перевод, баланс"
+    },
+    {
+      "order": 10,
+      "canonicalKey": "domain.home_daily_life",
+      "titleRu": "Дом и повседневная жизнь",
+      "facetCode": "DOMAIN",
+      "objectKindCode": "domain_root",
+      "nodeRoleCode": "root",
+      "hierarchyRelationCode": null,
+      "parentCanonicalKey": null,
+      "rootCanonicalKey": "domain.home_daily_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active",
+      "facetEntrypoints": [
+        "ENTITY",
+        "PROCESS",
+        "STATE"
+      ],
+      "pilotCoverageRu": "готовка, уборка, стирка, ремонт, обслуживание вещей, бытовая задача"
+    },
+    {
+      "order": 11,
+      "canonicalKey": "domain.environment_context",
+      "titleRu": "Окружающая среда и контекст",
+      "facetCode": "DOMAIN",
+      "objectKindCode": "domain_root",
+      "nodeRoleCode": "root",
+      "hierarchyRelationCode": null,
+      "parentCanonicalKey": null,
+      "rootCanonicalKey": "domain.environment_context",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active",
+      "facetEntrypoints": [
+        "CONTEXT",
+        "ENTITY"
+      ],
+      "pilotCoverageRu": "температура воздуха, облачность, осадки, влажность, ветер, шум, освещённость, indoor/outdoor"
+    },
+    {
+      "order": 12,
+      "canonicalKey": "domain.rest_creativity_leisure",
+      "titleRu": "Отдых, творчество и досуг",
+      "facetCode": "DOMAIN",
+      "objectKindCode": "domain_root",
+      "nodeRoleCode": "root",
+      "hierarchyRelationCode": null,
+      "parentCanonicalKey": null,
+      "rootCanonicalKey": "domain.rest_creativity_leisure",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active",
+      "facetEntrypoints": [
+        "PROCESS",
+        "STATE"
+      ],
+      "pilotCoverageRu": "игра на инструменте, музыка, творчество, игра, культурный досуг, отдых"
+    }
+  ],
+  "nodes": [
+    {
+      "domainCanonicalKey": "domain.body_physiology",
+      "orderInDomain": 1,
+      "facetCode": "ENTITY",
+      "entryType": "branch",
+      "canonicalKey": "entity.body_structure",
+      "titleRu": "Анатомические структуры",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "part_of",
+      "objectKindCode": "generic_entity",
+      "parentCanonicalKey": "domain.body_physiology",
+      "rootCanonicalKey": "domain.body_physiology",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.body_physiology",
+      "orderInDomain": 2,
+      "facetCode": "ENTITY",
+      "entryType": "node",
+      "canonicalKey": "entity.body",
+      "titleRu": "Тело",
+      "descriptionRu": "Семантическая мишень тела как целого; прямые измерения ограничены назначенными параметрами.",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "part_of",
+      "objectKindCode": "body_entity",
+      "parentCanonicalKey": "entity.body_structure",
+      "rootCanonicalKey": "domain.body_physiology",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.body_physiology",
+      "orderInDomain": 3,
+      "facetCode": "ENTITY",
+      "entryType": "node",
+      "canonicalKey": "entity.body.spine",
+      "titleRu": "Позвоночник",
+      "descriptionRu": "Опорно-двигательная структура; сырые факты только на более точных leaf.",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "part_of",
+      "objectKindCode": "anatomical_structure",
+      "parentCanonicalKey": "entity.body",
+      "rootCanonicalKey": "domain.body_physiology",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.body_physiology",
+      "orderInDomain": 4,
+      "facetCode": "ENTITY",
+      "entryType": "node",
+      "canonicalKey": "entity.body.spine.lumbar",
+      "titleRu": "Поясничный отдел позвоночника",
+      "descriptionRu": "Терминальная анатомическая мишень для боли/скованности/подвижности.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "part_of",
+      "objectKindCode": "anatomical_region",
+      "parentCanonicalKey": "entity.body.spine",
+      "rootCanonicalKey": "domain.body_physiology",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.body_physiology",
+      "orderInDomain": 5,
+      "facetCode": "STATE",
+      "entryType": "branch",
+      "canonicalKey": "state.physiology",
+      "titleRu": "Физиологические показатели и симптомы",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_state",
+      "parentCanonicalKey": "domain.body_physiology",
+      "rootCanonicalKey": "domain.body_physiology",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.body_physiology",
+      "orderInDomain": 6,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.physiology.body_weight",
+      "titleRu": "Масса тела",
+      "descriptionRu": "Повторяемое наблюдение массы тела.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "physiological_measurement_state",
+      "parentCanonicalKey": "state.physiology",
+      "rootCanonicalKey": "domain.body_physiology",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.body_physiology",
+      "orderInDomain": 7,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.physiology.heart_rate",
+      "titleRu": "Частота сердечных сокращений",
+      "descriptionRu": "Измерение пульса/ЧСС в конкретный момент или интервал.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "physiological_signal",
+      "parentCanonicalKey": "state.physiology",
+      "rootCanonicalKey": "domain.body_physiology",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.body_physiology",
+      "orderInDomain": 8,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.physiology.blood_pressure",
+      "titleRu": "Артериальное давление",
+      "descriptionRu": "Систолическое/диастолическое давление при фактическом измерении.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "physiological_signal",
+      "parentCanonicalKey": "state.physiology",
+      "rootCanonicalKey": "domain.body_physiology",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.body_physiology",
+      "orderInDomain": 9,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.physiology.pain",
+      "titleRu": "Боль",
+      "descriptionRu": "Качественное/числовое состояние боли; location связывается relation с анатомическим leaf.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "symptom_state",
+      "parentCanonicalKey": "state.physiology",
+      "rootCanonicalKey": "domain.body_physiology",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.body_physiology",
+      "orderInDomain": 10,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.physiology.physical_fatigue",
+      "titleRu": "Физическая усталость",
+      "descriptionRu": "Субъективная или измеренная физическая усталость без автоматического score.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "fatigue_state",
+      "parentCanonicalKey": "state.physiology",
+      "rootCanonicalKey": "domain.body_physiology",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.body_physiology",
+      "orderInDomain": 11,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.physiology.general_wellbeing",
+      "titleRu": "Общее физическое самочувствие",
+      "descriptionRu": "Качественное физическое самочувствие; explicit scale только если пользователь её дал.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "wellbeing_state",
+      "parentCanonicalKey": "state.physiology",
+      "rootCanonicalKey": "domain.body_physiology",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.body_physiology",
+      "orderInDomain": 12,
+      "facetCode": "PROCESS",
+      "entryType": "branch",
+      "canonicalKey": "process.physiology",
+      "titleRu": "Физиологические процессы",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_process",
+      "parentCanonicalKey": "domain.body_physiology",
+      "rootCanonicalKey": "domain.body_physiology",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.body_physiology",
+      "orderInDomain": 13,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.physiology.recovery_after_load",
+      "titleRu": "Восстановление после нагрузки",
+      "descriptionRu": "Наблюдаемый эпизод восстановления; не приписывает автоматически физиологический эффект.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "recovery_process",
+      "parentCanonicalKey": "process.physiology",
+      "rootCanonicalKey": "domain.body_physiology",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.sleep_recovery",
+      "orderInDomain": 1,
+      "facetCode": "PROCESS",
+      "entryType": "branch",
+      "canonicalKey": "process.sleep_recovery",
+      "titleRu": "Сон и отдых",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_process",
+      "parentCanonicalKey": "domain.sleep_recovery",
+      "rootCanonicalKey": "domain.sleep_recovery",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.sleep_recovery",
+      "orderInDomain": 2,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.sleep.night_episode",
+      "titleRu": "Ночной сон",
+      "descriptionRu": "Основной эпизод сна в ночной период.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "sleep_episode",
+      "parentCanonicalKey": "process.sleep_recovery",
+      "rootCanonicalKey": "domain.sleep_recovery",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.sleep_recovery",
+      "orderInDomain": 3,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.sleep.day_episode",
+      "titleRu": "Дневной сон",
+      "descriptionRu": "Дневной эпизод сна/дремоты.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "sleep_episode",
+      "parentCanonicalKey": "process.sleep_recovery",
+      "rootCanonicalKey": "domain.sleep_recovery",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.sleep_recovery",
+      "orderInDomain": 4,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.recovery.rest_awake",
+      "titleRu": "Отдых без сна",
+      "descriptionRu": "Период отдыха без сна.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "rest_episode",
+      "parentCanonicalKey": "process.sleep_recovery",
+      "rootCanonicalKey": "domain.sleep_recovery",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.sleep_recovery",
+      "orderInDomain": 5,
+      "facetCode": "STATE",
+      "entryType": "branch",
+      "canonicalKey": "state.sleep_recovery",
+      "titleRu": "Состояния сна/восстановления",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_state",
+      "parentCanonicalKey": "domain.sleep_recovery",
+      "rootCanonicalKey": "domain.sleep_recovery",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.sleep_recovery",
+      "orderInDomain": 6,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.sleep.sleepiness",
+      "titleRu": "Сонливость",
+      "descriptionRu": "Качественная/explicit scale сонливости.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "sleepiness_state",
+      "parentCanonicalKey": "state.sleep_recovery",
+      "rootCanonicalKey": "domain.sleep_recovery",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.sleep_recovery",
+      "orderInDomain": 7,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.recovery.restedness",
+      "titleRu": "Восстановленность",
+      "descriptionRu": "Ощущение/измерение восстановленности.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "recovery_state",
+      "parentCanonicalKey": "state.sleep_recovery",
+      "rootCanonicalKey": "domain.sleep_recovery",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.sleep_recovery",
+      "orderInDomain": 8,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.sleep.sleep_onset_difficulty",
+      "titleRu": "Трудность засыпания",
+      "descriptionRu": "Качественное состояние или explicit latency.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "sleep_state",
+      "parentCanonicalKey": "state.sleep_recovery",
+      "rootCanonicalKey": "domain.sleep_recovery",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.nutrition_consumption",
+      "orderInDomain": 1,
+      "facetCode": "PROCESS",
+      "entryType": "branch",
+      "canonicalKey": "process.nutrition",
+      "titleRu": "Приём пищи и напитков",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_process",
+      "parentCanonicalKey": "domain.nutrition_consumption",
+      "rootCanonicalKey": "domain.nutrition_consumption",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.nutrition_consumption",
+      "orderInDomain": 2,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.nutrition.meal",
+      "titleRu": "Приём пищи",
+      "descriptionRu": "Событие приёма пищи.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "food_intake",
+      "parentCanonicalKey": "process.nutrition",
+      "rootCanonicalKey": "domain.nutrition_consumption",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.nutrition_consumption",
+      "orderInDomain": 3,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.nutrition.water_intake",
+      "titleRu": "Употребление воды",
+      "descriptionRu": "Событие употребления воды.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "fluid_intake",
+      "parentCanonicalKey": "process.nutrition",
+      "rootCanonicalKey": "domain.nutrition_consumption",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.nutrition_consumption",
+      "orderInDomain": 4,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.nutrition.caffeine_intake",
+      "titleRu": "Употребление кофеина",
+      "descriptionRu": "Кофе/чай/кофеин как intake event; dose только explicit/source-backed.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "substance_intake",
+      "parentCanonicalKey": "process.nutrition",
+      "rootCanonicalKey": "domain.nutrition_consumption",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.nutrition_consumption",
+      "orderInDomain": 5,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.nutrition.alcohol_intake",
+      "titleRu": "Употребление алкоголя",
+      "descriptionRu": "Событие употребления алкоголя; amount только explicit/source-backed.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "substance_intake",
+      "parentCanonicalKey": "process.nutrition",
+      "rootCanonicalKey": "domain.nutrition_consumption",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.nutrition_consumption",
+      "orderInDomain": 6,
+      "facetCode": "ENTITY",
+      "entryType": "branch",
+      "canonicalKey": "entity.nutrition",
+      "titleRu": "Пища и напитки",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_entity",
+      "parentCanonicalKey": "domain.nutrition_consumption",
+      "rootCanonicalKey": "domain.nutrition_consumption",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.nutrition_consumption",
+      "orderInDomain": 7,
+      "facetCode": "ENTITY",
+      "entryType": "node",
+      "canonicalKey": "entity.food.item",
+      "titleRu": "Пищевой продукт/блюдо",
+      "descriptionRu": "Общий объект потребляемой пищи; детализация продукта может быть candidate/reference later.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "food_entity",
+      "parentCanonicalKey": "entity.nutrition",
+      "rootCanonicalKey": "domain.nutrition_consumption",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.nutrition_consumption",
+      "orderInDomain": 8,
+      "facetCode": "ENTITY",
+      "entryType": "node",
+      "canonicalKey": "entity.beverage.item",
+      "titleRu": "Напиток",
+      "descriptionRu": "Общий объект напитка.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "beverage_entity",
+      "parentCanonicalKey": "entity.nutrition",
+      "rootCanonicalKey": "domain.nutrition_consumption",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.nutrition_consumption",
+      "orderInDomain": 9,
+      "facetCode": "STATE",
+      "entryType": "branch",
+      "canonicalKey": "state.nutrition",
+      "titleRu": "Аппетит и гидратационные ощущения",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_state",
+      "parentCanonicalKey": "domain.nutrition_consumption",
+      "rootCanonicalKey": "domain.nutrition_consumption",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.nutrition_consumption",
+      "orderInDomain": 10,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.nutrition.hunger",
+      "titleRu": "Голод",
+      "descriptionRu": "Качественное/explicit scale состояние голода.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "appetite_state",
+      "parentCanonicalKey": "state.nutrition",
+      "rootCanonicalKey": "domain.nutrition_consumption",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.nutrition_consumption",
+      "orderInDomain": 11,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.nutrition.satiety",
+      "titleRu": "Сытость",
+      "descriptionRu": "Качественное/explicit scale состояние сытости.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "appetite_state",
+      "parentCanonicalKey": "state.nutrition",
+      "rootCanonicalKey": "domain.nutrition_consumption",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.nutrition_consumption",
+      "orderInDomain": 12,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.nutrition.thirst",
+      "titleRu": "Жажда",
+      "descriptionRu": "Качественное/explicit scale состояние жажды.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "hydration_state",
+      "parentCanonicalKey": "state.nutrition",
+      "rootCanonicalKey": "domain.nutrition_consumption",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.movement_physical_activity",
+      "orderInDomain": 1,
+      "facetCode": "PROCESS",
+      "entryType": "branch",
+      "canonicalKey": "process.movement.locomotion",
+      "titleRu": "Передвижение",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_process",
+      "parentCanonicalKey": "domain.movement_physical_activity",
+      "rootCanonicalKey": "domain.movement_physical_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.movement_physical_activity",
+      "orderInDomain": 2,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.movement.walking",
+      "titleRu": "Ходьба",
+      "descriptionRu": "Обычная ходьба/прогулка; purpose/context — relation, не новый leaf.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "locomotion_process",
+      "parentCanonicalKey": "process.movement.locomotion",
+      "rootCanonicalKey": "domain.movement_physical_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.movement_physical_activity",
+      "orderInDomain": 3,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.movement.running",
+      "titleRu": "Бег",
+      "descriptionRu": "Беговой эпизод.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "locomotion_process",
+      "parentCanonicalKey": "process.movement.locomotion",
+      "rootCanonicalKey": "domain.movement_physical_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.movement_physical_activity",
+      "orderInDomain": 4,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.movement.cycling",
+      "titleRu": "Езда на велосипеде",
+      "descriptionRu": "Велосипедная активность.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "locomotion_process",
+      "parentCanonicalKey": "process.movement.locomotion",
+      "rootCanonicalKey": "domain.movement_physical_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.movement_physical_activity",
+      "orderInDomain": 5,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.movement.swimming",
+      "titleRu": "Плавание",
+      "descriptionRu": "Плавание как физическая активность.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "locomotion_process",
+      "parentCanonicalKey": "process.movement.locomotion",
+      "rootCanonicalKey": "domain.movement_physical_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.movement_physical_activity",
+      "orderInDomain": 6,
+      "facetCode": "PROCESS",
+      "entryType": "branch",
+      "canonicalKey": "process.exercise",
+      "titleRu": "Упражнения",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_process",
+      "parentCanonicalKey": "domain.movement_physical_activity",
+      "rootCanonicalKey": "domain.movement_physical_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.movement_physical_activity",
+      "orderInDomain": 7,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.exercise.plank",
+      "titleRu": "Планка",
+      "descriptionRu": "Статическое упражнение в положении планки.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "isometric_exercise",
+      "parentCanonicalKey": "process.exercise",
+      "rootCanonicalKey": "domain.movement_physical_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.movement_physical_activity",
+      "orderInDomain": 8,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.exercise.reverse_plank",
+      "titleRu": "Обратная планка",
+      "descriptionRu": "Статическое упражнение в положении обратной планки.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "isometric_exercise",
+      "parentCanonicalKey": "process.exercise",
+      "rootCanonicalKey": "domain.movement_physical_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.movement_physical_activity",
+      "orderInDomain": 9,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.exercise.push_up",
+      "titleRu": "Отжимания",
+      "descriptionRu": "Отжимания; repetitions/set_count при explicit данных.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "bodyweight_strength_exercise",
+      "parentCanonicalKey": "process.exercise",
+      "rootCanonicalKey": "domain.movement_physical_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.movement_physical_activity",
+      "orderInDomain": 10,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.exercise.pull_up",
+      "titleRu": "Подтягивания",
+      "descriptionRu": "Подтягивания; repetitions/set_count при explicit данных.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "bodyweight_strength_exercise",
+      "parentCanonicalKey": "process.exercise",
+      "rootCanonicalKey": "domain.movement_physical_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.movement_physical_activity",
+      "orderInDomain": 11,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.exercise.squat",
+      "titleRu": "Приседания",
+      "descriptionRu": "Приседания с/без нагрузки; конкретный variant может стать candidate.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "strength_exercise",
+      "parentCanonicalKey": "process.exercise",
+      "rootCanonicalKey": "domain.movement_physical_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.movement_physical_activity",
+      "orderInDomain": 12,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.exercise.mobility_stretching",
+      "titleRu": "Растяжка/мобилизация",
+      "descriptionRu": "Растяжка и mobility-сессия.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "mobility_exercise",
+      "parentCanonicalKey": "process.exercise",
+      "rootCanonicalKey": "domain.movement_physical_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.movement_physical_activity",
+      "orderInDomain": 13,
+      "facetCode": "BEHAVIOR",
+      "entryType": "branch",
+      "canonicalKey": "behavior.movement",
+      "titleRu": "Повседневная двигательная экспозиция",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_behavior",
+      "parentCanonicalKey": "domain.movement_physical_activity",
+      "rootCanonicalKey": "domain.movement_physical_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.movement_physical_activity",
+      "orderInDomain": 14,
+      "facetCode": "BEHAVIOR",
+      "entryType": "node",
+      "canonicalKey": "behavior.movement.prolonged_sitting",
+      "titleRu": "Продолжительное сидение",
+      "descriptionRu": "Период сидения/низкой подвижности; duration only if explicit/derived from event interval.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "sedentary_behavior",
+      "parentCanonicalKey": "behavior.movement",
+      "rootCanonicalKey": "domain.movement_physical_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.movement_physical_activity",
+      "orderInDomain": 15,
+      "facetCode": "BEHAVIOR",
+      "entryType": "node",
+      "canonicalKey": "behavior.movement.prolonged_standing",
+      "titleRu": "Продолжительное стояние",
+      "descriptionRu": "Период стояния.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "posture_behavior",
+      "parentCanonicalKey": "behavior.movement",
+      "rootCanonicalKey": "domain.movement_physical_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.mental_cognitive_state",
+      "orderInDomain": 1,
+      "facetCode": "STATE",
+      "entryType": "branch",
+      "canonicalKey": "state.emotional",
+      "titleRu": "Эмоциональные состояния",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_state",
+      "parentCanonicalKey": "domain.mental_cognitive_state",
+      "rootCanonicalKey": "domain.mental_cognitive_state",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.mental_cognitive_state",
+      "orderInDomain": 2,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.emotional.mood",
+      "titleRu": "Настроение",
+      "descriptionRu": "Общее текущее настроение/его качественное изменение.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "mood_state",
+      "parentCanonicalKey": "state.emotional",
+      "rootCanonicalKey": "domain.mental_cognitive_state",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.mental_cognitive_state",
+      "orderInDomain": 3,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.emotional.stress",
+      "titleRu": "Психологическое напряжение/стресс",
+      "descriptionRu": "Субъективное напряжение/стресс без автоматической медицинской интерпретации.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "stress_state",
+      "parentCanonicalKey": "state.emotional",
+      "rootCanonicalKey": "domain.mental_cognitive_state",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.mental_cognitive_state",
+      "orderInDomain": 4,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.emotional.anxiety",
+      "titleRu": "Тревожность",
+      "descriptionRu": "Качественное или explicit scale состояние тревожности.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "anxiety_state",
+      "parentCanonicalKey": "state.emotional",
+      "rootCanonicalKey": "domain.mental_cognitive_state",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.mental_cognitive_state",
+      "orderInDomain": 5,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.emotional.calmness",
+      "titleRu": "Спокойствие",
+      "descriptionRu": "Качественное состояние спокойствия.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "calm_state",
+      "parentCanonicalKey": "state.emotional",
+      "rootCanonicalKey": "domain.mental_cognitive_state",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.mental_cognitive_state",
+      "orderInDomain": 6,
+      "facetCode": "STATE",
+      "entryType": "branch",
+      "canonicalKey": "state.cognitive",
+      "titleRu": "Когнитивные состояния",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_state",
+      "parentCanonicalKey": "domain.mental_cognitive_state",
+      "rootCanonicalKey": "domain.mental_cognitive_state",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.mental_cognitive_state",
+      "orderInDomain": 7,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.cognitive.concentration",
+      "titleRu": "Концентрация",
+      "descriptionRu": "Субъективное/explicit measure состояние концентрации.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "cognitive_state",
+      "parentCanonicalKey": "state.cognitive",
+      "rootCanonicalKey": "domain.mental_cognitive_state",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.mental_cognitive_state",
+      "orderInDomain": 8,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.cognitive.attention",
+      "titleRu": "Внимание",
+      "descriptionRu": "Качество/устойчивость внимания.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "cognitive_state",
+      "parentCanonicalKey": "state.cognitive",
+      "rootCanonicalKey": "domain.mental_cognitive_state",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.mental_cognitive_state",
+      "orderInDomain": 9,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.cognitive.mental_fatigue",
+      "titleRu": "Умственная усталость",
+      "descriptionRu": "Качественное состояние умственной усталости.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "fatigue_state",
+      "parentCanonicalKey": "state.cognitive",
+      "rootCanonicalKey": "domain.mental_cognitive_state",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.mental_cognitive_state",
+      "orderInDomain": 10,
+      "facetCode": "PROCESS",
+      "entryType": "branch",
+      "canonicalKey": "process.cognitive",
+      "titleRu": "Когнитивная работа",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_process",
+      "parentCanonicalKey": "domain.mental_cognitive_state",
+      "rootCanonicalKey": "domain.mental_cognitive_state",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.mental_cognitive_state",
+      "orderInDomain": 11,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.cognitive.focused_work",
+      "titleRu": "Сосредоточенная умственная работа",
+      "descriptionRu": "Эпизод целенаправленной когнитивной деятельности, не привязанный к конкретной профессии.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "cognitive_process",
+      "parentCanonicalKey": "process.cognitive",
+      "rootCanonicalKey": "domain.mental_cognitive_state",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.relationships_social_life",
+      "orderInDomain": 1,
+      "facetCode": "RELATIONSHIP",
+      "entryType": "branch",
+      "canonicalKey": "relationship.social",
+      "titleRu": "Типы близких и социальных отношений",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_relationship",
+      "parentCanonicalKey": "domain.relationships_social_life",
+      "rootCanonicalKey": "domain.relationships_social_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.relationships_social_life",
+      "orderInDomain": 2,
+      "facetCode": "RELATIONSHIP",
+      "entryType": "node",
+      "canonicalKey": "relationship.partner",
+      "titleRu": "Партнёрские отношения",
+      "descriptionRu": "Глобальный тип отношений; конкретный партнёр создаётся позже actor-scoped.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "close_relationship_type",
+      "parentCanonicalKey": "relationship.social",
+      "rootCanonicalKey": "domain.relationships_social_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.relationships_social_life",
+      "orderInDomain": 3,
+      "facetCode": "RELATIONSHIP",
+      "entryType": "node",
+      "canonicalKey": "relationship.parent_child",
+      "titleRu": "Родительско-детские отношения",
+      "descriptionRu": "Глобальный тип отношений.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "family_relationship_type",
+      "parentCanonicalKey": "relationship.social",
+      "rootCanonicalKey": "domain.relationships_social_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.relationships_social_life",
+      "orderInDomain": 4,
+      "facetCode": "RELATIONSHIP",
+      "entryType": "node",
+      "canonicalKey": "relationship.friendship",
+      "titleRu": "Дружеские отношения",
+      "descriptionRu": "Глобальный тип дружеских отношений.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "social_relationship_type",
+      "parentCanonicalKey": "relationship.social",
+      "rootCanonicalKey": "domain.relationships_social_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.relationships_social_life",
+      "orderInDomain": 5,
+      "facetCode": "RELATIONSHIP",
+      "entryType": "node",
+      "canonicalKey": "relationship.colleague",
+      "titleRu": "Коллегиальные отношения",
+      "descriptionRu": "Глобальный тип отношений с коллегами.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "work_relationship_type",
+      "parentCanonicalKey": "relationship.social",
+      "rootCanonicalKey": "domain.relationships_social_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.relationships_social_life",
+      "orderInDomain": 6,
+      "facetCode": "PROCESS",
+      "entryType": "branch",
+      "canonicalKey": "process.social_interaction",
+      "titleRu": "Социальные взаимодействия",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_process",
+      "parentCanonicalKey": "domain.relationships_social_life",
+      "rootCanonicalKey": "domain.relationships_social_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.relationships_social_life",
+      "orderInDomain": 7,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.social.conversation",
+      "titleRu": "Разговор",
+      "descriptionRu": "Разговор с участником/участниками.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "communication_process",
+      "parentCanonicalKey": "process.social_interaction",
+      "rootCanonicalKey": "domain.relationships_social_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.relationships_social_life",
+      "orderInDomain": 8,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.social.shared_time",
+      "titleRu": "Совместное время/досуг",
+      "descriptionRu": "Совместное время; конкретная activity может дополнительно иметь свой PROCESS leaf.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "joint_activity_process",
+      "parentCanonicalKey": "process.social_interaction",
+      "rootCanonicalKey": "domain.relationships_social_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.relationships_social_life",
+      "orderInDomain": 9,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.social.conflict_interaction",
+      "titleRu": "Конфликтное взаимодействие",
+      "descriptionRu": "Эпизод конфликта; stress/mood не вшиваются автоматически.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "conflict_process",
+      "parentCanonicalKey": "process.social_interaction",
+      "rootCanonicalKey": "domain.relationships_social_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.relationships_social_life",
+      "orderInDomain": 10,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.social.support_exchange",
+      "titleRu": "Помощь/поддержка",
+      "descriptionRu": "Оказание/получение практической или эмоциональной поддержки.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "support_process",
+      "parentCanonicalKey": "process.social_interaction",
+      "rootCanonicalKey": "domain.relationships_social_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.relationships_social_life",
+      "orderInDomain": 11,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.social.caregiving",
+      "titleRu": "Забота/уход за другим",
+      "descriptionRu": "Эпизод заботы/ухода; participant — relation.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "caregiving_process",
+      "parentCanonicalKey": "process.social_interaction",
+      "rootCanonicalKey": "domain.relationships_social_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.relationships_social_life",
+      "orderInDomain": 12,
+      "facetCode": "ROLE",
+      "entryType": "branch",
+      "canonicalKey": "role.social",
+      "titleRu": "Социальные роли",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_role",
+      "parentCanonicalKey": "domain.relationships_social_life",
+      "rootCanonicalKey": "domain.relationships_social_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.relationships_social_life",
+      "orderInDomain": 13,
+      "facetCode": "ROLE",
+      "entryType": "node",
+      "canonicalKey": "role.social.partner",
+      "titleRu": "Партнёр/супруг",
+      "descriptionRu": "Глобальная роль, не конкретный человек.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "social_role",
+      "parentCanonicalKey": "role.social",
+      "rootCanonicalKey": "domain.relationships_social_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.relationships_social_life",
+      "orderInDomain": 14,
+      "facetCode": "ROLE",
+      "entryType": "node",
+      "canonicalKey": "role.social.parent",
+      "titleRu": "Родитель",
+      "descriptionRu": "Глобальная роль.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "social_role",
+      "parentCanonicalKey": "role.social",
+      "rootCanonicalKey": "domain.relationships_social_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.relationships_social_life",
+      "orderInDomain": 15,
+      "facetCode": "ROLE",
+      "entryType": "node",
+      "canonicalKey": "role.social.friend",
+      "titleRu": "Друг",
+      "descriptionRu": "Глобальная роль.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "social_role",
+      "parentCanonicalKey": "role.social",
+      "rootCanonicalKey": "domain.relationships_social_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.relationships_social_life",
+      "orderInDomain": 16,
+      "facetCode": "ROLE",
+      "entryType": "node",
+      "canonicalKey": "role.social.colleague",
+      "titleRu": "Коллега",
+      "descriptionRu": "Глобальная роль.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "social_role",
+      "parentCanonicalKey": "role.social",
+      "rootCanonicalKey": "domain.relationships_social_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.work_professional_activity",
+      "orderInDomain": 1,
+      "facetCode": "PROCESS",
+      "entryType": "branch",
+      "canonicalKey": "process.work",
+      "titleRu": "Рабочие процессы",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_process",
+      "parentCanonicalKey": "domain.work_professional_activity",
+      "rootCanonicalKey": "domain.work_professional_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.work_professional_activity",
+      "orderInDomain": 2,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.work.session",
+      "titleRu": "Рабочая сессия",
+      "descriptionRu": "Общий эпизод работы.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "work_process",
+      "parentCanonicalKey": "process.work",
+      "rootCanonicalKey": "domain.work_professional_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.work_professional_activity",
+      "orderInDomain": 3,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.work.meeting",
+      "titleRu": "Встреча/совещание",
+      "descriptionRu": "Рабочее совещание/встреча.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "meeting_process",
+      "parentCanonicalKey": "process.work",
+      "rootCanonicalKey": "domain.work_professional_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.work_professional_activity",
+      "orderInDomain": 4,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.work.client_interaction",
+      "titleRu": "Клиентское взаимодействие",
+      "descriptionRu": "Взаимодействие с клиентом/заказчиком.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "client_process",
+      "parentCanonicalKey": "process.work",
+      "rootCanonicalKey": "domain.work_professional_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.work_professional_activity",
+      "orderInDomain": 5,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.work.administrative",
+      "titleRu": "Административная работа",
+      "descriptionRu": "Административные/офисные задачи.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "administrative_process",
+      "parentCanonicalKey": "process.work",
+      "rootCanonicalKey": "domain.work_professional_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.work_professional_activity",
+      "orderInDomain": 6,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.work.performance",
+      "titleRu": "Публичное выступление/исполнение",
+      "descriptionRu": "Профессиональное публичное исполнение/выступление; relation связывает с творческим процессом при необходимости.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "performance_process",
+      "parentCanonicalKey": "process.work",
+      "rootCanonicalKey": "domain.work_professional_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.work_professional_activity",
+      "orderInDomain": 7,
+      "facetCode": "STATE",
+      "entryType": "branch",
+      "canonicalKey": "state.work",
+      "titleRu": "Рабочие состояния",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_state",
+      "parentCanonicalKey": "domain.work_professional_activity",
+      "rootCanonicalKey": "domain.work_professional_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.work_professional_activity",
+      "orderInDomain": 8,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.work.workload",
+      "titleRu": "Рабочая нагрузка",
+      "descriptionRu": "Качественная/explicit шкала текущей нагрузки.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "workload_state",
+      "parentCanonicalKey": "state.work",
+      "rootCanonicalKey": "domain.work_professional_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.work_professional_activity",
+      "orderInDomain": 9,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.work.readiness",
+      "titleRu": "Готовность к работе",
+      "descriptionRu": "Текущее ощущение/измерение готовности без универсальной нормы.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "readiness_state",
+      "parentCanonicalKey": "state.work",
+      "rootCanonicalKey": "domain.work_professional_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.work_professional_activity",
+      "orderInDomain": 10,
+      "facetCode": "ROLE",
+      "entryType": "branch",
+      "canonicalKey": "role.work",
+      "titleRu": "Общие профессиональные роли",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_role",
+      "parentCanonicalKey": "domain.work_professional_activity",
+      "rootCanonicalKey": "domain.work_professional_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.work_professional_activity",
+      "orderInDomain": 11,
+      "facetCode": "ROLE",
+      "entryType": "node",
+      "canonicalKey": "role.work.worker",
+      "titleRu": "Работник/исполнитель",
+      "descriptionRu": "Общая роль участника профессиональной деятельности; конкретные профессии — позже.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "professional_role",
+      "parentCanonicalKey": "role.work",
+      "rootCanonicalKey": "domain.work_professional_activity",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.learning_knowledge_development",
+      "orderInDomain": 1,
+      "facetCode": "PROCESS",
+      "entryType": "branch",
+      "canonicalKey": "process.learning",
+      "titleRu": "Учебные процессы",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_process",
+      "parentCanonicalKey": "domain.learning_knowledge_development",
+      "rootCanonicalKey": "domain.learning_knowledge_development",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.learning_knowledge_development",
+      "orderInDomain": 2,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.learning.study_session",
+      "titleRu": "Учебная сессия",
+      "descriptionRu": "Общий эпизод учёбы.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "learning_process",
+      "parentCanonicalKey": "process.learning",
+      "rootCanonicalKey": "domain.learning_knowledge_development",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.learning_knowledge_development",
+      "orderInDomain": 3,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.learning.reading_study",
+      "titleRu": "Чтение/изучение материала",
+      "descriptionRu": "Чтение с учебной целью.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "learning_process",
+      "parentCanonicalKey": "process.learning",
+      "rootCanonicalKey": "domain.learning_knowledge_development",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.learning_knowledge_development",
+      "orderInDomain": 4,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.learning.practice_repetition",
+      "titleRu": "Практика/повторение",
+      "descriptionRu": "Повторение материала/навыка; repetitions/items_count if explicit.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "practice_process",
+      "parentCanonicalKey": "process.learning",
+      "rootCanonicalKey": "domain.learning_knowledge_development",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.learning_knowledge_development",
+      "orderInDomain": 5,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.learning.language_practice",
+      "titleRu": "Языковая практика",
+      "descriptionRu": "Практика иностранного/родного языка; language_code via relation/context.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "language_learning_process",
+      "parentCanonicalKey": "process.learning",
+      "rootCanonicalKey": "domain.learning_knowledge_development",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.learning_knowledge_development",
+      "orderInDomain": 6,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.learning.test_exam",
+      "titleRu": "Тест/экзамен",
+      "descriptionRu": "Фактический контроль знаний; score only if explicit.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "assessment_process",
+      "parentCanonicalKey": "process.learning",
+      "rootCanonicalKey": "domain.learning_knowledge_development",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.learning_knowledge_development",
+      "orderInDomain": 7,
+      "facetCode": "STATE",
+      "entryType": "branch",
+      "canonicalKey": "state.learning",
+      "titleRu": "Состояния освоения",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_state",
+      "parentCanonicalKey": "domain.learning_knowledge_development",
+      "rootCanonicalKey": "domain.learning_knowledge_development",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.learning_knowledge_development",
+      "orderInDomain": 8,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.learning.understanding",
+      "titleRu": "Понимание материала",
+      "descriptionRu": "Качественное/explicit оценённое понимание.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "knowledge_state",
+      "parentCanonicalKey": "state.learning",
+      "rootCanonicalKey": "domain.learning_knowledge_development",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.learning_knowledge_development",
+      "orderInDomain": 9,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.learning.confidence",
+      "titleRu": "Уверенность в знании/навыке",
+      "descriptionRu": "Субъективная уверенность; не равна объективной компетенции.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "knowledge_state",
+      "parentCanonicalKey": "state.learning",
+      "rootCanonicalKey": "domain.learning_knowledge_development",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.learning_knowledge_development",
+      "orderInDomain": 10,
+      "facetCode": "KNOWLEDGE",
+      "entryType": "branch",
+      "canonicalKey": "knowledge.general",
+      "titleRu": "Общие знания",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_knowledge",
+      "parentCanonicalKey": "domain.learning_knowledge_development",
+      "rootCanonicalKey": "domain.learning_knowledge_development",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.learning_knowledge_development",
+      "orderInDomain": 11,
+      "facetCode": "KNOWLEDGE",
+      "entryType": "node",
+      "canonicalKey": "knowledge.general.topic",
+      "titleRu": "Знание/понятие",
+      "descriptionRu": "Минимальный placeholder для подтверждённого knowledge target; конкретные области расширяются контролируемо.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "knowledge_item",
+      "parentCanonicalKey": "knowledge.general",
+      "rootCanonicalKey": "domain.learning_knowledge_development",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.finance_material_resources",
+      "orderInDomain": 1,
+      "facetCode": "PROCESS",
+      "entryType": "branch",
+      "canonicalKey": "process.finance",
+      "titleRu": "Денежные операции",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_process",
+      "parentCanonicalKey": "domain.finance_material_resources",
+      "rootCanonicalKey": "domain.finance_material_resources",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.finance_material_resources",
+      "orderInDomain": 2,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.finance.purchase",
+      "titleRu": "Покупка",
+      "descriptionRu": "Покупка товара/услуги; object link при наличии.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "financial_transaction",
+      "parentCanonicalKey": "process.finance",
+      "rootCanonicalKey": "domain.finance_material_resources",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.finance_material_resources",
+      "orderInDomain": 3,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.finance.expense",
+      "titleRu": "Расход",
+      "descriptionRu": "Расход денежных средств.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "financial_transaction",
+      "parentCanonicalKey": "process.finance",
+      "rootCanonicalKey": "domain.finance_material_resources",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.finance_material_resources",
+      "orderInDomain": 4,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.finance.income",
+      "titleRu": "Доход",
+      "descriptionRu": "Получение дохода.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "financial_transaction",
+      "parentCanonicalKey": "process.finance",
+      "rootCanonicalKey": "domain.finance_material_resources",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.finance_material_resources",
+      "orderInDomain": 5,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.finance.transfer",
+      "titleRu": "Перевод денег",
+      "descriptionRu": "Перевод/перемещение средств.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "financial_transaction",
+      "parentCanonicalKey": "process.finance",
+      "rootCanonicalKey": "domain.finance_material_resources",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.finance_material_resources",
+      "orderInDomain": 6,
+      "facetCode": "ENTITY",
+      "entryType": "branch",
+      "canonicalKey": "entity.finance",
+      "titleRu": "Денежные и материальные ресурсы",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_entity",
+      "parentCanonicalKey": "domain.finance_material_resources",
+      "rootCanonicalKey": "domain.finance_material_resources",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.finance_material_resources",
+      "orderInDomain": 7,
+      "facetCode": "ENTITY",
+      "entryType": "node",
+      "canonicalKey": "entity.finance.money",
+      "titleRu": "Денежные средства",
+      "descriptionRu": "Деньги как ресурс; конкретные счета/кошельки actor-scoped later.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "financial_resource",
+      "parentCanonicalKey": "entity.finance",
+      "rootCanonicalKey": "domain.finance_material_resources",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.finance_material_resources",
+      "orderInDomain": 8,
+      "facetCode": "ENTITY",
+      "entryType": "node",
+      "canonicalKey": "entity.finance.asset",
+      "titleRu": "Материальный актив",
+      "descriptionRu": "Общий материальный актив; конкретные активы personal layer.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "asset_entity",
+      "parentCanonicalKey": "entity.finance",
+      "rootCanonicalKey": "domain.finance_material_resources",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.finance_material_resources",
+      "orderInDomain": 9,
+      "facetCode": "STATE",
+      "entryType": "branch",
+      "canonicalKey": "state.finance",
+      "titleRu": "Финансовые состояния",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_state",
+      "parentCanonicalKey": "domain.finance_material_resources",
+      "rootCanonicalKey": "domain.finance_material_resources",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.finance_material_resources",
+      "orderInDomain": 10,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.finance.balance",
+      "titleRu": "Денежный баланс",
+      "descriptionRu": "Фактический баланс при explicit/source-backed наблюдении.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "financial_state",
+      "parentCanonicalKey": "state.finance",
+      "rootCanonicalKey": "domain.finance_material_resources",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.finance_material_resources",
+      "orderInDomain": 11,
+      "facetCode": "STATE",
+      "entryType": "node",
+      "canonicalKey": "state.finance.debt",
+      "titleRu": "Долговое обязательство",
+      "descriptionRu": "Состояние долга/обязательства; amount explicit.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "financial_state",
+      "parentCanonicalKey": "state.finance",
+      "rootCanonicalKey": "domain.finance_material_resources",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.home_daily_life",
+      "orderInDomain": 1,
+      "facetCode": "PROCESS",
+      "entryType": "branch",
+      "canonicalKey": "process.home",
+      "titleRu": "Бытовые процессы",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_process",
+      "parentCanonicalKey": "domain.home_daily_life",
+      "rootCanonicalKey": "domain.home_daily_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.home_daily_life",
+      "orderInDomain": 2,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.home.cooking",
+      "titleRu": "Приготовление пищи",
+      "descriptionRu": "Готовка как бытовой процесс; eating — отдельный nutrition event.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "household_process",
+      "parentCanonicalKey": "process.home",
+      "rootCanonicalKey": "domain.home_daily_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.home_daily_life",
+      "orderInDomain": 3,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.home.cleaning",
+      "titleRu": "Уборка",
+      "descriptionRu": "Уборка помещения/вещей.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "household_process",
+      "parentCanonicalKey": "process.home",
+      "rootCanonicalKey": "domain.home_daily_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.home_daily_life",
+      "orderInDomain": 4,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.home.laundry",
+      "titleRu": "Стирка/уход за одеждой",
+      "descriptionRu": "Стирка и уход за одеждой.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "household_process",
+      "parentCanonicalKey": "process.home",
+      "rootCanonicalKey": "domain.home_daily_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.home_daily_life",
+      "orderInDomain": 5,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.home.maintenance",
+      "titleRu": "Ремонт/обслуживание",
+      "descriptionRu": "Ремонт или обслуживание вещи/жилья.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "household_process",
+      "parentCanonicalKey": "process.home",
+      "rootCanonicalKey": "domain.home_daily_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.home_daily_life",
+      "orderInDomain": 6,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.home.household_task",
+      "titleRu": "Бытовая задача",
+      "descriptionRu": "Универсальный fallback бытовой задачи, пока нет более точного leaf.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "household_process",
+      "parentCanonicalKey": "process.home",
+      "rootCanonicalKey": "domain.home_daily_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.home_daily_life",
+      "orderInDomain": 7,
+      "facetCode": "ENTITY",
+      "entryType": "branch",
+      "canonicalKey": "entity.home",
+      "titleRu": "Домашняя среда и вещи",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_entity",
+      "parentCanonicalKey": "domain.home_daily_life",
+      "rootCanonicalKey": "domain.home_daily_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.home_daily_life",
+      "orderInDomain": 8,
+      "facetCode": "ENTITY",
+      "entryType": "node",
+      "canonicalKey": "entity.home.dwelling",
+      "titleRu": "Жилище",
+      "descriptionRu": "Общий объект жилища; конкретный дом actor-scoped later.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "place_entity",
+      "parentCanonicalKey": "entity.home",
+      "rootCanonicalKey": "domain.home_daily_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.home_daily_life",
+      "orderInDomain": 9,
+      "facetCode": "ENTITY",
+      "entryType": "node",
+      "canonicalKey": "entity.home.item",
+      "titleRu": "Домашняя вещь",
+      "descriptionRu": "Общая домашняя вещь; конкретный предмет actor-scoped later.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "household_entity",
+      "parentCanonicalKey": "entity.home",
+      "rootCanonicalKey": "domain.home_daily_life",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.environment_context",
+      "orderInDomain": 1,
+      "facetCode": "CONTEXT",
+      "entryType": "branch",
+      "canonicalKey": "context.weather",
+      "titleRu": "Погодные и атмосферные условия",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_context",
+      "parentCanonicalKey": "domain.environment_context",
+      "rootCanonicalKey": "domain.environment_context",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.environment_context",
+      "orderInDomain": 2,
+      "facetCode": "CONTEXT",
+      "entryType": "node",
+      "canonicalKey": "context.weather.air_temperature",
+      "titleRu": "Температура окружающего воздуха",
+      "descriptionRu": "Температура воздуха в текущем внешнем контексте.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "environment_measurement_context",
+      "parentCanonicalKey": "context.weather",
+      "rootCanonicalKey": "domain.environment_context",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.environment_context",
+      "orderInDomain": 3,
+      "facetCode": "CONTEXT",
+      "entryType": "node",
+      "canonicalKey": "context.weather.cloudiness",
+      "titleRu": "Облачность",
+      "descriptionRu": "Категориальная/процентная облачность, если source её дал.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "weather_context",
+      "parentCanonicalKey": "context.weather",
+      "rootCanonicalKey": "domain.environment_context",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.environment_context",
+      "orderInDomain": 4,
+      "facetCode": "CONTEXT",
+      "entryType": "node",
+      "canonicalKey": "context.weather.precipitation",
+      "titleRu": "Осадки",
+      "descriptionRu": "Дождь/снег/осадки; intensity only explicit/source-backed.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "weather_context",
+      "parentCanonicalKey": "context.weather",
+      "rootCanonicalKey": "domain.environment_context",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.environment_context",
+      "orderInDomain": 5,
+      "facetCode": "CONTEXT",
+      "entryType": "node",
+      "canonicalKey": "context.weather.humidity",
+      "titleRu": "Влажность воздуха",
+      "descriptionRu": "Относительная влажность.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "environment_measurement_context",
+      "parentCanonicalKey": "context.weather",
+      "rootCanonicalKey": "domain.environment_context",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.environment_context",
+      "orderInDomain": 6,
+      "facetCode": "CONTEXT",
+      "entryType": "node",
+      "canonicalKey": "context.weather.wind",
+      "titleRu": "Ветер",
+      "descriptionRu": "Скорость/характер ветра.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "weather_context",
+      "parentCanonicalKey": "context.weather",
+      "rootCanonicalKey": "domain.environment_context",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.environment_context",
+      "orderInDomain": 7,
+      "facetCode": "CONTEXT",
+      "entryType": "branch",
+      "canonicalKey": "context.environment",
+      "titleRu": "Физический контекст среды",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_context",
+      "parentCanonicalKey": "domain.environment_context",
+      "rootCanonicalKey": "domain.environment_context",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.environment_context",
+      "orderInDomain": 8,
+      "facetCode": "CONTEXT",
+      "entryType": "node",
+      "canonicalKey": "context.environment.noise",
+      "titleRu": "Шум окружающей среды",
+      "descriptionRu": "Уровень/категория шума.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "environment_context",
+      "parentCanonicalKey": "context.environment",
+      "rootCanonicalKey": "domain.environment_context",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.environment_context",
+      "orderInDomain": 9,
+      "facetCode": "CONTEXT",
+      "entryType": "node",
+      "canonicalKey": "context.environment.illumination",
+      "titleRu": "Освещённость",
+      "descriptionRu": "Освещённость/яркость при source-backed измерении или качественном описании.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "environment_context",
+      "parentCanonicalKey": "context.environment",
+      "rootCanonicalKey": "domain.environment_context",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.environment_context",
+      "orderInDomain": 10,
+      "facetCode": "CONTEXT",
+      "entryType": "node",
+      "canonicalKey": "context.environment.indoor_outdoor",
+      "titleRu": "В помещении/на улице",
+      "descriptionRu": "Грубый контекст без точных координат.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "location_context",
+      "parentCanonicalKey": "context.environment",
+      "rootCanonicalKey": "domain.environment_context",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.environment_context",
+      "orderInDomain": 11,
+      "facetCode": "CONTEXT",
+      "entryType": "branch",
+      "canonicalKey": "context.resources",
+      "titleRu": "Ресурсный контекст",
+      "descriptionRu": "Facet entry для доступных ресурсов контекста, не являющихся самостоятельными DOMAIN.",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_context",
+      "parentCanonicalKey": "domain.environment_context",
+      "rootCanonicalKey": "domain.environment_context",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.environment_context",
+      "orderInDomain": 12,
+      "facetCode": "CONTEXT",
+      "entryType": "node",
+      "canonicalKey": "context.resources.available_time",
+      "titleRu": "Доступное время",
+      "descriptionRu": "Доступный временной ресурс в заданном окне. Не является дедлайном, временем суток или требуемой длительностью задачи.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "available_time_context",
+      "parentCanonicalKey": "context.resources",
+      "rootCanonicalKey": "domain.environment_context",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.rest_creativity_leisure",
+      "orderInDomain": 1,
+      "facetCode": "PROCESS",
+      "entryType": "branch",
+      "canonicalKey": "process.creative",
+      "titleRu": "Творческая деятельность",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_process",
+      "parentCanonicalKey": "domain.rest_creativity_leisure",
+      "rootCanonicalKey": "domain.rest_creativity_leisure",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.rest_creativity_leisure",
+      "orderInDomain": 2,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.creative.instrument_playing",
+      "titleRu": "Игра на музыкальном инструменте",
+      "descriptionRu": "Игра/практика на музыкальном инструменте.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "creative_process",
+      "parentCanonicalKey": "process.creative",
+      "rootCanonicalKey": "domain.rest_creativity_leisure",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.rest_creativity_leisure",
+      "orderInDomain": 3,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.creative.singing",
+      "titleRu": "Пение",
+      "descriptionRu": "Пение как творческий процесс; professional context relation возможен.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "creative_process",
+      "parentCanonicalKey": "process.creative",
+      "rootCanonicalKey": "domain.rest_creativity_leisure",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.rest_creativity_leisure",
+      "orderInDomain": 4,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.creative.creation",
+      "titleRu": "Создание текста/визуального материала",
+      "descriptionRu": "Творческое создание контента/произведения.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "creative_process",
+      "parentCanonicalKey": "process.creative",
+      "rootCanonicalKey": "domain.rest_creativity_leisure",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.rest_creativity_leisure",
+      "orderInDomain": 5,
+      "facetCode": "PROCESS",
+      "entryType": "branch",
+      "canonicalKey": "process.leisure",
+      "titleRu": "Досуг",
+      "descriptionRu": "Facet entry",
+      "nodeRoleCode": "intermediate",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "generic_process",
+      "parentCanonicalKey": "domain.rest_creativity_leisure",
+      "rootCanonicalKey": "domain.rest_creativity_leisure",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.rest_creativity_leisure",
+      "orderInDomain": 6,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.leisure.game",
+      "titleRu": "Игра/видеоигра",
+      "descriptionRu": "Игровой досуг.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "leisure_process",
+      "parentCanonicalKey": "process.leisure",
+      "rootCanonicalKey": "domain.rest_creativity_leisure",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.rest_creativity_leisure",
+      "orderInDomain": 7,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.leisure.media_consumption",
+      "titleRu": "Просмотр медиа",
+      "descriptionRu": "Просмотр видео/телевидения/стриминга.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "leisure_process",
+      "parentCanonicalKey": "process.leisure",
+      "rootCanonicalKey": "domain.rest_creativity_leisure",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.rest_creativity_leisure",
+      "orderInDomain": 8,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.leisure.cultural_event",
+      "titleRu": "Культурное мероприятие",
+      "descriptionRu": "Посещение/участие в культурном событии как досуг.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "leisure_process",
+      "parentCanonicalKey": "process.leisure",
+      "rootCanonicalKey": "domain.rest_creativity_leisure",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    },
+    {
+      "domainCanonicalKey": "domain.rest_creativity_leisure",
+      "orderInDomain": 9,
+      "facetCode": "PROCESS",
+      "entryType": "node",
+      "canonicalKey": "process.leisure.free_rest",
+      "titleRu": "Свободный отдых",
+      "descriptionRu": "Свободный отдых, когда нет более точного процесса.",
+      "nodeRoleCode": "leaf",
+      "hierarchyRelationCode": "is_a",
+      "objectKindCode": "leisure_process",
+      "parentCanonicalKey": "process.leisure",
+      "rootCanonicalKey": "domain.rest_creativity_leisure",
+      "scopeCode": "global",
+      "visibilityCode": "public",
+      "privacyClassCode": "public_ontology",
+      "originTypeCode": "system_model",
+      "statusCode": "active"
+    }
+  ],
+  "kindRegistryExtensions": [
+    {
+      "objectKindCode": "administrative_process",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.administrative_process.title",
+      "descriptionKey": "valueObject.kind.administrative_process.description"
+    },
+    {
+      "objectKindCode": "anatomical_region",
+      "facetCode": "ENTITY",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.anatomical_region.title",
+      "descriptionKey": "valueObject.kind.anatomical_region.description"
+    },
+    {
+      "objectKindCode": "anxiety_state",
+      "facetCode": "STATE",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.anxiety_state.title",
+      "descriptionKey": "valueObject.kind.anxiety_state.description"
+    },
+    {
+      "objectKindCode": "appetite_state",
+      "facetCode": "STATE",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.appetite_state.title",
+      "descriptionKey": "valueObject.kind.appetite_state.description"
+    },
+    {
+      "objectKindCode": "assessment_process",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.assessment_process.title",
+      "descriptionKey": "valueObject.kind.assessment_process.description"
+    },
+    {
+      "objectKindCode": "asset_entity",
+      "facetCode": "ENTITY",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.asset_entity.title",
+      "descriptionKey": "valueObject.kind.asset_entity.description"
+    },
+    {
+      "objectKindCode": "available_time_context",
+      "facetCode": "CONTEXT",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.available_time_context.title",
+      "descriptionKey": "valueObject.kind.available_time_context.description"
+    },
+    {
+      "objectKindCode": "beverage_entity",
+      "facetCode": "ENTITY",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.beverage_entity.title",
+      "descriptionKey": "valueObject.kind.beverage_entity.description"
+    },
+    {
+      "objectKindCode": "body_entity",
+      "facetCode": "ENTITY",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.body_entity.title",
+      "descriptionKey": "valueObject.kind.body_entity.description"
+    },
+    {
+      "objectKindCode": "bodyweight_strength_exercise",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.bodyweight_strength_exercise.title",
+      "descriptionKey": "valueObject.kind.bodyweight_strength_exercise.description"
+    },
+    {
+      "objectKindCode": "calm_state",
+      "facetCode": "STATE",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.calm_state.title",
+      "descriptionKey": "valueObject.kind.calm_state.description"
+    },
+    {
+      "objectKindCode": "caregiving_process",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.caregiving_process.title",
+      "descriptionKey": "valueObject.kind.caregiving_process.description"
+    },
+    {
+      "objectKindCode": "client_process",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.client_process.title",
+      "descriptionKey": "valueObject.kind.client_process.description"
+    },
+    {
+      "objectKindCode": "close_relationship_type",
+      "facetCode": "RELATIONSHIP",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.close_relationship_type.title",
+      "descriptionKey": "valueObject.kind.close_relationship_type.description"
+    },
+    {
+      "objectKindCode": "cognitive_process",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.cognitive_process.title",
+      "descriptionKey": "valueObject.kind.cognitive_process.description"
+    },
+    {
+      "objectKindCode": "cognitive_state",
+      "facetCode": "STATE",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.cognitive_state.title",
+      "descriptionKey": "valueObject.kind.cognitive_state.description"
+    },
+    {
+      "objectKindCode": "communication_process",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.communication_process.title",
+      "descriptionKey": "valueObject.kind.communication_process.description"
+    },
+    {
+      "objectKindCode": "conflict_process",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.conflict_process.title",
+      "descriptionKey": "valueObject.kind.conflict_process.description"
+    },
+    {
+      "objectKindCode": "creative_process",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.creative_process.title",
+      "descriptionKey": "valueObject.kind.creative_process.description"
+    },
+    {
+      "objectKindCode": "environment_context",
+      "facetCode": "CONTEXT",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.environment_context.title",
+      "descriptionKey": "valueObject.kind.environment_context.description"
+    },
+    {
+      "objectKindCode": "environment_measurement_context",
+      "facetCode": "CONTEXT",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.environment_measurement_context.title",
+      "descriptionKey": "valueObject.kind.environment_measurement_context.description"
+    },
+    {
+      "objectKindCode": "family_relationship_type",
+      "facetCode": "RELATIONSHIP",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.family_relationship_type.title",
+      "descriptionKey": "valueObject.kind.family_relationship_type.description"
+    },
+    {
+      "objectKindCode": "fatigue_state",
+      "facetCode": "STATE",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.fatigue_state.title",
+      "descriptionKey": "valueObject.kind.fatigue_state.description"
+    },
+    {
+      "objectKindCode": "financial_resource",
+      "facetCode": "ENTITY",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.financial_resource.title",
+      "descriptionKey": "valueObject.kind.financial_resource.description"
+    },
+    {
+      "objectKindCode": "financial_state",
+      "facetCode": "STATE",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.financial_state.title",
+      "descriptionKey": "valueObject.kind.financial_state.description"
+    },
+    {
+      "objectKindCode": "financial_transaction",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.financial_transaction.title",
+      "descriptionKey": "valueObject.kind.financial_transaction.description"
+    },
+    {
+      "objectKindCode": "fluid_intake",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.fluid_intake.title",
+      "descriptionKey": "valueObject.kind.fluid_intake.description"
+    },
+    {
+      "objectKindCode": "food_entity",
+      "facetCode": "ENTITY",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.food_entity.title",
+      "descriptionKey": "valueObject.kind.food_entity.description"
+    },
+    {
+      "objectKindCode": "food_intake",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.food_intake.title",
+      "descriptionKey": "valueObject.kind.food_intake.description"
+    },
+    {
+      "objectKindCode": "household_entity",
+      "facetCode": "ENTITY",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.household_entity.title",
+      "descriptionKey": "valueObject.kind.household_entity.description"
+    },
+    {
+      "objectKindCode": "household_process",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.household_process.title",
+      "descriptionKey": "valueObject.kind.household_process.description"
+    },
+    {
+      "objectKindCode": "hydration_state",
+      "facetCode": "STATE",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.hydration_state.title",
+      "descriptionKey": "valueObject.kind.hydration_state.description"
+    },
+    {
+      "objectKindCode": "isometric_exercise",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.isometric_exercise.title",
+      "descriptionKey": "valueObject.kind.isometric_exercise.description"
+    },
+    {
+      "objectKindCode": "joint_activity_process",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.joint_activity_process.title",
+      "descriptionKey": "valueObject.kind.joint_activity_process.description"
+    },
+    {
+      "objectKindCode": "knowledge_state",
+      "facetCode": "STATE",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.knowledge_state.title",
+      "descriptionKey": "valueObject.kind.knowledge_state.description"
+    },
+    {
+      "objectKindCode": "language_learning_process",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.language_learning_process.title",
+      "descriptionKey": "valueObject.kind.language_learning_process.description"
+    },
+    {
+      "objectKindCode": "learning_process",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.learning_process.title",
+      "descriptionKey": "valueObject.kind.learning_process.description"
+    },
+    {
+      "objectKindCode": "leisure_process",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.leisure_process.title",
+      "descriptionKey": "valueObject.kind.leisure_process.description"
+    },
+    {
+      "objectKindCode": "location_context",
+      "facetCode": "CONTEXT",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.location_context.title",
+      "descriptionKey": "valueObject.kind.location_context.description"
+    },
+    {
+      "objectKindCode": "locomotion_process",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.locomotion_process.title",
+      "descriptionKey": "valueObject.kind.locomotion_process.description"
+    },
+    {
+      "objectKindCode": "meeting_process",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.meeting_process.title",
+      "descriptionKey": "valueObject.kind.meeting_process.description"
+    },
+    {
+      "objectKindCode": "mobility_exercise",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.mobility_exercise.title",
+      "descriptionKey": "valueObject.kind.mobility_exercise.description"
+    },
+    {
+      "objectKindCode": "mood_state",
+      "facetCode": "STATE",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.mood_state.title",
+      "descriptionKey": "valueObject.kind.mood_state.description"
+    },
+    {
+      "objectKindCode": "performance_process",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.performance_process.title",
+      "descriptionKey": "valueObject.kind.performance_process.description"
+    },
+    {
+      "objectKindCode": "physiological_measurement_state",
+      "facetCode": "STATE",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.physiological_measurement_state.title",
+      "descriptionKey": "valueObject.kind.physiological_measurement_state.description"
+    },
+    {
+      "objectKindCode": "physiological_signal",
+      "facetCode": "STATE",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.physiological_signal.title",
+      "descriptionKey": "valueObject.kind.physiological_signal.description"
+    },
+    {
+      "objectKindCode": "place_entity",
+      "facetCode": "ENTITY",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.place_entity.title",
+      "descriptionKey": "valueObject.kind.place_entity.description"
+    },
+    {
+      "objectKindCode": "posture_behavior",
+      "facetCode": "BEHAVIOR",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.posture_behavior.title",
+      "descriptionKey": "valueObject.kind.posture_behavior.description"
+    },
+    {
+      "objectKindCode": "practice_process",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.practice_process.title",
+      "descriptionKey": "valueObject.kind.practice_process.description"
+    },
+    {
+      "objectKindCode": "readiness_state",
+      "facetCode": "STATE",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.readiness_state.title",
+      "descriptionKey": "valueObject.kind.readiness_state.description"
+    },
+    {
+      "objectKindCode": "recovery_process",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.recovery_process.title",
+      "descriptionKey": "valueObject.kind.recovery_process.description"
+    },
+    {
+      "objectKindCode": "recovery_state",
+      "facetCode": "STATE",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.recovery_state.title",
+      "descriptionKey": "valueObject.kind.recovery_state.description"
+    },
+    {
+      "objectKindCode": "rest_episode",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.rest_episode.title",
+      "descriptionKey": "valueObject.kind.rest_episode.description"
+    },
+    {
+      "objectKindCode": "sedentary_behavior",
+      "facetCode": "BEHAVIOR",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.sedentary_behavior.title",
+      "descriptionKey": "valueObject.kind.sedentary_behavior.description"
+    },
+    {
+      "objectKindCode": "sleep_episode",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.sleep_episode.title",
+      "descriptionKey": "valueObject.kind.sleep_episode.description"
+    },
+    {
+      "objectKindCode": "sleep_state",
+      "facetCode": "STATE",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.sleep_state.title",
+      "descriptionKey": "valueObject.kind.sleep_state.description"
+    },
+    {
+      "objectKindCode": "sleepiness_state",
+      "facetCode": "STATE",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.sleepiness_state.title",
+      "descriptionKey": "valueObject.kind.sleepiness_state.description"
+    },
+    {
+      "objectKindCode": "social_relationship_type",
+      "facetCode": "RELATIONSHIP",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.social_relationship_type.title",
+      "descriptionKey": "valueObject.kind.social_relationship_type.description"
+    },
+    {
+      "objectKindCode": "social_role",
+      "facetCode": "ROLE",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.social_role.title",
+      "descriptionKey": "valueObject.kind.social_role.description"
+    },
+    {
+      "objectKindCode": "strength_exercise",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.strength_exercise.title",
+      "descriptionKey": "valueObject.kind.strength_exercise.description"
+    },
+    {
+      "objectKindCode": "stress_state",
+      "facetCode": "STATE",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.stress_state.title",
+      "descriptionKey": "valueObject.kind.stress_state.description"
+    },
+    {
+      "objectKindCode": "substance_intake",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.substance_intake.title",
+      "descriptionKey": "valueObject.kind.substance_intake.description"
+    },
+    {
+      "objectKindCode": "support_process",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.support_process.title",
+      "descriptionKey": "valueObject.kind.support_process.description"
+    },
+    {
+      "objectKindCode": "symptom_state",
+      "facetCode": "STATE",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.symptom_state.title",
+      "descriptionKey": "valueObject.kind.symptom_state.description"
+    },
+    {
+      "objectKindCode": "weather_context",
+      "facetCode": "CONTEXT",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.weather_context.title",
+      "descriptionKey": "valueObject.kind.weather_context.description"
+    },
+    {
+      "objectKindCode": "wellbeing_state",
+      "facetCode": "STATE",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.wellbeing_state.title",
+      "descriptionKey": "valueObject.kind.wellbeing_state.description"
+    },
+    {
+      "objectKindCode": "work_process",
+      "facetCode": "PROCESS",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.work_process.title",
+      "descriptionKey": "valueObject.kind.work_process.description"
+    },
+    {
+      "objectKindCode": "work_relationship_type",
+      "facetCode": "RELATIONSHIP",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.work_relationship_type.title",
+      "descriptionKey": "valueObject.kind.work_relationship_type.description"
+    },
+    {
+      "objectKindCode": "workload_state",
+      "facetCode": "STATE",
+      "allowedNodeRoles": [
+        "leaf"
+      ],
+      "status": "active",
+      "version": 1,
+      "titleKey": "valueObject.kind.workload_state.title",
+      "descriptionKey": "valueObject.kind.workload_state.description"
+    }
+  ],
+  "parameterRegistry": [
+    {
+      "parameterCode": "duration_minutes",
+      "valueType": "numeric",
+      "unit": "minute",
+      "aggregation": "sum",
+      "sources": "explicit interval / declared duration",
+      "precision": "exact|approx",
+      "commentRu": "Эпизоды процессов"
+    },
+    {
+      "parameterCode": "event_count",
+      "valueType": "derived/integer",
+      "unit": "count",
+      "aggregation": "count distinct event_id",
+      "sources": "deterministic",
+      "precision": "exact",
+      "commentRu": "Не писать фиктивный 1; выводится из событий"
+    },
+    {
+      "parameterCode": "body_weight_kg",
+      "valueType": "numeric",
+      "unit": "kg",
+      "aggregation": "latest/avg/trend",
+      "sources": "manual/device",
+      "precision": "exact|approx",
+      "commentRu": "Масса тела"
+    },
+    {
+      "parameterCode": "heart_rate_bpm",
+      "valueType": "numeric",
+      "unit": "1/min",
+      "aggregation": "latest/avg/min/max",
+      "sources": "manual/device",
+      "precision": "exact",
+      "commentRu": "ЧСС"
+    },
+    {
+      "parameterCode": "blood_pressure_systolic_mmhg",
+      "valueType": "numeric",
+      "unit": "mmHg",
+      "aggregation": "latest/avg",
+      "sources": "manual/device",
+      "precision": "exact",
+      "commentRu": "АД"
+    },
+    {
+      "parameterCode": "blood_pressure_diastolic_mmhg",
+      "valueType": "numeric",
+      "unit": "mmHg",
+      "aggregation": "latest/avg",
+      "sources": "manual/device",
+      "precision": "exact",
+      "commentRu": "АД"
+    },
+    {
+      "parameterCode": "intensity_scale",
+      "valueType": "numeric",
+      "unit": "user_scale",
+      "aggregation": "latest/avg",
+      "sources": "manual declared",
+      "precision": "explicit_scale_only",
+      "commentRu": "Боль/стресс/тревога и др. только при названной шкале"
+    },
+    {
+      "parameterCode": "qualitative_state",
+      "valueType": "enum",
+      "unit": "—",
+      "aggregation": "latest/category transitions",
+      "sources": "manual declared",
+      "precision": "qualitative",
+      "commentRu": "лучше/хуже/нормально/сильнее и т.п."
+    },
+    {
+      "parameterCode": "sleep_latency_minutes",
+      "valueType": "numeric",
+      "unit": "minute",
+      "aggregation": "avg/latest",
+      "sources": "manual/device",
+      "precision": "exact|approx",
+      "commentRu": "Трудность засыпания"
+    },
+    {
+      "parameterCode": "repetition_count",
+      "valueType": "integer",
+      "unit": "count",
+      "aggregation": "sum",
+      "sources": "manual/device",
+      "precision": "exact",
+      "commentRu": "Упражнения/повторение"
+    },
+    {
+      "parameterCode": "set_count",
+      "valueType": "integer",
+      "unit": "count",
+      "aggregation": "sum",
+      "sources": "manual",
+      "precision": "exact",
+      "commentRu": "Упражнения"
+    },
+    {
+      "parameterCode": "distance_m",
+      "valueType": "numeric",
+      "unit": "m",
+      "aggregation": "sum",
+      "sources": "manual/device",
+      "precision": "exact|approx",
+      "commentRu": "Ходьба/бег/велосипед/плавание"
+    },
+    {
+      "parameterCode": "external_load_kg",
+      "valueType": "numeric",
+      "unit": "kg",
+      "aggregation": "sum/avg/max depending rule",
+      "sources": "manual/device",
+      "precision": "exact|approx",
+      "commentRu": "Силовые упражнения"
+    },
+    {
+      "parameterCode": "food_mass_g",
+      "valueType": "numeric",
+      "unit": "g",
+      "aggregation": "sum",
+      "sources": "manual/device",
+      "precision": "exact|approx",
+      "commentRu": "Food intake only explicit"
+    },
+    {
+      "parameterCode": "fluid_volume_ml",
+      "valueType": "numeric",
+      "unit": "mL",
+      "aggregation": "sum",
+      "sources": "manual/device",
+      "precision": "exact|approx",
+      "commentRu": "Вода/напитки"
+    },
+    {
+      "parameterCode": "energy_kcal",
+      "valueType": "numeric",
+      "unit": "kcal",
+      "aggregation": "sum",
+      "sources": "manual/device/reference-model",
+      "precision": "exact|approx|model",
+      "commentRu": "Только explicit или source-backed"
+    },
+    {
+      "parameterCode": "caffeine_mg",
+      "valueType": "numeric",
+      "unit": "mg",
+      "aggregation": "sum",
+      "sources": "manual/reference-model",
+      "precision": "exact|approx|model",
+      "commentRu": "Только explicit или source-backed"
+    },
+    {
+      "parameterCode": "alcohol_g",
+      "valueType": "numeric",
+      "unit": "g",
+      "aggregation": "sum",
+      "sources": "manual/reference-model",
+      "precision": "exact|approx|model",
+      "commentRu": "Только explicit или source-backed"
+    },
+    {
+      "parameterCode": "amount_money",
+      "valueType": "numeric",
+      "unit": "currency-unit",
+      "aggregation": "sum",
+      "sources": "manual/import",
+      "precision": "exact|approx",
+      "commentRu": "Финансовые операции"
+    },
+    {
+      "parameterCode": "currency_code",
+      "valueType": "enum",
+      "unit": "ISO4217",
+      "aggregation": "—",
+      "sources": "manual/import",
+      "precision": "exact",
+      "commentRu": "Валюта суммы"
+    },
+    {
+      "parameterCode": "temperature_celsius",
+      "valueType": "numeric",
+      "unit": "Cel",
+      "aggregation": "avg/min/max/latest",
+      "sources": "manual/external_api/device",
+      "precision": "exact|approx",
+      "commentRu": "Температура окружающего воздуха в v0.2. Для температуры тела параметр переиспользуется позже, когда появится соответствующий leaf."
+    },
+    {
+      "parameterCode": "humidity_percent",
+      "valueType": "numeric",
+      "unit": "%",
+      "aggregation": "avg/latest",
+      "sources": "manual/external_api/device",
+      "precision": "exact|approx",
+      "commentRu": "Влажность"
+    },
+    {
+      "parameterCode": "wind_speed_mps",
+      "valueType": "numeric",
+      "unit": "m/s",
+      "aggregation": "avg/max/latest",
+      "sources": "manual/external_api/device",
+      "precision": "exact|approx",
+      "commentRu": "Ветер"
+    },
+    {
+      "parameterCode": "cloudiness_percent",
+      "valueType": "numeric",
+      "unit": "%",
+      "aggregation": "avg/latest",
+      "sources": "external_api/manual",
+      "precision": "exact|approx",
+      "commentRu": "Если дана числом"
+    },
+    {
+      "parameterCode": "weather_category",
+      "valueType": "enum",
+      "unit": "—",
+      "aggregation": "latest/duration",
+      "sources": "manual/external_api",
+      "precision": "categorical",
+      "commentRu": "солнечно/облачно/дождь и т.п."
+    },
+    {
+      "parameterCode": "noise_level_db",
+      "valueType": "numeric",
+      "unit": "dB",
+      "aggregation": "avg/max/latest",
+      "sources": "device/manual",
+      "precision": "exact|approx",
+      "commentRu": "Если реально измерено"
+    },
+    {
+      "parameterCode": "illumination_lux",
+      "valueType": "numeric",
+      "unit": "lx",
+      "aggregation": "avg/latest",
+      "sources": "device/manual",
+      "precision": "exact|approx",
+      "commentRu": "Если реально измерено"
+    },
+    {
+      "parameterCode": "score_percent",
+      "valueType": "numeric",
+      "unit": "%",
+      "aggregation": "latest/avg",
+      "sources": "manual/import",
+      "precision": "exact",
+      "commentRu": "Тест/экзамен explicit result"
+    },
+    {
+      "parameterCode": "items_count",
+      "valueType": "integer",
+      "unit": "count",
+      "aggregation": "sum",
+      "sources": "manual/device",
+      "precision": "exact",
+      "commentRu": "Учёба/задачи/повторения"
+    },
+    {
+      "parameterCode": "interruption_count",
+      "valueType": "integer",
+      "unit": "count",
+      "aggregation": "sum",
+      "sources": "manual/system",
+      "precision": "exact",
+      "commentRu": "Рабочая/когнитивная сессия, если наблюдалось"
+    },
+    {
+      "parameterCode": "available_duration_minutes",
+      "valueType": "numeric",
+      "unit": "minute",
+      "aggregation": "latest_by_window",
+      "sources": "manual/planner",
+      "precision": "exact|approx",
+      "commentRu": "Доступный временной ресурс в конкретном окне; не путать с duration задачи или дедлайном."
+    },
+    {
+      "parameterCode": "meal_label",
+      "valueType": "enum",
+      "unit": "—",
+      "aggregation": "event-local",
+      "sources": "manual/rule-derived",
+      "precision": "declared|derived",
+      "commentRu": "Опциональная классификация breakfast/lunch/dinner/snack/other. Не заменяет occurred_at."
+    }
+  ],
+  "leafParameterContracts": [
+    {
+      "leafCanonicalKey": "state.physiology.body_weight",
+      "allowedParameterCodes": [
+        "body_weight_kg"
+      ],
+      "optionalParameterCodes": [],
+      "sources": "manual/device",
+      "aggregationPolicyRu": "latest + daily avg + trend_7d"
+    },
+    {
+      "leafCanonicalKey": "state.physiology.heart_rate",
+      "allowedParameterCodes": [
+        "heart_rate_bpm"
+      ],
+      "optionalParameterCodes": [],
+      "sources": "manual/device",
+      "aggregationPolicyRu": "latest + avg/min/max by window"
+    },
+    {
+      "leafCanonicalKey": "state.physiology.blood_pressure",
+      "allowedParameterCodes": [
+        "blood_pressure_systolic_mmhg",
+        "blood_pressure_diastolic_mmhg"
+      ],
+      "optionalParameterCodes": [],
+      "sources": "manual/device",
+      "aggregationPolicyRu": "latest + avg; paired observation"
+    },
+    {
+      "leafCanonicalKey": "state.physiology.pain",
+      "allowedParameterCodes": [
+        "qualitative_state",
+        "intensity_scale"
+      ],
+      "optionalParameterCodes": [],
+      "sources": "manual",
+      "aggregationPolicyRu": "latest + episodes; explicit scale only"
+    },
+    {
+      "leafCanonicalKey": "process.sleep.night_episode",
+      "allowedParameterCodes": [
+        "duration_minutes",
+        "sleep_latency_minutes"
+      ],
+      "optionalParameterCodes": [],
+      "sources": "manual/device",
+      "aggregationPolicyRu": "sum_24h; avg_7d"
+    },
+    {
+      "leafCanonicalKey": "process.sleep.day_episode",
+      "allowedParameterCodes": [
+        "duration_minutes"
+      ],
+      "optionalParameterCodes": [],
+      "sources": "manual/device",
+      "aggregationPolicyRu": "sum_24h; avg_7d"
+    },
+    {
+      "leafCanonicalKey": "process.nutrition.meal",
+      "allowedParameterCodes": [
+        "duration_minutes",
+        "energy_kcal",
+        "food_mass_g",
+        "meal_label"
+      ],
+      "optionalParameterCodes": [
+        "duration_minutes",
+        "energy_kcal",
+        "food_mass_g",
+        "meal_label"
+      ],
+      "sources": "manual/reference later",
+      "aggregationPolicyRu": "event count; occurred_at обязателен/восстанавливается с temporal_precision; explicit/source-backed amounts; meal_label optional"
+    },
+    {
+      "leafCanonicalKey": "process.nutrition.water_intake",
+      "allowedParameterCodes": [
+        "fluid_volume_ml"
+      ],
+      "optionalParameterCodes": [],
+      "sources": "manual/device",
+      "aggregationPolicyRu": "sum_24h"
+    },
+    {
+      "leafCanonicalKey": "process.exercise.plank",
+      "allowedParameterCodes": [
+        "duration_minutes",
+        "set_count"
+      ],
+      "optionalParameterCodes": [],
+      "sources": "manual/device",
+      "aggregationPolicyRu": "sum by 24h/7d"
+    },
+    {
+      "leafCanonicalKey": "process.exercise.reverse_plank",
+      "allowedParameterCodes": [
+        "duration_minutes",
+        "set_count"
+      ],
+      "optionalParameterCodes": [],
+      "sources": "manual/device",
+      "aggregationPolicyRu": "sum by 24h/7d"
+    },
+    {
+      "leafCanonicalKey": "process.exercise.push_up",
+      "allowedParameterCodes": [
+        "repetition_count",
+        "set_count",
+        "duration_minutes"
+      ],
+      "optionalParameterCodes": [
+        "duration_minutes"
+      ],
+      "sources": "manual/device",
+      "aggregationPolicyRu": "sum reps/sets by window"
+    },
+    {
+      "leafCanonicalKey": "process.exercise.pull_up",
+      "allowedParameterCodes": [
+        "repetition_count",
+        "set_count",
+        "duration_minutes"
+      ],
+      "optionalParameterCodes": [
+        "duration_minutes"
+      ],
+      "sources": "manual/device",
+      "aggregationPolicyRu": "sum reps/sets by window"
+    },
+    {
+      "leafCanonicalKey": "process.movement.walking",
+      "allowedParameterCodes": [
+        "duration_minutes",
+        "distance_m"
+      ],
+      "optionalParameterCodes": [],
+      "sources": "manual/device",
+      "aggregationPolicyRu": "sum by 24h/7d"
+    },
+    {
+      "leafCanonicalKey": "behavior.movement.prolonged_sitting",
+      "allowedParameterCodes": [
+        "duration_minutes"
+      ],
+      "optionalParameterCodes": [],
+      "sources": "manual/system",
+      "aggregationPolicyRu": "sum/max continuous bout"
+    },
+    {
+      "leafCanonicalKey": "state.emotional.mood",
+      "allowedParameterCodes": [
+        "qualitative_state",
+        "intensity_scale"
+      ],
+      "optionalParameterCodes": [
+        "intensity_scale"
+      ],
+      "sources": "manual",
+      "aggregationPolicyRu": "latest + transitions; explicit scale only"
+    },
+    {
+      "leafCanonicalKey": "state.emotional.stress",
+      "allowedParameterCodes": [
+        "qualitative_state",
+        "intensity_scale"
+      ],
+      "optionalParameterCodes": [
+        "intensity_scale"
+      ],
+      "sources": "manual/device only if device measure is separately defined",
+      "aggregationPolicyRu": "latest + windows"
+    },
+    {
+      "leafCanonicalKey": "state.cognitive.concentration",
+      "allowedParameterCodes": [
+        "qualitative_state",
+        "intensity_scale"
+      ],
+      "optionalParameterCodes": [
+        "intensity_scale"
+      ],
+      "sources": "manual",
+      "aggregationPolicyRu": "latest/episode context"
+    },
+    {
+      "leafCanonicalKey": "process.social.conversation",
+      "allowedParameterCodes": [
+        "duration_minutes"
+      ],
+      "optionalParameterCodes": [],
+      "sources": "manual/system",
+      "aggregationPolicyRu": "sum by participant/context"
+    },
+    {
+      "leafCanonicalKey": "process.social.conflict_interaction",
+      "allowedParameterCodes": [
+        "duration_minutes",
+        "qualitative_state"
+      ],
+      "optionalParameterCodes": [
+        "duration_minutes",
+        "qualitative_state"
+      ],
+      "sources": "manual",
+      "aggregationPolicyRu": "event count + duration if explicit"
+    },
+    {
+      "leafCanonicalKey": "process.work.session",
+      "allowedParameterCodes": [
+        "duration_minutes",
+        "interruption_count"
+      ],
+      "optionalParameterCodes": [
+        "interruption_count"
+      ],
+      "sources": "manual/system",
+      "aggregationPolicyRu": "sum by day/week"
+    },
+    {
+      "leafCanonicalKey": "process.learning.language_practice",
+      "allowedParameterCodes": [
+        "duration_minutes",
+        "repetition_count",
+        "items_count"
+      ],
+      "optionalParameterCodes": [],
+      "sources": "manual/system",
+      "aggregationPolicyRu": "sum by day/week"
+    },
+    {
+      "leafCanonicalKey": "process.finance.purchase",
+      "allowedParameterCodes": [
+        "amount_money",
+        "currency_code"
+      ],
+      "optionalParameterCodes": [],
+      "sources": "manual/import",
+      "aggregationPolicyRu": "sum by day/month"
+    },
+    {
+      "leafCanonicalKey": "context.weather.air_temperature",
+      "allowedParameterCodes": [
+        "temperature_celsius"
+      ],
+      "optionalParameterCodes": [],
+      "sources": "manual/external_api",
+      "aggregationPolicyRu": "latest/min/max/avg day"
+    },
+    {
+      "leafCanonicalKey": "context.weather.cloudiness",
+      "allowedParameterCodes": [
+        "weather_category",
+        "cloudiness_percent"
+      ],
+      "optionalParameterCodes": [
+        "cloudiness_percent"
+      ],
+      "sources": "manual/external_api",
+      "aggregationPolicyRu": "latest/avg if numeric"
+    },
+    {
+      "leafCanonicalKey": "context.environment.indoor_outdoor",
+      "allowedParameterCodes": [
+        "qualitative_state"
+      ],
+      "optionalParameterCodes": [],
+      "sources": "manual/device",
+      "aggregationPolicyRu": "latest/context duration"
+    },
+    {
+      "leafCanonicalKey": "process.creative.instrument_playing",
+      "allowedParameterCodes": [
+        "duration_minutes",
+        "repetition_count"
+      ],
+      "optionalParameterCodes": [
+        "repetition_count"
+      ],
+      "sources": "manual/device",
+      "aggregationPolicyRu": "sum by day/week"
+    },
+    {
+      "leafCanonicalKey": "context.resources.available_time",
+      "allowedParameterCodes": [
+        "available_duration_minutes"
+      ],
+      "optionalParameterCodes": [],
+      "sources": "manual/planner",
+      "aggregationPolicyRu": "latest by declared window; history kept; no automatic conversion into goal"
+    }
+  ],
+  "storageParameterMapping": {
+    "duration_minutes": {
+      "status": "reuse",
+      "storageCode": "duration",
+      "note": "canonical minute"
+    },
+    "event_count": {
+      "status": "derived",
+      "storageCode": "observation_count",
+      "note": "derive from distinct event_id; do not write synthetic 1"
+    },
+    "body_weight_kg": {
+      "status": "reuse",
+      "storageCode": "body_mass",
+      "note": "canonical kg"
+    },
+    "heart_rate_bpm": {
+      "status": "reuse",
+      "storageCode": "heart_rate",
+      "note": "canonical bpm"
+    },
+    "blood_pressure_systolic_mmhg": {
+      "status": "extend",
+      "storageCode": null,
+      "note": "new pressure parameter required"
+    },
+    "blood_pressure_diastolic_mmhg": {
+      "status": "extend",
+      "storageCode": null,
+      "note": "new pressure parameter required"
+    },
+    "intensity_scale": {
+      "status": "reuse_guarded",
+      "storageCode": "state_score",
+      "note": "only when semantic scale is 0..10"
+    },
+    "qualitative_state": {
+      "status": "reuse",
+      "storageCode": "observed_text",
+      "note": "qualitative declared state"
+    },
+    "sleep_latency_minutes": {
+      "status": "extend",
+      "storageCode": null,
+      "note": "must not collide with sleep duration"
+    },
+    "repetition_count": {
+      "status": "reuse",
+      "storageCode": "repetition_count",
+      "note": ""
+    },
+    "set_count": {
+      "status": "reuse",
+      "storageCode": "set_count",
+      "note": ""
+    },
+    "distance_m": {
+      "status": "reuse",
+      "storageCode": "distance",
+      "note": "canonical meter"
+    },
+    "external_load_kg": {
+      "status": "reuse",
+      "storageCode": "object_mass",
+      "note": "canonical kg"
+    },
+    "food_mass_g": {
+      "status": "extend",
+      "storageCode": null,
+      "note": "dedicated food-mass parameter preferred"
+    },
+    "fluid_volume_ml": {
+      "status": "reuse",
+      "storageCode": "liquid_volume",
+      "note": "canonical liter with ml conversion"
+    },
+    "energy_kcal": {
+      "status": "leaf_specific",
+      "storageCode": null,
+      "note": "resolve to energy_intake / energy_expenditure / energy_amount by leaf contract"
+    },
+    "caffeine_mg": {
+      "status": "extend",
+      "storageCode": null,
+      "note": "dedicated mass parameter required"
+    },
+    "alcohol_g": {
+      "status": "extend",
+      "storageCode": null,
+      "note": "dedicated alcohol mass parameter required"
+    },
+    "amount_money": {
+      "status": "leaf_specific",
+      "storageCode": null,
+      "note": "resolve to currency-specific monetary parameter"
+    },
+    "currency_code": {
+      "status": "extend",
+      "storageCode": null,
+      "note": "dedicated text parameter or structured measure context"
+    },
+    "temperature_celsius": {
+      "status": "reuse",
+      "storageCode": "temperature",
+      "note": "environment temperature in v0.2"
+    },
+    "humidity_percent": {
+      "status": "extend",
+      "storageCode": null,
+      "note": "percentage parameter required"
+    },
+    "wind_speed_mps": {
+      "status": "extend_unit",
+      "storageCode": "speed",
+      "note": "add meter_per_second to allowed unit/conversion"
+    },
+    "cloudiness_percent": {
+      "status": "extend",
+      "storageCode": null,
+      "note": "percentage parameter required"
+    },
+    "weather_category": {
+      "status": "reuse",
+      "storageCode": "observed_text",
+      "note": "categorical weather state"
+    },
+    "noise_level_db": {
+      "status": "extend",
+      "storageCode": null,
+      "note": "sound-level parameter required"
+    },
+    "illumination_lux": {
+      "status": "extend",
+      "storageCode": null,
+      "note": "illuminance parameter required"
+    },
+    "score_percent": {
+      "status": "extend",
+      "storageCode": null,
+      "note": "percentage score parameter required"
+    },
+    "items_count": {
+      "status": "extend",
+      "storageCode": null,
+      "note": "dedicated item count preferred"
+    },
+    "interruption_count": {
+      "status": "extend",
+      "storageCode": null,
+      "note": "dedicated interruption count preferred"
+    },
+    "available_duration_minutes": {
+      "status": "reuse_guarded",
+      "storageCode": "duration",
+      "note": "safe only on context.resources.available_time"
+    },
+    "meal_label": {
+      "status": "extend",
+      "storageCode": null,
+      "note": "event-local enum/text classification; not separate leaf"
+    }
+  },
+  "relations": [
+    {
+      "layer": "VO semantic",
+      "relationCode": "related_to",
+      "meaningRu": "нейтральная смысловая связь",
+      "status": "global allowed",
+      "guardRu": "Не означает причинность."
+    },
+    {
+      "layer": "VO semantic",
+      "relationCode": "same_subject_as",
+      "meaningRu": "тот же предмет/смысл в другой проекции",
+      "status": "global allowed",
+      "guardRu": "Использовать осторожно, без дублирования identity."
+    },
+    {
+      "layer": "VO semantic",
+      "relationCode": "supports / supported_by",
+      "meaningRu": "поддерживает/поддерживается",
+      "status": "guarded",
+      "guardRu": "В Global — только очевидная функциональная/организационная связь; научные эффекты later."
+    },
+    {
+      "layer": "VO semantic",
+      "relationCode": "depends_on / prerequisite_for",
+      "meaningRu": "структурная зависимость вне hierarchy",
+      "status": "guarded",
+      "guardRu": "Чаще Reference/model/Goal World; Global только безопасные универсальные зависимости."
+    },
+    {
+      "layer": "VO semantic",
+      "relationCode": "conflicts_with",
+      "meaningRu": "несовместимость/конфликт смыслов/процессов",
+      "status": "guarded",
+      "guardRu": "Не использовать как медицинский вывод."
+    },
+    {
+      "layer": "VO semantic",
+      "relationCode": "influences / influenced_by",
+      "meaningRu": "влияние",
+      "status": "model-only by default",
+      "guardRu": "Global Seed разрешает code как hook, но не создаёт научное утверждение без package/evidence."
+    },
+    {
+      "layer": "Event link",
+      "relationCode": "categorized_as / performs",
+      "meaningRu": "событие относится к PROCESS leaf",
+      "status": "runtime",
+      "guardRu": "Основной semantic routing."
+    },
+    {
+      "layer": "Event link",
+      "relationCode": "consumes",
+      "meaningRu": "событие потребления → ENTITY food/beverage",
+      "status": "runtime",
+      "guardRu": "Без invented quantity."
+    },
+    {
+      "layer": "Event link",
+      "relationCode": "with_participant",
+      "meaningRu": "участник события",
+      "status": "runtime",
+      "guardRu": "Third-party privacy guard."
+    },
+    {
+      "layer": "Event link",
+      "relationCode": "located_in",
+      "meaningRu": "симптом/событие → anatomical/context target",
+      "status": "runtime",
+      "guardRu": "Например боль located_in lumbar."
+    },
+    {
+      "layer": "Event link",
+      "relationCode": "occurs_in_context",
+      "meaningRu": "событие → CONTEXT observation",
+      "status": "runtime",
+      "guardRu": "Погода/место/условия не становятся вторым parent."
+    },
+    {
+      "layer": "Temporal",
+      "relationCode": "precedes / follows / overlaps",
+      "meaningRu": "временная последовательность",
+      "status": "runtime",
+      "guardRu": "Не повышать автоматически до causes."
+    }
+  ],
+  "routingExamples": [
+    {
+      "phraseRu": "Планка",
+      "objects": "process.exercise.plank",
+      "allowedRouteRu": "related_to → process.exercise; located/context via event; model hook: musculoskeletal, recovery, mood pre/post",
+      "forbiddenRu": "Не записывать «позвоночник улучшился» без наблюдения/model package."
+    },
+    {
+      "phraseRu": "Обратная планка",
+      "objects": "process.exercise.reverse_plank",
+      "allowedRouteRu": "model hook: musculoskeletal, posture/recovery, mood pre/post",
+      "forbiddenRu": "Отдельный process leaf, даже если соседствует во времени с plank."
+    },
+    {
+      "phraseRu": "Настроение улучшилось после планки",
+      "objects": "state.emotional.mood",
+      "allowedRouteRu": "event temporal: plank precedes mood-change; declared state link",
+      "forbiddenRu": "Не CAUSES; персональная association только после истории."
+    },
+    {
+      "phraseRu": "Боль в пояснице",
+      "objects": "state.physiology.pain + entity.body.spine.lumbar",
+      "allowedRouteRu": "pain event/state located_in lumbar",
+      "forbiddenRu": "Intensity только explicit scale/qualitative."
+    },
+    {
+      "phraseRu": "Съел пирожное",
+      "objects": "process.nutrition.meal + entity.food.item",
+      "allowedRouteRu": "consumes food entity",
+      "forbiddenRu": "No kcal/sugar without source."
+    },
+    {
+      "phraseRu": "Гулял с дочерью",
+      "objects": "process.movement.walking + process.social.shared_time",
+      "allowedRouteRu": "with_participant actor; related event projection",
+      "forbiddenRu": "Не создаём второй structural parent и скрытый профиль дочери."
+    },
+    {
+      "phraseRu": "Было 3 конфликта",
+      "objects": "process.social.conflict_interaction",
+      "allowedRouteRu": "aggregate_declared count for today",
+      "forbiddenRu": "Не суммировать автоматически с детальными events без dedup/coverage rule."
+    },
+    {
+      "phraseRu": "19°C, облачно",
+      "objects": "context.weather.air_temperature + context.weather.cloudiness",
+      "allowedRouteRu": "same observation context; external/manual provenance separate",
+      "forbiddenRu": "Погода — context, не цель."
+    }
+  ],
+  "observationTargetStrategies": [
+    {
+      "mode": "OBSERVE",
+      "meaningRu": "Нейтральное наблюдение без желаемого значения.",
+      "exampleRu": "Температура воздуха, пульс, доступное время.",
+      "ruleRu": "Строить временной ряд/агрегаты; не создавать фиктивную цель."
+    },
+    {
+      "mode": "TARGET",
+      "meaningRu": "Желаемое конкретное значение.",
+      "exampleRu": "Вес: 100 кг → цель 80 кг.",
+      "ruleRu": "Сравнивать с target; raw history остаётся прежней."
+    },
+    {
+      "mode": "MAINTAIN",
+      "meaningRu": "Удержание показателя около текущего/опорного уровня.",
+      "exampleRu": "Сохранить стабильный режим/показатель.",
+      "ruleRu": "Нужен baseline/anchor; отклонения оцениваются относительно него."
+    },
+    {
+      "mode": "RANGE",
+      "meaningRu": "Желаемый допустимый диапазон.",
+      "exampleRu": "Вес 78–82 кг.",
+      "ruleRu": "Сравнивать с min/max range; не сводить к одной точке."
+    },
+    {
+      "mode": "AVOID",
+      "meaningRu": "Нежелательное состояние/событие или превышение.",
+      "exampleRu": "Избегать повторяющейся боли/конфликтов.",
+      "ruleRu": "Не выдавать причинность; считать occurrences/threshold только по установленным правилам."
+    }
+  ],
+  "temporalSemantics": [
+    {
+      "field": "occurred_at",
+      "livesIn": "Activity/event/observation",
+      "ruleRu": "Когда событие реально произошло. Для еды, сна, тренировки и др. восстанавливается из фразы с temporal_precision."
+    },
+    {
+      "field": "reported_at",
+      "livesIn": "Intake metadata",
+      "ruleRu": "Когда пользователь сообщил системе. Никогда молча не подменяет occurred_at."
+    },
+    {
+      "field": "timezone",
+      "livesIn": "Event/intake context",
+      "ruleRu": "Нужна для локального часа, дня недели и корректных окон."
+    },
+    {
+      "field": "temporal_precision",
+      "livesIn": "Event metadata",
+      "ruleRu": "exact / approximate / date_only / window_only / unknown."
+    },
+    {
+      "field": "required_duration",
+      "livesIn": "Плановая activity/task",
+      "ruleRu": "Сколько времени нужно на выполнение. Не является «Доступным временем»."
+    },
+    {
+      "field": "deadline",
+      "livesIn": "Плановая activity/goal",
+      "ruleRu": "Фиксированная/гибкая дата; remaining time вычисляется детерминированно."
+    },
+    {
+      "field": "available_time",
+      "livesIn": "CONTEXT leaf",
+      "ruleRu": "Наблюдаемый ресурс в конкретном временном окне; может быть OBSERVE/TARGET-like аналитически, но сам по себе не Goal World."
+    }
+  ],
+  "goldFixtures": [
+    {
+      "id": "G01",
+      "messageRu": "Постоял в планке две минуты и в обратной планке две минуты.",
+      "expectedRu": "2 PROCESS events: plank 2m; reverse_plank 2m.",
+      "forbiddenRu": "Не один 4m event; no spine/mood effect."
+    },
+    {
+      "id": "G02",
+      "messageRu": "После планки настроение стало лучше.",
+      "expectedRu": "plank event + DECLARED mood qualitative change + temporal precedes.",
+      "forbiddenRu": "No numeric mood score; no CAUSES."
+    },
+    {
+      "id": "G03",
+      "messageRu": "После планки начала болеть поясница.",
+      "expectedRu": "plank event; pain state located_in lumbar; temporal precedes.",
+      "forbiddenRu": "No diagnosis; no causal promotion."
+    },
+    {
+      "id": "G04",
+      "messageRu": "Спал с 23:40 до 06:30.",
+      "expectedRu": "night sleep event; duration deterministically derived.",
+      "forbiddenRu": "No invented sleep quality."
+    },
+    {
+      "id": "G05",
+      "messageRu": "Спал примерно 6 часов.",
+      "expectedRu": "night sleep duration=360m; precision approximate.",
+      "forbiddenRu": "Не exact."
+    },
+    {
+      "id": "G06",
+      "messageRu": "Утром вес 94,8 кг.",
+      "expectedRu": "body_weight=94.8 kg DECLARED.",
+      "forbiddenRu": "No BMI unless height rule explicitly invoked elsewhere."
+    },
+    {
+      "id": "G07",
+      "messageRu": "Пульс 72.",
+      "expectedRu": "heart_rate=72 bpm DECLARED.",
+      "forbiddenRu": "No medical interpretation."
+    },
+    {
+      "id": "G08",
+      "messageRu": "Давление 125 на 78.",
+      "expectedRu": "paired BP systolic/diastolic.",
+      "forbiddenRu": "Не разделять как unrelated values."
+    },
+    {
+      "id": "G09",
+      "messageRu": "Поясница болит сильнее.",
+      "expectedRu": "pain qualitative change + located_in lumbar.",
+      "forbiddenRu": "No 8/10."
+    },
+    {
+      "id": "G10",
+      "messageRu": "Боль в пояснице 4 из 10.",
+      "expectedRu": "pain intensity=4 on explicit 0–10 scale + location.",
+      "forbiddenRu": "No inference beyond stated."
+    },
+    {
+      "id": "G11",
+      "messageRu": "Съел пирожное.",
+      "expectedRu": "food intake event + consumes food item.",
+      "forbiddenRu": "No kcal/sugar/mass."
+    },
+    {
+      "id": "G12",
+      "messageRu": "Съел примерно 800 ккал.",
+      "expectedRu": "food intake + energy_kcal=800 approximate declared.",
+      "forbiddenRu": "Not food-db calculated."
+    },
+    {
+      "id": "G13",
+      "messageRu": "Выпил 500 мл воды.",
+      "expectedRu": "water intake volume=500 ml.",
+      "forbiddenRu": "No hydration effect automatically."
+    },
+    {
+      "id": "G14",
+      "messageRu": "Сегодня выпил две чашки кофе.",
+      "expectedRu": "2 caffeine-intake events or aggregate count if episode times unknown; cup as linguistic quantity.",
+      "forbiddenRu": "No caffeine_mg without source."
+    },
+    {
+      "id": "G15",
+      "messageRu": "Гулял 35 минут с дочерью.",
+      "expectedRu": "walking duration 35 + shared_time/social link + with_participant.",
+      "forbiddenRu": "No hidden daughter profile."
+    },
+    {
+      "id": "G16",
+      "messageRu": "Сегодня было три конфликта.",
+      "expectedRu": "aggregate declared event_count=3, window=today.",
+      "forbiddenRu": "No duplicate when detailed episodes later."
+    },
+    {
+      "id": "G17",
+      "messageRu": "На улице 19 градусов, облачно.",
+      "expectedRu": "air_temperature=19 C + cloudiness category.",
+      "forbiddenRu": "No weather API overwrite."
+    },
+    {
+      "id": "G18",
+      "messageRu": "Два часа работал за компьютером.",
+      "expectedRu": "work session 120m; context/device/computer if explicitly resolved.",
+      "forbiddenRu": "No automatic physiological damage."
+    },
+    {
+      "id": "G19",
+      "messageRu": "Повторил немецкую фразу 20 раз.",
+      "expectedRu": "language practice repetition_count=20; language context=de.",
+      "forbiddenRu": "No mastery score."
+    },
+    {
+      "id": "G20",
+      "messageRu": "Играл на гитаре 40 минут, потом почувствовал себя спокойнее.",
+      "expectedRu": "instrument_playing 40m + calmness qualitative state + temporal relation.",
+      "forbiddenRu": "No causal claim or numeric effect."
+    },
+    {
+      "id": "G21",
+      "messageRu": "Сегодня вечером у меня есть примерно два свободных часа.",
+      "expectedRu": "context.resources.available_time; available_duration_minutes=120 approximate; window=this evening.",
+      "forbiddenRu": "Не создавать DOMAIN «Время»; не считать это дедлайном или длительностью задачи."
+    },
+    {
+      "id": "G22",
+      "messageRu": "На эту задачу нужно примерно четыре часа.",
+      "expectedRu": "Плановая оценка duration конкретной activity/task = 240m approximate.",
+      "forbiddenRu": "Не записывать как «Доступное время»."
+    },
+    {
+      "id": "G23",
+      "messageRu": "До дедлайна осталось два дня, и меня это сильно напрягает.",
+      "expectedRu": "deadline остаётся свойством плана; remaining time derived; DECLARED stress state + link to deadline context.",
+      "forbiddenRu": "Не создавать leaf «два дня» и не превращать временную последовательность в медицинскую причинность."
+    },
+    {
+      "id": "G24",
+      "messageRu": "Ужинал вчера около девяти вечера.",
+      "expectedRu": "meal event; occurred_at≈21:00 local previous day; reported_at=now; temporal_precision=approx; meal_label=dinner.",
+      "forbiddenRu": "Не использовать reported_at как время еды; не создавать отдельный leaf «Ужин»."
+    }
+  ],
+  "lockedDecisions": [
+    {
+      "id": "Q1",
+      "topicRu": "Температура тела",
+      "decisionRu": "Пока не включать отдельный системный leaf. Температура тела обычно измеряется в особых состояниях/болезни; добавить при реальном сценарии или Reference/model расширении."
+    },
+    {
+      "id": "Q2",
+      "topicRu": "Ходьба / прогулка",
+      "decisionRu": "Пока один PROCESS-leaf «Ходьба». Прогулка, commute, совместное время и тренировочный контекст выражаются через purpose/context/relations. Разделять позже только при подтверждённой необходимости."
+    },
+    {
+      "id": "Q3",
+      "topicRu": "Завтрак / обед / ужин",
+      "decisionRu": "Пока один PROCESS-leaf «Приём пищи». occurred_at и локальная временная зона принципиально фиксируются с первого дня; meal_label допустим как event-local классификация. reported_at не заменяет occurred_at."
+    },
+    {
+      "id": "Q4",
+      "topicRu": "DOMAIN «Время / распорядок»",
+      "decisionRu": "Не создавать. Время суток — temporal metadata; duration задачи и deadline — свойства плановой активности/цели. В Global Seed добавить CONTEXT-leaf «Доступное время» как наблюдаемый ресурс."
+    },
+    {
+      "id": "Q5",
+      "topicRu": "DOMAIN «Локации / места»",
+      "decisionRu": "Пока не создавать. Локация события остаётся context; значимое место при необходимости становится ENTITY. Точная геолокация не собирается по умолчанию."
+    }
+  ],
+  "acceptanceGates": [
+    {
+      "id": "G01",
+      "criterionRu": "12 roots и facet entry branches согласованы."
+    },
+    {
+      "id": "G02",
+      "criterionRu": "Для каждого pilot leaf есть canonical_key, definition, node role, hierarchy relation и scope=global."
+    },
+    {
+      "id": "G03",
+      "criterionRu": "Каждый pilot leaf либо имеет allowed parameter assignments, либо links-only policy."
+    },
+    {
+      "id": "G04",
+      "criterionRu": "Relation/event-link guards не позволяют второй structural parent и не смешивают MODEL с DECLARED."
+    },
+    {
+      "id": "G05",
+      "criterionRu": "Планка/reverse plank, сон, вес, пульс, еда, конфликт, работа, учёба, погода проходят gold examples без invented writes."
+    },
+    {
+      "id": "G06",
+      "criterionRu": "Unknown leaf/parameter/relation идёт только в proposal."
+    },
+    {
+      "id": "G07",
+      "criterionRu": "Минимальный Analyzer payload ограничен branch-local context; полный каталог не отправляется модели."
+    },
+    {
+      "id": "G08",
+      "criterionRu": "После согласования создаётся машинный seed package + SQL/RPC fixture + acceptance checks; только затем реальные записи в Supabase."
+    },
+    {
+      "id": "G09",
+      "criterionRu": "Q1–Q5 зафиксированы: body temperature later; walking single leaf; meal single leaf with occurred_at; no Time root; no Location root."
+    },
+    {
+      "id": "G10",
+      "criterionRu": "Observation/Target Strategy modes OBSERVE/TARGET/MAINTAIN/RANGE/AVOID описаны и не меняют raw fact history."
+    },
+    {
+      "id": "G11",
+      "criterionRu": "Доступное время отделено от required_duration и deadline; occurred_at/reported_at/timezone/temporal_precision не смешиваются."
+    }
+  ]
+}
