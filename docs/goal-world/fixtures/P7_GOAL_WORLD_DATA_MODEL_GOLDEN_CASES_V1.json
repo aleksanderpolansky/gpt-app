@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "fixtureSetCode": "p7_goal_world_data_model_v1",
+  "cases": [
+    {
+      "caseCode": "weight_target_refinement_same_world",
+      "revision1": {
+        "worldId": "gw-weight-1",
+        "revisionNumber": 1,
+        "terminalTarget": "100 kg"
+      },
+      "revision2": {
+        "worldId": "gw-weight-1",
+        "revisionNumber": 2,
+        "terminalTarget": "95 kg",
+        "revisionReasonCode": "user_refinement"
+      },
+      "expected": {
+        "sameWorld": true,
+        "newRevision": true,
+        "oldRevisionPreserved": true
+      }
+    },
+    {
+      "caseCode": "one_terminal_many_subgoals",
+      "objectives": [
+        {
+          "role": "terminal",
+          "label": "Open the restaurant"
+        },
+        {
+          "role": "intermediate",
+          "label": "Secure financing"
+        },
+        {
+          "role": "intermediate",
+          "label": "Find premises"
+        },
+        {
+          "role": "supporting",
+          "label": "Build local supplier network"
+        }
+      ],
+      "expected": {
+        "terminalCount": 1,
+        "supportingDoesNotMeanLowImportance": true,
+        "arbitraryDepthAllowed": true
+      }
+    },
+    {
+      "caseCode": "hidden_goal_hypothesis_does_not_replace_declared_goal",
+      "declaredTerminalGoal": "Reach 95 kg",
+      "hypothesis": "The actor may value mobility and appearance more than the exact number.",
+      "expected": {
+        "terminalGoalUnchanged": true,
+        "hypothesisStatus": "proposal_only",
+        "automaticReplacementForbidden": true
+      }
+    },
+    {
+      "caseCode": "target_does_not_overwrite_reality",
+      "reality": {
+        "bodyWeightKg": 130
+      },
+      "goalWorld": {
+        "targetBodyWeightKg": 95
+      },
+      "expected": {
+        "currentRealityRemains130": true,
+        "targetStoredWorldSpecific": true
+      }
+    },
+    {
+      "caseCode": "new_observation_does_not_create_goal_revision",
+      "before": {
+        "worldRevision": 2,
+        "bodyWeightKg": 130
+      },
+      "after": {
+        "worldRevision": 2,
+        "bodyWeightKg": 127
+      },
+      "expected": {
+        "goalRevisionUnchanged": true,
+        "currentStateProjectionCanChange": true
+      }
+    },
+    {
+      "caseCode": "same_value_object_different_world_roles",
+      "valueObject": "German language competence",
+      "worldA": {
+        "goal": "Pass C1 German",
+        "role": "target",
+        "orientation": "approach"
+      },
+      "worldB": {
+        "goal": "Reduce weekly study load temporarily",
+        "role": "constraint",
+        "orientation": "maintain"
+      },
+      "expected": {
+        "valueObjectCopied": false,
+        "worldSpecificRoles": true
+      }
+    }
+  ]
+}
