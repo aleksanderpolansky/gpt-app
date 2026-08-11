@@ -1,0 +1,250 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "arctor://schemas/goal-evidence-requirement-package/v1",
+  "title": "ARCTor Goal Evidence Requirement Package v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "packageCode",
+    "packageVersion",
+    "title",
+    "goalPatternCodes",
+    "specialistPerspectiveCodes",
+    "sourceRefs",
+    "requirements"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "packageCode": {
+      "type": "string",
+      "minLength": 1
+    },
+    "packageVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "goalPatternCodes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "specialistPerspectiveCodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "sourceRefs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourceKindCode",
+          "title",
+          "publisher",
+          "versionOrDate",
+          "jurisdiction",
+          "locator",
+          "retrievedAt"
+        ],
+        "properties": {
+          "sourceKindCode": {
+            "enum": [
+              "internal_protocol",
+              "professional_guideline",
+              "official_catalog",
+              "peer_reviewed",
+              "professional_consensus",
+              "other_reviewed_source"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "publisher": {
+            "type": "string",
+            "minLength": 1
+          },
+          "versionOrDate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "jurisdiction": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "locator": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "retrievedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "requirements": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requirementCode",
+          "informationNeedText",
+          "rationaleText",
+          "importanceCode",
+          "dimensionCodes",
+          "subjectScopeCode",
+          "acquisitionMethodCodes",
+          "freshnessPolicy",
+          "provisionalUseAllowed",
+          "professionalAssessmentRequired",
+          "sourceRefIndexes",
+          "tags"
+        ],
+        "properties": {
+          "requirementCode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "informationNeedText": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rationaleText": {
+            "type": "string"
+          },
+          "importanceCode": {
+            "enum": [
+              "critical",
+              "important",
+              "useful",
+              "optional"
+            ]
+          },
+          "dimensionCodes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "enum": [
+                "physiological",
+                "medical",
+                "capability",
+                "psychological_behavioral",
+                "stress_recovery",
+                "social",
+                "relationship_context",
+                "physical_environment",
+                "workplace_environment",
+                "lifestyle",
+                "self_habit",
+                "close_person_habit",
+                "social_norm",
+                "schedule_time",
+                "financial",
+                "material_resource",
+                "legal_institutional",
+                "motivation_values",
+                "other"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "subjectScopeCode": {
+            "enum": [
+              "actor",
+              "close_person",
+              "household",
+              "social_environment",
+              "physical_environment",
+              "institution",
+              "goal_specific"
+            ]
+          },
+          "acquisitionMethodCodes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "enum": [
+                "existing_reality",
+                "direct_question",
+                "natural_observation",
+                "device_import",
+                "external_document",
+                "professional_assessment",
+                "later_plan_observation"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "freshnessPolicy": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "maxAgeDays",
+              "stableCharacteristic"
+            ],
+            "properties": {
+              "maxAgeDays": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0
+              },
+              "stableCharacteristic": {
+                "type": "boolean"
+              }
+            }
+          },
+          "provisionalUseAllowed": {
+            "type": "boolean"
+          },
+          "professionalAssessmentRequired": {
+            "type": "boolean"
+          },
+          "sourceRefIndexes": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "uniqueItems": true
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          }
+        }
+      }
+    }
+  }
+}

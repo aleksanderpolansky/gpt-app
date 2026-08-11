@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "fixtureSetCode": "p6c_goal_evidence_requirements_v1",
+  "cases": [
+    {
+      "caseCode": "weight_change_information_needs_not_questionnaire",
+      "goal": "Reduce body weight from 130 kg to 100 kg.",
+      "principles": [
+        "search_existing_reality_before_asking",
+        "information_need_is_primary_not_question_text",
+        "sleep_stress_sedentary_time_may_be_relevant_if_professional_package_says_so",
+        "household_and_close_person_habits_may_affect_goal_context",
+        "social_norms_and_workplace_environment_may_affect_goal_context",
+        "no_medical_completeness_claim_without_versioned_professional_sources"
+      ],
+      "expectedUserOptionsMayInclude": [
+        "answer_now",
+        "observe_then_refresh",
+        "proceed_provisionally",
+        "professional_assessment"
+      ]
+    },
+    {
+      "caseCode": "close_person_habit_is_context_not_personality_profile",
+      "input": "My partner usually orders takeaway for the household in the evening.",
+      "expected": {
+        "dimensionCode": "close_person_habit",
+        "subjectScopeCode": "household",
+        "mayInfluenceGoal": true,
+        "mustNotCreateClosePersonPsychologicalProfile": true,
+        "mustRetainEvidence": true
+      }
+    },
+    {
+      "caseCode": "social_norm_can_be_goal_friction",
+      "input": "All work celebrations in my team revolve around alcohol and large meals.",
+      "expected": {
+        "dimensionCodes": [
+          "social_norm",
+          "workplace_environment"
+        ],
+        "effectMustRemainGoalSpecific": true,
+        "globalCharacterJudgmentForbidden": true
+      }
+    },
+    {
+      "caseCode": "same_factor_can_accelerate_or_block_different_goals",
+      "factor": "Frequent evening social gatherings.",
+      "goalA": "Build a local professional network.",
+      "goalB": "Maintain a strict early-sleep schedule.",
+      "expected": {
+        "goalAEffectMayBe": "potential_accelerator",
+        "goalBEffectMayBe": "potential_blocker",
+        "mustNotStoreUniversalPolarity": true
+      }
+    },
+    {
+      "caseCode": "missing_sleep_can_be_observed_instead_of_asked",
+      "requirement": "Typical sleep duration and regularity.",
+      "expected": {
+        "ifExistingEvidenceSufficient": "sufficient",
+        "ifMissingAndDeviceAllowed": "observe_then_refresh",
+        "directQuestionNotMandatoryWhenNaturalObservationIsAvailable": true
+      }
+    },
+    {
+      "caseCode": "critical_professional_assessment_blocks_only_affected_part",
+      "expected": {
+        "statusCode": "professional_evaluation_required",
+        "readinessCode": "blocked_for_specific_parts",
+        "mustNotPretendWholeGoalIsImpossible": true,
+        "mustNotGenerateUnsafeAffectedPlanPart": true
+      }
+    }
+  ]
+}
