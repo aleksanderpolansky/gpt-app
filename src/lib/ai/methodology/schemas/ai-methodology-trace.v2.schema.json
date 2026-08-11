@@ -1,0 +1,233 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "arctor://schemas/ai-methodology-trace/v2",
+  "title": "ARCTor AI Methodology Trace v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "runtimeCode",
+    "bindingVersion",
+    "protocol",
+    "supportingProtocols",
+    "outputSchema",
+    "traceSchema",
+    "systemInstructions",
+    "actorInstruction",
+    "deterministicRules",
+    "knowledgePackages"
+  ],
+  "properties": {
+    "runtimeCode": {
+      "type": "string"
+    },
+    "bindingVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "version",
+        "sha256"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[A-F0-9]{64}$"
+        }
+      }
+    },
+    "supportingProtocols": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "version",
+          "sha256"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[A-F0-9]{64}$"
+          }
+        }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "version",
+        "sha256"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[A-F0-9]{64}$"
+        }
+      }
+    },
+    "traceSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "version",
+        "sha256"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[A-F0-9]{64}$"
+        }
+      }
+    },
+    "systemInstructions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "source",
+          "localeCode",
+          "revision"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "localeCode": {
+            "type": "string"
+          },
+          "revision": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          }
+        }
+      }
+    },
+    "actorInstruction": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source",
+            "sourceLocale",
+            "revision"
+          ],
+          "properties": {
+            "source": {
+              "type": "string"
+            },
+            "sourceLocale": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "revision": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1
+            }
+          }
+        }
+      ]
+    },
+    "deterministicRules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "registryCode",
+          "ruleCode",
+          "version"
+        ],
+        "properties": {
+          "registryCode": {
+            "type": "string"
+          },
+          "ruleCode": {
+            "type": "string"
+          },
+          "version": {
+            "type": [
+              "integer",
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "knowledgePackages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "packageCode",
+          "version"
+        ],
+        "properties": {
+          "packageCode": {
+            "type": "string"
+          },
+          "version": {
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

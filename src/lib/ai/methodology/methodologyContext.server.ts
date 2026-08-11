@@ -31,6 +31,11 @@ export type PublicMethodologyTrace = {
     readonly version: number;
     readonly sha256: string;
   };
+  readonly supportingProtocols?: readonly {
+    readonly code: string;
+    readonly version: number;
+    readonly sha256: string;
+  }[];
   readonly outputSchema: {
     readonly code: string;
     readonly version: number;
@@ -142,6 +147,15 @@ export async function resolveRuntimeMethodologyContext(params: {
       version: binding.protocol.version,
       sha256: binding.protocol.sha256,
     },
+    ...(binding.supportingProtocols.length > 0
+      ? {
+          supportingProtocols: binding.supportingProtocols.map((protocol) => ({
+            code: protocol.code,
+            version: protocol.version,
+            sha256: protocol.sha256,
+          })),
+        }
+      : {}),
     outputSchema: {
       code: binding.outputSchema.code,
       version: binding.outputSchema.version,
@@ -172,9 +186,15 @@ export async function resolveRuntimeMethodologyContext(params: {
     knowledgePackages,
   };
 
+  const supportingProtocolHeaders = binding.supportingProtocols.map(
+    (protocol) =>
+      `[SUPPORTING_PROTOCOL ${protocol.code}@${protocol.version} sha256=${protocol.sha256}]`,
+  );
+
   const systemPrompt = [
     `[CORE_PROTOCOL ${binding.protocol.code}@${binding.protocol.version} sha256=${binding.protocol.sha256}]`,
     ARCTOR_AI_RUNTIME_CORE_RUNTIME_INSTRUCTION_V1,
+    ...supportingProtocolHeaders,
     "[EDITABLE_OPERATIONAL_INSTRUCTIONS]",
     processingContext.systemPrompt,
   ].join("\n\n");
