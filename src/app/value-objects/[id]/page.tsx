@@ -18,6 +18,7 @@ import {
   type ValueObjectSummaryItem,
 } from "@/components/workspace/value-objects/value-object-profile-top-grid";
 import { ValueObjectSemanticRelationsManager } from "@/components/workspace/value-objects/value-object-semantic-relations-manager";
+import { ValueObjectFullCardPanel } from "@/components/workspace/value-objects/value-object-full-card-panel";
 import { ActivityScheduleDisplay } from "./activity-schedule-display";
 import {
   isValueObjectLeafKindV2,
@@ -1353,7 +1354,13 @@ export default async function ValueObjectDetailPage({
     : isLeaf
       ? [
           { label: copy.status, value: valueObject.status || "—" },
-          { label: copy.role, value: valueObject.node_role_code || "—" },
+          {
+            label: copy.role,
+            value:
+              (isSemanticOntologyObject
+                ? valueObject.ontology_node_role_code
+                : valueObject.node_role_code) || "—",
+          },
           {
             label: summaryLabels.linkedActivities,
             value: String(plannedActivities.length),
@@ -1362,7 +1369,13 @@ export default async function ValueObjectDetailPage({
         ]
       : [
           { label: copy.status, value: valueObject.status || "—" },
-          { label: copy.role, value: valueObject.node_role_code || "—" },
+          {
+            label: copy.role,
+            value:
+              (isSemanticOntologyObject
+                ? valueObject.ontology_node_role_code
+                : valueObject.node_role_code) || "—",
+          },
           { label: copy.directChildren, value: String(directChildren.length) },
           { label: copy.descendantLeaves, value: String(descendantLeafCount) },
         ];
@@ -1461,86 +1474,7 @@ export default async function ValueObjectDetailPage({
           ) : null}
         </div>
 
-        {editMode && canEdit ? (
-          <section className="max-w-[980px]">
-            <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#8b91aa]">
-              {isRoot
-                ? copy.rootEyebrow
-                : isIntermediate
-                  ? copy.intermediateEyebrow
-                  : isLeaf
-                    ? copy.leafEyebrow
-                    : copy.genericEyebrow}
-            </div>
-
-            {isSemanticOntologyObject ? (
-              <div className="grid gap-5">
-                <ValueObjectSemanticDefinitionEditor
-                  valueObjectId={valueObject.id}
-                  locale={locale}
-                  initialTitle={valueObject.title}
-                  initialDescription={valueObject.description}
-                  initialHierarchyRelationCode={
-                    valueObject.hierarchy_relation_code
-                  }
-                  nodeRoleCode={valueObject.ontology_node_role_code ?? ""}
-                  initialVisibilityCode={
-                    valueObject.visibility_code ?? "private"
-                  }
-                  initialPrivacyClassCode={
-                    valueObject.privacy_class_code ?? "standard"
-                  }
-                  definitionVersion={valueObject.definition_version ?? 1}
-                  viewHref={viewHref}
-                />
-
-                <ValueObjectAliasEditor
-                  valueObjectId={valueObject.id}
-                  locale={locale}
-                />
-              </div>
-            ) : (
-              <ValueObjectInlineEditor
-                valueObjectId={valueObject.id}
-                locale={locale}
-                initialTitle={valueObject.title}
-                initialDescription={valueObject.description}
-                isProductOrService={isProductOrService}
-                isService={isService}
-                initialPrice={valueObject.default_price}
-                currency={valueObject.default_currency}
-                initialDurationMinutes={valueObject.default_duration_minutes}
-                viewHref={viewHref}
-              />
-            )}
-
-            {pathNodes.length > 1 && (
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] font-semibold text-[#5a5f7a]">
-                <span className="uppercase tracking-[0.14em] text-[#7c8099]">
-                  {copy.path}
-                </span>
-                {pathNodes.map((node, index) => (
-                  <span key={node.id} className="inline-flex items-center gap-2">
-                    {index > 0 && <span aria-hidden="true">→</span>}
-                    {node.id === valueObject.id ? (
-                      <span>{node.title}</span>
-                    ) : (
-                      <Link
-                        href={buildLocaleHref(
-                          `/value-objects/${node.id}`,
-                          locale,
-                        )}
-                        className="text-[#3b6ef8] hover:underline"
-                      >
-                        {node.title}
-                      </Link>
-                    )}
-                  </span>
-                ))}
-              </div>
-            )}
-          </section>
-        ) : (
+        {editMode && canEdit ? null : (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h1 className="text-[20px] font-bold leading-tight text-[#1a1d2e]">
@@ -1594,14 +1528,47 @@ export default async function ValueObjectDetailPage({
           editMode={editMode}
           canEdit={canEdit}
           title={valueObject.title}
-          objectKindLabel={`${valueObject.object_kind || "—"} · ${
-            valueObject.node_role_code || "—"
+          objectKindLabel={`${
+            valueObject.facet_code || valueObject.object_kind || "—"
+          } · ${
+            valueObject.ontology_node_role_code ||
+            valueObject.node_role_code ||
+            "—"
           }`}
           imageUrl={publicProfileMetadata.imageUrl}
           location={effectiveLocation}
           locationIsInherited={!hasOwnLocation && Boolean(organizationLocation)}
+          showLocationCard={
+            hasOwnLocation ||
+            Boolean(organizationLocation) ||
+            isProductOrService ||
+            valueObject.facet_code === "ENTITY"
+          }
+          structureContext={{
+            rootTitle: pathNodes[0]?.title ?? valueObject.title,
+            parentTitle:
+              pathNodes.length > 1
+                ? pathNodes[pathNodes.length - 2]?.title ?? null
+                : null,
+            pathText: pathNodes.map((node) => node.title).join(" → "),
+          }}
           owner={ownerPresentation}
           summaryItems={summaryItems}
+        />
+
+        <ValueObjectFullCardPanel
+          valueObjectId={valueObject.id}
+          locale={locale}
+          editMode={editMode}
+          canEdit={canEdit}
+          initialTitle={valueObject.title}
+          initialDescription={valueObject.description}
+          initialHierarchyRelationCode={valueObject.hierarchy_relation_code}
+          initialNodeRoleCode={valueObject.ontology_node_role_code ?? ""}
+          initialVisibilityCode={valueObject.visibility_code ?? "private"}
+          initialPrivacyClassCode={valueObject.privacy_class_code ?? "standard"}
+          definitionVersion={valueObject.definition_version ?? 1}
+          viewHref={viewHref}
         />
 
         <section className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
@@ -1769,7 +1736,7 @@ export default async function ValueObjectDetailPage({
               )}
             </section>
 
-            <section className="rounded-[26px] border border-black/[0.07] bg-white p-6 shadow-sm">
+            <section className="hidden">
               <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#7c8099]">
                 {copy.relations}
               </div>
@@ -1781,7 +1748,7 @@ export default async function ValueObjectDetailPage({
           </div>
         </section>
 
-        <section className="rounded-[26px] border border-black/[0.07] bg-white p-6 shadow-sm">
+        <section className="hidden">
           <h2 className="text-[20px] font-bold text-[#111827]">
             {copy.description}
           </h2>

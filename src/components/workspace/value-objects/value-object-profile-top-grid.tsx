@@ -5,6 +5,7 @@ import {
   Camera,
   ExternalLink,
   Gauge,
+  GitBranch,
   ImageIcon,
   MapPin,
   RotateCcw,
@@ -82,6 +83,11 @@ type Copy = {
   mapFallback: string;
   openOwner: string;
   inheritedLocation: string;
+  structure: string;
+  rootLabel: string;
+  parentLabel: string;
+  pathLabel: string;
+  structureHint: string;
 };
 
 const COPY: Record<LocaleCode, Copy> = {
@@ -115,6 +121,11 @@ const COPY: Record<LocaleCode, Copy> = {
     mapFallback: "Add an address or coordinates to show the map",
     openOwner: "Open owner page",
     inheritedLocation: "The provider location is shown until this object gets its own public location.",
+    structure: "Position in structure",
+    rootLabel: "Root",
+    parentLabel: "Structural parent",
+    pathLabel: "Path",
+    structureHint: "Tree position is shown here because this object has no public physical location.",
   },
   pl: {
     object: "Obiekt",
@@ -146,6 +157,11 @@ const COPY: Record<LocaleCode, Copy> = {
     mapFallback: "Dodaj adres lub współrzędne, aby pokazać mapę",
     openOwner: "Otwórz stronę właściciela",
     inheritedLocation: "Do czasu dodania lokalizacji obiektu wyświetlana jest lokalizacja dostawcy.",
+    structure: "Pozycja w strukturze",
+    rootLabel: "Korzeń",
+    parentLabel: "Rodzic strukturalny",
+    pathLabel: "Ścieżka",
+    structureHint: "Pokazujemy pozycję w drzewie, ponieważ ten obiekt nie ma publicznej lokalizacji fizycznej.",
   },
   ru: {
     object: "Объект",
@@ -177,6 +193,11 @@ const COPY: Record<LocaleCode, Copy> = {
     mapFallback: "Добавьте адрес или координаты, чтобы показать карту",
     openOwner: "Открыть страницу владельца",
     inheritedLocation: "Пока у объекта нет собственной географии, показывается публичная география предоставляющего.",
+    structure: "Положение в структуре",
+    rootLabel: "Корень",
+    parentLabel: "Структурный родитель",
+    pathLabel: "Путь",
+    structureHint: "Здесь показано место в дереве, потому что у объекта нет публичной физической локации.",
   },
   uk: {
     object: "Об’єкт",
@@ -208,6 +229,11 @@ const COPY: Record<LocaleCode, Copy> = {
     mapFallback: "Додайте адресу або координати, щоб показати карту",
     openOwner: "Відкрити сторінку власника",
     inheritedLocation: "Поки об’єкт не має власної географії, показується публічна географія надавача.",
+    structure: "Положення у структурі",
+    rootLabel: "Корінь",
+    parentLabel: "Структурний батько",
+    pathLabel: "Шлях",
+    structureHint: "Тут показано місце в дереві, оскільки об’єкт не має публічної фізичної локації.",
   },
   de: {
     object: "Objekt",
@@ -239,6 +265,11 @@ const COPY: Record<LocaleCode, Copy> = {
     mapFallback: "Adresse oder Koordinaten hinzufügen, um die Karte anzuzeigen",
     openOwner: "Eigentümerseite öffnen",
     inheritedLocation: "Bis ein eigener Standort gespeichert wird, wird der öffentliche Standort des Anbieters gezeigt.",
+    structure: "Position in der Struktur",
+    rootLabel: "Wurzel",
+    parentLabel: "Strukturelles Elternobjekt",
+    pathLabel: "Pfad",
+    structureHint: "Die Baumposition wird gezeigt, weil dieses Objekt keinen öffentlichen physischen Standort hat.",
   },
   es: {
     object: "Objeto",
@@ -270,6 +301,11 @@ const COPY: Record<LocaleCode, Copy> = {
     mapFallback: "Añade una dirección o coordenadas para mostrar el mapa",
     openOwner: "Abrir página del titular",
     inheritedLocation: "Hasta que el objeto tenga ubicación propia, se muestra la ubicación pública del proveedor.",
+    structure: "Posición en la estructura",
+    rootLabel: "Raíz",
+    parentLabel: "Padre estructural",
+    pathLabel: "Ruta",
+    structureHint: "Se muestra la posición en el árbol porque este objeto no tiene una ubicación física pública.",
   },
   cs: {
     object: "Objekt",
@@ -301,6 +337,11 @@ const COPY: Record<LocaleCode, Copy> = {
     mapFallback: "Přidejte adresu nebo souřadnice pro zobrazení mapy",
     openOwner: "Otevřít stránku vlastníka",
     inheritedLocation: "Dokud objekt nemá vlastní polohu, zobrazuje se veřejná poloha poskytovatele.",
+    structure: "Pozice ve struktuře",
+    rootLabel: "Kořen",
+    parentLabel: "Strukturální rodič",
+    pathLabel: "Cesta",
+    structureHint: "Zobrazuje se pozice ve stromu, protože objekt nemá veřejnou fyzickou polohu.",
   },
 };
 
@@ -436,6 +477,8 @@ export function ValueObjectProfileTopGrid({
   imageUrl: initialImageUrl,
   location: initialLocation,
   locationIsInherited,
+  showLocationCard,
+  structureContext,
   owner,
   summaryItems,
 }: {
@@ -448,6 +491,12 @@ export function ValueObjectProfileTopGrid({
   readonly imageUrl: string | null;
   readonly location: ValueObjectPublicLocation;
   readonly locationIsInherited: boolean;
+  readonly showLocationCard: boolean;
+  readonly structureContext: {
+    readonly rootTitle: string;
+    readonly parentTitle: string | null;
+    readonly pathText: string;
+  };
   readonly owner: ValueObjectOwnerPresentation;
   readonly summaryItems: readonly ValueObjectSummaryItem[];
 }) {
@@ -463,6 +512,8 @@ export function ValueObjectProfileTopGrid({
   const [imageUrl, setImageUrl] = useState(initialImageUrl ?? "");
   const [savedLocation, setSavedLocation] = useState(initialEditableLocation);
   const [location, setLocation] = useState(initialEditableLocation);
+  const [ownerImageFailed, setOwnerImageFailed] = useState(false);
+
   const [saveState, setSaveState] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
@@ -716,122 +767,155 @@ export function ValueObjectProfileTopGrid({
           </div>
         </EntityPageTopCard>
 
-        <EntityPageTopCard label={copy.location} icon={MapPin} accent="#f97316">
-          {editable ? (
-            <div className="grid gap-2">
-              <input
-                value={location.label}
-                onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                  setLocationField("label", event.target.value)
-                }
-                placeholder={copy.addressLabel}
-                className={inputClassName()}
-              />
-              <input
-                value={location.streetAddress}
-                onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                  setLocationField("streetAddress", event.target.value)
-                }
-                placeholder={copy.streetAddress}
-                className={inputClassName()}
-              />
-              <div className="grid grid-cols-2 gap-2">
+        {showLocationCard ? (
+          <EntityPageTopCard label={copy.location} icon={MapPin} accent="#f97316">
+            {editable ? (
+              <div className="grid gap-2">
                 <input
-                  value={location.city}
+                  value={location.label}
                   onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                    setLocationField("city", event.target.value)
+                    setLocationField("label", event.target.value)
                   }
-                  placeholder={copy.city}
+                  placeholder={copy.addressLabel}
                   className={inputClassName()}
                 />
                 <input
-                  value={location.district}
+                  value={location.streetAddress}
                   onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                    setLocationField("district", event.target.value)
+                    setLocationField("streetAddress", event.target.value)
                   }
-                  placeholder={copy.district}
+                  placeholder={copy.streetAddress}
                   className={inputClassName()}
                 />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    value={location.city}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                      setLocationField("city", event.target.value)
+                    }
+                    placeholder={copy.city}
+                    className={inputClassName()}
+                  />
+                  <input
+                    value={location.district}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                      setLocationField("district", event.target.value)
+                    }
+                    placeholder={copy.district}
+                    className={inputClassName()}
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <input
+                    value={location.region}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                      setLocationField("region", event.target.value)
+                    }
+                    placeholder={copy.region}
+                    className={inputClassName()}
+                  />
+                  <input
+                    value={location.postalCode}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                      setLocationField("postalCode", event.target.value)
+                    }
+                    placeholder={copy.postalCode}
+                    className={inputClassName()}
+                  />
+                  <input
+                    value={location.countryCode}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                      setLocationField("countryCode", event.target.value)
+                    }
+                    placeholder={copy.countryCode}
+                    maxLength={2}
+                    className={inputClassName()}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    value={location.latitude}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                      setLocationField("latitude", event.target.value)
+                    }
+                    placeholder={copy.latitude}
+                    inputMode="decimal"
+                    className={inputClassName()}
+                  />
+                  <input
+                    value={location.longitude}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                      setLocationField("longitude", event.target.value)
+                    }
+                    placeholder={copy.longitude}
+                    inputMode="decimal"
+                    className={inputClassName()}
+                  />
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <input
-                  value={location.region}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                    setLocationField("region", event.target.value)
-                  }
-                  placeholder={copy.region}
-                  className={inputClassName()}
-                />
-                <input
-                  value={location.postalCode}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                    setLocationField("postalCode", event.target.value)
-                  }
-                  placeholder={copy.postalCode}
-                  className={inputClassName()}
-                />
-                <input
-                  value={location.countryCode}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                    setLocationField("countryCode", event.target.value)
-                  }
-                  placeholder={copy.countryCode}
-                  maxLength={2}
-                  className={inputClassName()}
-                />
+            ) : (
+              <div>
+                <div className="text-[15px] font-bold leading-5 text-[#111827]">
+                  {addressLine || location.label || copy.noLocation}
+                </div>
+                {locationIsInherited ? (
+                  <p className="mt-2 text-[11px] leading-4 text-[#7c8099]">
+                    {copy.inheritedLocation}
+                  </p>
+                ) : null}
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  value={location.latitude}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                    setLocationField("latitude", event.target.value)
-                  }
-                  placeholder={copy.latitude}
-                  inputMode="decimal"
-                  className={inputClassName()}
-                />
-                <input
-                  value={location.longitude}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                    setLocationField("longitude", event.target.value)
-                  }
-                  placeholder={copy.longitude}
-                  inputMode="decimal"
-                  className={inputClassName()}
-                />
-              </div>
-            </div>
-          ) : (
-            <div>
-              <div className="text-[15px] font-bold leading-5 text-[#111827]">
-                {addressLine || location.label || copy.noLocation}
-              </div>
-              {locationIsInherited ? (
-                <p className="mt-2 text-[11px] leading-4 text-[#7c8099]">
-                  {copy.inheritedLocation}
-                </p>
-              ) : null}
-            </div>
-          )}
+            )}
 
-          <OrganizationLocationMapPreview
-            location={mapLocation}
-            organizationName={title}
-            locale={locale}
-            titleLabel={copy.mapTitle}
-            fallbackLabel={copy.mapFallback}
-            className={editable ? "min-h-[170px]" : "min-h-[260px]"}
-          />
-        </EntityPageTopCard>
-
-        <EntityPageTopCard label={copy.owner} icon={UserRound} accent="#8b5cf6">
+            <OrganizationLocationMapPreview
+              location={mapLocation}
+              organizationName={title}
+              locale={locale}
+              titleLabel={copy.mapTitle}
+              fallbackLabel={copy.mapFallback}
+              className={editable ? "min-h-[170px]" : "min-h-[260px]"}
+            />
+          </EntityPageTopCard>
+        ) : (
+          <EntityPageTopCard label={copy.structure} icon={GitBranch} accent="#f97316">
+            <div className="grid gap-3">
+              <div className="rounded-xl border border-[#edf0f7] bg-[#f8fafc] px-3 py-3">
+                <div className="text-[10px] font-medium uppercase tracking-wide text-[#7c8099]">
+                  {copy.rootLabel}
+                </div>
+                <div className="mt-1 text-[14px] font-semibold text-[#111827]">
+                  {structureContext.rootTitle || "—"}
+                </div>
+              </div>
+              <div className="rounded-xl border border-[#edf0f7] bg-[#f8fafc] px-3 py-3">
+                <div className="text-[10px] font-medium uppercase tracking-wide text-[#7c8099]">
+                  {copy.parentLabel}
+                </div>
+                <div className="mt-1 text-[14px] font-semibold text-[#111827]">
+                  {structureContext.parentTitle || "—"}
+                </div>
+              </div>
+              <div className="rounded-xl border border-[#edf0f7] bg-[#f8fafc] px-3 py-3">
+                <div className="text-[10px] font-medium uppercase tracking-wide text-[#7c8099]">
+                  {copy.pathLabel}
+                </div>
+                <div className="mt-1 break-words text-[13px] font-semibold leading-5 text-[#111827]">
+                  {structureContext.pathText || title}
+                </div>
+              </div>
+              <p className="text-[11px] leading-4 text-[#7c8099]">
+                {copy.structureHint}
+              </p>
+            </div>
+          </EntityPageTopCard>
+        )}        <EntityPageTopCard label={copy.owner} icon={UserRound} accent="#8b5cf6">
           <div className="flex h-full flex-col">
             <div className="mx-auto aspect-square w-full max-w-[250px] overflow-hidden rounded-2xl border border-[#eee7ff] bg-[#f7f1ff]">
-              {owner.imageUrl ? (
+              {owner.imageUrl && !ownerImageFailed ? (
                 <img
                   src={owner.imageUrl}
                   alt={owner.displayName}
                   className="h-full w-full object-cover object-center"
+                  onError={() => setOwnerImageFailed(true)}
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-[#8b5cf6]">
