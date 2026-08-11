@@ -1,6 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import {
+  ImageIcon,
+  Layers3,
+  Leaf,
+  Network,
+  Search,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -23,7 +30,25 @@ type ActualValueObjectPayload = {
   description?: string | null;
   status?: string | null;
   created_at?: string | null;
+  updated_at?: string | null;
   organizations?: OrganizationPayload | null;
+
+  object_kind?: string | null;
+  node_role_code?: string | null;
+  root_value_object_id?: string | null;
+  parent_value_object_id?: string | null;
+
+  canonical_key?: string | null;
+  facet_code?: string | null;
+  object_kind_code?: string | null;
+  ontology_node_role_code?: string | null;
+  scope_code?: string | null;
+  origin_type_code?: string | null;
+  definition_version?: number | null;
+  visibility_code?: string | null;
+  privacy_class_code?: string | null;
+
+  metadata_json?: Record<string, unknown> | null;
 };
 
 type ActualValueObjectsResponse = {
@@ -40,17 +65,46 @@ type ActualListStatus =
   | "forbidden"
   | "error";
 
+type RoleFilter = "all" | "root" | "intermediate" | "leaf" | "draft";
+type SortMode = "newest" | "title" | "structure";
+type SemanticRole = "root" | "intermediate" | "leaf";
+
 type LocalCopy = {
   eyebrow: string;
   title: string;
   description: string;
-  status: string;
-  context: string;
-  created: string;
+
+  total: string;
+  roots: string;
+  intermediate: string;
+  leaves: string;
+
+  allObjects: string;
+  rootObjects: string;
+  intermediateObjects: string;
+  leafObjects: string;
+  drafts: string;
+
+  searchPlaceholder: string;
+  sortNewest: string;
+  sortTitle: string;
+  sortStructure: string;
+
   personal: string;
   commercial: string;
+  system: string;
   draft: string;
   active: string;
+  inactive: string;
+
+  children: string;
+  descendantLeaves: string;
+  version: string;
+  path: string;
+  noDescription: string;
+  shown: string;
+  of: string;
+  open: string;
 };
 
 const COPY: Record<LocaleCode, LocalCopy> = {
@@ -58,99 +112,234 @@ const COPY: Record<LocaleCode, LocalCopy> = {
     eyebrow: "Observation objects",
     title: "My observation objects",
     description:
-      "Root, intermediate and leaf objects belonging to the current active profile.",
-    status: "Status",
-    context: "Context",
-    created: "Created",
+      "Roots, intermediate nodes and leaves of the active profile. The list is organized for fast navigation through the observation tree.",
+    total: "Total",
+    roots: "Roots",
+    intermediate: "Intermediate",
+    leaves: "Leaves",
+    allObjects: "All objects",
+    rootObjects: "Roots",
+    intermediateObjects: "Intermediate",
+    leafObjects: "Leaves",
+    drafts: "Drafts",
+    searchPlaceholder: "Search by name, description, facet, kind or path",
+    sortNewest: "Newest first",
+    sortTitle: "By name",
+    sortStructure: "By structure",
     personal: "Personal",
     commercial: "Commercial",
+    system: "System",
     draft: "Draft",
     active: "Active",
+    inactive: "Inactive",
+    children: "Children",
+    descendantLeaves: "Leaves below",
+    version: "Definition",
+    path: "Path",
+    noDescription: "No description yet.",
+    shown: "Shown",
+    of: "of",
+    open: "Open object",
   },
   pl: {
     eyebrow: "Obiekty obserwacji",
     title: "Moje obiekty obserwacji",
     description:
-      "Obiekty korzeniowe, pośrednie i liściowe aktualnie aktywnego profilu.",
-    status: "Status",
-    context: "Kontekst",
-    created: "Utworzono",
+      "Korzenie, obiekty pośrednie i liście aktywnego profilu. Lista jest uporządkowana tak, aby szybko poruszać się po drzewie obserwacji.",
+    total: "Razem",
+    roots: "Korzenie",
+    intermediate: "Pośrednie",
+    leaves: "Liście",
+    allObjects: "Wszystkie obiekty",
+    rootObjects: "Korzenie",
+    intermediateObjects: "Pośrednie",
+    leafObjects: "Liście",
+    drafts: "Szkice",
+    searchPlaceholder: "Szukaj po nazwie, opisie, płaszczyźnie, rodzaju lub ścieżce",
+    sortNewest: "Od najnowszych",
+    sortTitle: "Według nazwy",
+    sortStructure: "Według struktury",
     personal: "Osobisty",
     commercial: "Komercyjny",
+    system: "Systemowy",
     draft: "Szkic",
     active: "Aktywny",
+    inactive: "Nieaktywny",
+    children: "Dzieci",
+    descendantLeaves: "Liście poniżej",
+    version: "Definicja",
+    path: "Ścieżka",
+    noDescription: "Nie dodano jeszcze opisu.",
+    shown: "Pokazano",
+    of: "z",
+    open: "Otwórz obiekt",
   },
   ru: {
     eyebrow: "Объекты наблюдения",
     title: "Мои объекты наблюдения",
     description:
-      "Корневые, промежуточные и листовые объекты текущего активного профиля.",
-    status: "Состояние",
-    context: "Контекст",
-    created: "Создано",
+      "Корни, промежуточные объекты и листья активного профиля. Список устроен так, чтобы быстро видеть структуру и переходить к нужному объекту.",
+    total: "Всего",
+    roots: "Корни",
+    intermediate: "Промежуточные",
+    leaves: "Листы",
+    allObjects: "Все объекты",
+    rootObjects: "Корни",
+    intermediateObjects: "Промежуточные",
+    leafObjects: "Листы",
+    drafts: "Черновики",
+    searchPlaceholder: "Поиск по названию, описанию, плоскости, виду или пути",
+    sortNewest: "Сначала новые",
+    sortTitle: "По названию",
+    sortStructure: "По структуре",
     personal: "Личный",
     commercial: "Коммерческий",
+    system: "Системный",
     draft: "Черновик",
-    active: "Активен",
+    active: "Активный",
+    inactive: "Неактивный",
+    children: "Дочерние",
+    descendantLeaves: "Листов ниже",
+    version: "Версия",
+    path: "Путь",
+    noDescription: "Описание пока не добавлено.",
+    shown: "Показано",
+    of: "из",
+    open: "Открыть объект",
   },
   uk: {
     eyebrow: "Об’єкти спостереження",
     title: "Мої об’єкти спостереження",
     description:
-      "Кореневі, проміжні та листові об’єкти поточного активного профілю.",
-    status: "Стан",
-    context: "Контекст",
-    created: "Створено",
+      "Корені, проміжні об’єкти та листи активного профілю. Список організовано для швидкої навігації деревом спостережень.",
+    total: "Разом",
+    roots: "Корені",
+    intermediate: "Проміжні",
+    leaves: "Листи",
+    allObjects: "Усі об’єкти",
+    rootObjects: "Корені",
+    intermediateObjects: "Проміжні",
+    leafObjects: "Листи",
+    drafts: "Чернетки",
+    searchPlaceholder: "Пошук за назвою, описом, площиною, видом або шляхом",
+    sortNewest: "Спочатку нові",
+    sortTitle: "За назвою",
+    sortStructure: "За структурою",
     personal: "Особистий",
     commercial: "Комерційний",
+    system: "Системний",
     draft: "Чернетка",
     active: "Активний",
+    inactive: "Неактивний",
+    children: "Дочірні",
+    descendantLeaves: "Листів нижче",
+    version: "Версія",
+    path: "Шлях",
+    noDescription: "Опис ще не додано.",
+    shown: "Показано",
+    of: "з",
+    open: "Відкрити об’єкт",
   },
   de: {
     eyebrow: "Beobachtungsobjekte",
     title: "Meine Beobachtungsobjekte",
     description:
-      "Wurzel-, Zwischen- und Blattobjekte des aktuell aktiven Profils.",
-    status: "Status",
-    context: "Kontext",
-    created: "Erstellt",
+      "Wurzeln, Zwischenobjekte und Blätter des aktiven Profils. Die Liste ist für eine schnelle Navigation im Beobachtungsbaum aufgebaut.",
+    total: "Gesamt",
+    roots: "Wurzeln",
+    intermediate: "Zwischenobjekte",
+    leaves: "Blätter",
+    allObjects: "Alle Objekte",
+    rootObjects: "Wurzeln",
+    intermediateObjects: "Zwischenobjekte",
+    leafObjects: "Blätter",
+    drafts: "Entwürfe",
+    searchPlaceholder: "Nach Name, Beschreibung, Ebene, Art oder Pfad suchen",
+    sortNewest: "Neueste zuerst",
+    sortTitle: "Nach Name",
+    sortStructure: "Nach Struktur",
     personal: "Persönlich",
     commercial: "Kommerziell",
+    system: "System",
     draft: "Entwurf",
     active: "Aktiv",
+    inactive: "Inaktiv",
+    children: "Kinder",
+    descendantLeaves: "Blätter darunter",
+    version: "Definition",
+    path: "Pfad",
+    noDescription: "Noch keine Beschreibung.",
+    shown: "Gezeigt",
+    of: "von",
+    open: "Objekt öffnen",
   },
   es: {
     eyebrow: "Objetos de observación",
     title: "Mis objetos de observación",
     description:
-      "Objetos raíz, intermedios y hoja del perfil activo actual.",
-    status: "Estado",
-    context: "Contexto",
-    created: "Creado",
+      "Raíces, objetos intermedios y hojas del perfil activo. La lista está organizada para navegar rápidamente por el árbol de observación.",
+    total: "Total",
+    roots: "Raíces",
+    intermediate: "Intermedios",
+    leaves: "Hojas",
+    allObjects: "Todos los objetos",
+    rootObjects: "Raíces",
+    intermediateObjects: "Intermedios",
+    leafObjects: "Hojas",
+    drafts: "Borradores",
+    searchPlaceholder: "Buscar por nombre, descripción, plano, tipo o ruta",
+    sortNewest: "Más recientes",
+    sortTitle: "Por nombre",
+    sortStructure: "Por estructura",
     personal: "Personal",
     commercial: "Comercial",
+    system: "Sistema",
     draft: "Borrador",
     active: "Activo",
+    inactive: "Inactivo",
+    children: "Hijos",
+    descendantLeaves: "Hojas debajo",
+    version: "Definición",
+    path: "Ruta",
+    noDescription: "Todavía no hay descripción.",
+    shown: "Mostrados",
+    of: "de",
+    open: "Abrir objeto",
   },
   cs: {
     eyebrow: "Objekty pozorování",
     title: "Moje objekty pozorování",
     description:
-      "Kořenové, mezilehlé a listové objekty aktuálně aktivního profilu.",
-    status: "Stav",
-    context: "Kontext",
-    created: "Vytvořeno",
+      "Kořeny, mezilehlé objekty a listy aktivního profilu. Seznam je uspořádán pro rychlou navigaci ve stromu pozorování.",
+    total: "Celkem",
+    roots: "Kořeny",
+    intermediate: "Mezilehlé",
+    leaves: "Listy",
+    allObjects: "Všechny objekty",
+    rootObjects: "Kořeny",
+    intermediateObjects: "Mezilehlé",
+    leafObjects: "Listy",
+    drafts: "Koncepty",
+    searchPlaceholder: "Hledat podle názvu, popisu, roviny, typu nebo cesty",
+    sortNewest: "Nejnovější",
+    sortTitle: "Podle názvu",
+    sortStructure: "Podle struktury",
     personal: "Osobní",
     commercial: "Komerční",
+    system: "Systémový",
     draft: "Koncept",
     active: "Aktivní",
+    inactive: "Neaktivní",
+    children: "Děti",
+    descendantLeaves: "Listů níže",
+    version: "Definice",
+    path: "Cesta",
+    noDescription: "Popis zatím nebyl přidán.",
+    shown: "Zobrazeno",
+    of: "z",
+    open: "Otevřít objekt",
   },
 };
-
-const SECTION_CLASSES =
-  "rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-sm";
-const SUMMARY_CLASSES =
-  "rounded-[18px] border border-[#edf0f7] bg-[#f8fafc] p-4";
 
 function useInterfaceLocale(): LocaleCode {
   const [locale, setLocale] = useState<LocaleCode>("en");
@@ -173,20 +362,6 @@ function useInterfaceLocale(): LocaleCode {
   }, []);
 
   return locale;
-}
-
-function getDateLocale(locale: LocaleCode) {
-  const dateLocales: Record<LocaleCode, string> = {
-    ru: "ru-RU",
-    pl: "pl-PL",
-    en: "en-US",
-    es: "es-ES",
-    uk: "uk-UA",
-    de: "de-DE",
-    cs: "cs-CZ",
-  };
-
-  return dateLocales[locale] ?? "en-US";
 }
 
 function getErrorStatus(statusCode: number): ActualListStatus {
@@ -220,34 +395,160 @@ function getStatusText(
   return t("valueObjects.actual.error");
 }
 
-function formatDate(value: string | null | undefined, locale: LocaleCode) {
-  if (!value) {
-    return "—";
-  }
-
-  const parsed = new Date(value);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return parsed.toLocaleDateString(getDateLocale(locale), {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function getObjectDetailHref(valueObject: ActualValueObjectPayload) {
-  return valueObject.id ? `/value-objects/${valueObject.id}` : "#";
-}
-
 function buildLocaleAwareHref(pathname: string, locale: LocaleCode) {
   if (locale === "en") {
     return pathname;
   }
 
   return `${pathname}?locale=${encodeURIComponent(locale)}`;
+}
+
+function getObjectDetailHref(valueObject: ActualValueObjectPayload) {
+  return valueObject.id ? `/value-objects/${valueObject.id}` : "#";
+}
+
+function readPublicImageUrl(metadata: Record<string, unknown> | null | undefined) {
+  const publicProfile =
+    metadata &&
+    typeof metadata.public_profile === "object" &&
+    metadata.public_profile !== null &&
+    !Array.isArray(metadata.public_profile)
+      ? (metadata.public_profile as Record<string, unknown>)
+      : null;
+
+  const imageUrl = publicProfile?.image_url;
+
+  return typeof imageUrl === "string" && imageUrl.trim()
+    ? imageUrl.trim()
+    : null;
+}
+
+function getSemanticRole(valueObject: ActualValueObjectPayload): SemanticRole {
+  if (
+    valueObject.ontology_node_role_code === "root" ||
+    valueObject.ontology_node_role_code === "intermediate" ||
+    valueObject.ontology_node_role_code === "leaf"
+  ) {
+    return valueObject.ontology_node_role_code;
+  }
+
+  if (
+    valueObject.id &&
+    valueObject.parent_value_object_id === null &&
+    valueObject.root_value_object_id === valueObject.id
+  ) {
+    return "root";
+  }
+
+  if (valueObject.node_role_code === "activity_leaf") {
+    return "leaf";
+  }
+
+  return "intermediate";
+}
+
+function roleBadgeClass(role: SemanticRole) {
+  if (role === "root") {
+    return "border-[#dfe4ff] bg-[#eef2ff] text-[#3b6ef8]";
+  }
+
+  if (role === "leaf") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+
+  return "border-violet-200 bg-violet-50 text-violet-700";
+}
+
+function statusBadgeClass(status: string | null | undefined) {
+  if (status === "active") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+
+  if (status === "inactive") {
+    return "border-slate-200 bg-slate-50 text-slate-600";
+  }
+
+  return "border-amber-200 bg-amber-50 text-amber-700";
+}
+
+function getRoleLabel(
+  role: SemanticRole,
+  copy: LocalCopy,
+): string {
+  if (role === "root") {
+    return copy.rootObjects;
+  }
+
+  if (role === "leaf") {
+    return copy.leafObjects;
+  }
+
+  return copy.intermediateObjects;
+}
+
+function getStatusLabel(
+  status: string | null | undefined,
+  copy: LocalCopy,
+) {
+  if (status === "active") {
+    return copy.active;
+  }
+
+  if (status === "inactive") {
+    return copy.inactive;
+  }
+
+  return copy.draft;
+}
+
+function getContextLabel(
+  valueObject: ActualValueObjectPayload,
+  copy: LocalCopy,
+) {
+  if (
+    valueObject.scope_code === "global" ||
+    valueObject.origin_type_code === "system"
+  ) {
+    return copy.system;
+  }
+
+  if (valueObject.usage_scope === "commercial") {
+    return (
+      valueObject.organizations?.organization_name?.trim() ||
+      copy.commercial
+    );
+  }
+
+  return copy.personal;
+}
+
+function getFacetLabel(valueObject: ActualValueObjectPayload) {
+  return (
+    valueObject.facet_code?.trim() ||
+    valueObject.object_kind_code?.trim() ||
+    valueObject.object_kind?.trim() ||
+    "—"
+  );
+}
+
+function getKindLabel(valueObject: ActualValueObjectPayload) {
+  return (
+    valueObject.object_kind_code?.trim() ||
+    valueObject.object_kind?.trim() ||
+    "—"
+  );
+}
+
+function roleIcon(role: SemanticRole) {
+  if (role === "root") {
+    return Network;
+  }
+
+  if (role === "leaf") {
+    return Leaf;
+  }
+
+  return Layers3;
 }
 
 export function ActualValueObjectsList() {
@@ -261,6 +562,9 @@ export function ActualValueObjectsList() {
   const [status, setStatus] = useState<ActualListStatus>("idle");
   const [valueObjects, setValueObjects] = useState<ActualValueObjectPayload[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
+  const [sortMode, setSortMode] = useState<SortMode>("newest");
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -312,144 +616,426 @@ export function ActualValueObjectsList() {
     };
   }, []);
 
-  const totalCount = valueObjects.length;
-  const draftCount = valueObjects.filter(
-    (valueObject) => valueObject.status === "draft",
-  ).length;
-  const privateCount = valueObjects.filter(
-    (valueObject) => valueObject.usage_scope === "private",
-  ).length;
-  const commercialCount = valueObjects.filter(
-    (valueObject) => valueObject.usage_scope === "commercial",
-  ).length;
+  const objectsById = useMemo(() => {
+    const map = new Map<string, ActualValueObjectPayload>();
+
+    for (const valueObject of valueObjects) {
+      if (valueObject.id) {
+        map.set(valueObject.id, valueObject);
+      }
+    }
+
+    return map;
+  }, [valueObjects]);
+
+  const childrenByParent = useMemo(() => {
+    const map = new Map<string, ActualValueObjectPayload[]>();
+
+    for (const valueObject of valueObjects) {
+      const parentId = valueObject.parent_value_object_id;
+      if (!parentId) {
+        continue;
+      }
+
+      const children = map.get(parentId) ?? [];
+      children.push(valueObject);
+      map.set(parentId, children);
+    }
+
+    return map;
+  }, [valueObjects]);
+
+  const pathById = useMemo(() => {
+    const map = new Map<string, string>();
+
+    for (const valueObject of valueObjects) {
+      if (!valueObject.id) {
+        continue;
+      }
+
+      const path: string[] = [];
+      const visited = new Set<string>();
+      let cursor: ActualValueObjectPayload | undefined = valueObject;
+
+      while (cursor?.id && !visited.has(cursor.id)) {
+        visited.add(cursor.id);
+        path.unshift(cursor.title?.trim() || "—");
+
+        const parentId = cursor.parent_value_object_id;
+        if (!parentId) {
+          break;
+        }
+
+        cursor = objectsById.get(parentId);
+      }
+
+      map.set(valueObject.id, path.join(" → "));
+    }
+
+    return map;
+  }, [objectsById, valueObjects]);
+
+  const descendantLeafCountById = useMemo(() => {
+    const cache = new Map<string, number>();
+
+    function count(objectId: string, visited = new Set<string>()): number {
+      if (cache.has(objectId)) {
+        return cache.get(objectId) ?? 0;
+      }
+
+      if (visited.has(objectId)) {
+        return 0;
+      }
+
+      const nextVisited = new Set(visited);
+      nextVisited.add(objectId);
+
+      const children = childrenByParent.get(objectId) ?? [];
+      let total = 0;
+
+      for (const child of children) {
+        if (!child.id) {
+          continue;
+        }
+
+        if (getSemanticRole(child) === "leaf") {
+          total += 1;
+        } else {
+          total += count(child.id, nextVisited);
+        }
+      }
+
+      cache.set(objectId, total);
+      return total;
+    }
+
+    for (const valueObject of valueObjects) {
+      if (valueObject.id) {
+        count(valueObject.id);
+      }
+    }
+
+    return cache;
+  }, [childrenByParent, valueObjects]);
+
+  const counts = useMemo(() => {
+    let roots = 0;
+    let intermediate = 0;
+    let leaves = 0;
+
+    for (const valueObject of valueObjects) {
+      const role = getSemanticRole(valueObject);
+
+      if (role === "root") {
+        roots += 1;
+      } else if (role === "leaf") {
+        leaves += 1;
+      } else {
+        intermediate += 1;
+      }
+    }
+
+    return {
+      total: valueObjects.length,
+      roots,
+      intermediate,
+      leaves,
+    };
+  }, [valueObjects]);
+
+  const filteredObjects = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase(locale);
+
+    const filtered = valueObjects.filter((valueObject) => {
+      const role = getSemanticRole(valueObject);
+
+      if (roleFilter === "root" && role !== "root") {
+        return false;
+      }
+
+      if (roleFilter === "intermediate" && role !== "intermediate") {
+        return false;
+      }
+
+      if (roleFilter === "leaf" && role !== "leaf") {
+        return false;
+      }
+
+      if (roleFilter === "draft" && valueObject.status !== "draft") {
+        return false;
+      }
+
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      const path = valueObject.id ? pathById.get(valueObject.id) ?? "" : "";
+      const haystack = [
+        valueObject.title,
+        valueObject.description,
+        valueObject.canonical_key,
+        valueObject.facet_code,
+        valueObject.object_kind_code,
+        valueObject.object_kind,
+        path,
+      ]
+        .filter((item): item is string => typeof item === "string")
+        .join(" ")
+        .toLocaleLowerCase(locale);
+
+      return haystack.includes(normalizedQuery);
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (sortMode === "title") {
+        return (a.title ?? "").localeCompare(b.title ?? "", locale);
+      }
+
+      if (sortMode === "structure") {
+        const pathA = a.id ? pathById.get(a.id) ?? "" : "";
+        const pathB = b.id ? pathById.get(b.id) ?? "" : "";
+        return pathA.localeCompare(pathB, locale);
+      }
+
+      const timeA = Date.parse(a.created_at ?? "") || 0;
+      const timeB = Date.parse(b.created_at ?? "") || 0;
+      return timeB - timeA;
+    });
+  }, [locale, pathById, query, roleFilter, sortMode, valueObjects]);
+
+  const filters: Array<{
+    value: RoleFilter;
+    label: string;
+  }> = [
+    { value: "all", label: copy.allObjects },
+    { value: "root", label: copy.rootObjects },
+    { value: "intermediate", label: copy.intermediateObjects },
+    { value: "leaf", label: copy.leafObjects },
+    { value: "draft", label: copy.drafts },
+  ];
 
   return (
-    <section className={SECTION_CLASSES} aria-label={copy.title}>
-      <div className="flex flex-col gap-5">
-        <header>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
-            {copy.eyebrow}
-          </div>
-          <h1 className="mt-1 text-[20px] font-bold leading-tight text-[#111827]">
-            {copy.title}
-          </h1>
-          <p className="mt-1 max-w-[850px] text-[13px] leading-5 text-[#7c8099]">
-            {copy.description}
-          </p>
-        </header>
-
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            [t("valueObjects.actual.total"), totalCount],
-            [t("valueObjects.actual.draft"), draftCount],
-            [t("valueObjects.actual.private"), privateCount],
-            [t("valueObjects.actual.commercial"), commercialCount],
-          ].map(([label, value]) => (
-            <div key={String(label)} className={SUMMARY_CLASSES}>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#7c8099]">
-                {label}
-              </div>
-              <div className="mt-2 text-[22px] font-bold text-[#111827]">
-                {value}
-              </div>
-            </div>
-          ))}
+    <section className="grid gap-4" aria-label={copy.title}>
+      <header>
+        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
+          {copy.eyebrow}
         </div>
+        <h1 className="mt-1 text-[22px] font-bold leading-tight text-[#111827]">
+          {copy.title}
+        </h1>
+        <p className="mt-1 max-w-[880px] text-[13px] leading-5 text-[#7c8099]">
+          {copy.description}
+        </p>
+      </header>
 
-        {status !== "success" ? (
-          <div className="rounded-[18px] border border-[#fed7aa] bg-[#fff7ed] p-4 text-[13px] font-semibold text-[#9a3412]">
-            {getStatusText(status, t)}
-            {errorMessage ? ` ${errorMessage}` : ""}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          [copy.total, counts.total],
+          [copy.roots, counts.roots],
+          [copy.intermediate, counts.intermediate],
+          [copy.leaves, counts.leaves],
+        ].map(([label, value]) => (
+          <div
+            key={String(label)}
+            className="rounded-[20px] border border-black/[0.07] bg-white p-5 shadow-sm"
+          >
+            <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#7c8099]">
+              {label}
+            </div>
+            <div className="mt-3 text-[26px] font-bold text-[#111827]">
+              {value}
+            </div>
           </div>
-        ) : null}
+        ))}
+      </div>
 
-        {status === "success" && valueObjects.length === 0 ? (
-          <div className="rounded-[18px] border border-dashed border-[#c9d5ff] bg-[#f7f9ff] p-5 text-[13px] leading-5 text-[#4a4f6a]">
-            {t("valueObjects.actual.empty")}
-          </div>
-        ) : null}
+      <div className="flex flex-wrap items-center gap-2">
+        {filters.map((filter) => {
+          const selected = roleFilter === filter.value;
 
-        {status === "success" && valueObjects.length > 0 ? (
-          <div className="grid gap-3">
-            {valueObjects.map((valueObject) => {
+          return (
+            <button
+              key={filter.value}
+              type="button"
+              onClick={() => setRoleFilter(filter.value)}
+              className={[
+                "rounded-xl border px-4 py-2 text-[12px] font-semibold shadow-sm transition",
+                selected
+                  ? "border-[#3b6ef8] bg-[#3b6ef8] text-white"
+                  : "border-[#dfe3f1] bg-white text-[#4a4f6a] hover:bg-gray-50",
+              ].join(" ")}
+            >
+              {filter.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="grid gap-3 rounded-[20px] border border-black/[0.07] bg-white p-4 shadow-sm md:grid-cols-[1fr_auto]">
+        <label className="flex min-h-11 items-center gap-2 rounded-xl border border-[#dfe3f1] bg-[#f8fafc] px-3">
+          <Search size={16} className="shrink-0 text-[#7c8099]" />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={copy.searchPlaceholder}
+            className="w-full bg-transparent text-[13px] text-[#111827] outline-none placeholder:text-[#9ca3b8]"
+          />
+        </label>
+
+        <select
+          value={sortMode}
+          onChange={(event) => setSortMode(event.target.value as SortMode)}
+          className="min-h-11 rounded-xl border border-[#dfe3f1] bg-white px-4 text-[12px] font-semibold text-[#4a4f6a] outline-none"
+        >
+          <option value="newest">{copy.sortNewest}</option>
+          <option value="title">{copy.sortTitle}</option>
+          <option value="structure">{copy.sortStructure}</option>
+        </select>
+      </div>
+
+      {status !== "success" ? (
+        <div className="rounded-[18px] border border-[#fed7aa] bg-[#fff7ed] p-4 text-[13px] font-semibold text-[#9a3412]">
+          {getStatusText(status, t)}
+          {errorMessage ? ` ${errorMessage}` : ""}
+        </div>
+      ) : null}
+
+      {status === "success" && valueObjects.length === 0 ? (
+        <div className="rounded-[20px] border border-dashed border-[#c9d5ff] bg-[#f7f9ff] p-5 text-[13px] leading-5 text-[#4a4f6a]">
+          {t("valueObjects.actual.empty")}
+        </div>
+      ) : null}
+
+      {status === "success" && valueObjects.length > 0 ? (
+        <>
+          <div className="grid gap-3 xl:grid-cols-2">
+            {filteredObjects.map((valueObject) => {
               const title =
                 valueObject.title?.trim() || t("valueObjects.actual.noTitle");
-              const isCommercial = valueObject.usage_scope === "commercial";
-              const isDraft = valueObject.status === "draft";
+              const role = getSemanticRole(valueObject);
+              const RoleIcon = roleIcon(role);
+              const imageUrl = readPublicImageUrl(valueObject.metadata_json);
+              const directChildren = valueObject.id
+                ? childrenByParent.get(valueObject.id)?.length ?? 0
+                : 0;
+              const descendantLeaves = valueObject.id
+                ? descendantLeafCountById.get(valueObject.id) ?? 0
+                : 0;
+              const path = valueObject.id
+                ? pathById.get(valueObject.id) ?? title
+                : title;
+              const definitionVersion =
+                valueObject.definition_version ?? 1;
 
               return (
                 <article
                   key={valueObject.id ?? title}
-                  className="rounded-[20px] border border-[#dfe3f1] bg-white p-4 shadow-sm"
+                  className="rounded-[20px] border border-[#dfe3f1] bg-white p-4 shadow-sm transition hover:border-[#c9d5ff] hover:shadow-md"
                 >
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap gap-2">
-                        <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-[11px] font-semibold text-[#3b6ef8]">
-                          {isCommercial ? copy.commercial : copy.personal}
-                        </span>
-                        <span className="rounded-full bg-[#f5f6fb] px-3 py-1 text-[11px] font-semibold text-[#6b7280]">
-                          {isDraft ? copy.draft : copy.active}
-                        </span>
+                  <div className="flex gap-4">
+                    <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#dfe4ff] bg-[#eef2ff] text-[#3b6ef8]">
+                      {imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt={title}
+                          className="h-full w-full object-cover object-center"
+                        />
+                      ) : (
+                        <RoleIcon size={34} strokeWidth={1.5} />
+                      )}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="flex flex-wrap gap-2">
+                          <span
+                            className={[
+                              "rounded-full border px-2.5 py-1 text-[10px] font-bold",
+                              roleBadgeClass(role),
+                            ].join(" ")}
+                          >
+                            {getRoleLabel(role, copy)}
+                          </span>
+
+                          <span
+                            className={[
+                              "rounded-full border px-2.5 py-1 text-[10px] font-bold",
+                              statusBadgeClass(valueObject.status),
+                            ].join(" ")}
+                          >
+                            {getStatusLabel(valueObject.status, copy)}
+                          </span>
+
+                          <span className="rounded-full border border-[#e7eaf3] bg-[#f8fafc] px-2.5 py-1 text-[10px] font-semibold text-[#5a5f7a]">
+                            {getContextLabel(valueObject, copy)}
+                          </span>
+                        </div>
+
+                        <Link
+                          href={buildLocaleAwareHref(
+                            getObjectDetailHref(valueObject),
+                            locale,
+                          )}
+                          className="shrink-0 text-[12px] font-bold text-[#3b6ef8] hover:underline"
+                        >
+                          {copy.open}
+                        </Link>
                       </div>
 
-                      <h2 className="mt-3 text-[16px] font-semibold text-[#111827]">
+                      <h2 className="mt-2 truncate text-[16px] font-bold text-[#111827]">
                         {title}
                       </h2>
 
-                      {valueObject.description?.trim() ? (
-                        <p className="mt-1 max-w-[760px] text-[13px] leading-5 text-[#5a5f7a]">
-                          {valueObject.description.trim()}
-                        </p>
-                      ) : null}
-                    </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#7c8099]">
+                        <span>{getFacetLabel(valueObject)}</span>
+                        <span aria-hidden="true">·</span>
+                        <span>{getKindLabel(valueObject)}</span>
+                      </div>
 
-                    <Link
-                      href={buildLocaleAwareHref(
-                        getObjectDetailHref(valueObject),
-                        locale,
-                      )}
-                      className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"
-                    >
-                      {t("valueObjects.actual.openEdit")}
-                    </Link>
+                      <p className="mt-2 max-h-10 overflow-hidden text-[12px] leading-5 text-[#5a5f7a]">
+                        {valueObject.description?.trim() || copy.noDescription}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                    <div className={SUMMARY_CLASSES}>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7c8099]">
-                        {copy.status}
-                      </div>
-                      <div className="mt-1 text-[13px] font-semibold text-[#1a1d2e]">
-                        {isDraft ? copy.draft : copy.active}
-                      </div>
+                  <div className="mt-4 rounded-xl border border-[#edf0f7] bg-[#fafbff] px-3 py-2.5">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7c8099]">
+                      {copy.path}
                     </div>
+                    <div className="mt-1 truncate text-[12px] font-semibold text-[#334155]">
+                      {path}
+                    </div>
+                  </div>
 
-                    <div className={SUMMARY_CLASSES}>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7c8099]">
-                        {copy.context}
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    {[
+                      [copy.children, directChildren],
+                      [copy.descendantLeaves, descendantLeaves],
+                      [copy.version, definitionVersion],
+                    ].map(([label, value]) => (
+                      <div
+                        key={String(label)}
+                        className="rounded-xl border border-[#edf0f7] bg-[#f8fafc] px-3 py-3 text-center"
+                      >
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#7c8099]">
+                          {label}
+                        </div>
+                        <div className="mt-1 text-[14px] font-bold text-[#111827]">
+                          {value}
+                        </div>
                       </div>
-                      <div className="mt-1 text-[13px] font-semibold text-[#1a1d2e]">
-                        {valueObject.organizations?.organization_name?.trim() ||
-                          (isCommercial ? copy.commercial : copy.personal)}
-                      </div>
-                    </div>
-
-                    <div className={SUMMARY_CLASSES}>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7c8099]">
-                        {copy.created}
-                      </div>
-                      <div className="mt-1 text-[13px] font-semibold text-[#1a1d2e]">
-                        {formatDate(valueObject.created_at, locale)}
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </article>
               );
             })}
           </div>
-        ) : null}
-      </div>
+
+          <div className="rounded-[18px] border border-black/[0.07] bg-white px-4 py-3 text-[12px] text-[#7c8099] shadow-sm">
+            {copy.shown} {filteredObjects.length} {copy.of} {valueObjects.length}
+          </div>
+        </>
+      ) : null}
     </section>
   );
 }
