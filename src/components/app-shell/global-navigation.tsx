@@ -761,6 +761,14 @@ export function GlobalSidebar({
   const certificateScope = certificateSearch.get("scope");
 
   const isDashboardActive = currentPathname === "/";
+  const isUserAiProcessingActive =
+    currentPathname === "/settings/ai-processing";
+  const isSystemAiInstructionsActive =
+    currentPathname === "/admin/ai-instructions";
+  const isDashboardSectionActive =
+    isDashboardActive ||
+    isUserAiProcessingActive ||
+    isSystemAiInstructionsActive;
   const isCalendarActive = currentPathname.startsWith("/calendar");
   const isObservationObjectsActive = currentPathname.startsWith("/value-objects");
   const isActivityJournalActive =
@@ -831,12 +839,27 @@ export function GlobalSidebar({
         aria-label="ARCTor"
         className="scrollbar-hide flex-1 space-y-0.5 overflow-y-auto px-2 py-3"
       >
-        <SidebarMainItem
+        <ExpandableSidebarLinkItem
           icon={LayoutDashboard}
           label={t("navigation.dashboard")}
-          active={isDashboardActive}
           href={localeHref("/")}
-        />
+          active={isDashboardSectionActive}
+          current={isDashboardActive}
+          defaultOpen
+        >
+          <TreeItem
+            label={t("navigation.myAiInstructions")}
+            depth={1}
+            href={localeHref("/settings/ai-processing")}
+            active={isUserAiProcessingActive}
+          />
+          <TreeItem
+            label={t("navigation.systemAiInstructions")}
+            depth={1}
+            href={localeHref("/admin/ai-instructions")}
+            active={isSystemAiInstructionsActive}
+          />
+        </ExpandableSidebarLinkItem>
 
         <SidebarDivider />
 

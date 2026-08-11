@@ -4,6 +4,8 @@ import { type LocaleCode } from "../locales";
 
 export const navigationMessageKeys = [
   "navigation.dashboard",
+  "navigation.myAiInstructions",
+  "navigation.systemAiInstructions",
   "navigation.observationObjects",
   "navigation.activityJournal",
   "navigation.facts",
@@ -94,6 +96,24 @@ export const navigationMessages: Record<NavigationMessageKey, Record<LocaleCode,
     uk: "Мій кабінет",
     de: "Mein Dashboard",
     cs: "Můj panel",
+  },
+  "navigation.myAiInstructions": {
+    ru: "Мои инструкции ИИ",
+    pl: "Moje instrukcje AI",
+    en: "My AI instructions",
+    es: "Mis instrucciones de IA",
+    uk: "Мої інструкції ШІ",
+    de: "Meine KI-Anweisungen",
+    cs: "Moje instrukce AI",
+  },
+  "navigation.systemAiInstructions": {
+    ru: "Системные инструкции ИИ",
+    pl: "Systemowe instrukcje AI",
+    en: "System AI instructions",
+    es: "Instrucciones de IA del sistema",
+    uk: "Системні інструкції ШІ",
+    de: "System-KI-Anweisungen",
+    cs: "Systémové instrukce AI",
   },
   "navigation.observationObjects": {
     ru: "Объекты наблюдения",
