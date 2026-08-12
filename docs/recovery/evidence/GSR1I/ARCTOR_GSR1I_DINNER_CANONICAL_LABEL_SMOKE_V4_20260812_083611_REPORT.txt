@@ -1,0 +1,103 @@
+ARCTor.app - GSR-1I Dinner Canonical Label Smoke v4
+TIMESTAMP=20260812_083611
+STATUS=PASS_WITH_REMAINING_GOLD_GAPS
+
+FAILURE:
+
+
+INPUT DIAGNOSIS AFTER GSR1I V3:
+G21_AVAILABLE_TIME now PASSES and is not rerun.
+
+G24_DINNER is functionally correct except for one canonicalization detail:
+  selected leaf = process.nutrition.meal
+  occurredAtRaw = "вчера около девяти вечера"
+  occurredAtIso = 2026-08-11T19:00:00.000Z
+    (= 21:00 Europe/Warsaw)
+  temporalPrecision = approximate
+  meal_label was emitted as the Russian surface form "ужин"
+
+The gold contract requires the stable machine value meal_label="dinner".
+This is not a new semantic inference. The source explicitly says "Ужинал";
+the deterministic Russian lexical normalizer already maps that evidence to
+the canonical category dinner.
+
+V4 FIX UNDER TEST:
+- if explicit Russian meal wording is present and the selected leaf exposes
+  meal_label, deterministic server post-processing REPLACES any AI-provided
+  meal_label text with the canonical machine label;
+- "ужинал" -> dinner, "обедал" -> lunch, "завтракал" -> breakfast;
+- all other facts remain unchanged;
+- only G24 is rerun. G21 and the other six passing gold cases are not rerun.
+
+BRANCH:
+feat/gsr1-global-system-reality-machine-contract-v1-20260811
+
+HEAD:
+843d1ea6bdf0ee822416d5ccfa9d8d445718c7c4
+
+EXPECTED_HEAD:
+843d1ea6bdf0ee822416d5ccfa9d8d445718c7c4
+
+GSR1F_VALIDATION_EXIT:
+0
+
+GLOBAL_SEED_VALIDATION_EXIT:
+0
+
+DIFF_CHECK_EXIT:
+0
+
+PRODUCTION_BUILD_EXIT:
+0
+
+CASE_COUNT:
+1
+
+PASS_COUNT:
+0
+
+FAIL_COUNT:
+1
+
+TOTAL_ACTUAL_PROVIDER_COST_USD:
+0.00076395
+
+TOTAL_RESERVED_MAXIMUM_PROVIDER_COST_USD:
+0.0046958
+
+PER_OPERATION_HARD_CAP_USD:
+0.1
+
+DOCUMENTED_PER_CASE_MAX_USD:
+0.00975
+
+DOCUMENTED_SUITE_MAX_USD:
+0.00975
+
+SUITE_HARD_STOP_USD:
+0.1
+
+CASE SUMMARY:
+G24_DINNER: HTTP=500 OK=False ACTUAL_USD=0.00076395 RESERVED_USD=0.0046958
+
+GIT STATUS:
+
+
+SAFETY:
+- THIS SCRIPT MAKES REAL OPENAI API CALLS only after validators/build/readiness.
+- Only G24_DINNER is rerun; G21 and the other passing cases are not rerun.
+- Nano only.
+- Each case is a separate operation with DB hard cap USD 0.10.
+- Two provider stages maximum per case.
+- Zero automatic provider retries.
+- One POST per case; no PowerShell retry.
+- Cases run sequentially.
+- Documented maximum for this one G24 operation = USD 0.00975.
+- Suite hard stop = USD 0.10.
+- No Reality Graph fact write.
+- No commit/push.
+- No Vercel settings change.
+- If the two-case smoke fails, the main worktree is restored to the exact
+  committed baseline automatically.
+- If both cases pass, exactly two modified files remain ready for controlled commit.
+- P8 remains blocked.

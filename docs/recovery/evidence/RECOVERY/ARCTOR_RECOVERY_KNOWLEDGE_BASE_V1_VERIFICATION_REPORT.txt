@@ -1,0 +1,23 @@
+ARCTor.app - Recovery Knowledge Base v1 Verification
+DATE=2026-08-12
+STATUS=PASS_PRECOMMIT_RECOVERY_BASELINE_VERIFIED
+
+BRANCH=feat/gsr1-global-system-reality-machine-contract-v1-20260811
+CODE_CHECKPOINT_COMMIT=843d1ea6bdf0ee822416d5ccfa9d8d445718c7c4
+
+VERIFIED:
+- human current-state document exists;
+- decisions/failures journal exists;
+- restore-from-zero document exists;
+- machine checkpoint manifest exists;
+- evidence index exists;
+- GSR1G/GSR1H/GSR1I reports are stored in repository recovery evidence;
+- recovery tree contains no obvious API/service secrets by local pattern scan;
+- only docs/recovery changes are allowed in this commit.
+
+MANIFEST_NEXT_ACTION:
+Diagnose exact G24 V4 HTTP 500 from preserved evidence; patch only that cause; rerun only G24.
+
+RULE:
+A meaningful project step is not fully closed until machine state, human
+reasoning/history, and relevant evidence are recoverable from GitHub.

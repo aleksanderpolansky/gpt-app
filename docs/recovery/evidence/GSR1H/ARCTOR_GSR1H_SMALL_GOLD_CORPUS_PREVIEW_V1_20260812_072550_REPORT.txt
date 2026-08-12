@@ -1,0 +1,94 @@
+ARCTor.app - GSR-1H Small Gold Corpus Preview v1
+TIMESTAMP=20260812_072550
+STATUS=FAILED
+
+FAILURE:
+EXISTING_LOCAL_DEV_SERVER_OR_GOLD_ROUTE_NOT_READY_WITHIN_60_SECONDS
+At C:\Users\Admin\Downloads\ARCTOR_GSR1H_SMALL_GOLD_CORPUS_PREVIEW_V1.ps1:431 char:9
++         throw "EXISTING_LOCAL_DEV_SERVER_OR_GOLD_ROUTE_NOT_READY_WITH ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (EXISTING_LOCAL_...THIN_60_SECONDS:String) 
+    [], RuntimeException
+    + FullyQualifiedErrorId : EXISTING_LOCAL_DEV_SERVER_OR_GOLD_ROUTE_NOT_READY_WITHIN_60_ 
+   SECONDS
+
+BRANCH:
+feat/gsr1-global-system-reality-machine-contract-v1-20260811
+
+HEAD:
+843d1ea6bdf0ee822416d5ccfa9d8d445718c7c4
+
+EXPECTED_HEAD:
+843d1ea6bdf0ee822416d5ccfa9d8d445718c7c4
+
+GSR1F_VALIDATION_EXIT:
+0
+
+GLOBAL_SEED_VALIDATION_EXIT:
+0
+
+CASE_COUNT:
+8
+
+PASS_COUNT:
+0
+
+FAIL_COUNT:
+0
+
+TOTAL_ACTUAL_PROVIDER_COST_USD:
+0
+
+TOTAL_RESERVED_MAXIMUM_PROVIDER_COST_USD:
+0
+
+PER_OPERATION_HARD_CAP_USD:
+0.1
+
+DOCUMENTED_PER_CASE_MAX_USD:
+0.00975
+
+DOCUMENTED_SUITE_MAX_USD:
+0.07800
+
+SUITE_HARD_STOP_USD:
+0.1
+
+CASE SUMMARY:
+
+
+GIT STATUS AFTER CLEANUP:
+
+
+TEST CORPUS:
+G06 "Вес 94.8 кг."
+G07 "Пульс 72."
+G11 "Съел пирожное."
+G13 "Выпил 500 мл воды."
+G17 "На улице 19 градусов, облачно."
+G19 "Повторил немецкую фразу 20 раз."
+G21 "Сегодня вечером у меня есть примерно два свободных часа."
+G24 "Ужинал вчера около девяти вечера."
+
+SAFETY:
+- THIS SCRIPT MAKES REAL OPENAI API CALLS.
+- Nano only.
+- Each case is a separate operation with DB hard cap USD 0.10.
+- Two provider stages maximum per case.
+- Zero automatic provider retries.
+- One POST per case; no PowerShell retry.
+- Cases run sequentially, never in parallel.
+- Before starting the next case, the script checks that current aggregate
+  reserved maximum + documented next-case maximum cannot exceed USD 0.10.
+- Documented maximum for all 8 cases together is USD 0.078.
+- No Reality Graph fact write.
+- Temporary localhost route is removed.
+- No commit/push.
+- No Vercel settings change.
+- P8 remains blocked.
+
+INTERPRETATION:
+PASS means all 8 current preview expectations matched.
+PASS_WITH_GOLD_GAPS means infrastructure/safety stayed intact, but one or more
+semantic gold expectations failed. That is useful pilot telemetry and must be
+reviewed before any Reality Graph write.

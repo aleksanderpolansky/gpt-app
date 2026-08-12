@@ -1,0 +1,107 @@
+ARCTor.app - GSR-1I Routing/Temporal Fix + Two-Case Smoke v2
+TIMESTAMP=20260812_081154
+STATUS=PASS_WITH_REMAINING_GOLD_GAPS
+
+FAILURE:
+
+
+INPUT DIAGNOSIS AFTER GSR1I V1:
+GSR1I V1 did not reach stage 2. Both cases were stopped after one Nano call
+because the new structured relative-time hints contained values but
+occurredAtRaw was null:
+  G21: relativeDayOffset=0, localTimeHour=18, localTimeMinute=0
+  G24: relativeDayOffset=-1, localTimeHour=21, localTimeMinute=0
+
+Important safety finding:
+For G21, 18:00 was an invented conversion of the vague daypart "вечером".
+That must NOT be accepted as observed time.
+
+V2 FIX UNDER TEST:
+1. Remove numeric relative-time hints from the AI contract.
+2. Keep occurredAtRaw as exact source evidence; server validates it is an
+   exact substring of the user's text.
+3. Add locked temporal_precision=window_only.
+4. For Russian pilot phrases, server deterministically parses explicit
+   relative-day + explicit clock wording from occurredAtRaw.
+   "вчера около девяти вечера" -> yesterday 21:00 local, approximate.
+5. A daypart without an explicit clock remains a window:
+   "сегодня вечером" -> window_only, occurredAtIso remains null.
+6. Stage 2 uses enum-bound selectionKey=segmentId::canonicalKey so a candidate
+   cannot cross segment boundaries.
+7. Explicit Russian meal wording is deterministically normalized when the
+   selected meal contract exposes meal_label:
+   "ужинал" -> dinner.
+
+BRANCH:
+feat/gsr1-global-system-reality-machine-contract-v1-20260811
+
+HEAD:
+843d1ea6bdf0ee822416d5ccfa9d8d445718c7c4
+
+EXPECTED_HEAD:
+843d1ea6bdf0ee822416d5ccfa9d8d445718c7c4
+
+GSR1F_VALIDATION_EXIT:
+0
+
+GLOBAL_SEED_VALIDATION_EXIT:
+0
+
+DIFF_CHECK_EXIT:
+0
+
+PRODUCTION_BUILD_EXIT:
+0
+
+CASE_COUNT:
+2
+
+PASS_COUNT:
+0
+
+FAIL_COUNT:
+2
+
+TOTAL_ACTUAL_PROVIDER_COST_USD:
+0.00172365
+
+TOTAL_RESERVED_MAXIMUM_PROVIDER_COST_USD:
+0.0106005999999999995
+
+PER_OPERATION_HARD_CAP_USD:
+0.1
+
+DOCUMENTED_PER_CASE_MAX_USD:
+0.00975
+
+DOCUMENTED_SUITE_MAX_USD:
+0.01950
+
+SUITE_HARD_STOP_USD:
+0.1
+
+CASE SUMMARY:
+G21_AVAILABLE_TIME: HTTP=409 OK=False ACTUAL_USD=0.0009902 RESERVED_USD=0.005690199999999999
+G24_DINNER: HTTP=409 OK=False ACTUAL_USD=0.00073345 RESERVED_USD=0.0049104000000000005
+
+GIT STATUS:
+
+
+SAFETY:
+- THIS SCRIPT MAKES REAL OPENAI API CALLS only after validators/build/readiness.
+- Only the 2 previously failing gold cases are rerun.
+- Nano only.
+- Each case is a separate operation with DB hard cap USD 0.10.
+- Two provider stages maximum per case.
+- Zero automatic provider retries.
+- One POST per case; no PowerShell retry.
+- Cases run sequentially.
+- Documented maximum for both new operations together = USD 0.0195.
+- Suite hard stop = USD 0.10.
+- No Reality Graph fact write.
+- No commit/push.
+- No Vercel settings change.
+- If the two-case smoke fails, the main worktree is restored to the exact
+  committed baseline automatically.
+- If both cases pass, exactly two modified files remain ready for controlled commit.
+- P8 remains blocked.

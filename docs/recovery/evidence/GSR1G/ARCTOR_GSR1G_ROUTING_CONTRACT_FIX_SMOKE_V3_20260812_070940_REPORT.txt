@@ -1,0 +1,119 @@
+ARCTor.app - GSR-1G Routing Contract Fix + Smoke v3
+TIMESTAMP=20260812_070940
+STATUS=PASS_GSR1G_ROUTING_FIX_AND_OPENAI_SMOKE
+
+FAILURE:
+
+
+BASELINE FINDING FROM V2:
+The first real provider stage completed, but deterministic validation rejected:
+  segmentId = seg2
+  root = domain.movement_physical_activity
+  facet = STATE
+because STATE is not an allowed live facet under that DOMAIN root.
+The guard worked: stage 2 was never called and no Reality Graph fact was written.
+
+V3 FIX:
+1. Stage-1 Structured Output no longer returns rootCanonicalKey and facetCode
+   independently.
+2. It returns one domainFacetKey selected from a live enum generated from the
+   actual DOMAIN/FACET catalog. Invalid root/facet combinations are therefore
+   structurally impossible in the schema.
+3. Prompt explicitly forbids splitting duration/count/load/quantity/unit into
+   a separate event segment.
+4. The PowerShell diagnostic URL interpolation bug is fixed.
+
+BRANCH:
+feat/gsr1-global-system-reality-machine-contract-v1-20260811
+
+HEAD:
+7de3e87225756422b13f97f15e385ff9b2065598
+
+EXPECTED_HEAD:
+7de3e87225756422b13f97f15e385ff9b2065598
+
+OPERATION_ID:
+4e91434b-e4b5-47a3-aa4d-98ee92bb4a30
+
+LOCKED_INPUT:
+делал планку две минуты
+
+GSR1F_VALIDATION_EXIT:
+0
+
+GLOBAL_SEED_VALIDATION_EXIT:
+0
+
+DIFF_CHECK_EXIT:
+0
+
+HTTP_STATUS:
+200
+
+DIAGNOSTIC_HTTP_STATUS:
+200
+
+SEMANTIC_PASSED:
+True
+
+NO_REALITY_GRAPH_WRITE:
+True
+
+COST_WITHIN_HARD_CAP:
+True
+
+USAGE_ROW_COUNT:
+2
+
+BUDGET_RESERVATION_COUNT:
+2
+
+ACTUAL_PROVIDER_COST_USD:
+0.0006572
+
+RESERVED_MAXIMUM_PROVIDER_COST_USD:
+0.004432
+
+HARD_CAP_USD:
+0.1
+
+DOCUMENTED_TWO_STAGE_MAX_USD:
+0.00975
+
+PRODUCTION_BUILD_EXIT:
+0
+
+GIT STATUS:
+ M lib/reality/globalObservationPilot.ts
+ M scripts/validate-gsr1f-global-observation-preview-v1.mjs
+
+COST NOTE:
+V2 already made exactly one successful Nano provider call:
+  actual provider cost = USD 0.0003068
+The V3 smoke can make at most the normal two guarded provider stages.
+Its documented maximum remains approximately USD 0.00975 for the whole V3
+operation, with the database hard cap fixed at USD 0.10.
+
+SAFETY:
+- one locked test phrase;
+- one HTTP POST only;
+- no script-level retry;
+- zero OpenAI SDK automatic retries;
+- Nano only;
+- DB budget preflight before each provider call;
+- no Reality Graph fact write;
+- temporary local route is removed;
+- no Vercel setting changes;
+- no commit or push;
+- P8 remains blocked.
+
+PASS REQUIRES:
+- stage-1 route contract accepted;
+- one semantic segment;
+- process.exercise.plank selected;
+- explicit 2 minute extracted;
+- occurred_at not invented;
+- exactly 2 provider calls and 2 reservations;
+- actual cost recorded and <= USD 0.10;
+- global fact/link counts unchanged;
+- validators and production build pass.

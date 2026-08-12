@@ -1,0 +1,100 @@
+ARCTor.app - GSR-1H Failed-Case Diagnostic v5
+TIMESTAMP=20260812_074922
+STATUS=PASS_DIAGNOSTIC_CAPTURED
+
+FAILURE:
+
+
+V4 RESULT THAT TRIGGERS THIS DIAGNOSTIC:
+- infrastructure/runtime reached all eight OpenAI cases;
+- 6 of 8 gold cases passed;
+- G21_AVAILABLE_TIME returned HTTP 409 (preview completed but gold expectation failed);
+- G24_DINNER returned HTTP 500 (runtime/validation failure);
+- total actual OpenAI provider cost for V4 was USD 0.00614640;
+- no Reality Graph write occurred;
+- the final PowerShell report object failed before CORPUS_RESULTS.json could be written,
+  so the exact two failed HTTP bodies were not preserved in the V4 package.
+
+V5 PURPOSE:
+- do NOT rerun the six passing cases;
+- rerun only G21_AVAILABLE_TIME and G24_DINNER once each;
+- save each raw HTTP response immediately before any PowerShell object assembly;
+- use a plain PowerShell array instead of Generic.List to avoid the V4
+  "Argument types do not match" packaging bug;
+- capture enough detail to decide whether each failure is an Analyzer bug,
+  ontology/parameter-contract gap, or an overly strict gold expectation.
+
+BRANCH:
+feat/gsr1-global-system-reality-machine-contract-v1-20260811
+
+HEAD:
+843d1ea6bdf0ee822416d5ccfa9d8d445718c7c4
+
+EXPECTED_HEAD:
+843d1ea6bdf0ee822416d5ccfa9d8d445718c7c4
+
+ISOLATED_SERVER_PORT:
+58574
+
+GSR1F_VALIDATION_EXIT:
+0
+
+GLOBAL_SEED_VALIDATION_EXIT:
+0
+
+CASE_COUNT:
+2
+
+PASS_COUNT:
+0
+
+FAIL_COUNT:
+2
+
+TOTAL_ACTUAL_PROVIDER_COST_USD:
+0.00163635
+
+TOTAL_RESERVED_MAXIMUM_PROVIDER_COST_USD:
+0.0099610
+
+PER_OPERATION_HARD_CAP_USD:
+0.1
+
+DOCUMENTED_PER_CASE_MAX_USD:
+0.00975
+
+DOCUMENTED_SUITE_MAX_USD:
+0.01950
+
+SUITE_HARD_STOP_USD:
+0.1
+
+CASE SUMMARY:
+G21_AVAILABLE_TIME: HTTP=500 OK=False ACTUAL_USD=0.0009432 RESERVED_USD=0.0052516
+G24_DINNER: HTTP=409 OK=False ACTUAL_USD=0.00069315 RESERVED_USD=0.0047094
+
+MAIN WORKTREE GIT STATUS AFTER CLEANUP:
+
+
+SAFETY:
+- THIS V5 MAKES REAL OPENAI API CALLS only after isolated-route readiness.
+- Nano only.
+- Each case is a separate operation with DB hard cap USD 0.10.
+- Two provider stages maximum per case.
+- Zero automatic provider retries.
+- One POST per case; no PowerShell retry.
+- Cases run sequentially, never in parallel.
+- Aggregate documented maximum for these 2 diagnostic cases = USD 0.0195.
+- The suite stops before another case if aggregate reserved maximum plus the
+  next documented case maximum could exceed USD 0.10.
+- No Reality Graph fact write.
+- No commit/push.
+- No Vercel settings change.
+- The main worktree must remain clean.
+- P8 remains blocked.
+
+INTERPRETATION:
+PASS_DIAGNOSTIC_CAPTURED means both failed cases were executed once and their
+full HTTP bodies were preserved, regardless of whether the gold expectation
+passed. We then inspect those bodies before changing any production contract.
+No Reality Graph write is permitted in this diagnostic.

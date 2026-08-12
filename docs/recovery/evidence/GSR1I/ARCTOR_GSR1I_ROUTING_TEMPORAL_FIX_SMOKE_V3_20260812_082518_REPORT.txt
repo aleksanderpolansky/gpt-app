@@ -1,0 +1,112 @@
+ARCTor.app - GSR-1I Routing/Temporal Fix + Two-Case Smoke v3
+TIMESTAMP=20260812_082518
+STATUS=PASS_WITH_REMAINING_GOLD_GAPS
+
+FAILURE:
+
+
+INPUT DIAGNOSIS AFTER GSR1I V2:
+Both provider stages completed safely for both cases, but semantic gold checks
+still failed.
+
+G21_AVAILABLE_TIME:
+  Stage 1 still split one resource observation into two segments and routed both
+  to process.leisure.free_rest. This proves prompt wording alone is not a hard
+  contract for the locked "available time" concept.
+
+G24_DINNER:
+  Meal selection was correct and occurredAtRaw preserved
+  "вчера около девяти вечера", but server parsing stayed date_only and
+  meal_label was still absent.
+
+ROOT CAUSE FOUND:
+JavaScript \b word boundaries are ASCII-word based and are not reliable around
+Cyrillic letters. The Russian clock/daypart and meal-label regexes therefore
+failed even though the source evidence was present.
+
+V3 FIX UNDER TEST:
+1. Remove Cyrillic \b assumptions from Russian clock/daypart/meal parsing.
+2. Keep exact-source temporal evidence and deterministic timezone conversion.
+3. Add a deterministic Russian available-time recognizer for explicit
+   "free/available X hours/minutes" resource statements:
+     -> one segment
+     -> domain.environment_context / CONTEXT
+     -> lookup "Доступное время"
+   This is the locked system rule: available time is a resource context, not
+   leisure and not a Time DOMAIN.
+4. Keep enum-bound stage-2 selectionKey.
+5. Keep deterministic explicit meal-label normalization.
+
+BRANCH:
+feat/gsr1-global-system-reality-machine-contract-v1-20260811
+
+HEAD:
+843d1ea6bdf0ee822416d5ccfa9d8d445718c7c4
+
+EXPECTED_HEAD:
+843d1ea6bdf0ee822416d5ccfa9d8d445718c7c4
+
+GSR1F_VALIDATION_EXIT:
+0
+
+GLOBAL_SEED_VALIDATION_EXIT:
+0
+
+DIFF_CHECK_EXIT:
+0
+
+PRODUCTION_BUILD_EXIT:
+0
+
+CASE_COUNT:
+2
+
+PASS_COUNT:
+1
+
+FAIL_COUNT:
+1
+
+TOTAL_ACTUAL_PROVIDER_COST_USD:
+0.0014939
+
+TOTAL_RESERVED_MAXIMUM_PROVIDER_COST_USD:
+0.0096300
+
+PER_OPERATION_HARD_CAP_USD:
+0.1
+
+DOCUMENTED_PER_CASE_MAX_USD:
+0.00975
+
+DOCUMENTED_SUITE_MAX_USD:
+0.01950
+
+SUITE_HARD_STOP_USD:
+0.1
+
+CASE SUMMARY:
+G21_AVAILABLE_TIME: HTTP=200 OK=True ACTUAL_USD=0.0007052 RESERVED_USD=0.0046866
+G24_DINNER: HTTP=409 OK=False ACTUAL_USD=0.0007887 RESERVED_USD=0.0049434
+
+GIT STATUS:
+
+
+SAFETY:
+- THIS SCRIPT MAKES REAL OPENAI API CALLS only after validators/build/readiness.
+- Only the 2 previously failing gold cases are rerun.
+- Nano only.
+- Each case is a separate operation with DB hard cap USD 0.10.
+- Two provider stages maximum per case.
+- Zero automatic provider retries.
+- One POST per case; no PowerShell retry.
+- Cases run sequentially.
+- Documented maximum for both new operations together = USD 0.0195.
+- Suite hard stop = USD 0.10.
+- No Reality Graph fact write.
+- No commit/push.
+- No Vercel settings change.
+- If the two-case smoke fails, the main worktree is restored to the exact
+  committed baseline automatically.
+- If both cases pass, exactly two modified files remain ready for controlled commit.
+- P8 remains blocked.

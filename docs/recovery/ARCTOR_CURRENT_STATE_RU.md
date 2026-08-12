@@ -1,0 +1,169 @@
+# ARCTor.app — текущее фактическое состояние
+
+Дата снимка: 2026-08-12
+
+## 1. Git
+
+Текущая рабочая ветка:
+
+`feat/gsr1-global-system-reality-machine-contract-v1-20260811`
+
+Последний подтверждённый и отправленный в GitHub commit:
+
+`843d1ea6bdf0ee822416d5ccfa9d8d445718c7c4`
+
+Сообщение commit:
+
+`fix(reality-core): bind routing to live domain facet pairs`
+
+`origin/main` на момент снимка:
+
+`220af0b45d6e91163c25d764d052658ffac32937`
+
+Важно: эксперименты GSR1H/GSR1I после этого commit выполнялись как контролируемые временные изменения. Если тест не проходил, скрипт возвращал рабочую папку к этому commit. Поэтому не следует считать незакоммиченные исправления частью продукта.
+
+## 2. Global System Reality — зафиксированная модель
+
+Global System Reality строится до P8.
+
+Порядок слоёв:
+
+1. Global system layer.
+2. Reference/model layer — позже.
+3. Personal layer — позже.
+
+Основные сущности:
+
+- Activity Event;
+- Value Object;
+- Fact / Measure;
+- Typed Relation.
+
+Тренды, окна и вычисляемые признаки — производные данные, а не Value Objects.
+
+Жёсткие правила:
+
+- у Value Object один структурный родитель;
+- многомерные связи выражаются типизированными отношениями;
+- сырые факты прикрепляются только к leaf;
+- leaf — конечный семантический адрес и не имеет детей;
+- `belongs-to` не означает `influences`;
+- причинность не повышается автоматически из временного соседства;
+- точная геолокация по умолчанию не собирается.
+
+## 3. Global ontology seed
+
+Зафиксировано:
+
+- 12 DOMAIN roots;
+- 35 intermediate;
+- 103 leaf;
+- всего 150 global ontology objects;
+- 32 semantic pilot parameters;
+- 27 leaf parameter contracts;
+- 24 gold fixtures.
+
+Ключевые объекты, использованные в текущем pilot:
+
+- `state.physiology.body_weight`
+- `state.physiology.heart_rate`
+- `process.nutrition.meal`
+- `process.nutrition.water_intake`
+- `process.movement.walking`
+- `process.learning.language_practice`
+- `context.weather.air_temperature`
+- `context.weather.cloudiness`
+- `context.resources.available_time`
+- `process.social.conflict_interaction`
+- `process.creative.instrument_playing`
+
+## 4. База данных / manual-applied ledger
+
+Уже применены и должны считаться частью фактической схемы:
+
+- `supabase/manual-applied/20260811_gsr1c_global_aliases_recognition_v3.sql`
+- `supabase/manual-applied/20260811_gsr1d_global_runtime_bridge_ai_budget_v1.sql`
+- `supabase/manual-applied/20260811_gsr1e_openai_pilot_price_refresh_budget_hardening_v1.sql`
+
+GSR1B seed уже применён. Его нельзя просто запускать повторно без отдельной проверки.
+
+Основные runtime функции:
+
+- `recognize_global_value_object_text_v1(...)`
+- `get_global_value_object_leaf_candidates_v1(...)`
+- `preflight_ai_pilot_call_budget_v1(...)`
+- global fact writer bridge существует, но preview pilot его не вызывает.
+
+## 5. OpenAI pilot — действующие ограничения
+
+Маршрут:
+
+`/api/ai/reality/global-observation-preview`
+
+Pilot:
+
+- Nano only;
+- 2 provider stages;
+- 0 automatic retries;
+- timeout 25 s на provider call;
+- общий route deadline 55 s;
+- максимум 20 000 консервативных input tokens на call;
+- максимум 4 000 output tokens на call;
+- `store=false`;
+- preview only;
+- факты в Reality Graph не записываются;
+- wallet не дебетуется этим preview;
+- обязательный hard cap одной операции: USD 0.10.
+
+Документированный максимум обычной двухступенчатой pilot-операции: USD 0.00975.
+
+## 6. Последние подтверждённые результаты GSR1H/GSR1I
+
+Полный малый gold corpus дал 6/8 успешных сценариев:
+
+- G06 Вес 94.8 кг. — PASS.
+- G07 Пульс 72. — PASS.
+- G11 Съел пирожное. — PASS, без выдуманных калорий.
+- G13 Выпил 500 мл воды. — PASS.
+- G17 На улице 19 градусов, облачно. — PASS.
+- G19 Повторил немецкую фразу 20 раз. — PASS.
+
+Два проблемных сценария:
+
+- G21 `Сегодня вечером у меня есть примерно два свободных часа.`
+- G24 `Ужинал вчера около девяти вечера.`
+
+GSR1I V3 исправил G21: `context.resources.available_time` прошёл gold expectation.
+
+G24 к V3 уже правильно определял:
+
+- `process.nutrition.meal`;
+- исходный временной фрагмент `вчера около девяти вечера`;
+- локальное 21:00 Europe/Warsaw;
+- `temporalPrecision=approximate`.
+
+Оставалось канонизировать `meal_label`: AI возвращал русское `ужин`, gold contract ожидает стабильное машинное `dinner`.
+
+GSR1I Dinner Canonical Label Smoke V4 попытался исправить только эту последнюю деталь, но тест снова завершился HTTP 500. Поэтому этот V4 patch НЕ является текущим кодом и должен быть диагностирован перед следующим изменением.
+
+## 7. Что сейчас НЕ делать
+
+- Не начинать P8.
+- Не писать preview-факты в Reality Graph.
+- Не выполнять полный 24-case OpenAI corpus одной командой без отдельного расчёта/подтверждения бюджета.
+- Не повторять уже прошедшие 6 gold cases без причины.
+- Не считать неудачный GSR1I V4 частью production source.
+- Не применять `npm audit fix --force`.
+
+## 8. Следующий технический шаг
+
+Перед следующей попыткой G24:
+
+1. открыть evidence последнего GSR1I V4;
+2. определить точную причину HTTP 500;
+3. исправить только найденную причину;
+4. прогнать только G24;
+5. при PASS — commit код + validator + recovery-документацию + evidence;
+6. после этого вернуться к one-week pilot gates.
+
+P8 остаётся заблокирован.

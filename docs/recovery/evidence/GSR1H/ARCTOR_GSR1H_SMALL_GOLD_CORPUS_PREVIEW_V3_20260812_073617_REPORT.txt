@@ -1,0 +1,115 @@
+ARCTor.app - GSR-1H Small Gold Corpus Preview v3
+TIMESTAMP=20260812_073617
+STATUS=FAILED
+
+FAILURE:
+ISOLATED_GOLD_ROUTE_NOT_READY_WITHIN_90_SECONDS
+At C:\Users\Admin\Downloads\ARCTOR_GSR1H_SMALL_GOLD_CORPUS_PREVIEW_V3.ps1:634 char:9
++         throw "ISOLATED_GOLD_ROUTE_NOT_READY_WITHIN_90_SECONDS"
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (ISOLATED_GOLD_R...THIN_90_SECONDS:String) 
+    [], RuntimeException
+    + FullyQualifiedErrorId : ISOLATED_GOLD_ROUTE_NOT_READY_WITHIN_90_SECONDS
+
+WHY V1 MADE ZERO OPENAI CALLS:
+V1 depended on a previously running Next.js dev server in the main checkout.
+At this run that server did not expose the temporary corpus route within
+60 seconds. No case POST was sent:
+  PASS_COUNT=0
+  FAIL_COUNT=0
+  TOTAL_ACTUAL_PROVIDER_COST_USD=0
+  TOTAL_RESERVED_MAXIMUM_PROVIDER_COST_USD=0
+
+WHY V2 MADE ZERO OPENAI CALLS:
+The isolated Next.js server started, but Next.js 16 used Turbopack by default.
+Turbopack rejected the detached worktree's node_modules directory junction:
+  Symlink [project]/node_modules is invalid, it points out of the filesystem root
+The server exited before readiness, so no case POST was sent and OpenAI cost
+remained USD 0.
+
+V3 SERVER STRATEGY:
+- keep the detached temporary Git worktree at the exact approved HEAD;
+- keep the node_modules directory junction to the existing installed packages;
+- run Next.js development server explicitly with --webpack instead of the
+  default Turbopack;
+- copy only local ignored .env files needed by Next.js;
+- add the temporary gold-corpus route only inside the detached worktree;
+- start the isolated server on a free 127.0.0.1 port;
+- run the eight cases there;
+- kill that server and remove the detached worktree afterward.
+The --webpack switch is used only for this disposable local test harness.
+The committed application build/runtime configuration is not changed.
+
+BRANCH:
+feat/gsr1-global-system-reality-machine-contract-v1-20260811
+
+HEAD:
+843d1ea6bdf0ee822416d5ccfa9d8d445718c7c4
+
+EXPECTED_HEAD:
+843d1ea6bdf0ee822416d5ccfa9d8d445718c7c4
+
+ISOLATED_SERVER_PORT:
+51358
+
+GSR1F_VALIDATION_EXIT:
+0
+
+GLOBAL_SEED_VALIDATION_EXIT:
+0
+
+CASE_COUNT:
+8
+
+PASS_COUNT:
+0
+
+FAIL_COUNT:
+0
+
+TOTAL_ACTUAL_PROVIDER_COST_USD:
+0
+
+TOTAL_RESERVED_MAXIMUM_PROVIDER_COST_USD:
+0
+
+PER_OPERATION_HARD_CAP_USD:
+0.1
+
+DOCUMENTED_PER_CASE_MAX_USD:
+0.00975
+
+DOCUMENTED_SUITE_MAX_USD:
+0.07800
+
+SUITE_HARD_STOP_USD:
+0.1
+
+CASE SUMMARY:
+
+
+MAIN WORKTREE GIT STATUS AFTER CLEANUP:
+
+
+SAFETY:
+- THIS V3 MAKES REAL OPENAI API CALLS only after isolated-route readiness.
+- Nano only.
+- Each case is a separate operation with DB hard cap USD 0.10.
+- Two provider stages maximum per case.
+- Zero automatic provider retries.
+- One POST per case; no PowerShell retry.
+- Cases run sequentially, never in parallel.
+- Aggregate documented maximum for all 8 cases = USD 0.078.
+- The suite stops before another case if aggregate reserved maximum plus the
+  next documented case maximum could exceed USD 0.10.
+- No Reality Graph fact write.
+- No commit/push.
+- No Vercel settings change.
+- The main worktree must remain clean.
+- P8 remains blocked.
+
+INTERPRETATION:
+PASS_GSR1H_ALL_GOLD_CASES means all 8 expectations matched.
+PASS_WITH_GOLD_GAPS means infrastructure and safety stayed intact, but one or
+more semantic expectations failed. Those failures are pilot telemetry, not a
+reason to write facts.

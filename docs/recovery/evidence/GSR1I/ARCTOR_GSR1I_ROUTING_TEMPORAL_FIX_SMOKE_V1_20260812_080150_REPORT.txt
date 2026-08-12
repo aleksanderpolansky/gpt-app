@@ -1,0 +1,103 @@
+ARCTor.app - GSR-1I Routing/Temporal Fix + Two-Case Smoke v1
+TIMESTAMP=20260812_080150
+STATUS=PASS_WITH_REMAINING_GOLD_GAPS
+
+FAILURE:
+
+
+INPUT DIAGNOSIS FROM GSR1H V5:
+G21_AVAILABLE_TIME:
+  AI correctly wanted context.resources.available_time, but the free-form
+  stage-2 canonicalKey could cross a segment candidate boundary and was
+  rejected by AI_SELECTION_OUTSIDE_CANDIDATE_SET.
+
+G24_DINNER:
+  Meal leaf was selected correctly and occurredAtRaw preserved
+  "вчера около девяти вечера", but occurredAtIso remained null and meal_label
+  was omitted.
+
+FIX UNDER TEST:
+1. Stage 2 now emits one enum-bound selectionKey = segmentId::canonicalKey.
+   A model cannot move a leaf from one segment's candidate set into another.
+2. Temporal/daypart phrases that qualify one event/resource must stay metadata
+   of that segment instead of becoming another segment.
+3. Stage 1 emits bounded structured relative-time hints:
+   relativeDayOffset, localTimeHour, localTimeMinute.
+4. The server, not the model, converts explicit relative local wall time into
+   occurredAtIso using the supplied IANA timezone.
+5. Explicit lexical meal categories may be normalized:
+   "ужинал" -> meal_label=dinner when that parameter is supplied.
+
+BRANCH:
+feat/gsr1-global-system-reality-machine-contract-v1-20260811
+
+HEAD:
+843d1ea6bdf0ee822416d5ccfa9d8d445718c7c4
+
+EXPECTED_HEAD:
+843d1ea6bdf0ee822416d5ccfa9d8d445718c7c4
+
+GSR1F_VALIDATION_EXIT:
+0
+
+GLOBAL_SEED_VALIDATION_EXIT:
+0
+
+DIFF_CHECK_EXIT:
+0
+
+PRODUCTION_BUILD_EXIT:
+0
+
+CASE_COUNT:
+2
+
+PASS_COUNT:
+0
+
+FAIL_COUNT:
+2
+
+TOTAL_ACTUAL_PROVIDER_COST_USD:
+0.0010407
+
+TOTAL_RESERVED_MAXIMUM_PROVIDER_COST_USD:
+0.0056812
+
+PER_OPERATION_HARD_CAP_USD:
+0.1
+
+DOCUMENTED_PER_CASE_MAX_USD:
+0.00975
+
+DOCUMENTED_SUITE_MAX_USD:
+0.01950
+
+SUITE_HARD_STOP_USD:
+0.1
+
+CASE SUMMARY:
+G21_AVAILABLE_TIME: HTTP=500 OK=False ACTUAL_USD=0.0005217 RESERVED_USD=0.0028448
+G24_DINNER: HTTP=500 OK=False ACTUAL_USD=0.000519 RESERVED_USD=0.0028364
+
+GIT STATUS:
+
+
+SAFETY:
+- THIS SCRIPT MAKES REAL OPENAI API CALLS only after validators/build/readiness.
+- Only the 2 previously failing gold cases are rerun.
+- Nano only.
+- Each case is a separate operation with DB hard cap USD 0.10.
+- Two provider stages maximum per case.
+- Zero automatic provider retries.
+- One POST per case; no PowerShell retry.
+- Cases run sequentially.
+- Documented maximum for both new operations together = USD 0.0195.
+- Suite hard stop = USD 0.10.
+- No Reality Graph fact write.
+- No commit/push.
+- No Vercel settings change.
+- If the two-case smoke fails, the main worktree is restored to the exact
+  committed baseline automatically.
+- If both cases pass, exactly two modified files remain ready for controlled commit.
+- P8 remains blocked.
