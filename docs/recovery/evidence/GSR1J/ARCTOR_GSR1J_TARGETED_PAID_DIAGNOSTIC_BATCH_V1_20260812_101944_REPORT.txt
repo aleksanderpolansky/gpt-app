@@ -1,0 +1,92 @@
+ARCTor.app - GSR1J Targeted Paid Diagnostic Batch v1
+TIMESTAMP=20260812_101944
+STATUS=PASS_DIAGNOSTIC_WITH_GOLD_GAPS
+
+FAILURE:
+
+
+COST POLICY:
+Useful provider calls are allowed and should be used when they increase
+engineering information. The USD 0.10 guard is an emergency runaway fuse,
+not a goal to make normal tests cost zero.
+
+BRANCH:
+feat/gsr1-global-system-reality-machine-contract-v1-20260811
+
+HEAD:
+d9a9afeca19399a75a398a199a18272b20be3628
+
+EXPECTED_HEAD:
+d9a9afeca19399a75a398a199a18272b20be3628
+
+VALIDATION:
+GSR1F_VALIDATION_EXIT=0
+GLOBAL_SEED_VALIDATION_EXIT=0
+PRODUCTION_BUILD_EXIT=0
+
+CASE_COUNT:
+5
+
+PASS_COUNT:
+3
+
+FAIL_COUNT:
+2
+
+TOTAL_ACTUAL_PROVIDER_COST_USD:
+0.0044693500000000001
+
+TOTAL_RESERVED_MAXIMUM_PROVIDER_COST_USD:
+0.026494400000000001
+
+PER_OPERATION_HARD_CAP_USD:
+0.1
+
+DOCUMENTED_PER_CASE_MAX_USD:
+0.00975
+
+DOCUMENTED_SUITE_MAX_USD:
+0.04875
+
+SUITE_EMERGENCY_STOP_USD:
+0.1
+
+CASE SUMMARY:
+G01_MULTI_PLANK: HTTP=200 OK=True ACTUAL_USD=0.0013121 RESERVED_USD=0.006561
+G05_SLEEP_APPROX: HTTP=409 OK=False ACTUAL_USD=0.00073675 RESERVED_USD=0.0048186
+G08_BLOOD_PRESSURE: HTTP=200 OK=True ACTUAL_USD=0.00089545 RESERVED_USD=0.005190200000000001
+G12_ENERGY_EXPLICIT: HTTP=200 OK=True ACTUAL_USD=0.0007866500000000001 RESERVED_USD=0.0049592
+G14_TWO_CUPS_COFFEE: HTTP=409 OK=False ACTUAL_USD=0.0007384 RESERVED_USD=0.0049654
+
+WHY THESE CASES:
+G01 tests true multi-event segmentation that the previous coverage preflight
+conservatively misclassified as unsupported.
+G05 tests approximate explicit sleep duration extraction.
+G08 tests paired blood-pressure fact support in the live parameter contract.
+G12 tests explicit kcal extraction without food-database invention.
+G14 tests two-cup coffee episode/count semantics without inventing caffeine mg.
+
+INTERPRETATION:
+A semantic 409 is useful diagnostic evidence, not an infrastructure failure.
+The batch intentionally does not test relation-only expectations that the
+current preview cannot represent yet (consumes, located_in, with_participant,
+temporal relations).
+
+SAFETY:
+- REAL OpenAI API calls are made only after validators/build/readiness pass.
+- Nano only.
+- One fresh operation UUID per case.
+- Maximum two provider calls per operation.
+- Zero automatic provider retries.
+- Exactly one POST per case.
+- Sequential only.
+- Documented maximum for all five operations = USD 0.04875.
+- Emergency aggregate reserved-cost stop = USD 0.10.
+- Each operation also has the database USD 0.10 hard cap.
+- No Reality Graph write.
+- No application-source patch.
+- No commit/push.
+- Temporary localhost route only, removed with detached worktree.
+- P8 remains blocked.
+
+GIT STATUS:

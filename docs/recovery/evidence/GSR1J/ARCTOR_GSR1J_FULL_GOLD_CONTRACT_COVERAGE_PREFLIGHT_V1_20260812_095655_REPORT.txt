@@ -1,0 +1,83 @@
+ARCTor.app - GSR1J Full Gold Contract Coverage Preflight v1
+TIMESTAMP=20260812_095655
+STATUS=PASS_GSR1J_FULL_GOLD_CONTRACT_GAPS_IDENTIFIED
+
+FAILURE:
+
+
+BRANCH:
+feat/gsr1-global-system-reality-machine-contract-v1-20260811
+
+HEAD:
+d9a9afeca19399a75a398a199a18272b20be3628
+
+EXPECTED_HEAD:
+d9a9afeca19399a75a398a199a18272b20be3628
+
+REMOTE_FEATURE_HEAD:
+d9a9afeca19399a75a398a199a18272b20be3628
+
+ORIGIN_MAIN:
+220af0b45d6e91163c25d764d052658ffac32937
+
+VALIDATION:
+GSR1F_VALIDATION_EXIT=0
+GLOBAL_SEED_VALIDATION_EXIT=0
+PRODUCTION_BUILD_EXIT=0
+
+FIXTURES:
+TOTAL=24
+NARROW_PREVIEW_ALREADY_PASSED=8
+FULL_CONTRACT_TESTABLE_NOW=9
+BLOCKED_BY_CURRENT_PREVIEW_SHAPE=15
+
+NARROW_PREVIEW_IDS:
+G06, G07, G11, G13, G17, G19, G21, G24
+
+BLOCKED_FULL_CONTRACT_IDS:
+G01, G02, G03, G04, G09, G10, G11, G14, G15, G16, G17, G18, G20, G22, G23
+
+CURRENT PREVIEW CAPABILITIES:
+ONE_SELECTION_PER_SEGMENT=True
+FACTS=True
+EVENT_LINKS=False
+TEMPORAL_RELATIONS=False
+MULTIPLE_LINKED_TARGETS_PER_SEGMENT=False
+DETERMINISTIC_INTERVAL_DURATION=False
+AGGREGATE_DEDUP=False
+PLANNING_TASK_CONTEXT=False
+PREVIEW_ONLY=True
+
+DECISION:
+Do NOT spend OpenAI budget on the remaining full 24-fixture corpus yet.
+The current preview can prove leaf/fact/temporal-metadata behavior, but the
+original GSR-4 gold contract also requires event links, cross-facet linked
+targets, temporal relations, deterministic calculations, aggregate/dedup and
+planning-context semantics.
+
+The next implementation block should extend the PREVIEW CONTRACT first:
+  semantic segment/event
+  -> primary bounded leaf
+  -> zero/more server-bounded linked targets
+  -> closed typed event links / temporal relations
+  -> deterministic derived fields where explicitly supported
+  -> server validation
+
+No Reality Graph write is introduced by this preflight or implied next block.
+
+RECOVERY NOTE:
+The eight entries recorded as passed in CHECKPOINT_MANIFEST are narrow small-
+corpus preview expectations. They must not be interpreted as proof that every
+original relation/link requirement of those fixture IDs has already passed.
+Example: G11 narrow preview proved Meal/no invented facts, while original G11
+also requires a consumes food-entity link.
+
+GIT STATUS:
+
+
+SAFETY:
+- ZERO OpenAI API calls.
+- ZERO Supabase writes.
+- ZERO Reality Graph writes.
+- ZERO commit/push.
+- P8 remains blocked.

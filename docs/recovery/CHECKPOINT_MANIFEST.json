@@ -1,5 +1,5 @@
 {
-    "schemaVersion":  2,
+    "schemaVersion":  3,
     "generatedAt":  "2026-08-12",
     "project":  "ARCTor.app",
     "repository":  "aleksanderpolansky/gpt-app",
@@ -49,7 +49,7 @@
                                    ],
                        "note":  "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
                    },
-    "nextAction":  "Proceed with remaining Global System Reality one-week pilot gates. P8 remains blocked.",
+    "nextAction":  "Extend preview with server-bounded event links / related targets, preserve preview-only/no-write behavior, then run relation-heavy diagnostics. Also resolve ambiguous sleep and serving-count contract.",
     "recoveryDocs":  [
                          "docs/recovery/README_RU.md",
                          "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -59,6 +59,33 @@
                          "docs/recovery/evidence/EVIDENCE_INDEX.json"
                      ],
     "checkpointPolicy":  "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
-    "previousRecoveryCommit":  "1f4d760c00b7cff40a1bd0bf885f1cdf81eb43ec",
-    "documentedState":  "GSR1I_V5_G21_G24_GOLD_GAPS_CLOSED"
+    "previousRecoveryCommit":  "d9a9afeca19399a75a398a199a18272b20be3628",
+    "documentedState":  "GSR1J_DIAGNOSTIC_COMPLETE_RELATION_CONTRACT_NEXT",
+    "costSafetyPolicy":  {
+                             "perOperationHardCapUsd":  0.1,
+                             "meaning":  "emergency runaway fuse, not a target test budget",
+                             "usefulPaidTestsAllowed":  true,
+                             "zeroAutomaticRetries":  true
+                         },
+    "gsr1jDiagnostic":  {
+                            "caseCount":  5,
+                            "passed":  [
+                                           "G01",
+                                           "G08",
+                                           "G12"
+                                       ],
+                            "failed":  [
+                                           "G05",
+                                           "G14"
+                                       ],
+                            "actualProviderCostUsd":  0.00446935,
+                            "reservedMaximumProviderCostUsd":  0.0264944,
+                            "findings":  {
+                                             "G01":  "multi-event segmentation works",
+                                             "G05":  "ambiguous sleep incorrectly selected day_episode at confidence 0.33",
+                                             "G08":  "paired blood-pressure values work",
+                                             "G12":  "explicit kcal extraction works",
+                                             "G14":  "caffeine leaf works but explicit two-cup quantity is lost"
+                                         }
+                        }
 }

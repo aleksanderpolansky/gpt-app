@@ -1,0 +1,11 @@
+{
+    "oneSelectionPerSegment":  true,
+    "facts":  true,
+    "eventLinks":  false,
+    "temporalRelations":  false,
+    "multipleLinkedTargetsPerSegment":  false,
+    "deterministicIntervalDuration":  false,
+    "aggregateDedup":  false,
+    "planningTaskContext":  false,
+    "previewOnly":  true
+}

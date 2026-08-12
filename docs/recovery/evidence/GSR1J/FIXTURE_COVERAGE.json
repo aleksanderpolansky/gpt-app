@@ -1,0 +1,371 @@
+[
+    {
+        "id":  "G01",
+        "messageRu":  "Постоял в планке две минуты и в обратной планке две минуты.",
+        "expectedRu":  "2 PROCESS events: plank 2m; reverse_plank 2m.",
+        "forbiddenRu":  "Не один 4m event; no spine/mood effect.",
+        "requirements":  [
+                             "multi_leaf_or_multi_event",
+                             "facts"
+                         ],
+        "blockingRequirements":  [
+                                     "multi_leaf_or_multi_event"
+                                 ],
+        "narrowPreviewPreviouslyPassed":  false,
+        "fullContractTestableNow":  false
+    },
+    {
+        "id":  "G02",
+        "messageRu":  "После планки настроение стало лучше.",
+        "expectedRu":  "plank event + DECLARED mood qualitative change + temporal precedes.",
+        "forbiddenRu":  "No numeric mood score; no CAUSES.",
+        "requirements":  [
+                             "multi_leaf_or_multi_event",
+                             "qualitative_state",
+                             "temporal_relation"
+                         ],
+        "blockingRequirements":  [
+                                     "multi_leaf_or_multi_event",
+                                     "temporal_relation"
+                                 ],
+        "narrowPreviewPreviouslyPassed":  false,
+        "fullContractTestableNow":  false
+    },
+    {
+        "id":  "G03",
+        "messageRu":  "После планки начала болеть поясница.",
+        "expectedRu":  "plank event; pain state located_in lumbar; temporal precedes.",
+        "forbiddenRu":  "No diagnosis; no causal promotion.",
+        "requirements":  [
+                             "multi_leaf_or_multi_event",
+                             "event_link_located_in",
+                             "temporal_relation"
+                         ],
+        "blockingRequirements":  [
+                                     "multi_leaf_or_multi_event",
+                                     "event_link_located_in",
+                                     "temporal_relation"
+                                 ],
+        "narrowPreviewPreviouslyPassed":  false,
+        "fullContractTestableNow":  false
+    },
+    {
+        "id":  "G04",
+        "messageRu":  "Спал с 23:40 до 06:30.",
+        "expectedRu":  "night sleep event; duration deterministically derived.",
+        "forbiddenRu":  "No invented sleep quality.",
+        "requirements":  [
+                             "deterministic_interval_duration"
+                         ],
+        "blockingRequirements":  [
+                                     "deterministic_interval_duration"
+                                 ],
+        "narrowPreviewPreviouslyPassed":  false,
+        "fullContractTestableNow":  false
+    },
+    {
+        "id":  "G05",
+        "messageRu":  "Спал примерно 6 часов.",
+        "expectedRu":  "night sleep duration=360m; precision approximate.",
+        "forbiddenRu":  "Не exact.",
+        "requirements":  [
+                             "facts",
+                             "approximate_precision"
+                         ],
+        "blockingRequirements":  [
+
+                                 ],
+        "narrowPreviewPreviouslyPassed":  false,
+        "fullContractTestableNow":  true
+    },
+    {
+        "id":  "G06",
+        "messageRu":  "Утром вес 94,8 кг.",
+        "expectedRu":  "body_weight=94.8 kg DECLARED.",
+        "forbiddenRu":  "No BMI unless height rule explicitly invoked elsewhere.",
+        "requirements":  [
+                             "facts"
+                         ],
+        "blockingRequirements":  [
+
+                                 ],
+        "narrowPreviewPreviouslyPassed":  true,
+        "fullContractTestableNow":  true
+    },
+    {
+        "id":  "G07",
+        "messageRu":  "Пульс 72.",
+        "expectedRu":  "heart_rate=72 bpm DECLARED.",
+        "forbiddenRu":  "No medical interpretation.",
+        "requirements":  [
+                             "facts"
+                         ],
+        "blockingRequirements":  [
+
+                                 ],
+        "narrowPreviewPreviouslyPassed":  true,
+        "fullContractTestableNow":  true
+    },
+    {
+        "id":  "G08",
+        "messageRu":  "Давление 125 на 78.",
+        "expectedRu":  "paired BP systolic/diastolic.",
+        "forbiddenRu":  "Не разделять как unrelated values.",
+        "requirements":  [
+                             "paired_measure"
+                         ],
+        "blockingRequirements":  [
+
+                                 ],
+        "narrowPreviewPreviouslyPassed":  false,
+        "fullContractTestableNow":  true
+    },
+    {
+        "id":  "G09",
+        "messageRu":  "Поясница болит сильнее.",
+        "expectedRu":  "pain qualitative change + located_in lumbar.",
+        "forbiddenRu":  "No 8/10.",
+        "requirements":  [
+                             "qualitative_state",
+                             "event_link_located_in"
+                         ],
+        "blockingRequirements":  [
+                                     "event_link_located_in"
+                                 ],
+        "narrowPreviewPreviouslyPassed":  false,
+        "fullContractTestableNow":  false
+    },
+    {
+        "id":  "G10",
+        "messageRu":  "Боль в пояснице 4 из 10.",
+        "expectedRu":  "pain intensity=4 on explicit 0–10 scale + location.",
+        "forbiddenRu":  "No inference beyond stated.",
+        "requirements":  [
+                             "numeric_scale",
+                             "event_link_located_in"
+                         ],
+        "blockingRequirements":  [
+                                     "event_link_located_in"
+                                 ],
+        "narrowPreviewPreviouslyPassed":  false,
+        "fullContractTestableNow":  false
+    },
+    {
+        "id":  "G11",
+        "messageRu":  "Съел пирожное.",
+        "expectedRu":  "food intake event + consumes food item.",
+        "forbiddenRu":  "No kcal/sugar/mass.",
+        "requirements":  [
+                             "event_link_consumes"
+                         ],
+        "blockingRequirements":  [
+                                     "event_link_consumes"
+                                 ],
+        "narrowPreviewPreviouslyPassed":  true,
+        "fullContractTestableNow":  false
+    },
+    {
+        "id":  "G12",
+        "messageRu":  "Съел примерно 800 ккал.",
+        "expectedRu":  "food intake + energy_kcal=800 approximate declared.",
+        "forbiddenRu":  "Not food-db calculated.",
+        "requirements":  [
+                             "facts",
+                             "approximate_precision"
+                         ],
+        "blockingRequirements":  [
+
+                                 ],
+        "narrowPreviewPreviouslyPassed":  false,
+        "fullContractTestableNow":  true
+    },
+    {
+        "id":  "G13",
+        "messageRu":  "Выпил 500 мл воды.",
+        "expectedRu":  "water intake volume=500 ml.",
+        "forbiddenRu":  "No hydration effect automatically.",
+        "requirements":  [
+                             "facts"
+                         ],
+        "blockingRequirements":  [
+
+                                 ],
+        "narrowPreviewPreviouslyPassed":  true,
+        "fullContractTestableNow":  true
+    },
+    {
+        "id":  "G14",
+        "messageRu":  "Сегодня выпил две чашки кофе.",
+        "expectedRu":  "2 caffeine-intake events or aggregate count if episode times unknown; cup as linguistic quantity.",
+        "forbiddenRu":  "No caffeine_mg without source.",
+        "requirements":  [
+                             "episode_or_aggregate_count",
+                             "linguistic_quantity"
+                         ],
+        "blockingRequirements":  [
+                                     "episode_or_aggregate_count"
+                                 ],
+        "narrowPreviewPreviouslyPassed":  false,
+        "fullContractTestableNow":  false
+    },
+    {
+        "id":  "G15",
+        "messageRu":  "Гулял 35 минут с дочерью.",
+        "expectedRu":  "walking duration 35 + shared_time/social link + with_participant.",
+        "forbiddenRu":  "No hidden daughter profile.",
+        "requirements":  [
+                             "multi_leaf_or_multi_event",
+                             "event_link_with_participant",
+                             "third_party_privacy"
+                         ],
+        "blockingRequirements":  [
+                                     "multi_leaf_or_multi_event",
+                                     "event_link_with_participant"
+                                 ],
+        "narrowPreviewPreviouslyPassed":  false,
+        "fullContractTestableNow":  false
+    },
+    {
+        "id":  "G16",
+        "messageRu":  "Сегодня было три конфликта.",
+        "expectedRu":  "aggregate declared event_count=3, window=today.",
+        "forbiddenRu":  "No duplicate when detailed episodes later.",
+        "requirements":  [
+                             "aggregate_declared",
+                             "window_semantics",
+                             "dedup_policy"
+                         ],
+        "blockingRequirements":  [
+                                     "aggregate_declared",
+                                     "dedup_policy"
+                                 ],
+        "narrowPreviewPreviouslyPassed":  false,
+        "fullContractTestableNow":  false
+    },
+    {
+        "id":  "G17",
+        "messageRu":  "На улице 19 градусов, облачно.",
+        "expectedRu":  "air_temperature=19 C + cloudiness category.",
+        "forbiddenRu":  "No weather API overwrite.",
+        "requirements":  [
+                             "multi_leaf_or_multi_event",
+                             "facts",
+                             "context_no_external_overwrite"
+                         ],
+        "blockingRequirements":  [
+                                     "multi_leaf_or_multi_event"
+                                 ],
+        "narrowPreviewPreviouslyPassed":  true,
+        "fullContractTestableNow":  false
+    },
+    {
+        "id":  "G18",
+        "messageRu":  "Два часа работал за компьютером.",
+        "expectedRu":  "work session 120m; context/device/computer if explicitly resolved.",
+        "forbiddenRu":  "No automatic physiological damage.",
+        "requirements":  [
+                             "facts",
+                             "event_link_context_device"
+                         ],
+        "blockingRequirements":  [
+                                     "event_link_context_device"
+                                 ],
+        "narrowPreviewPreviouslyPassed":  false,
+        "fullContractTestableNow":  false
+    },
+    {
+        "id":  "G19",
+        "messageRu":  "Повторил немецкую фразу 20 раз.",
+        "expectedRu":  "language practice repetition_count=20; language context=de.",
+        "forbiddenRu":  "No mastery score.",
+        "requirements":  [
+                             "facts",
+                             "language_context"
+                         ],
+        "blockingRequirements":  [
+
+                                 ],
+        "narrowPreviewPreviouslyPassed":  true,
+        "fullContractTestableNow":  true
+    },
+    {
+        "id":  "G20",
+        "messageRu":  "Играл на гитаре 40 минут, потом почувствовал себя спокойнее.",
+        "expectedRu":  "instrument_playing 40m + calmness qualitative state + temporal relation.",
+        "forbiddenRu":  "No causal claim or numeric effect.",
+        "requirements":  [
+                             "multi_leaf_or_multi_event",
+                             "qualitative_state",
+                             "temporal_relation"
+                         ],
+        "blockingRequirements":  [
+                                     "multi_leaf_or_multi_event",
+                                     "temporal_relation"
+                                 ],
+        "narrowPreviewPreviouslyPassed":  false,
+        "fullContractTestableNow":  false
+    },
+    {
+        "id":  "G21",
+        "messageRu":  "Сегодня вечером у меня есть примерно два свободных часа.",
+        "expectedRu":  "context.resources.available_time; available_duration_minutes=120 approximate; window=this evening.",
+        "forbiddenRu":  "Не создавать DOMAIN «Время»; не считать это дедлайном или длительностью задачи.",
+        "requirements":  [
+                             "available_time_context",
+                             "window_semantics"
+                         ],
+        "blockingRequirements":  [
+
+                                 ],
+        "narrowPreviewPreviouslyPassed":  true,
+        "fullContractTestableNow":  true
+    },
+    {
+        "id":  "G22",
+        "messageRu":  "На эту задачу нужно примерно четыре часа.",
+        "expectedRu":  "Плановая оценка duration конкретной activity/task = 240m approximate.",
+        "forbiddenRu":  "Не записывать как «Доступное время».",
+        "requirements":  [
+                             "planning_task_duration"
+                         ],
+        "blockingRequirements":  [
+                                     "planning_task_duration"
+                                 ],
+        "narrowPreviewPreviouslyPassed":  false,
+        "fullContractTestableNow":  false
+    },
+    {
+        "id":  "G23",
+        "messageRu":  "До дедлайна осталось два дня, и меня это сильно напрягает.",
+        "expectedRu":  "deadline остаётся свойством плана; remaining time derived; DECLARED stress state + link to deadline context.",
+        "forbiddenRu":  "Не создавать leaf «два дня» и не превращать временную последовательность в медицинскую причинность.",
+        "requirements":  [
+                             "deadline_context",
+                             "derived_remaining_time",
+                             "qualitative_state",
+                             "context_link"
+                         ],
+        "blockingRequirements":  [
+                                     "deadline_context",
+                                     "derived_remaining_time",
+                                     "context_link"
+                                 ],
+        "narrowPreviewPreviouslyPassed":  false,
+        "fullContractTestableNow":  false
+    },
+    {
+        "id":  "G24",
+        "messageRu":  "Ужинал вчера около девяти вечера.",
+        "expectedRu":  "meal event; occurred_at≈21:00 local previous day; reported_at=now; temporal_precision=approx; meal_label=dinner.",
+        "forbiddenRu":  "Не использовать reported_at как время еды; не создавать отдельный leaf «Ужин».",
+        "requirements":  [
+                             "meal_label",
+                             "relative_time"
+                         ],
+        "blockingRequirements":  [
+
+                                 ],
+        "narrowPreviewPreviouslyPassed":  true,
+        "fullContractTestableNow":  true
+    }
+]

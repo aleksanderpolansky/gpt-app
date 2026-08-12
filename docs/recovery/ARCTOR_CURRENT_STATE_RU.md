@@ -197,3 +197,27 @@ G24 Ужинал вчера около девяти вечера. подтвер
 Production build, GSR1F validator, Global Seed validator и diff check прошли.
 
 Следующий шаг после фиксации этого commit: продолжить оставшиеся Global System Reality one-week pilot gates. P8 остаётся заблокированным.
+## 10. Авторитетное обновление — GSR1J, 2026-08-12
+
+После GSR1I выполнен полный preflight 24 gold fixtures и платный диагностический пакет из пяти информативных случаев.
+
+Preflight подтвердил:
+
+- 24 fixture присутствуют;
+- текущий preview умеет факты и один primary leaf на сегмент;
+- event links, temporal relations, planning context и aggregate/dedup ещё не представлены в output contract;
+- build и оба валидатора прошли.
+
+Реальный Nano diagnostic дал 3 PASS / 2 FAIL:
+
+- G01 PASS: две планки корректно разделены на два события, каждая duration=2 minute;
+- G08 PASS: давление 125/78 корректно представлено одной записью с двумя связанными параметрами;
+- G12 PASS: explicit 800 kcal корректно извлечено без выдуманных нутриентов;
+- G05 FAIL: Спал примерно 6 часов. был отнесён к process.sleep.day_episode с confidence 0.33; duration=6 hour извлечён правильно, но day/night выбран без достаточного свидетельства;
+- G14 FAIL: Сегодня выпил две чашки кофе. правильно отнесён к process.nutrition.caffeine_intake, caffeine_mg не выдуман, но количество две чашки потеряно, потому что текущий contract не представил безопасный serving/count fact.
+
+Фактическая стоимость пяти операций: USD 0.00446935. Резерв: USD 0.0264944.
+
+Новое правило стоимости тестов: полезные provider calls разрешены и должны использоваться, если повышают инженерную информативность. USD 0.10 — аварийный предохранитель от зацикливания/сбоя, а не цель экономить на нормальных тестах.
+
+Следующий архитектурный блок: расширить preview contract для server-bounded event links / related targets, затем тестировать relation-heavy fixtures. Отдельно исправить неопределённый sleep и явный serving/count для кофе. Reality Graph write пока не включать. P8 остаётся заблокированным.

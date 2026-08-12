@@ -1,8 +1,8 @@
 {
-    "generatedAt":  "2026-08-12T09:41:09",
-    "copiedCount":  13,
+    "generatedAt":  "2026-08-12T10:44:24",
+    "copiedCount":  23,
     "generatedEvidenceCount":  1,
-    "indexedCount":  14,
+    "indexedCount":  24,
     "missingPatterns":  [
 
                         ],
@@ -94,6 +94,76 @@
                       "sourceDownloadsName":  "ARCTOR_GSR1I_DINNER_TEMPORAL_DURATION_GUARD_SMOKE_V5_20260812_092215_TWO_CASE_RESULTS.json",
                       "sha256":  "8dd471893320b118270a4384499b2f0c2cd2e15932f3dca11fa319c040f72d1a",
                       "origin":  "GSR1I_V5_gold_closure"
+                  },
+                  {
+                      "group":  "GSR1J",
+                      "file":  "docs/recovery/evidence/GSR1J/ARCTOR_GSR1J_FULL_GOLD_CONTRACT_COVERAGE_PREFLIGHT_V1_20260812_095655_REPORT.txt",
+                      "sourceDownloadsName":  "ARCTOR_GSR1J_FULL_GOLD_CONTRACT_COVERAGE_PREFLIGHT_V1_20260812_095655_REPORT.txt",
+                      "sha256":  "6ca76d97f29c5865378c66047fee126de376ebfd9d53aa51a8ec1a4de7b10df2",
+                      "origin":  "GSR1J_diagnostic_checkpoint"
+                  },
+                  {
+                      "group":  "GSR1J",
+                      "file":  "docs/recovery/evidence/GSR1J/ARCTOR_GSR1J_TARGETED_PAID_DIAGNOSTIC_BATCH_V1_20260812_101944_REPORT.txt",
+                      "sourceDownloadsName":  "ARCTOR_GSR1J_TARGETED_PAID_DIAGNOSTIC_BATCH_V1_20260812_101944_REPORT.txt",
+                      "sha256":  "b00dc6bd047942c57b0869d672ad00797d842c8023f8641795769807d95a0f59",
+                      "origin":  "GSR1J_diagnostic_checkpoint"
+                  },
+                  {
+                      "group":  "GSR1J",
+                      "file":  "docs/recovery/evidence/GSR1J/FIXTURE_COVERAGE.json",
+                      "sourceDownloadsName":  "FIXTURE_COVERAGE.json",
+                      "sha256":  "e09c77486d7a61e7eae7b53649bb45697abaf0318039ace4a1214f9c0457ddae",
+                      "origin":  "GSR1J_diagnostic_checkpoint"
+                  },
+                  {
+                      "group":  "GSR1J",
+                      "file":  "docs/recovery/evidence/GSR1J/PILOT_CONTRACT_CAPABILITIES.json",
+                      "sourceDownloadsName":  "PILOT_CONTRACT_CAPABILITIES.json",
+                      "sha256":  "77b02ee5e3821fb120a7132c581aee9cadf1abd0d4747fbae70a3f0874230faf",
+                      "origin":  "GSR1J_diagnostic_checkpoint"
+                  },
+                  {
+                      "group":  "GSR1J",
+                      "file":  "docs/recovery/evidence/GSR1J/DIAGNOSTIC_RESULTS.json",
+                      "sourceDownloadsName":  "DIAGNOSTIC_RESULTS.json",
+                      "sha256":  "3563b276959c62209e773c022cd7e6d5b6d16cbea5e97cc5979378a3a05b58d2",
+                      "origin":  "GSR1J_diagnostic_checkpoint"
+                  },
+                  {
+                      "group":  "GSR1J",
+                      "file":  "docs/recovery/evidence/GSR1J/CASE_G01_MULTI_PLANK_RESPONSE.json",
+                      "sourceDownloadsName":  "CASE_G01_MULTI_PLANK_RESPONSE.json",
+                      "sha256":  "49c15ff3f831e3c2faae8c650924a65892d0fadd1aaffe747b77446ce0a9773c",
+                      "origin":  "GSR1J_diagnostic_checkpoint"
+                  },
+                  {
+                      "group":  "GSR1J",
+                      "file":  "docs/recovery/evidence/GSR1J/CASE_G05_SLEEP_APPROX_RESPONSE.json",
+                      "sourceDownloadsName":  "CASE_G05_SLEEP_APPROX_RESPONSE.json",
+                      "sha256":  "84ab2098299d6b8ef8dd7927a5aec524f7c51c81b6af82ca3ab732f8b246ca31",
+                      "origin":  "GSR1J_diagnostic_checkpoint"
+                  },
+                  {
+                      "group":  "GSR1J",
+                      "file":  "docs/recovery/evidence/GSR1J/CASE_G08_BLOOD_PRESSURE_RESPONSE.json",
+                      "sourceDownloadsName":  "CASE_G08_BLOOD_PRESSURE_RESPONSE.json",
+                      "sha256":  "f80b4a2fb284d1f49c38bf75dc4cc73e5ed1735f003caf6622fcf0058ee9b7b0",
+                      "origin":  "GSR1J_diagnostic_checkpoint"
+                  },
+                  {
+                      "group":  "GSR1J",
+                      "file":  "docs/recovery/evidence/GSR1J/CASE_G12_ENERGY_EXPLICIT_RESPONSE.json",
+                      "sourceDownloadsName":  "CASE_G12_ENERGY_EXPLICIT_RESPONSE.json",
+                      "sha256":  "814b5199af83c5d545069d165e905604c6f35ca678bbd19f3f9676a7bc6c8039",
+                      "origin":  "GSR1J_diagnostic_checkpoint"
+                  },
+                  {
+                      "group":  "GSR1J",
+                      "file":  "docs/recovery/evidence/GSR1J/CASE_G14_TWO_CUPS_COFFEE_RESPONSE.json",
+                      "sourceDownloadsName":  "CASE_G14_TWO_CUPS_COFFEE_RESPONSE.json",
+                      "sha256":  "a81a3f1c91d062e3793e19412b57511d5c7a8cd9af25d3674e5ef51d134f7ed1",
+                      "origin":  "GSR1J_diagnostic_checkpoint"
                   }
               ]
 }
