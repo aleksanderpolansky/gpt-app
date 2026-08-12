@@ -1,0 +1,23 @@
+ARCTor.app - GSR1L Design Recovery Checkpoint v2
+TIMESTAMP=20260812_141004
+STATUS=FAILED
+
+FAILURE:
+LIVE_DB_INTAKE_RESULT not found by content signature in Downloads (.txt/.csv)
+At C:\Users\Admin\Downloads\ARCTOR_GSR1L_DESIGN_RECOVERY_CHECKPOINT_V2.ps1:137 char:5
++     throw 'LIVE_DB_INTAKE_RESULT not found by content signature in Do ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (LIVE_DB_INTAKE_...ads (.txt/.csv):String)
+    [], RuntimeException
+    + FullyQualifiedErrorId : LIVE_DB_INTAKE_RESULT not found by content signature in Down
+   loads (.txt/.csv)
+
+REPO=C:/Users/Admin/Documents/projects/gpt-app
+EXPECTED_BRANCH=feat/gsr1-global-system-reality-machine-contract-v1-20260811
+EXPECTED_HEAD=a78638c3cb118cb27cd6dff74777c1887e0ec9c9
+NEW_COMMIT=
+
+SAFETY:
+OPENAI_CALLS=0
+SUPABASE_WRITES=0
+REALITY_GRAPH_WRITES=0

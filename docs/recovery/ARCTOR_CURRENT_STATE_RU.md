@@ -282,3 +282,27 @@ GSR1L начинается **без изменения БД**: сначала и
 После утверждения GSR1L создать отдельный Word-документ с архитектурной спецификацией и только затем решать, какие новые поля/таблицы действительно нужны в БД.
 
 P8 остаётся заблокированным.
+## GSR1L Recognition Architecture v1.1 — approved 2026-08-12
+
+После полного repository/environment intake и отдельного live Supabase read-only intake утверждён экспериментальный GSR1L.
+
+Фактический live baseline:
+- 150 global objects = 12 root / 35 intermediate / 103 leaf;
+- 89 approved/published global aliases, но aliases покрывают только 23 leaf;
+- 39 active system parameter definitions, 52 active system assignments, покрыто 27 leaf;
+- 12 semantic relation types;
+- максимальная DOMAIN+FACET группа = 10 leaf; текущий candidate RPC hard-fails при группе >10.
+
+Архитектурное решение:
+- AI отвечает за понимание языка и bounded choice;
+- Server отвечает за deterministic parsing, ontology constraints, candidate assembly, uncertainty, exact evidence и final validation;
+- новая versioned recognition-profile сущность хранит только недостающие recognition/disambiguation данные;
+- aliases, parameters и semantic relation registry переиспользуются и не дублируются;
+- UNKNOWN/UNRESOLVED является валидным результатом;
+- event links не смешиваются с долгоживущими VO relations;
+- Reality Graph write path не меняется до отдельного gate.
+- UX/input contract: одно сообщение по умолчанию описывает один основной эпизод; параллельные активности, мысли, чувства и состояния разрешены в том же сообщении и сохраняют собственную семантическую роль. Это мягкое правило, не hard rejection.
+
+Следующий блок: **IMPLEMENTATION GSR1L-P1** — минимальная recognition-profile table + read-only assembled profile/candidate RPC + ограниченный pilot seed. Перед SQL/кодовыми изменениями используется уже завершённый intake; новый intake нужен только если implementation scope выходит за проверенную инфраструктуру.
+
+Полная спецификация: `docs/recovery/specs/ARCTor_Value_Object_Recognition_Profile_and_AI_Server_Routing_Architecture_v1_RU_20260812.docx`.

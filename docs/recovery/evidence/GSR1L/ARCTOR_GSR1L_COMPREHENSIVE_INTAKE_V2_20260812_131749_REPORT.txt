@@ -1,0 +1,71 @@
+ARCTor.app - GSR1L Comprehensive Intake v2
+TIMESTAMP=20260812_131749
+STATUS=PASS_GSR1L_COMPREHENSIVE_INTAKE_COLLECTED
+
+V1 FAILURE CORRECTION:
+V1 treated an optional .NET RuntimeInformation architecture property as if it
+were guaranteed in Windows PowerShell 5.1. The property does not exist in this
+runtime, so StrictMode aborted before intake collection.
+
+V2 PROCESS CORRECTION:
+- Windows PowerShell 5.1 compatibility is treated as a first-class constraint.
+- Architecture is read from environment variables / Environment properties.
+- Optional environment probes are non-fatal.
+- Only safety gates and canonical-source validators may abort the intake.
+- No PowerShell Generic.List JSON traversal is used.
+- Machine seed summary is performed by Node only after the existing seed
+  validator passes.
+
+REPOSITORY:
+C:/Users/Admin/Documents/projects/gpt-app
+
+BRANCH:
+feat/gsr1-global-system-reality-machine-contract-v1-20260811
+
+HEAD:
+a78638c3cb118cb27cd6dff74777c1887e0ec9c9
+
+REMOTE_FEATURE_HEAD:
+a78638c3cb118cb27cd6dff74777c1887e0ec9c9
+
+ORIGIN_MAIN:
+220af0b45d6e91163c25d764d052658ffac32937
+
+FETCH_EXIT:
+0
+
+BASELINE_VALIDATORS:
+GLOBAL_SEED=0
+GSR1F=0
+
+ENVIRONMENT:
+POWERSHELL_VERSION=5.1.26100.8972
+PSEDITION=Desktop
+PROCESSOR_ARCHITECTURE=AMD64
+
+COLLECTED:
+TRACKED_PATHS=2249
+RELEVANT_TRACKED_PATHS=1635
+RELEVANT_SQL_PATHS=64
+COPIED_SOURCE_FILES=77
+
+RECOVERY:
+UNEXPECTED_CONTROL_CHAR_COUNT=1
+
+LIVE_DATABASE:
+NOT_QUERIED
+
+SAFETY:
+OPENAI_CALLS=0
+SUPABASE_WRITES=0
+REALITY_GRAPH_WRITES=0
+REPOSITORY_WRITES=0
+COMMIT_PUSH=0
+WORKTREE_UNCHANGED=True
+
+WARNINGS:
+NONE
+
+NEXT:
+Review PACKAGE before any GSR1L design or implementation.
+If live DB facts are required, do a separate read-only SQL intake first.

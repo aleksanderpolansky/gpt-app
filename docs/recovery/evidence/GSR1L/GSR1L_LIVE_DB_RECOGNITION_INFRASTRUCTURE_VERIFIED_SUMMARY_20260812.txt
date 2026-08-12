@@ -1,0 +1,70 @@
+ARCTor.app — GSR1L live DB recognition infrastructure verified summary
+Captured/reviewed: 2026-08-12
+Source: manual read-only Supabase SQL intake result reviewed before this checkpoint.
+Raw actor/personal data was not part of the intake.
+
+LIVE SERVER:
+- PostgreSQL 17.6
+- database: postgres
+- inRecovery: false
+
+GLOBAL ONTOLOGY:
+- global objects: 150
+- roots: 12
+- intermediate: 35
+- leaves: 103
+- global definition versions: 150
+
+ALIASES:
+- approved/published global aliases: 89
+- leaves with at least one active alias: 23
+- leaves without active alias: 80
+- concept_aliases has RLS enabled
+- dedicated value-object recognition index exists on alias_normalized / locale / concept_id
+
+SYSTEM PARAMETERS:
+- active system parameter definitions: 39
+- active global system assignments: 52
+- leaves with at least one system parameter: 27
+- leaves without system parameter: 76
+- system/actor ownership shape guards exist
+
+RELATION INFRASTRUCTURE:
+- relation type registry exists
+- relation evidence exists
+- value_object_relations exists
+- AI write policy is bounded to proposal_only / disabled
+- relation source/target facet and node-role guards exist
+
+CURRENT GLOBAL RECOGNITION RPCS:
+1. recognize_global_value_object_text_v1(text,text,text,text,integer)
+   - exact normalized leaf title/alias matching only
+   - SECURITY DEFINER
+   - service_role execute: true
+   - anon/authenticated execute: false
+
+2. get_global_value_object_leaf_candidates_v1(text,text,integer)
+   - returns global leaf candidates by root + facet
+   - hard candidate bound: 10
+   - if total candidates in root+facet > 10, function raises GSR1C_CANDIDATE_BOUND_EXCEEDED
+   - current maximum live DOMAIN+FACET leaf group already equals 10
+
+3. recognize_value_object_text_v1(uuid,uuid,text,text)
+   - actor-scoped exact title/alias recognition
+
+4. get_value_object_alias_profile_v1(uuid,uuid,uuid)
+   - actor-scoped alias profile
+
+5. validate_value_object_relation_candidate_v1(uuid,uuid,uuid,uuid,text)
+   - relation candidate validation with facet/node-role guards
+
+ARCHITECTURAL CONSEQUENCE:
+The missing layer is semantic/disambiguation recognition between exact alias/title
+matching and the coarse root+facet candidate group. GSR1L recognition profiles are
+approved for controlled experimental implementation to fill this layer without
+duplicating aliases, system parameter contracts, or semantic relation registry.
+
+IMPORTANT:
+This summary is recovery evidence of the reviewed live read-only intake.
+It does not authorize writes and is not a substitute for a future fresh live intake
+if schema/runtime facts materially change.

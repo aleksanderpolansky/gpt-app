@@ -336,6 +336,32 @@ AI может помогать распознавать смысл, но не д
 
 ### Статус GSR1K кода
 
-Экспериментальные runtime-кандидаты V1–V6 не считаются принятой production-реализацией. После диагностик основная рабочая папка возвращалась к commit 10ce6be0653eeefe6535766fc21f1c09bda567c.
+Экспериментальные runtime-кандидаты V1–V6 не считаются принятой production-реализацией. После диагностик основная рабочая папка возвращалась к commit 10ce6be0653eeefe6535766fc21f1c09bda567c.
 
 Следующий блок — GSR1L: спроектировать recognition-profile contract и разделение AI/server responsibilities до новых изменений runtime.
+---
+
+## Постоянное правило процесса разработки ARCTor — 2026-08-12
+
+**INTAKE -> DESIGN -> IMPLEMENTATION -> TEST -> RECOVERY**
+
+Если следующий шаг зависит от существующего кода, файлов, DB objects, routes, runtime environment или project contracts, implementation не создаётся до read-only intake фактического состояния.
+
+Intake обязан установить: branch/head/remote/worktree; точные source-of-truth paths; существующие functions/RPC/types/contracts/validators; релевантные DB ledgers и при необходимости live read-only DB state; версии runtime/tools; противоречия docs/code/DB/recovery; уже существующие механизмы, которые нужно reuse; prerequisites будущего implementation.
+
+Ошибки путей, имён, версий среды и повторное изобретение уже существующего механизма считаются ошибкой процесса intake, а не нормальной implementation iteration.
+
+Необязательный environment probe не должен валить intake. Gate failure допустим только для safety/source-of-truth условий.
+---
+
+## GSR1L Recognition Architecture v1.1 approved — 2026-08-12
+
+Решено проверить data-driven recognition profiles вместо дальнейшего case-specific prompt patching.
+
+Причина: GSR1K доказал, что strict server guards безопасны, но одинаковый текст может давать разные model decisions. Поэтому уменьшается поверхность решений AI.
+
+Первый experiment не заполняет все 103 leaf и не меняет Reality Graph writes. Он вводит minimal versioned recognition profiles только для репрезентативного pilot set, assembled candidate retrieval, UNKNOWN contract и последующую runtime integration.
+
+Дополнительное решение по входу: пользователь по умолчанию сообщает один основной эпизод за сообщение. Одновременно происходившие дополнительные действия, мысли, чувства и состояния разрешены в том же сообщении. Параллельные действия при необходимости становятся отдельными activity events и связываются temporal relations; чувства/состояния не обязаны становиться activities. Правило является UX-guidance, а не жёстким валидатором.
+
+Принцип «не попробуем — не узнаем» применяется контролируемо: эксперимент должен быть ограничен, versioned, preview-only и проверяем на G01–G24 плюс stability tests.

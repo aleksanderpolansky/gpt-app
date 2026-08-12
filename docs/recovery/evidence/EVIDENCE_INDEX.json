@@ -1,8 +1,8 @@
 {
-    "generatedAt":  "2026-08-12T12:40:59",
-    "copiedCount":  53,
+    "generatedAt":  "2026-08-12T14:21:42",
+    "copiedCount":  57,
     "generatedEvidenceCount":  1,
-    "indexedCount":  54,
+    "indexedCount":  58,
     "missingPatterns":  [
 
                         ],
@@ -374,6 +374,34 @@
                       "sourceDownloadsName":  "V6_GLOBAL_SEED_VALIDATION.txt",
                       "sha256":  "504736b45429e654bb915412b56e74a0ac7b6b9c96fce27c22240fbb2dda963a",
                       "origin":  "GSR1K_architecture_pivot_checkpoint"
+                  },
+                  {
+                      "group":  "GSR1L",
+                      "file":  "docs/recovery/evidence/GSR1L/ARCTOR_GSR1L_COMPREHENSIVE_INTAKE_V2_20260812_131749_REPORT.txt",
+                      "sourceDownloadsName":  "ARCTOR_GSR1L_COMPREHENSIVE_INTAKE_V2_20260812_131749_REPORT.txt",
+                      "sha256":  "995e8ebc038920a04c902ed05b133a3b976a57519d3a4f12333bf2b769d56813",
+                      "origin":  "GSR1L_design_recovery_checkpoint"
+                  },
+                  {
+                      "group":  "GSR1L",
+                      "file":  "docs/recovery/evidence/GSR1L/GSR1L_DESIGN_CHECKPOINT_V1_FILENAME_MATCH_FAILURE_REPORT.txt",
+                      "sourceDownloadsName":  "GSR1L_DESIGN_CHECKPOINT_V1_FILENAME_MATCH_FAILURE_REPORT.txt",
+                      "sha256":  "8ce92782d1d3b54bed66e6f7631149e7b5059bcba28b1ae03e38276c950f87aa",
+                      "origin":  "GSR1L_design_recovery_checkpoint"
+                  },
+                  {
+                      "group":  "GSR1L",
+                      "file":  "docs/recovery/evidence/GSR1L/GSR1L_DESIGN_CHECKPOINT_V2_CONTENT_MATCH_FAILURE_REPORT.txt",
+                      "sourceDownloadsName":  "GSR1L_DESIGN_CHECKPOINT_V2_CONTENT_MATCH_FAILURE_REPORT.txt",
+                      "sha256":  "642cddb7360b7dd34051775397ef148719f3f4168636c39a106ab5197bbd5143",
+                      "origin":  "GSR1L_design_recovery_checkpoint"
+                  },
+                  {
+                      "group":  "GSR1L",
+                      "file":  "docs/recovery/evidence/GSR1L/GSR1L_LIVE_DB_RECOGNITION_INFRASTRUCTURE_VERIFIED_SUMMARY_20260812.txt",
+                      "sourceDownloadsName":  "GSR1L_LIVE_DB_RECOGNITION_INFRASTRUCTURE_VERIFIED_SUMMARY_20260812.txt",
+                      "sha256":  "e03c02a5bc85472cb1a855838987b26298fa5faca739c3d491784d0ec428e3b4",
+                      "origin":  "GSR1L_design_recovery_checkpoint"
                   }
               ]
 }

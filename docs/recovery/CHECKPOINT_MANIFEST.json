@@ -1,11 +1,11 @@
 {
-    "schemaVersion":  4,
+    "schemaVersion":  6,
     "generatedAt":  "2026-08-12",
     "project":  "ARCTor.app",
     "repository":  "aleksanderpolansky/gpt-app",
     "branch":  "feat/gsr1-global-system-reality-machine-contract-v1-20260811",
     "originMainAtCheckpoint":  "220af0b45d6e91163c25d764d052658ffac32937",
-    "checkpointMeaning":  "Authoritative recoverable code+knowledge checkpoint after GSR1K diagnostics and architecture pivot to GSR1L recognition profiles.",
+    "checkpointMeaning":  "GSR1L architecture v1.1 approved after repository/environment and live Supabase intake, including the one-primary-episode interaction rule.",
     "globalReality":  {
                           "p8Blocked":  true,
                           "objectsTotal":  150,
@@ -49,7 +49,7 @@
                                    ],
                        "note":  "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
                    },
-    "nextAction":  "GSR1L: inventory existing global leaf recognition inputs and design a data-driven Value Object recognition profile plus deterministic server parsing before any new DB schema or runtime patch.",
+    "nextAction":  "IMPLEMENTATION GSR1L-P1: minimal versioned recognition-profile table, read-only assembled profile/candidate RPC, limited pilot seed; no Reality Graph write change.",
     "recoveryDocs":  [
                          "docs/recovery/README_RU.md",
                          "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -59,8 +59,8 @@
                          "docs/recovery/evidence/EVIDENCE_INDEX.json"
                      ],
     "checkpointPolicy":  "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
-    "previousRecoveryCommit":  "b10ce6be0653eeefe6535766fc21f1c09bda567c",
-    "documentedState":  "GSR1K_DIAGNOSTIC_COMPLETE_GSR1L_RECOGNITION_PROFILE_ARCHITECTURE_NEXT",
+    "previousRecoveryCommit":  "a78638c3cb118cb27cd6dff74777c1887e0ec9c9",
+    "documentedState":  "GSR1L_RECOGNITION_ARCHITECTURE_V1_1_APPROVED_IMPLEMENTATION_P1_NEXT",
     "costSafetyPolicy":  {
                              "perOperationHardCapUsd":  0.1,
                              "meaning":  "emergency runaway fuse, not a target test budget",
@@ -136,5 +136,33 @@
                                                                                "durations",
                                                                                "supported_explicit_temporal_markers"
                                                                            ]
-                                        }
+                                        },
+    "developmentProcessRule":  "INTAKE -\u003e DESIGN -\u003e IMPLEMENTATION -\u003e TEST -\u003e RECOVERY",
+    "gsr1lDesign":  {
+                        "status":  "approved_for_experimental_implementation",
+                        "architectureDoc":  "docs/recovery/specs/ARCTor_Value_Object_Recognition_Profile_and_AI_Server_Routing_Architecture_v1_1_RU_20260812.docx",
+                        "globalObjects":  150,
+                        "roots":  12,
+                        "intermediate":  35,
+                        "leaves":  103,
+                        "approvedPublishedAliases":  89,
+                        "leavesWithAlias":  23,
+                        "leavesWithoutAlias":  80,
+                        "activeSystemParameterDefinitions":  39,
+                        "activeGlobalSystemParameterAssignments":  52,
+                        "leavesWithSystemParameter":  27,
+                        "relationTypes":  12,
+                        "maxDomainFacetLeafGroup":  10,
+                        "primaryDecision":  "AI interprets language; server owns ontology, deterministic parsing, candidate bounding, uncertainty and final validation.",
+                        "inputDiscipline":  {
+                                                "mode":  "one_primary_episode_soft_guidance",
+                                                "concurrentEventsAllowed":  true,
+                                                "thoughtsFeelingsStatesAllowed":  true,
+                                                "independentSequentialEventsHardRejected":  false,
+                                                "parallelActivitiesRemainSeparateEvents":  true
+                                            },
+                        "realityGraphWriteChanged":  false,
+                        "liveDbEvidenceMode":  "verified_summary_from_reviewed_read_only_intake",
+                        "rawLiveDbExportRequiredForCheckpoint":  false
+                    }
 }
