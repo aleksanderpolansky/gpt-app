@@ -1,0 +1,102 @@
+ARCTor.app - GSR1K Event-Link + Temporal Preview Smoke v2
+TIMESTAMP=20260812_111513
+STATUS=PASS_WITH_REMAINING_GOLD_GAPS
+
+FAILURE:
+
+
+BRANCH:
+feat/gsr1-global-system-reality-machine-contract-v1-20260811
+
+HEAD:
+b10ce6be0653eeefe6535766fc21f1c09bda567c
+
+EXPECTED_HEAD:
+b10ce6be0653eeefe6535766fc21f1c09bda567c
+
+CANDIDATE:
+PILOT_SHA256=d3532ac1909c50807174e79289015135084d9f7a3ec4765a58e174ddf0475da3
+VALIDATOR_SHA256=d51e4c27540612101144dd15775f83b590ff6d67b032bc9a00b38747af32def1
+
+VALIDATION:
+GSR1F_VALIDATION_EXIT=0
+GLOBAL_SEED_VALIDATION_EXIT=0
+DIFF_CHECK_EXIT=0
+PRODUCTION_BUILD_EXIT=0
+
+CASE_COUNT:
+2
+
+PASS_COUNT:
+1
+
+FAIL_COUNT:
+1
+
+TOTAL_ACTUAL_PROVIDER_COST_USD:
+0.0015216000000000001
+
+TOTAL_RESERVED_MAXIMUM_PROVIDER_COST_USD:
+0.0083504000000000005
+
+PER_OPERATION_HARD_CAP_USD:
+0.1
+
+DOCUMENTED_PER_CASE_MAX_USD:
+0.00975
+
+DOCUMENTED_SUITE_MAX_USD:
+0.01950
+
+SUITE_EMERGENCY_STOP_USD:
+0.1
+
+CASE SUMMARY:
+G03_PAIN_LOCATION_TEMPORAL: HTTP=500 OK=False ACTUAL_USD=0.00057295 RESERVED_USD=0.002852
+G11_MEAL_CONSUMES: HTTP=200 OK=True ACTUAL_USD=0.0009486500000000001 RESERVED_USD=0.0054984000000000005
+
+V1 DIAGNOSIS:
+G20 already PASSED and is not rerun.
+G03 collapsed После планки into occurredAtRaw, so the referenced plank event
+disappeared and no temporal/event-link contract could be completed.
+G11 already produced the correct consumes -> entity.food.item link, but AI
+misused meal_label as arbitrary food text (пирожное).
+
+V2 IMPLEMENTATION UNDER TEST:
+- Keep exactly two OpenAI provider stages.
+- Relational phrases such as после X that name another event are kept as
+  separate semantic event segments, not occurredAtRaw.
+- Direct source-backed pain anatomy must use the bounded located_in candidate.
+- Direct source-backed consumed food must use the bounded consumes candidate.
+- For Meal, every AI-proposed meal_label is removed first; only deterministic
+  breakfast/lunch/dinner normalization may add meal_label back.
+- Qualitative source-backed pain text remains allowed; invented numeric pain
+  intensity remains forbidden.
+- No structural-parent change.
+- No Reality Graph write.
+
+SMOKE CASES:
+G03: plank + pain + located_in lumbar + temporal precedes.
+G11: meal + consumes food item, zero unrelated meal_label/nutrition facts.
+
+COST POLICY:
+Useful paid calls are intentional. USD 0.10 remains an emergency runaway fuse.
+
+RESULT POLICY:
+- Both failed V1 cases PASS -> candidate runtime + validator remain modified in main worktree for controlled commit/recovery.
+- Any case FAIL or infrastructure failure -> baseline runtime + validator are restored automatically.
+
+SAFETY:
+- Nano only.
+- Maximum two provider calls per case.
+- Zero automatic provider retries.
+- Exactly one POST per case.
+- Sequential only.
+- Documented suite max = USD 0.01950.
+- Aggregate emergency stop = USD 0.10.
+- No graph writes.
+- No commit/push.
+- Temporary localhost route only.
+- P8 remains blocked.
+
+GIT STATUS:

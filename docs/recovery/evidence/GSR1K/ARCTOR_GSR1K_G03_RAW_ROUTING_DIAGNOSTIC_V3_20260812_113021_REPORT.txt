@@ -1,0 +1,95 @@
+ARCTor.app - GSR1K G03 Raw Routing Diagnostic v3
+TIMESTAMP=20260812_113021
+STATUS=PASS_GSR1K_G03_RAW_ROUTING_CAPTURED
+
+FAILURE:
+
+
+BRANCH:
+feat/gsr1-global-system-reality-machine-contract-v1-20260811
+
+HEAD:
+b10ce6be0653eeefe6535766fc21f1c09bda567c
+
+EXPECTED_HEAD:
+b10ce6be0653eeefe6535766fc21f1c09bda567c
+
+CANDIDATE:
+PILOT_SHA256=ec4460b065fd4830a7fb6078b6506ca65af59e3b1dee68caf946294a11b4aa97
+VALIDATOR_SHA256=73dc573bd8f9c57096fc62b9e0d51270dca325f867de7ffaf1bc4e747c29c08a
+
+VALIDATION:
+GSR1F_VALIDATION_EXIT=0
+GLOBAL_SEED_VALIDATION_EXIT=0
+DIFF_CHECK_EXIT=0
+PRODUCTION_BUILD_EXIT=0
+
+CASE_COUNT:
+1
+
+PASS_COUNT:
+0
+
+FAIL_COUNT:
+1
+
+TOTAL_ACTUAL_PROVIDER_COST_USD:
+0.0009429
+
+TOTAL_RESERVED_MAXIMUM_PROVIDER_COST_USD:
+0.0052922
+
+PER_OPERATION_HARD_CAP_USD:
+0.1
+
+DOCUMENTED_PER_CASE_MAX_USD:
+0.00975
+
+DOCUMENTED_SUITE_MAX_USD:
+0.00975
+
+SUITE_EMERGENCY_STOP_USD:
+0.1
+
+CASE SUMMARY:
+G03_PAIN_LOCATION_TEMPORAL: HTTP=500 OK=False ACTUAL_USD=0.0009429 RESERVED_USD=0.0052922
+
+V2 DIAGNOSIS:
+G11 now PASSES completely and is not rerun.
+G03 fails after the first provider stage with
+AI_ROUTING_SEGMENT_CONTRACT_FAILED before stage 2.
+
+The previous response preserves only the validator summary
+(segmentId=seg2, domain.body_physiology::PROCESS), not the exact JSON emitted
+by stage 1. Multiple contract fields can cause the same summary, so guessing
+would risk fixing the wrong thing.
+
+V3 DIAGNOSTIC UNDER TEST:
+- Reuse the V2 routing/event-link candidate.
+- Run ONLY G03.
+- If routing validation fails, preserve the exact rawRoutingOutput from stage 1
+  together with validationDetails in the HTTP response.
+- No attempt is made to force G03 to pass in this diagnostic.
+- The main worktree is restored to the committed baseline after the run.
+
+COST POLICY:
+Useful paid calls are intentional. USD 0.10 remains an emergency runaway fuse.
+
+RESULT POLICY:
+- This is diagnostic-only. Candidate runtime + validator are always restored after the run.
+- Baseline runtime + validator are restored automatically after success or failure.
+
+SAFETY:
+- Nano only.
+- Maximum two provider calls per case.
+- Zero automatic provider retries.
+- Exactly one POST per case.
+- Sequential only.
+- Documented suite max = USD 0.00975.
+- Aggregate emergency stop = USD 0.10.
+- No graph writes.
+- No commit/push.
+- Temporary localhost route only.
+- P8 remains blocked.
+
+GIT STATUS:

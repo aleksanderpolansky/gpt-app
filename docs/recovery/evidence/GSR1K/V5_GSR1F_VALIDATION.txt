@@ -1,0 +1,278 @@
+{
+  "check": "ARCTOR_GSR1F_GLOBAL_OBSERVATION_PREVIEW_RUNTIME_V1",
+  "passed": true,
+  "total": 54,
+  "failed": [],
+  "checks": [
+    {
+      "name": "file:lib/ai/openaiClient.ts",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "file:lib/reality/globalObservationPilot.ts",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "file:src/app/api/ai/reality/global-observation-preview/route.ts",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "file:docs/reality-core/GSR1_OPENAI_PILOT_SAFETY_CONTRACT_V1.md",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "file:supabase/manual-applied/20260811_gsr1c_global_aliases_recognition_v3.sql",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "file:supabase/manual-applied/20260811_gsr1d_global_runtime_bridge_ai_budget_v1.sql",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "file:supabase/manual-applied/20260811_gsr1e_openai_pilot_price_refresh_budget_hardening_v1.sql",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "client_per_request_retry_control",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "client_per_request_timeout_control",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "client_abort_signal_control",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "client_store_control",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_env_gate",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_nano_only",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_two_provider_calls",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_no_automatic_retry",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_store_false",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_route_deadline",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_provider_timeout",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_budget_preflight",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_exact_recognition",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_bounded_candidates",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_candidate_bound_10",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "preview_does_not_call_fact_writer",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "preview_usage_audit",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "route_uses_active_actor_context",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_domain_facet_pair_enum",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_measurement_stays_with_event",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_window_only_temporal_precision",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_temporal_metadata_stays_with_segment",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_temporal_raw_exact_evidence",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_ru_relative_time_server_parser",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_daypart_no_invented_hour",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_selection_segment_candidate_pair_enum",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_deterministic_meal_label_normalization",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_meal_label_replaces_noncanonical_ai_text",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_clock_time_never_becomes_duration",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_cyrillic_temporal_parser_avoids_ascii_word_boundary",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_available_time_deterministic_context_override",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_available_time_not_leisure_rule",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_event_link_output_contract",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_event_link_candidates_server_bounded",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_event_link_policy_consumes",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_event_link_policy_located_in",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_event_link_selection_bound_to_primary",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_temporal_link_output_contract",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_temporal_link_no_causal_promotion",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_links_require_exact_evidence",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_link_preview_still_no_fact_writer",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_relational_temporal_phrase_not_occurred_at_raw",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_direct_pain_location_link_instruction",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_direct_meal_consumes_link_instruction",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_meal_label_only_from_explicit_meal_category",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_temporal_relation_uses_deterministic_source_evidence",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pilot_temporal_relation_never_trusts_ai_evidence_as_authority",
+      "passed": true,
+      "detail": null
+    }
+  ]
+}

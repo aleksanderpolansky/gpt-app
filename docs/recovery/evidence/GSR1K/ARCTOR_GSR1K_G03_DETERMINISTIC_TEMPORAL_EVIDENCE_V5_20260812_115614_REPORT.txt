@@ -1,0 +1,98 @@
+ARCTor.app - GSR1K G03 Deterministic Temporal Evidence v5
+TIMESTAMP=20260812_115614
+STATUS=PASS_WITH_REMAINING_GOLD_GAPS
+
+FAILURE:
+
+
+BRANCH:
+feat/gsr1-global-system-reality-machine-contract-v1-20260811
+
+HEAD:
+b10ce6be0653eeefe6535766fc21f1c09bda567c
+
+EXPECTED_HEAD:
+b10ce6be0653eeefe6535766fc21f1c09bda567c
+
+CANDIDATE:
+PILOT_SHA256=267fbeb53e972b93946a175079f3caa0392e0af72fe66a418036cf6c6301281d
+VALIDATOR_SHA256=51becdfefb0fdcfffba530f3521bbf19625d4222b2d61a2b2aec962531b8cf73
+
+VALIDATION:
+GSR1F_VALIDATION_EXIT=0
+GLOBAL_SEED_VALIDATION_EXIT=0
+DIFF_CHECK_EXIT=0
+PRODUCTION_BUILD_EXIT=0
+
+CASE_COUNT:
+1
+
+PASS_COUNT:
+0
+
+FAIL_COUNT:
+1
+
+TOTAL_ACTUAL_PROVIDER_COST_USD:
+0.00056795
+
+TOTAL_RESERVED_MAXIMUM_PROVIDER_COST_USD:
+0.002852
+
+PER_OPERATION_HARD_CAP_USD:
+0.1
+
+DOCUMENTED_PER_CASE_MAX_USD:
+0.00975
+
+DOCUMENTED_SUITE_MAX_USD:
+0.00975
+
+SUITE_EMERGENCY_STOP_USD:
+0.1
+
+CASE SUMMARY:
+G03_PAIN_LOCATION_TEMPORAL: HTTP=500 OK=False ACTUAL_USD=0.00056795 RESERVED_USD=0.002852
+
+V4 FAILURE DIAGNOSIS:
+V4 made ZERO OpenAI calls and ZERO provider spend. The candidate runtime itself
+was not rejected by TypeScript/build. Execution stopped in the static GSR1F
+validator before seed validation/build because one legacy validator check still
+expected the old temporal-link error string:
+  "... lacked source evidence"
+while the V4 runtime intentionally changed it to:
+  "... lacked deterministic source evidence"
+
+All other 53 / 54 GSR1F checks passed, including the new deterministic temporal
+evidence checks. This is a validator-contract mismatch, not a runtime finding.
+
+V5 FIX UNDER TEST:
+- Keep the V4 runtime candidate byte-for-byte unchanged.
+- Update only the legacy static validator assertion so it accepts:
+    exact source-backed event-link evidence, and
+    server-resolved deterministic temporal-link evidence.
+- Re-run validators + production build.
+- Only if those zero-provider checks pass, run ONLY G03 once.
+- No Reality Graph write.
+
+COST POLICY:
+Useful paid calls are intentional. USD 0.10 remains an emergency runaway fuse.
+
+RESULT POLICY:
+- G03 PASS -> candidate runtime + validator remain modified in main worktree for controlled commit/recovery.
+- Any case FAIL or infrastructure failure -> baseline runtime + validator are restored automatically.
+
+SAFETY:
+- Nano only.
+- Maximum two provider calls per case.
+- Zero automatic provider retries.
+- Exactly one POST per case.
+- Sequential only.
+- Documented suite max = USD 0.00975.
+- Aggregate emergency stop = USD 0.10.
+- No graph writes.
+- No commit/push.
+- Temporary localhost route only.
+- P8 remains blocked.
+
+GIT STATUS:

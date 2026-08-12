@@ -1,0 +1,109 @@
+ARCTor.app - GSR1K G03 Deterministic Temporal Evidence v4
+TIMESTAMP=20260812_114356
+STATUS=FAILED
+
+FAILURE:
+CANDIDATE_GSR1F_VALIDATION_FAILED
+At C:\Users\Admin\Downloads\ARCTOR_GSR1K_G03_DETERMINISTIC_TEMPORAL_EVIDENCE_V4.ps1:511 
+char:9
++         throw "CANDIDATE_GSR1F_VALIDATION_FAILED"
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (CANDIDATE_GSR1F_VALIDATION_FAILED:String) 
+    [], RuntimeException
+    + FullyQualifiedErrorId : CANDIDATE_GSR1F_VALIDATION_FAILED
+
+BRANCH:
+feat/gsr1-global-system-reality-machine-contract-v1-20260811
+
+HEAD:
+b10ce6be0653eeefe6535766fc21f1c09bda567c
+
+EXPECTED_HEAD:
+b10ce6be0653eeefe6535766fc21f1c09bda567c
+
+CANDIDATE:
+PILOT_SHA256=267fbeb53e972b93946a175079f3caa0392e0af72fe66a418036cf6c6301281d
+VALIDATOR_SHA256=531f21331c4fb3a486b11760078fca2dcce28b5f074dd9b81ed2b5f864d4b252
+
+VALIDATION:
+GSR1F_VALIDATION_EXIT=1
+GLOBAL_SEED_VALIDATION_EXIT=-999
+DIFF_CHECK_EXIT=-999
+PRODUCTION_BUILD_EXIT=-999
+
+CASE_COUNT:
+1
+
+PASS_COUNT:
+0
+
+FAIL_COUNT:
+0
+
+TOTAL_ACTUAL_PROVIDER_COST_USD:
+0
+
+TOTAL_RESERVED_MAXIMUM_PROVIDER_COST_USD:
+0
+
+PER_OPERATION_HARD_CAP_USD:
+0.1
+
+DOCUMENTED_PER_CASE_MAX_USD:
+0.00975
+
+DOCUMENTED_SUITE_MAX_USD:
+0.00975
+
+SUITE_EMERGENCY_STOP_USD:
+0.1
+
+CASE SUMMARY:
+
+
+V3 EXACT DIAGNOSIS:
+Stage 1 now succeeds and stage 2 selects the correct bounded temporal link:
+  seg1::precedes::seg2
+
+The remaining failure is only temporal evidence text. Nano proposed:
+  rawFragment = "планки начина"
+but the source contains:
+  "После планки начала болеть поясница."
+
+So the model chose the correct relation but misspelled/truncated its evidence.
+Rejecting the relation is safe, but relying on model-generated evidence text is
+unnecessarily brittle once the relation key is already server-bounded.
+
+V4 FIX UNDER TEST:
+- Keep all V2 event-link / meal-label fixes.
+- Rerun ONLY G03.
+- AI still chooses only a server-bounded temporal linkKey.
+- Server independently resolves exact Russian temporal evidence from the
+  original source text (После ..., потом, затем, overlap markers).
+- AI rawFragment is only a diagnostic hint and is never the evidence authority.
+- Relation is rejected if deterministic source evidence cannot be found.
+- Returned temporal rawFragment is the exact server-extracted source substring.
+- temporal link remains causal=false.
+- No Reality Graph write.
+
+COST POLICY:
+Useful paid calls are intentional. USD 0.10 remains an emergency runaway fuse.
+
+RESULT POLICY:
+- G03 PASS -> candidate runtime + validator remain modified in main worktree for controlled commit/recovery.
+- Any case FAIL or infrastructure failure -> baseline runtime + validator are restored automatically.
+
+SAFETY:
+- Nano only.
+- Maximum two provider calls per case.
+- Zero automatic provider retries.
+- Exactly one POST per case.
+- Sequential only.
+- Documented suite max = USD 0.00975.
+- Aggregate emergency stop = USD 0.10.
+- No graph writes.
+- No commit/push.
+- Temporary localhost route only.
+- P8 remains blocked.
+
+GIT STATUS:

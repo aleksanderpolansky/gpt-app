@@ -1,0 +1,115 @@
+{
+    "check":  "ARCTOR_GSR1K_EVENT_LINK_TEMPORAL_PREVIEW_SMOKE_V1",
+    "caseCount":  1,
+    "passCount":  0,
+    "failCount":  1,
+    "totalActualProviderCostUsd":  0.0009429,
+    "totalReservedMaximumProviderCostUsd":  0.0052922,
+    "cases":  [
+                  {
+                      "caseId":  "G03_PAIN_LOCATION_TEMPORAL",
+                      "inputText":  "После планки начала болеть поясница.",
+                      "operationId":  "13c4e105-dd79-400d-91b5-9a5571819515",
+                      "httpStatus":  500,
+                      "ok":  false,
+                      "actualProviderCostUsd":  0.0009429,
+                      "reservedMaximumProviderCostUsd":  0.0052922,
+                      "response":  {
+                                       "ok":  false,
+                                       "check":  "ARCTOR_GSR1K_G03_RAW_ROUTING_DIAGNOSTIC_CASE_V3",
+                                       "caseId":  "G03_PAIN_LOCATION_TEMPORAL",
+                                       "operationId":  "13c4e105-dd79-400d-91b5-9a5571819515",
+                                       "inputText":  "После планки начала болеть поясница.",
+                                       "error":  "AI temporal link was outside the server-bounded segment relation set or lacked source evidence.",
+                                       "details":  {
+                                                       "code":  "AI_TEMPORAL_LINK_CONTRACT_FAILED",
+                                                       "status":  502,
+                                                       "details":  {
+                                                                       "segmentId":  "seg1",
+                                                                       "linkKey":  "seg1::precedes::seg2",
+                                                                       "rawFragment":  "планки начина"
+                                                                   }
+                                                   },
+                                       "audit":  {
+                                                     "usage":  [
+                                                                   {
+                                                                       "id":  "057d74f2-d79c-4b98-80bb-381265b4907d",
+                                                                       "selected_tier_code":  "nano",
+                                                                       "model_name":  "gpt-5.4-nano",
+                                                                       "status":  "openai_completed",
+                                                                       "input_tokens":  1996,
+                                                                       "cached_input_tokens":  0,
+                                                                       "output_tokens":  128,
+                                                                       "total_tokens":  2124,
+                                                                       "estimated_provider_cost_usd":  0.002852,
+                                                                       "actual_provider_cost_usd":  0.0005592,
+                                                                       "max_output_tokens":  500,
+                                                                       "created_at":  "2026-08-12T09:31:31.044264+00:00",
+                                                                       "completed_at":  "2026-08-12T09:31:32.914+00:00",
+                                                                       "request_metadata":  {
+                                                                                                "stage":  "domain_facet_routing",
+                                                                                                "contract":  "GSR1F_GLOBAL_OBSERVATION_PREVIEW_V1",
+                                                                                                "previewOnly":  true,
+                                                                                                "walletDebited":  false,
+                                                                                                "conservativeInputTokenUpperBound":  11135
+                                                                                            }
+                                                                   },
+                                                                   {
+                                                                       "id":  "c35f62b3-d43c-4123-9e7c-68168c170540",
+                                                                       "selected_tier_code":  "nano",
+                                                                       "model_name":  "gpt-5.4-nano",
+                                                                       "status":  "openai_completed",
+                                                                       "input_tokens":  1156,
+                                                                       "cached_input_tokens":  0,
+                                                                       "output_tokens":  122,
+                                                                       "total_tokens":  1278,
+                                                                       "estimated_provider_cost_usd":  0.0024402,
+                                                                       "actual_provider_cost_usd":  0.0003837,
+                                                                       "max_output_tokens":  900,
+                                                                       "created_at":  "2026-08-12T09:31:33.681122+00:00",
+                                                                       "completed_at":  "2026-08-12T09:31:35.25+00:00",
+                                                                       "request_metadata":  {
+                                                                                                "stage":  "leaf_parameter_selection",
+                                                                                                "contract":  "GSR1F_GLOBAL_OBSERVATION_PREVIEW_V1",
+                                                                                                "previewOnly":  true,
+                                                                                                "walletDebited":  false,
+                                                                                                "conservativeInputTokenUpperBound":  6576
+                                                                                            }
+                                                                   }
+                                                               ],
+                                                     "reservations":  [
+                                                                          {
+                                                                              "id":  "6352456c-0682-4e1d-84ee-24e3fd1f4674",
+                                                                              "call_index":  1,
+                                                                              "tier_code":  "nano",
+                                                                              "model_name":  "gpt-5.4-nano",
+                                                                              "input_tokens":  11135,
+                                                                              "cached_input_tokens":  0,
+                                                                              "max_output_tokens":  500,
+                                                                              "estimated_max_cost_usd":  0.002852,
+                                                                              "hard_cap_usd":  0.1,
+                                                                              "created_at":  "2026-08-12T09:31:30.9595+00:00"
+                                                                          },
+                                                                          {
+                                                                              "id":  "39c72fef-bf1b-4cfa-b2a2-2f0fffb51161",
+                                                                              "call_index":  2,
+                                                                              "tier_code":  "nano",
+                                                                              "model_name":  "gpt-5.4-nano",
+                                                                              "input_tokens":  6576,
+                                                                              "cached_input_tokens":  0,
+                                                                              "max_output_tokens":  900,
+                                                                              "estimated_max_cost_usd":  0.0024402,
+                                                                              "hard_cap_usd":  0.1,
+                                                                              "created_at":  "2026-08-12T09:31:33.611588+00:00"
+                                                                          }
+                                                                      ],
+                                                     "usageRowCount":  2,
+                                                     "reservationCount":  2,
+                                                     "actualProviderCostUsd":  0.0009429,
+                                                     "reservedMaximumProviderCostUsd":  0.0052922
+                                                 }
+                                   },
+                      "rawBody":  null
+                  }
+              ]
+}

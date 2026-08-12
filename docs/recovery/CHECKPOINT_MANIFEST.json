@@ -1,11 +1,11 @@
 {
-    "schemaVersion":  3,
+    "schemaVersion":  4,
     "generatedAt":  "2026-08-12",
     "project":  "ARCTor.app",
     "repository":  "aleksanderpolansky/gpt-app",
     "branch":  "feat/gsr1-global-system-reality-machine-contract-v1-20260811",
     "originMainAtCheckpoint":  "220af0b45d6e91163c25d764d052658ffac32937",
-    "checkpointMeaning":  "Last committed/pushed GSR1G baseline. Later GSR1H/GSR1I experiments are evidence unless separately committed.",
+    "checkpointMeaning":  "Authoritative recoverable code+knowledge checkpoint after GSR1K diagnostics and architecture pivot to GSR1L recognition profiles.",
     "globalReality":  {
                           "p8Blocked":  true,
                           "objectsTotal":  150,
@@ -49,7 +49,7 @@
                                    ],
                        "note":  "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
                    },
-    "nextAction":  "Extend preview with server-bounded event links / related targets, preserve preview-only/no-write behavior, then run relation-heavy diagnostics. Also resolve ambiguous sleep and serving-count contract.",
+    "nextAction":  "GSR1L: inventory existing global leaf recognition inputs and design a data-driven Value Object recognition profile plus deterministic server parsing before any new DB schema or runtime patch.",
     "recoveryDocs":  [
                          "docs/recovery/README_RU.md",
                          "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -59,8 +59,8 @@
                          "docs/recovery/evidence/EVIDENCE_INDEX.json"
                      ],
     "checkpointPolicy":  "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
-    "previousRecoveryCommit":  "d9a9afeca19399a75a398a199a18272b20be3628",
-    "documentedState":  "GSR1J_DIAGNOSTIC_COMPLETE_RELATION_CONTRACT_NEXT",
+    "previousRecoveryCommit":  "b10ce6be0653eeefe6535766fc21f1c09bda567c",
+    "documentedState":  "GSR1K_DIAGNOSTIC_COMPLETE_GSR1L_RECOGNITION_PROFILE_ARCHITECTURE_NEXT",
     "costSafetyPolicy":  {
                              "perOperationHardCapUsd":  0.1,
                              "meaning":  "emergency runaway fuse, not a target test budget",
@@ -87,5 +87,54 @@
                                              "G12":  "explicit kcal extraction works",
                                              "G14":  "caffeine leaf works but explicit two-cup quantity is lost"
                                          }
-                        }
+                        },
+    "gsr1kDiagnostic":  {
+                            "productionBaselineCommit":  "b10ce6be0653eeefe6535766fc21f1c09bda567c",
+                            "experimentalCandidatesCommitted":  false,
+                            "v6CaseCount":  3,
+                            "v6Passed":  0,
+                            "v6Failed":  3,
+                            "v6ActualProviderCostUsd":  0.0033631,
+                            "v6ReservedMaximumProviderCostUsd":  0.0174104,
+                            "v6Findings":  [
+                                               "correct segmentation but wrong temporal relation overlaps instead of precedes; server rejected",
+                                               "two segments produced but both leaf selections were __NONE__",
+                                               "__NONE__ selection combined with facts/links; server rejected contradictory output"
+                                           ],
+                            "guardsWorked":  true,
+                            "conclusion":  "Do not continue per-phrase prompt patching. Reduce AI decision surface and move stable rules/candidate constraints into data-driven recognition profiles plus deterministic server logic."
+                        },
+    "recognitionArchitectureDecision":  {
+                                            "nextBlock":  "GSR1L",
+                                            "wordDocumentNow":  false,
+                                            "wordDocumentAfterContractApproval":  true,
+                                            "recognitionProfileStoredAsData":  true,
+                                            "aiRole":  "language interpretation and bounded candidate choice",
+                                            "serverRole":  "deterministic extraction, candidate bounding, ontology constraints, final validation",
+                                            "uncertaintyAllowed":  true,
+                                            "neutralFallbackRequiredWhenNarrowClassificationIsUnderdetermined":  true,
+                                            "initialProfileFields":  [
+                                                                         "names_aliases",
+                                                                         "semantic_definition",
+                                                                         "positive_examples",
+                                                                         "contrast_negative_examples",
+                                                                         "characteristic_predicates_states_objects",
+                                                                         "allowed_parameter_codes",
+                                                                         "allowed_relation_codes",
+                                                                         "allowed_relation_target_facets_kinds",
+                                                                         "sufficient_evidence_conditions",
+                                                                         "unknown_conditions",
+                                                                         "fallback_policy"
+                                                                     ],
+                                            "deterministicServerTargets":  [
+                                                                               "numbers",
+                                                                               "units",
+                                                                               "dates",
+                                                                               "exact_time",
+                                                                               "approximate_time",
+                                                                               "intervals",
+                                                                               "durations",
+                                                                               "supported_explicit_temporal_markers"
+                                                                           ]
+                                        }
 }

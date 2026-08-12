@@ -1,0 +1,107 @@
+ARCTor.app - GSR1K G03 Routing Stability Diagnostic v6
+TIMESTAMP=20260812_120931
+STATUS=PASS_GSR1K_V6_G03_ROUTING_FAILURES_CAPTURED
+
+FAILURE:
+
+
+BRANCH:
+feat/gsr1-global-system-reality-machine-contract-v1-20260811
+
+HEAD:
+b10ce6be0653eeefe6535766fc21f1c09bda567c
+
+EXPECTED_HEAD:
+b10ce6be0653eeefe6535766fc21f1c09bda567c
+
+CANDIDATE:
+PILOT_SHA256=267fbeb53e972b93946a175079f3caa0392e0af72fe66a418036cf6c6301281d
+VALIDATOR_SHA256=51becdfefb0fdcfffba530f3521bbf19625d4222b2d61a2b2aec962531b8cf73
+
+VALIDATION:
+GSR1F_VALIDATION_EXIT=0
+GLOBAL_SEED_VALIDATION_EXIT=0
+DIFF_CHECK_EXIT=0
+PRODUCTION_BUILD_EXIT=0
+
+CASE_COUNT:
+3
+
+PASS_COUNT:
+0
+
+FAIL_COUNT:
+3
+
+TOTAL_ACTUAL_PROVIDER_COST_USD:
+0.00336310
+
+TOTAL_RESERVED_MAXIMUM_PROVIDER_COST_USD:
+0.0174103999999999995
+
+PER_OPERATION_HARD_CAP_USD:
+0.1
+
+DOCUMENTED_PER_CASE_MAX_USD:
+0.00975
+
+DOCUMENTED_SUITE_MAX_USD:
+0.02925
+
+SUITE_EMERGENCY_STOP_USD:
+0.1
+
+CASE SUMMARY:
+G03_PAIN_LOCATION_TEMPORAL: HTTP=500 OK=False ACTUAL_USD=0.0012259 RESERVED_USD=0.0060044
+G03_PAIN_LOCATION_TEMPORAL: HTTP=409 OK=False ACTUAL_USD=0.00092505 RESERVED_USD=0.0054015999999999995
+G03_PAIN_LOCATION_TEMPORAL: HTTP=500 OK=False ACTUAL_USD=0.00121215 RESERVED_USD=0.0060044
+
+V5 FINDING:
+All static validators and production build passed, but the single G03 run
+failed again at Stage 1 with AI_ROUTING_SEGMENT_CONTRACT_FAILED.
+Only one provider call occurred, so V5 never reached the new deterministic
+temporal-evidence logic.
+
+This means G03 Stage 1 is currently stochastic: an earlier V3 operation passed
+routing and reached the correct bounded temporal link, while V5 rejected the
+routing output before Stage 2.
+
+V6 DIAGNOSTIC:
+- Production candidate is unchanged from V5.
+- Run G03 THREE times with fresh operation UUIDs.
+- Exactly the same input is used each time.
+- Temporary detached runtime preserves rawRoutingOutput whenever Stage 1
+  deterministic validation rejects the model output.
+- A passing operation continues through the full V5 event-link / temporal
+  preview path.
+- The purpose is to distinguish a stable contract defect from provider-output
+  variability and capture the exact rejected Stage 1 JSON.
+- Diagnostic wrapper is NOT left in the main runtime.
+- Main runtime + validator are restored to committed baseline after the batch.
+
+PRODUCTION_CANDIDATE_SHA256:
+PILOT=267fbeb53e972b93946a175079f3caa0392e0af72fe66a418036cf6c6301281d
+VALIDATOR=51becdfefb0fdcfffba530f3521bbf19625d4222b2d61a2b2aec962531b8cf73
+DETACHED_DIAGNOSTIC_PILOT_SHA256=7fdf03c43d2cf519497853ecda1c018ca1ba2dd92fb5dd2e82f3ec7651e9a19e
+
+COST POLICY:
+Useful paid calls are intentional. USD 0.10 remains an emergency runaway fuse.
+
+RESULT POLICY:
+- Diagnostic-only: main runtime + validator are always restored after the 3-run batch.
+- Each run uses a fresh operation UUID; failures do not trigger automatic provider retries.
+
+SAFETY:
+- Nano only.
+- Maximum two provider calls per case.
+- Zero automatic provider retries.
+- Exactly one POST per case.
+- Sequential only.
+- Documented suite max = USD 0.02925.
+- Aggregate emergency stop = USD 0.10.
+- No graph writes.
+- No commit/push.
+- Temporary localhost route only.
+- P8 remains blocked.
+
+GIT STATUS:

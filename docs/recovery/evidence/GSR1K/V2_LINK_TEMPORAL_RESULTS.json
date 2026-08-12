@@ -1,0 +1,260 @@
+{
+    "check":  "ARCTOR_GSR1K_EVENT_LINK_TEMPORAL_PREVIEW_SMOKE_V1",
+    "caseCount":  2,
+    "passCount":  1,
+    "failCount":  1,
+    "totalActualProviderCostUsd":  0.0015216000000000001,
+    "totalReservedMaximumProviderCostUsd":  0.0083504000000000005,
+    "cases":  [
+                  {
+                      "caseId":  "G03_PAIN_LOCATION_TEMPORAL",
+                      "inputText":  "После планки начала болеть поясница.",
+                      "operationId":  "80cb04d6-5e30-43ea-9ed0-5b52a23360e7",
+                      "httpStatus":  500,
+                      "ok":  false,
+                      "actualProviderCostUsd":  0.00057295,
+                      "reservedMaximumProviderCostUsd":  0.002852,
+                      "response":  {
+                                       "ok":  false,
+                                       "check":  "ARCTOR_GSR1K_EVENT_LINK_TEMPORAL_PREVIEW_CASE_V2",
+                                       "caseId":  "G03_PAIN_LOCATION_TEMPORAL",
+                                       "operationId":  "80cb04d6-5e30-43ea-9ed0-5b52a23360e7",
+                                       "inputText":  "После планки начала болеть поясница.",
+                                       "error":  "AI routing output failed deterministic server validation.",
+                                       "details":  {
+                                                       "code":  "AI_ROUTING_SEGMENT_CONTRACT_FAILED",
+                                                       "status":  502,
+                                                       "details":  {
+                                                                       "segmentId":  "seg2",
+                                                                       "domainFacetKey":  "domain.body_physiology::PROCESS",
+                                                                       "rootCanonicalKey":  "domain.body_physiology",
+                                                                       "facetCode":  "PROCESS"
+                                                                   }
+                                                   },
+                                       "audit":  {
+                                                     "usage":  [
+                                                                   {
+                                                                       "id":  "98a81a31-559b-4c98-9397-4934bd75bcfa",
+                                                                       "selected_tier_code":  "nano",
+                                                                       "model_name":  "gpt-5.4-nano",
+                                                                       "status":  "openai_completed",
+                                                                       "input_tokens":  1996,
+                                                                       "cached_input_tokens":  0,
+                                                                       "output_tokens":  139,
+                                                                       "total_tokens":  2135,
+                                                                       "estimated_provider_cost_usd":  0.002852,
+                                                                       "actual_provider_cost_usd":  0.00057295,
+                                                                       "max_output_tokens":  500,
+                                                                       "created_at":  "2026-08-12T09:16:23.635109+00:00",
+                                                                       "completed_at":  "2026-08-12T09:16:25.798+00:00",
+                                                                       "request_metadata":  {
+                                                                                                "stage":  "domain_facet_routing",
+                                                                                                "contract":  "GSR1F_GLOBAL_OBSERVATION_PREVIEW_V1",
+                                                                                                "previewOnly":  true,
+                                                                                                "walletDebited":  false,
+                                                                                                "conservativeInputTokenUpperBound":  11135
+                                                                                            }
+                                                                   }
+                                                               ],
+                                                     "reservations":  [
+                                                                          {
+                                                                              "id":  "c5a59c98-7a0d-4e8a-ad59-90fdf5ecb139",
+                                                                              "call_index":  1,
+                                                                              "tier_code":  "nano",
+                                                                              "model_name":  "gpt-5.4-nano",
+                                                                              "input_tokens":  11135,
+                                                                              "cached_input_tokens":  0,
+                                                                              "max_output_tokens":  500,
+                                                                              "estimated_max_cost_usd":  0.002852,
+                                                                              "hard_cap_usd":  0.1,
+                                                                              "created_at":  "2026-08-12T09:16:23.543619+00:00"
+                                                                          }
+                                                                      ],
+                                                     "usageRowCount":  1,
+                                                     "reservationCount":  1,
+                                                     "actualProviderCostUsd":  0.00057295,
+                                                     "reservedMaximumProviderCostUsd":  0.002852
+                                                 }
+                                   },
+                      "rawBody":  null
+                  },
+                  {
+                      "caseId":  "G11_MEAL_CONSUMES",
+                      "inputText":  "Съел пирожное.",
+                      "operationId":  "99b5f109-ac2d-48de-bff7-be64c80053f5",
+                      "httpStatus":  200,
+                      "ok":  true,
+                      "actualProviderCostUsd":  0.0009486500000000001,
+                      "reservedMaximumProviderCostUsd":  0.0054984000000000005,
+                      "response":  {
+                                       "ok":  true,
+                                       "check":  "ARCTOR_GSR1K_EVENT_LINK_TEMPORAL_PREVIEW_CASE_V2",
+                                       "caseId":  "G11_MEAL_CONSUMES",
+                                       "operationId":  "99b5f109-ac2d-48de-bff7-be64c80053f5",
+                                       "inputText":  "Съел пирожное.",
+                                       "semantic":  {
+                                                        "passed":  true,
+                                                        "expected":  "one meal event + consumes -\u003e entity.food.item; no kcal/sugar/mass and no unrelated temporal relation."
+                                                    },
+                                       "noRealityWrite":  true,
+                                       "costWithinHardCap":  true,
+                                       "exactlyTwoProviderCalls":  true,
+                                       "usageComplete":  true,
+                                       "beforeCounts":  {
+                                                            "globalFacts":  0,
+                                                            "globalLinks":  0
+                                                        },
+                                       "afterCounts":  {
+                                                           "globalFacts":  0,
+                                                           "globalLinks":  0
+                                                       },
+                                       "audit":  {
+                                                     "usage":  [
+                                                                   {
+                                                                       "id":  "de658cae-dc7e-4c75-bb4b-adeab1ad58fe",
+                                                                       "selected_tier_code":  "nano",
+                                                                       "model_name":  "gpt-5.4-nano",
+                                                                       "status":  "openai_completed",
+                                                                       "input_tokens":  1994,
+                                                                       "cached_input_tokens":  0,
+                                                                       "output_tokens":  79,
+                                                                       "total_tokens":  2073,
+                                                                       "estimated_provider_cost_usd":  0.0028438,
+                                                                       "actual_provider_cost_usd":  0.00049755,
+                                                                       "max_output_tokens":  500,
+                                                                       "created_at":  "2026-08-12T09:16:27.622743+00:00",
+                                                                       "completed_at":  "2026-08-12T09:16:29.338+00:00",
+                                                                       "request_metadata":  {
+                                                                                                "stage":  "domain_facet_routing",
+                                                                                                "contract":  "GSR1F_GLOBAL_OBSERVATION_PREVIEW_V1",
+                                                                                                "previewOnly":  true,
+                                                                                                "walletDebited":  false,
+                                                                                                "conservativeInputTokenUpperBound":  11094
+                                                                                            }
+                                                                   },
+                                                                   {
+                                                                       "id":  "a46d9114-9bd4-4f7a-9591-fb83f9850cef",
+                                                                       "selected_tier_code":  "nano",
+                                                                       "model_name":  "gpt-5.4-nano",
+                                                                       "status":  "openai_completed",
+                                                                       "input_tokens":  1468,
+                                                                       "cached_input_tokens":  0,
+                                                                       "output_tokens":  126,
+                                                                       "total_tokens":  1594,
+                                                                       "estimated_provider_cost_usd":  0.0026546,
+                                                                       "actual_provider_cost_usd":  0.0004511,
+                                                                       "max_output_tokens":  900,
+                                                                       "created_at":  "2026-08-12T09:16:30.105051+00:00",
+                                                                       "completed_at":  "2026-08-12T09:16:31.484+00:00",
+                                                                       "request_metadata":  {
+                                                                                                "stage":  "leaf_parameter_selection",
+                                                                                                "contract":  "GSR1F_GLOBAL_OBSERVATION_PREVIEW_V1",
+                                                                                                "previewOnly":  true,
+                                                                                                "walletDebited":  false,
+                                                                                                "conservativeInputTokenUpperBound":  7648
+                                                                                            }
+                                                                   }
+                                                               ],
+                                                     "reservations":  [
+                                                                          {
+                                                                              "id":  "49202662-f2ab-4acf-a5dc-e56de64eab4c",
+                                                                              "call_index":  1,
+                                                                              "tier_code":  "nano",
+                                                                              "model_name":  "gpt-5.4-nano",
+                                                                              "input_tokens":  11094,
+                                                                              "cached_input_tokens":  0,
+                                                                              "max_output_tokens":  500,
+                                                                              "estimated_max_cost_usd":  0.0028438,
+                                                                              "hard_cap_usd":  0.1,
+                                                                              "created_at":  "2026-08-12T09:16:27.560209+00:00"
+                                                                          },
+                                                                          {
+                                                                              "id":  "f2866d89-f868-4c36-ad81-24cacad679a9",
+                                                                              "call_index":  2,
+                                                                              "tier_code":  "nano",
+                                                                              "model_name":  "gpt-5.4-nano",
+                                                                              "input_tokens":  7648,
+                                                                              "cached_input_tokens":  0,
+                                                                              "max_output_tokens":  900,
+                                                                              "estimated_max_cost_usd":  0.0026546,
+                                                                              "hard_cap_usd":  0.1,
+                                                                              "created_at":  "2026-08-12T09:16:30.046047+00:00"
+                                                                          }
+                                                                      ],
+                                                     "usageRowCount":  2,
+                                                     "reservationCount":  2,
+                                                     "actualProviderCostUsd":  0.0009486500000000001,
+                                                     "reservedMaximumProviderCostUsd":  0.0054984000000000005
+                                                 },
+                                       "preview":  {
+                                                       "ok":  true,
+                                                       "contractVersion":  "GSR1K_GLOBAL_OBSERVATION_LINK_PREVIEW_V1",
+                                                       "previewOnly":  true,
+                                                       "dbFactWriteExecuted":  false,
+                                                       "operationId":  "99b5f109-ac2d-48de-bff7-be64c80053f5",
+                                                       "actorId":  "0308f254-b34f-48f0-858b-a82a71ceb6b9",
+                                                       "modelTier":  "nano",
+                                                       "model":  "gpt-5.4-nano",
+                                                       "reportedAt":  "2026-08-12T09:16:27.479Z",
+                                                       "timeZone":  "Europe/Warsaw",
+                                                       "locale":  "ru",
+                                                       "rows":  [
+                                                                    {
+                                                                        "segmentId":  "seg1",
+                                                                        "sourceFragment":  "Съел пирожное.",
+                                                                        "selected":  {
+                                                                                         "valueObjectId":  "3d2f2aed-e971-50e9-bc6d-76678d27222e",
+                                                                                         "canonicalKey":  "process.nutrition.meal",
+                                                                                         "title":  "Приём пищи",
+                                                                                         "facetCode":  "PROCESS",
+                                                                                         "objectKindCode":  "food_intake",
+                                                                                         "semanticMatchMethodCode":  "ai_candidate"
+                                                                                     },
+                                                                        "confidence":  0.86,
+                                                                        "facts":  [
+
+                                                                                  ],
+                                                                        "eventLinks":  [
+                                                                                           {
+                                                                                               "relationCode":  "consumes",
+                                                                                               "target":  {
+                                                                                                              "valueObjectId":  "628469da-e705-5dc0-ae35-b79792eefc45",
+                                                                                                              "canonicalKey":  "entity.food.item",
+                                                                                                              "title":  "Пищевой продукт/блюдо"
+                                                                                                          },
+                                                                                               "rawFragment":  "Съел пирожное",
+                                                                                               "linkStatus":  "proposed",
+                                                                                               "sourceReliabilityCode":  "user_reported"
+                                                                                           }
+                                                                                       ],
+                                                                        "temporalLinks":  [
+
+                                                                                          ],
+                                                                        "temporal":  {
+                                                                                         "occurredAtIso":  null,
+                                                                                         "occurredAtRaw":  null,
+                                                                                         "temporalPrecision":  "unknown"
+                                                                                     }
+                                                                    }
+                                                                ],
+                                                       "safety":  {
+                                                                      "hardCapUsd":  0.1,
+                                                                      "maxProviderCallsConfigured":  2,
+                                                                      "providerCallsUsed":  2,
+                                                                      "automaticProviderRetries":  0,
+                                                                      "operationDeadlineMs":  55000,
+                                                                      "providerCallTimeoutMs":  25000,
+                                                                      "maxInputTokensPerCall":  20000,
+                                                                      "maxOutputTokensPerCall":  4000,
+                                                                      "reservedMaximumProviderCostUsd":  0.0054984,
+                                                                      "actualProviderCostUsd":  0.0009486500000000001
+                                                                  },
+                                                       "warnings":  [
+
+                                                                    ]
+                                                   }
+                                   },
+                      "rawBody":  null
+                  }
+              ]
+}

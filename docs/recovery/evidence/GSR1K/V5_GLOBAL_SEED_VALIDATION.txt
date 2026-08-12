@@ -1,0 +1,27 @@
+PASS: Global System Reality Seed v1 machine contract is structurally valid.
+Roots: 12
+Non-root nodes: 138
+Total ontology objects: 150
+Custom kind extensions: 69
+Semantic parameters: 32
+Leaf parameter contracts: 27
+Gold fixtures: 24
+Storage registry extensions still required before DB fact routing: 18
+  - blood_pressure_systolic_mmhg: extend
+  - blood_pressure_diastolic_mmhg: extend
+  - sleep_latency_minutes: extend
+  - food_mass_g: extend
+  - energy_kcal: leaf_specific
+  - caffeine_mg: extend
+  - alcohol_g: extend
+  - amount_money: leaf_specific
+  - currency_code: extend
+  - humidity_percent: extend
+  - wind_speed_mps: extend_unit -> speed
+  - cloudiness_percent: extend
+  - noise_level_db: extend
+  - illumination_lux: extend
+  - score_percent: extend
+  - items_count: extend
+  - interruption_count: extend
+  - meal_label: extend
