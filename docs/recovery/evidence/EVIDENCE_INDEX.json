@@ -1,8 +1,8 @@
 {
-    "generatedAt":  "2026-08-12T09:09:10",
-    "copiedCount":  10,
+    "generatedAt":  "2026-08-12T09:41:09",
+    "copiedCount":  13,
     "generatedEvidenceCount":  1,
-    "indexedCount":  11,
+    "indexedCount":  14,
     "missingPatterns":  [
 
                         ],
@@ -73,6 +73,27 @@
                       "sourceDownloadsName":  null,
                       "sha256":  "05970052fdae549c2fdbf3b70dcc3ed360b08695675ded2a66983824429308dd",
                       "origin":  "generated_precommit_verification"
+                  },
+                  {
+                      "group":  "GSR1I",
+                      "file":  "docs/recovery/evidence/GSR1I/ARCTOR_GSR1I_DINNER_TEMPORAL_DURATION_GUARD_SMOKE_V5_20260812_092215_REPORT.txt",
+                      "sourceDownloadsName":  "ARCTOR_GSR1I_DINNER_TEMPORAL_DURATION_GUARD_SMOKE_V5_20260812_092215_REPORT.txt",
+                      "sha256":  "af8350c978a34e64fe15457565973cd362170f2a6de77d52b15df2b7c624f056",
+                      "origin":  "GSR1I_V5_gold_closure"
+                  },
+                  {
+                      "group":  "GSR1I",
+                      "file":  "docs/recovery/evidence/GSR1I/ARCTOR_GSR1I_DINNER_TEMPORAL_DURATION_GUARD_SMOKE_V5_20260812_092215_CASE_G24_DINNER_RESPONSE.json",
+                      "sourceDownloadsName":  "ARCTOR_GSR1I_DINNER_TEMPORAL_DURATION_GUARD_SMOKE_V5_20260812_092215_CASE_G24_DINNER_RESPONSE.json",
+                      "sha256":  "dc5d7caa4f84c09c0c8ab535c7f35fe16ee0013382b6cdadbea2994a24367d3c",
+                      "origin":  "GSR1I_V5_gold_closure"
+                  },
+                  {
+                      "group":  "GSR1I",
+                      "file":  "docs/recovery/evidence/GSR1I/ARCTOR_GSR1I_DINNER_TEMPORAL_DURATION_GUARD_SMOKE_V5_20260812_092215_TWO_CASE_RESULTS.json",
+                      "sourceDownloadsName":  "ARCTOR_GSR1I_DINNER_TEMPORAL_DURATION_GUARD_SMOKE_V5_20260812_092215_TWO_CASE_RESULTS.json",
+                      "sha256":  "8dd471893320b118270a4384499b2f0c2cd2e15932f3dca11fa319c040f72d1a",
+                      "origin":  "GSR1I_V5_gold_closure"
                   }
               ]
 }

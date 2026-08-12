@@ -1,61 +1,64 @@
 {
-  "schemaVersion": 1,
-  "generatedAt": "2026-08-12",
-  "project": "ARCTor.app",
-  "repository": "aleksanderpolansky/gpt-app",
-  "branch": "feat/gsr1-global-system-reality-machine-contract-v1-20260811",
-  "checkpointCommit": "843d1ea6bdf0ee822416d5ccfa9d8d445718c7c4",
-  "originMainAtCheckpoint": "220af0b45d6e91163c25d764d052658ffac32937",
-  "checkpointMeaning": "Last committed/pushed GSR1G baseline. Later GSR1H/GSR1I experiments are evidence unless separately committed.",
-  "globalReality": {
-    "p8Blocked": true,
-    "objectsTotal": 150,
-    "roots": 12,
-    "intermediate": 35,
-    "leaves": 103,
-    "semanticPilotParameters": 32,
-    "leafParameterContracts": 27,
-    "goldFixtures": 24
-  },
-  "openAiPilot": {
-    "tier": "nano",
-    "providerStages": 2,
-    "automaticRetries": 0,
-    "providerCallTimeoutSeconds": 25,
-    "routeDeadlineSeconds": 55,
-    "operationHardCapUsd": 0.1,
-    "documentedTwoStageMaxUsd": 0.00975,
-    "previewOnly": true,
-    "realityGraphWrite": false,
-    "store": false
-  },
-  "manualAppliedSql": [
-    "supabase/manual-applied/20260811_gsr1c_global_aliases_recognition_v3.sql",
-    "supabase/manual-applied/20260811_gsr1d_global_runtime_bridge_ai_budget_v1.sql",
-    "supabase/manual-applied/20260811_gsr1e_openai_pilot_price_refresh_budget_hardening_v1.sql"
-  ],
-  "goldStatus": {
-    "passed": [
-      "G06",
-      "G07",
-      "G11",
-      "G13",
-      "G17",
-      "G19",
-      "G21"
-    ],
-    "pending": [
-      "G24"
-    ],
-    "note": "G21 passed in GSR1I V3. G24 last canonical-label V4 attempt returned HTTP 500 and was rolled back."
-  },
-  "nextAction": "Diagnose exact G24 V4 HTTP 500 from preserved evidence; patch only that cause; rerun only G24.",
-  "recoveryDocs": [
-    "docs/recovery/README_RU.md",
-    "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
-    "docs/recovery/ARCTOR_DECISIONS_AND_FAILURES_RU.md",
-    "docs/recovery/ARCTOR_RESTORE_FROM_ZERO_RU.md",
-    "docs/recovery/CHECKPOINT_MANIFEST.json",
-    "docs/recovery/evidence/EVIDENCE_INDEX.json"
-  ]
+    "schemaVersion":  2,
+    "generatedAt":  "2026-08-12",
+    "project":  "ARCTor.app",
+    "repository":  "aleksanderpolansky/gpt-app",
+    "branch":  "feat/gsr1-global-system-reality-machine-contract-v1-20260811",
+    "originMainAtCheckpoint":  "220af0b45d6e91163c25d764d052658ffac32937",
+    "checkpointMeaning":  "Last committed/pushed GSR1G baseline. Later GSR1H/GSR1I experiments are evidence unless separately committed.",
+    "globalReality":  {
+                          "p8Blocked":  true,
+                          "objectsTotal":  150,
+                          "roots":  12,
+                          "intermediate":  35,
+                          "leaves":  103,
+                          "semanticPilotParameters":  32,
+                          "leafParameterContracts":  27,
+                          "goldFixtures":  24
+                      },
+    "openAiPilot":  {
+                        "tier":  "nano",
+                        "providerStages":  2,
+                        "automaticRetries":  0,
+                        "providerCallTimeoutSeconds":  25,
+                        "routeDeadlineSeconds":  55,
+                        "operationHardCapUsd":  0.1,
+                        "documentedTwoStageMaxUsd":  0.00975,
+                        "previewOnly":  true,
+                        "realityGraphWrite":  false,
+                        "store":  false
+                    },
+    "manualAppliedSql":  [
+                             "supabase/manual-applied/20260811_gsr1c_global_aliases_recognition_v3.sql",
+                             "supabase/manual-applied/20260811_gsr1d_global_runtime_bridge_ai_budget_v1.sql",
+                             "supabase/manual-applied/20260811_gsr1e_openai_pilot_price_refresh_budget_hardening_v1.sql"
+                         ],
+    "goldStatus":  {
+                       "passed":  [
+                                      "G06",
+                                      "G07",
+                                      "G11",
+                                      "G13",
+                                      "G17",
+                                      "G19",
+                                      "G21",
+                                      "G24"
+                                  ],
+                       "pending":  [
+
+                                   ],
+                       "note":  "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
+                   },
+    "nextAction":  "Proceed with remaining Global System Reality one-week pilot gates. P8 remains blocked.",
+    "recoveryDocs":  [
+                         "docs/recovery/README_RU.md",
+                         "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
+                         "docs/recovery/ARCTOR_DECISIONS_AND_FAILURES_RU.md",
+                         "docs/recovery/ARCTOR_RESTORE_FROM_ZERO_RU.md",
+                         "docs/recovery/CHECKPOINT_MANIFEST.json",
+                         "docs/recovery/evidence/EVIDENCE_INDEX.json"
+                     ],
+    "checkpointPolicy":  "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
+    "previousRecoveryCommit":  "1f4d760c00b7cff40a1bd0bf885f1cdf81eb43ec",
+    "documentedState":  "GSR1I_V5_G21_G24_GOLD_GAPS_CLOSED"
 }

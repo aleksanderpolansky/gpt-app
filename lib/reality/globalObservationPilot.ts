@@ -27,6 +27,7 @@ const TEMPORAL_PRECISIONS = new Set([
   "exact",
   "approximate",
   "date_only",
+  "window_only",
   "unknown",
 ]);
 
@@ -105,8 +106,7 @@ type ProposedFact = {
 };
 
 type SelectionRow = {
-  segmentId: string;
-  canonicalKey: string | null;
+  selectionKey: string;
   confidence: number;
   facts: ProposedFact[];
 };
@@ -213,6 +213,349 @@ function isValidTimeZone(value: string) {
   }
 }
 
+type ZonedDateParts = {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+};
+
+type DeterministicTemporalResolution = {
+  occurredAtIso: string | null;
+  temporalPrecision: string;
+};
+
+function readZonedDateParts(date: Date, timeZone: string): ZonedDateParts {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+
+  const byType = new Map(parts.map((part) => [part.type, part.value]));
+
+  return {
+    year: Number(byType.get("year")),
+    month: Number(byType.get("month")),
+    day: Number(byType.get("day")),
+    hour: Number(byType.get("hour")),
+    minute: Number(byType.get("minute")),
+    second: Number(byType.get("second")),
+  };
+}
+
+function zonedLocalDateTimeToIso(input: {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  timeZone: string;
+}) {
+  const desiredLocalAsUtc = Date.UTC(
+    input.year,
+    input.month - 1,
+    input.day,
+    input.hour,
+    input.minute,
+    0,
+  );
+
+  let candidate = new Date(desiredLocalAsUtc);
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const actual = readZonedDateParts(candidate, input.timeZone);
+    const actualLocalAsUtc = Date.UTC(
+      actual.year,
+      actual.month - 1,
+      actual.day,
+      actual.hour,
+      actual.minute,
+      actual.second,
+    );
+    const deltaMs = desiredLocalAsUtc - actualLocalAsUtc;
+
+    if (deltaMs === 0) {
+      return candidate.toISOString();
+    }
+
+    candidate = new Date(candidate.getTime() + deltaMs);
+  }
+
+  const finalParts = readZonedDateParts(candidate, input.timeZone);
+
+  if (
+    finalParts.year !== input.year ||
+    finalParts.month !== input.month ||
+    finalParts.day !== input.day ||
+    finalParts.hour !== input.hour ||
+    finalParts.minute !== input.minute
+  ) {
+    return null;
+  }
+
+  return candidate.toISOString();
+}
+
+function normalizeRussianClockHour(hour: number, daypart: string | null) {
+  if (!daypart) {
+    return hour;
+  }
+
+  if (daypart === "вечера" || daypart === "дня") {
+    return hour < 12 ? hour + 12 : hour;
+  }
+
+  if (daypart === "ночи" && hour === 12) {
+    return 0;
+  }
+
+  return hour;
+}
+
+function parseRussianClock(raw: string) {
+  const normalized = raw.toLocaleLowerCase().replaceAll("ё", "е");
+
+  const numericColon = normalized.match(/\b([01]?\d|2[0-3])[:.]([0-5]\d)\b/);
+
+  if (numericColon) {
+    return {
+      hour: Number(numericColon[1]),
+      minute: Number(numericColon[2]),
+    };
+  }
+
+  const numericDaypart = normalized.match(
+    /(?:^|\s)(?:в|около)\s+([01]?\d|2[0-3])\s*(утра|дня|вечера|ночи)(?=$|[\s,.!?])/iu,
+  );
+
+  if (numericDaypart) {
+    return {
+      hour: normalizeRussianClockHour(
+        Number(numericDaypart[1]),
+        numericDaypart[2],
+      ),
+      minute: 0,
+    };
+  }
+
+  const wordHours = new Map<string, number>([
+    ["один", 1],
+    ["одного", 1],
+    ["два", 2],
+    ["двух", 2],
+    ["три", 3],
+    ["трех", 3],
+    ["четыре", 4],
+    ["четырех", 4],
+    ["пять", 5],
+    ["пяти", 5],
+    ["шесть", 6],
+    ["шести", 6],
+    ["семь", 7],
+    ["семи", 7],
+    ["восемь", 8],
+    ["восьми", 8],
+    ["девять", 9],
+    ["девяти", 9],
+    ["десять", 10],
+    ["десяти", 10],
+    ["одиннадцать", 11],
+    ["одиннадцати", 11],
+    ["двенадцать", 12],
+    ["двенадцати", 12],
+  ]);
+
+  const wordDaypart = normalized.match(
+    /(?:^|\s)(один|одного|два|двух|три|трех|четыре|четырех|пять|пяти|шесть|шести|семь|семи|восемь|восьми|девять|девяти|десять|десяти|одиннадцать|одиннадцати|двенадцать|двенадцати)\s+(утра|дня|вечера|ночи)(?=$|[\s,.!?])/iu,
+  );
+
+  if (!wordDaypart) {
+    return null;
+  }
+
+  const baseHour = wordHours.get(wordDaypart[1]);
+
+  if (baseHour === undefined) {
+    return null;
+  }
+
+  return {
+    hour: normalizeRussianClockHour(baseHour, wordDaypart[2]),
+    minute: 0,
+  };
+}
+
+function resolveRussianRelativeTemporalRaw(input: {
+  raw: string;
+  reportedAt: Date;
+  timeZone: string;
+}): DeterministicTemporalResolution | null {
+  const normalized = input.raw.toLocaleLowerCase().replaceAll("ё", "е");
+
+  const relativeDayOffset = normalized.includes("позавчера")
+    ? -2
+    : normalized.includes("вчера")
+      ? -1
+      : normalized.includes("сегодня")
+        ? 0
+        : null;
+
+  if (relativeDayOffset === null) {
+    return null;
+  }
+
+  const clock = parseRussianClock(input.raw);
+  const hasDaypart =
+    /(утром|утра|днем|дня|вечером|вечера|ночью|ночи)/iu.test(normalized);
+
+  if (!clock) {
+    return {
+      occurredAtIso: null,
+      temporalPrecision: hasDaypart ? "window_only" : "date_only",
+    };
+  }
+
+  const localReference = readZonedDateParts(
+    input.reportedAt,
+    input.timeZone,
+  );
+  const localDateCursor = new Date(
+    Date.UTC(
+      localReference.year,
+      localReference.month - 1,
+      localReference.day,
+    ),
+  );
+
+  localDateCursor.setUTCDate(
+    localDateCursor.getUTCDate() + relativeDayOffset,
+  );
+
+  const occurredAtIso = zonedLocalDateTimeToIso({
+    year: localDateCursor.getUTCFullYear(),
+    month: localDateCursor.getUTCMonth() + 1,
+    day: localDateCursor.getUTCDate(),
+    hour: clock.hour,
+    minute: clock.minute,
+    timeZone: input.timeZone,
+  });
+
+  if (!occurredAtIso) {
+    throw new GlobalObservationPilotError(
+      502,
+      "TEMPORAL_LOCAL_TIME_RESOLUTION_FAILED",
+      "Explicit relative local time could not be resolved deterministically.",
+      { raw: input.raw, timeZone: input.timeZone },
+    );
+  }
+
+  return {
+    occurredAtIso,
+    temporalPrecision:
+      /(около|примерно|приблизительно)/iu.test(normalized)
+        ? "approximate"
+        : "exact",
+  };
+}
+
+function resolveTemporalRawDeterministically(input: {
+  raw: string;
+  locale: string;
+  reportedAt: Date;
+  timeZone: string;
+}) {
+  if (input.locale === "ru") {
+    return resolveRussianRelativeTemporalRaw(input);
+  }
+
+  return null;
+}
+
+function extractExplicitMealLabel(input: {
+  sourceFragment: string;
+  locale: string;
+}) {
+  if (input.locale !== "ru") {
+    return null;
+  }
+
+  const patterns = [
+    { label: "breakfast", pattern: /(завтракал(?:а|и)?|завтрак)/iu },
+    { label: "lunch", pattern: /(обедал(?:а|и)?|обед)/iu },
+    { label: "dinner", pattern: /(ужинал(?:а|и)?|ужин)/iu },
+  ];
+
+  for (const item of patterns) {
+    const match = input.sourceFragment.match(item.pattern);
+
+    if (match?.[0]) {
+      return {
+        label: item.label,
+        rawFragment: match[0],
+      };
+    }
+  }
+
+  return null;
+}
+
+function buildDeterministicRussianAvailableTimeSegment(input: {
+  sourceText: string;
+  locale: string;
+  existingSegments: RoutingSegment[];
+}): RoutingSegment[] | null {
+  if (input.locale !== "ru") {
+    return null;
+  }
+
+  const normalized = input.sourceText.toLocaleLowerCase().replaceAll("ё", "е");
+  const hasAvailabilityWord =
+    /(свободн[а-я]*|доступн[а-я]*)/iu.test(normalized);
+  const hasTimeUnit =
+    /(час[а-я]*|минут[а-я]*)/iu.test(normalized);
+  const hasAvailabilityPredicate =
+    /(есть|имею|имеется|будет|осталось|остается)/iu.test(normalized);
+
+  if (
+    !hasAvailabilityWord ||
+    !hasTimeUnit ||
+    !hasAvailabilityPredicate
+  ) {
+    return null;
+  }
+
+  const temporalMatch = input.sourceText.match(
+    /(сегодня|вчера|позавчера)(?:\s+(утром|днем|вечером|ночью))?/iu,
+  );
+  const occurredAtRaw = temporalMatch?.[0] ?? null;
+  const hasDaypart = Boolean(temporalMatch?.[2]);
+
+  return [
+    {
+      segmentId: input.existingSegments[0]?.segmentId || "available_time_1",
+      sourceFragment: input.sourceText.trim(),
+      lookupText: "Доступное время",
+      rootCanonicalKey: "domain.environment_context",
+      facetCode: "CONTEXT",
+      occurredAtIso: null,
+      occurredAtRaw,
+      temporalPrecision: occurredAtRaw
+        ? hasDaypart
+          ? "window_only"
+          : "date_only"
+        : "unknown",
+    },
+  ];
+}
+
 function estimateInputTokensUpperBound(input: {
   system: string;
   user: unknown;
@@ -288,7 +631,7 @@ function getRoutingSchema(
             occurredAtRaw: { type: ["string", "null"] },
             temporalPrecision: {
               type: "string",
-              enum: ["exact", "approximate", "date_only", "unknown"],
+              enum: ["exact", "approximate", "date_only", "window_only", "unknown"],
             },
           },
         },
@@ -297,7 +640,16 @@ function getRoutingSchema(
   };
 }
 
-function getSelectionSchema(): Record<string, unknown> {
+function getSelectionSchema(
+  groups: CandidateGroup[],
+): Record<string, unknown> {
+  const selectionKeys = groups.flatMap((group) => [
+    `${group.segmentId}::__NONE__`,
+    ...group.candidates.map(
+      (candidate) => `${group.segmentId}::${candidate.canonicalKey}`,
+    ),
+  ]);
+
   return {
     type: "object",
     additionalProperties: false,
@@ -305,15 +657,17 @@ function getSelectionSchema(): Record<string, unknown> {
     properties: {
       selections: {
         type: "array",
-        minItems: 1,
-        maxItems: MAX_SEGMENTS,
+        minItems: groups.length,
+        maxItems: groups.length,
         items: {
           type: "object",
           additionalProperties: false,
-          required: ["segmentId", "canonicalKey", "confidence", "facts"],
+          required: ["selectionKey", "confidence", "facts"],
           properties: {
-            segmentId: { type: "string" },
-            canonicalKey: { type: ["string", "null"] },
+            selectionKey: {
+              type: "string",
+              enum: selectionKeys,
+            },
             confidence: { type: "number" },
             facts: {
               type: "array",
@@ -449,6 +803,8 @@ function validateRoutingOutput(input: {
   sourceText: string;
   catalog: DomainFacetOption[];
   reportedAt: Date;
+  locale: string;
+  timeZone: string;
 }): RoutingSegment[] {
   const outputRecord = asRecord(input.output);
   const rawSegments = asArray(outputRecord?.segments);
@@ -492,9 +848,9 @@ function validateRoutingOutput(input: {
     const routeOption = allowedRoutes.get(domainFacetKey);
     const rootCanonicalKey = routeOption?.rootCanonicalKey ?? "";
     const facetCode = routeOption?.facetCode ?? "";
-    const occurredAtIso = asNullableText(row.occurredAtIso);
+    let occurredAtIso = asNullableText(row.occurredAtIso);
     const occurredAtRaw = asNullableText(row.occurredAtRaw);
-    const temporalPrecision = asText(row.temporalPrecision);
+    let temporalPrecision = asText(row.temporalPrecision);
 
     if (
       !segmentId ||
@@ -513,6 +869,32 @@ function validateRoutingOutput(input: {
         "AI routing output failed deterministic server validation.",
         { segmentId, domainFacetKey, rootCanonicalKey, facetCode },
       );
+    }
+
+    if (
+      occurredAtRaw &&
+      !containsFragment(input.sourceText, occurredAtRaw)
+    ) {
+      throw new GlobalObservationPilotError(
+        502,
+        "AI_ROUTING_TEMPORAL_EVIDENCE_INVALID",
+        "occurredAtRaw must be an exact substring of the user text.",
+        { segmentId, occurredAtRaw },
+      );
+    }
+
+    if (!occurredAtIso && occurredAtRaw) {
+      const deterministicTemporal = resolveTemporalRawDeterministically({
+        raw: occurredAtRaw,
+        locale: input.locale,
+        reportedAt: input.reportedAt,
+        timeZone: input.timeZone,
+      });
+
+      if (deterministicTemporal) {
+        occurredAtIso = deterministicTemporal.occurredAtIso;
+        temporalPrecision = deterministicTemporal.temporalPrecision;
+      }
     }
 
     if (occurredAtIso) {
@@ -1124,10 +1506,48 @@ async function runBudgetedJsonCall<T>(input: {
   }
 }
 
+function isTemporalClockMisclassifiedAsDuration(input: {
+  parameterCode: string;
+  rawFragment: string;
+  segment: RoutingSegment;
+  locale: string;
+}) {
+  if (
+    input.parameterCode !== "duration" ||
+    input.locale !== "ru" ||
+    !input.rawFragment ||
+    !input.segment.occurredAtRaw
+  ) {
+    return false;
+  }
+
+  const raw = input.rawFragment.toLocaleLowerCase().replaceAll("ё", "е");
+  const temporal = input.segment.occurredAtRaw
+    .toLocaleLowerCase()
+    .replaceAll("ё", "е");
+
+  const overlapsTemporalEvidence =
+    temporal.includes(raw) || raw.includes(temporal);
+
+  if (!overlapsTemporalEvidence) {
+    return false;
+  }
+
+  const hasExplicitDurationUnit =
+    /(секунд[а-я]*|минут[а-я]*|час(?:а|ов)?)/iu.test(raw);
+
+  if (hasExplicitDurationUnit) {
+    return false;
+  }
+
+  return /(сегодня|вчера|позавчера|утра|дня|вечера|ночи|около)/iu.test(raw);
+}
+
 function validateSelectionOutput(input: {
   output: unknown;
   segments: RoutingSegment[];
   groups: CandidateGroup[];
+  locale: string;
 }) {
   const outputRecord = asRecord(input.output);
   const rawSelections = asArray(outputRecord?.selections);
@@ -1159,9 +1579,13 @@ function validateSelectionOutput(input: {
       );
     }
 
-    const segmentId = asText(row.segmentId);
-    const canonicalKey = asNullableText(row.canonicalKey);
+    const selectionKey = asText(row.selectionKey);
     const confidence = asFiniteNumber(row.confidence);
+    const separatorIndex = selectionKey.indexOf("::");
+    const segmentId =
+      separatorIndex > 0 ? selectionKey.slice(0, separatorIndex) : "";
+    const selectedCanonicalKey =
+      separatorIndex > 0 ? selectionKey.slice(separatorIndex + 2) : "";
     const segment = segmentById.get(segmentId);
     const group = groupById.get(segmentId);
 
@@ -1177,19 +1601,19 @@ function validateSelectionOutput(input: {
         502,
         "AI_SELECTION_ROW_CONTRACT_FAILED",
         "AI selection row failed deterministic server validation.",
-        { segmentId },
+        { selectionKey, segmentId },
       );
     }
 
     seen.add(segmentId);
 
-    if (!canonicalKey) {
+    if (selectedCanonicalKey === "__NONE__") {
       if (asArray(row.facts).length > 0) {
         throw new GlobalObservationPilotError(
           502,
           "AI_SELECTION_FACT_WITHOUT_TARGET",
           "AI returned facts without a selected semantic leaf.",
-          { segmentId },
+          { selectionKey, segmentId },
         );
       }
 
@@ -1208,17 +1632,19 @@ function validateSelectionOutput(input: {
     }
 
     const candidate = group.candidates.find(
-      (item) => item.canonicalKey === canonicalKey,
+      (item) => item.canonicalKey === selectedCanonicalKey,
     );
 
     if (!candidate) {
       throw new GlobalObservationPilotError(
         502,
-        "AI_SELECTION_OUTSIDE_CANDIDATE_SET",
-        "AI selected a Value Object that was not in the bounded candidate set.",
-        { segmentId, canonicalKey },
+        "AI_SELECTION_KEY_CONTRACT_FAILED",
+        "selectionKey did not resolve inside its segment candidate set.",
+        { selectionKey, segmentId, selectedCanonicalKey },
       );
     }
+
+    const canonicalKey = candidate.canonicalKey;
 
     const parameterByCode = new Map(
       candidate.parameters.map((parameter) => [
@@ -1227,7 +1653,22 @@ function validateSelectionOutput(input: {
       ]),
     );
 
-    const facts = asArray(row.facts).map((rawFact) => {
+    let facts = asArray(row.facts)
+      .filter((rawFact) => {
+        const fact = asRecord(rawFact);
+
+        if (!fact) {
+          return true;
+        }
+
+        return !isTemporalClockMisclassifiedAsDuration({
+          parameterCode: asText(fact.parameterCode),
+          rawFragment: asText(fact.rawFragment),
+          segment,
+          locale: input.locale,
+        });
+      })
+      .map((rawFact) => {
       const fact = asRecord(rawFact);
 
       if (!fact) {
@@ -1296,6 +1737,39 @@ function validateSelectionOutput(input: {
         factStatus: "proposed",
       };
     });
+
+    const mealLabelContract = parameterByCode.get("meal_label");
+    const explicitMealLabel =
+      candidate.canonicalKey === "process.nutrition.meal"
+        ? extractExplicitMealLabel({
+            sourceFragment: segment.sourceFragment,
+            locale: input.locale,
+          })
+        : null;
+
+    if (
+      explicitMealLabel &&
+      mealLabelContract?.valueTypeCode === "text" &&
+      mealLabelContract.allowedUnitCodes.length > 0
+    ) {
+      const canonicalMealLabelFact = {
+        parameterCode: "meal_label",
+        unit: mealLabelContract.allowedUnitCodes[0],
+        valueType: "text" as const,
+        valueNumeric: null,
+        valueText: explicitMealLabel.label,
+        valueBoolean: null,
+        rawFragment: explicitMealLabel.rawFragment,
+        valueOriginCode: "user_explicit",
+        sourceReliabilityCode: "user_reported",
+        factStatus: "proposed",
+      };
+
+      facts = [
+        ...facts.filter((fact) => fact.parameterCode !== "meal_label"),
+        canonicalMealLabelFact,
+      ];
+    }
 
     return {
       segmentId,
@@ -1385,13 +1859,18 @@ export async function runGlobalObservationPreview(
       `Return 1-${MAX_SEGMENTS} segments.`,
       "A simple clause with one observed predicate/event/state MUST remain one segment.",
       "A duration, count, load, quantity, unit, or other measurement that describes an event MUST stay inside that event segment; NEVER create a separate segment only for the measurement.",
+      "A date, relative day, clock time, or daypart that qualifies the same event/state/resource is temporal metadata for that segment; NEVER split it into a separate segment.",
+      "An explicit amount of free/available time is a resource CONTEXT observation (context.resources.available_time), not leisure activity and not a Time DOMAIN.",
       "sourceFragment MUST be an exact substring of the user text and must contain the semantic event/state evidence, not only a number or unit.",
       "lookupText is a short semantic noun/activity phrase suitable for exact alias lookup.",
       "Choose domainFacetKey ONLY from the supplied live DOMAIN/FACET route options. The key already binds a valid root and facet; never invent or recombine them.",
       "Do not invent a new ontology object.",
       "Do not diagnose.",
       "Do not infer calories, caffeine, physiological effects, hidden metrics, or causal relations.",
-      "Temporal rule: occurredAt is not reportedAt. If occurrence time cannot be grounded from the text and supplied clock context, return null and temporalPrecision=unknown.",
+      "Temporal rule: occurredAt is not reportedAt.",
+      "If the text contains an explicit relative/date/time/daypart expression, put that exact expression in occurredAtRaw. For relative expressions such as today/yesterday, leave occurredAtIso null; the server resolves supported local-time phrases deterministically from occurredAtRaw and the supplied timezone.",
+      "A daypart without an explicit clock time is a temporal window, not a made-up hour. Never convert 'вечером' into 18:00 or another invented clock time.",
+      "If no temporal expression is stated, return occurredAtRaw=null, occurredAtIso=null, temporalPrecision=unknown.",
       "Never turn temporal adjacency into causality.",
     ].join("\n");
 
@@ -1416,23 +1895,34 @@ export async function runGlobalObservationPreview(
       signal: controller.signal,
     });
 
-    const segments = validateRoutingOutput({
+    const aiSegments = validateRoutingOutput({
       output: routingCall.parsed,
       sourceText: inputText,
       catalog,
       reportedAt,
+      locale,
+      timeZone,
     });
+
+    const segments =
+      buildDeterministicRussianAvailableTimeSegment({
+        sourceText: inputText,
+        locale,
+        existingSegments: aiSegments,
+      }) ?? aiSegments;
 
     const candidateGroups = await buildCandidateGroups(segments, locale);
 
-    const selectionSchema = getSelectionSchema();
+    const selectionSchema = getSelectionSchema(candidateGroups);
     const selectionSystem = [
       "You are ARCTor Global System Reality routing stage 2.",
       "For every segment return exactly one selection row.",
-      "Choose canonicalKey ONLY from that segment's supplied candidate list, or null.",
-      "Never output an ontology object not supplied by the server.",
+      "Choose selectionKey ONLY from the schema enum. Each key already binds one segment to one allowed candidate or __NONE__.",
+      "Never move a candidate across segments and never output an ontology object not supplied by the server.",
       "For facts use ONLY parameterCode and unit pairs supplied for the selected candidate.",
       "Extract values ONLY when explicitly stated by the user in sourceFragment.",
+      "A clock time is occurrence metadata, NEVER elapsed duration. For example 'около девяти вечера' means occurred-at about 21:00, not duration=9 hours.",
+      "Lexical meal categories such as breakfast/lunch/dinner may be normalized only when directly expressed by the source wording; this is normalization, not inference.",
       "rawFragment MUST be an exact substring that contains the evidence for the value.",
       "Do not estimate or infer calories, caffeine amount, diagnosis, physical harm, mood effects, causal effects, or any unstated number.",
       "If a value is not explicitly stated, omit that fact.",
@@ -1454,7 +1944,7 @@ export async function runGlobalObservationPreview(
       model,
       system: selectionSystem,
       user: selectionUser,
-      schemaName: "arctor_gsr1_leaf_parameter_selection_v1",
+      schemaName: "arctor_gsr1_leaf_parameter_selection_v2",
       schema: selectionSchema,
       maxOutputTokens: SELECTION_MAX_OUTPUT_TOKENS,
       signal: controller.signal,
@@ -1464,6 +1954,7 @@ export async function runGlobalObservationPreview(
       output: selectionCall.parsed,
       segments,
       groups: candidateGroups,
+      locale,
     });
 
     const reservedMaxUsd = Math.max(

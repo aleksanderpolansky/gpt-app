@@ -1,0 +1,107 @@
+ARCTor.app - GSR-1I Dinner Temporal/Duration Guard Smoke v5
+TIMESTAMP=20260812_092215
+STATUS=PASS_GSR1I_V5_G24_FIXED_READY_TO_COMMIT
+
+FAILURE:
+
+
+INPUT DIAGNOSIS AFTER GSR1I V4:
+Recovery knowledge base is now committed/pushed separately at
+1f4d760c00b7cff40a1bd0bf885f1cdf81eb43ec.
+
+G21_AVAILABLE_TIME already PASSES and is not rerun.
+
+Exact G24 V4 raw response shows the HTTP 500 was NOT caused by canonical
+meal-label replacement. The request failed earlier because stage 2 emitted:
+  parameterCode=duration
+  unit=hour
+from the occurrence-time phrase "около девяти вечера".
+
+That is a semantic category error:
+  "около девяти вечера" = occurred-at clock time
+  NOT elapsed duration = 9 hours.
+
+V5 FIX UNDER TEST:
+1. Keep all V3/V4 fixes: available-time routing, Russian temporal parsing,
+   enum-bound selectionKey, and deterministic meal_label canonicalization.
+2. Before normal fact validation, deterministically discard a proposed
+   duration fact when its evidence overlaps occurredAtRaw, looks like a
+   clock/daypart expression, and contains no explicit duration unit.
+3. A real duration such as "два часа" remains valid because it contains an
+   explicit duration unit.
+4. Add the same distinction to the stage-2 prompt as a soft aid.
+5. Rerun ONLY G24 once. No other gold case is rerun.
+
+BRANCH:
+feat/gsr1-global-system-reality-machine-contract-v1-20260811
+
+HEAD:
+1f4d760c00b7cff40a1bd0bf885f1cdf81eb43ec
+
+EXPECTED_HEAD:
+1f4d760c00b7cff40a1bd0bf885f1cdf81eb43ec
+
+GSR1F_VALIDATION_EXIT:
+0
+
+GLOBAL_SEED_VALIDATION_EXIT:
+0
+
+DIFF_CHECK_EXIT:
+0
+
+PRODUCTION_BUILD_EXIT:
+0
+
+CASE_COUNT:
+1
+
+PASS_COUNT:
+1
+
+FAIL_COUNT:
+0
+
+TOTAL_ACTUAL_PROVIDER_COST_USD:
+0.000742
+
+TOTAL_RESERVED_MAXIMUM_PROVIDER_COST_USD:
+0.004975
+
+PER_OPERATION_HARD_CAP_USD:
+0.1
+
+DOCUMENTED_PER_CASE_MAX_USD:
+0.00975
+
+DOCUMENTED_SUITE_MAX_USD:
+0.00975
+
+SUITE_HARD_STOP_USD:
+0.1
+
+CASE SUMMARY:
+G24_DINNER: HTTP=200 OK=True ACTUAL_USD=0.000742 RESERVED_USD=0.004975
+
+GIT STATUS:
+ M lib/reality/globalObservationPilot.ts
+ M scripts/validate-gsr1f-global-observation-preview-v1.mjs
+
+SAFETY:
+- THIS SCRIPT MAKES REAL OPENAI API CALLS only after validators/build/readiness.
+- Only G24_DINNER is rerun; G21 and the other passing cases are not rerun.
+- Nano only.
+- Each case is a separate operation with DB hard cap USD 0.10.
+- Two provider stages maximum per case.
+- Zero automatic provider retries.
+- One POST per case; no PowerShell retry.
+- Cases run sequentially.
+- Documented maximum for this one G24 operation = USD 0.00975.
+- Suite hard stop = USD 0.10.
+- No Reality Graph fact write.
+- No commit/push.
+- No Vercel settings change.
+- If the G24 smoke fails, the main worktree is restored to the exact
+  committed baseline automatically.
+- If G24 passes, exactly two modified runtime/validator files remain ready for controlled commit.
+- P8 remains blocked.

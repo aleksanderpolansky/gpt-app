@@ -167,3 +167,33 @@ GSR1I Dinner Canonical Label Smoke V4 попытался исправить то
 6. после этого вернуться к one-week pilot gates.
 
 P8 остаётся заблокирован.
+## 9. Авторитетное обновление — GSR1I V5, 2026-08-12
+
+Этот раздел новее описания незавершённого G24 выше.
+
+G21 и G24 теперь оба прошли узкие gold-проверки.
+
+G24 Ужинал вчера около девяти вечера. подтверждён как:
+
+- leaf process.nutrition.meal;
+- meal_label=dinner;
+- occurredAtRaw=вчера около девяти вечера;
+- occurredAtIso=2026-08-11T19:00:00.000Z, что соответствует приблизительно 21:00 Europe/Warsaw;
+- 	emporalPrecision=approximate;
+- ошибочный duration=9 hour не сохраняется;
+- Reality Graph write не выполнялся;
+- ровно 2 provider calls;
+- actual provider cost USD 0.000742;
+- reserved maximum USD 0.004975.
+
+Исправления GSR1I теперь включают:
+
+1. enum-bound selectionKey=segmentId::canonicalKey, не позволяющий переносить leaf между candidate groups;
+2. относительное русское время хранит точное исходное свидетельство и преобразуется сервером, а расплывчатый daypart не получает выдуманный час;
+3. явное доступное время маршрутизируется как context.resources.available_time, а не leisure;
+4. русские meal labels детерминированно нормализуются в стабильные machine values;
+5. clock-time evidence не может стать elapsed duration без явной единицы длительности.
+
+Production build, GSR1F validator, Global Seed validator и diff check прошли.
+
+Следующий шаг после фиксации этого commit: продолжить оставшиеся Global System Reality one-week pilot gates. P8 остаётся заблокированным.

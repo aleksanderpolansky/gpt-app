@@ -123,6 +123,77 @@ check(
   ),
 );
 
+check(
+  "pilot_window_only_temporal_precision",
+  pilot.includes('"window_only"'),
+);
+check(
+  "pilot_temporal_metadata_stays_with_segment",
+  pilot.includes(
+    "A date, relative day, clock time, or daypart that qualifies the same event/state/resource is temporal metadata",
+  ),
+);
+check(
+  "pilot_temporal_raw_exact_evidence",
+  pilot.includes("AI_ROUTING_TEMPORAL_EVIDENCE_INVALID") &&
+    pilot.includes("occurredAtRaw must be an exact substring"),
+);
+check(
+  "pilot_ru_relative_time_server_parser",
+  pilot.includes("resolveRussianRelativeTemporalRaw") &&
+    pilot.includes("parseRussianClock") &&
+    pilot.includes("zonedLocalDateTimeToIso"),
+);
+check(
+  "pilot_daypart_no_invented_hour",
+  pilot.includes("Never convert 'вечером' into 18:00"),
+);
+check(
+  "pilot_selection_segment_candidate_pair_enum",
+  pilot.includes("selectionKey") &&
+    pilot.includes("`${group.segmentId}::${candidate.canonicalKey}`") &&
+    pilot.includes("enum: selectionKeys"),
+);
+check(
+  "pilot_deterministic_meal_label_normalization",
+  pilot.includes("extractExplicitMealLabel") &&
+    pilot.includes('parameterCode: "meal_label"') &&
+    pilot.includes('valueText: explicitMealLabel.label'),
+);
+check(
+  "pilot_meal_label_replaces_noncanonical_ai_text",
+  pilot.includes("canonicalMealLabelFact") &&
+    pilot.includes('facts.filter((fact) => fact.parameterCode !== "meal_label")'),
+);
+
+check(
+  "pilot_clock_time_never_becomes_duration",
+  pilot.includes("isTemporalClockMisclassifiedAsDuration") &&
+    pilot.includes("overlapsTemporalEvidence") &&
+    pilot.includes("hasExplicitDurationUnit") &&
+    pilot.includes("A clock time is occurrence metadata, NEVER elapsed duration"),
+);
+
+check(
+  "pilot_cyrillic_temporal_parser_avoids_ascii_word_boundary",
+  pilot.includes("parseRussianClock") &&
+    pilot.includes("(?=$|[\\s,.!?])") &&
+    !pilot.includes("/\\b(утром|утра|днем|дня|вечером|вечера|ночью|ночи)\\b/"),
+);
+check(
+  "pilot_available_time_deterministic_context_override",
+  pilot.includes("buildDeterministicRussianAvailableTimeSegment") &&
+    pilot.includes('lookupText: "Доступное время"') &&
+    pilot.includes('rootCanonicalKey: "domain.environment_context"') &&
+    pilot.includes('facetCode: "CONTEXT"'),
+);
+check(
+  "pilot_available_time_not_leisure_rule",
+  pilot.includes(
+    "An explicit amount of free/available time is a resource CONTEXT observation",
+  ),
+);
+
 const failed = checks.filter((item) => !item.passed);
 
 console.log(
