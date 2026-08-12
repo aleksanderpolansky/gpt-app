@@ -52,8 +52,15 @@ check(
 );
 
 check(
-  "pilot_env_gate",
-  pilot.includes('GSR1_OPENAI_PILOT_ENABLED !== "true"'),
+  "pilot_emergency_off_gate",
+  pilot.includes('GSR1_OPENAI_PILOT_ENABLED === "false"') &&
+    pilot.includes("emergency server switch"),
+);
+check(
+  "pilot_user_visible_analysis_trace",
+  pilot.includes("analysisTrace") &&
+    pilot.includes("candidateGroups: candidateGroups.map") &&
+    pilot.includes("allowedParameterCodes"),
 );
 check(
   "pilot_nano_only",

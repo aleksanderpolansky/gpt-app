@@ -1801,11 +1801,11 @@ function validateSelectionOutput(input: {
 export async function runGlobalObservationPreview(
   request: GlobalObservationPreviewRequest,
 ) {
-  if (process.env.GSR1_OPENAI_PILOT_ENABLED !== "true") {
+  if (process.env.GSR1_OPENAI_PILOT_ENABLED === "false") {
     throw new GlobalObservationPilotError(
       503,
       "GSR1_OPENAI_PILOT_DISABLED",
-      "GSR-1 OpenAI pilot is disabled.",
+      "Full Global Reality analysis is disabled by the emergency server switch.",
     );
   }
 
@@ -1978,6 +1978,33 @@ export async function runGlobalObservationPreview(
       reportedAt: reportedAt.toISOString(),
       timeZone,
       locale,
+      analysisTrace: {
+        routing: segments.map((segment) => ({
+          segmentId: segment.segmentId,
+          sourceFragment: segment.sourceFragment,
+          lookupText: segment.lookupText,
+          rootCanonicalKey: segment.rootCanonicalKey,
+          facetCode: segment.facetCode,
+          occurredAtIso: segment.occurredAtIso,
+          occurredAtRaw: segment.occurredAtRaw,
+          temporalPrecision: segment.temporalPrecision,
+        })),
+        candidateGroups: candidateGroups.map((group) => ({
+          segmentId: group.segmentId,
+          resolutionMode: group.resolutionMode,
+          exactMatchKind: group.exactMatchKind,
+          candidates: group.candidates.map((candidate) => ({
+            canonicalKey: candidate.canonicalKey,
+            title: candidate.title,
+            description: candidate.description,
+            facetCode: candidate.facetCode,
+            objectKindCode: candidate.objectKindCode,
+            allowedParameterCodes: candidate.parameters.map(
+              (parameter) => parameter.parameterCode,
+            ),
+          })),
+        })),
+      },
       rows: previewRows,
       safety: {
         hardCapUsd: HARD_CAP_USD,

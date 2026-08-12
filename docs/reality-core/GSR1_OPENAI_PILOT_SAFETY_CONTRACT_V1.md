@@ -106,3 +106,20 @@ No OpenAI call is possible through the new route unless:
 
 The repository patch itself does not change this environment variable and does
 not make any OpenAI call.
+
+## 2026-08-12 production mode
+
+The authenticated Global Reality preview is now enabled by default for the
+production Activity AI Lab.
+
+The legacy environment variable remains only as an emergency OFF switch:
+
+`GSR1_OPENAI_PILOT_ENABLED=false`
+
+If the variable is absent, the bounded Nano pipeline is allowed to run.
+
+Unchanged safeguards: active actor context, Nano-only model, two provider
+stages, zero automatic retries, USD 0.10 hard operation cap, 25 second provider
+timeout, 55 second route deadline, `store=false`, server-bounded candidate
+selection, parameter/evidence validation, and preview-only Reality Graph
+behavior.

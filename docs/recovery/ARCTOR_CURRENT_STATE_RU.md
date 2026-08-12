@@ -306,3 +306,22 @@ P8 остаётся заблокированным.
 Следующий блок: **IMPLEMENTATION GSR1L-P1** — минимальная recognition-profile table + read-only assembled profile/candidate RPC + ограниченный pilot seed. Перед SQL/кодовыми изменениями используется уже завершённый intake; новый intake нужен только если implementation scope выходит за проверенную инфраструктуру.
 
 Полная спецификация: `docs/recovery/specs/ARCTor_Value_Object_Recognition_Profile_and_AI_Server_Routing_Architecture_v1_RU_20260812.docx`.
+
+## 2026-08-12 — Global catalog + Activity AI Lab production correction
+
+Маркер: `GLOBAL_CATALOG_ACTIVITY_AI_PRODUCTION_V1`
+
+`/value-objects` теперь является объединённым каталогом доступных ЦО/ОН:
+- GLOBAL SYSTEM objects из `scope_code=global`;
+- объекты текущего активного actor/profile.
+
+Глобальные системные объекты показываются read-only в списке и явно помечаются
+как системные. Персональные объекты сохраняют обычный переход на карточку.
+
+`/activity-ai-lab` остаётся отдельной страницей только для ввода и разбора
+активности. Каталог ЦО туда не переносится.
+
+Global Reality preview включён по умолчанию. Точное значение
+`GSR1_OPENAI_PILOT_ENABLED=false` остаётся аварийным OFF. Response получает
+безопасный `analysisTrace` с реальными bounded candidate groups; скрытая
+chain-of-thought не возвращается.

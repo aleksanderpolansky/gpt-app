@@ -6,7 +6,7 @@ import { getLocaleSearchParam } from "@/i18n";
 
 export const metadata: Metadata = {
   title: "Observation objects | AI Navigator",
-  description: "Observation objects owned by the current active profile.",
+  description: "Global system and active-profile observation objects.",
 };
 
 type ValueObjectsPageProps = {

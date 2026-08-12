@@ -367,10 +367,7 @@ export async function GET() {
     return errorResponse;
   }
 
-  const { data: valueObjects, error: valueObjectsError } = await supabase
-    .from("value_objects")
-    .select(
-      `
+  const selectShape = `
       *,
       organizations (
         id,
@@ -378,38 +375,80 @@ export async function GET() {
         organization_type,
         status
       )
-    `,
-    )
-    .eq("owner_user_id", appUser.id)
-    .eq("owner_actor_id", personActor.id)
-    .order("created_at", { ascending: false });
+    `;
 
-  if (valueObjectsError) {
+  const [ownedResult, globalResult] = await Promise.all([
+    supabase
+      .from("value_objects")
+      .select(selectShape)
+      .eq("owner_user_id", appUser.id)
+      .eq("owner_actor_id", personActor.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("value_objects")
+      .select(selectShape)
+      .eq("scope_code", "global")
+      .order("created_at", { ascending: false }),
+  ]);
+
+  if (ownedResult.error) {
     return NextResponse.json(
-      { error: valueObjectsError.message },
+      { error: ownedResult.error.message },
       { status: 500 },
     );
   }
 
-  const observationValueObjects = (valueObjects ?? []).filter((valueObject) => {
-    const metadata =
+  if (globalResult.error) {
+    return NextResponse.json(
+      { error: globalResult.error.message },
+      { status: 500 },
+    );
+  }
+
+  const mergedById = new Map<string, Record<string, unknown>>();
+
+  for (const valueObject of [
+    ...(globalResult.data ?? []),
+    ...(ownedResult.data ?? []),
+  ]) {
+    if (
       valueObject &&
       typeof valueObject === "object" &&
-      valueObject.metadata_json &&
-      typeof valueObject.metadata_json === "object" &&
-      !Array.isArray(valueObject.metadata_json)
-        ? (valueObject.metadata_json as Record<string, unknown>)
-        : null;
+      typeof valueObject.id === "string"
+    ) {
+      mergedById.set(valueObject.id, valueObject as Record<string, unknown>);
+    }
+  }
 
-    return (
-      metadata?.system_hidden_from_observation_ui !== true &&
-      metadata?.system_root_code !== "products_services"
-    );
-  });
+  const observationValueObjects = [...mergedById.values()].filter(
+    (valueObject) => {
+      const rawMetadata = valueObject.metadata_json;
+      const metadata =
+        rawMetadata &&
+        typeof rawMetadata === "object" &&
+        !Array.isArray(rawMetadata)
+          ? (rawMetadata as Record<string, unknown>)
+          : null;
+
+      return (
+        metadata?.system_hidden_from_observation_ui !== true &&
+        metadata?.system_root_code !== "products_services"
+      );
+    },
+  );
 
   return NextResponse.json({
     ok: true,
     valueObjects: observationValueObjects,
+    counts: {
+      total: observationValueObjects.length,
+      global: observationValueObjects.filter(
+        (valueObject) => valueObject.scope_code === "global",
+      ).length,
+      actorOwned: observationValueObjects.filter(
+        (valueObject) => valueObject.scope_code !== "global",
+      ).length,
+    },
   });
 }
 

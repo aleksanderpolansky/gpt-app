@@ -5,6 +5,19 @@ import { useMemo, useState } from "react";
 
 type Locale = "ru" | "en" | "pl" | "uk" | "de" | "es" | "cs";
 
+type TraceKind =
+  | "system"
+  | "model"
+  | "check"
+  | "fact"
+  | "unresolved"
+  | "fallback";
+
+type TraceLine = {
+  kind: TraceKind;
+  text: string;
+};
+
 type GlobalFact = {
   parameterCode?: string;
   unit?: string;
@@ -36,6 +49,33 @@ type GlobalRow = {
   };
 };
 
+type RoutingTraceRow = {
+  segmentId?: string;
+  sourceFragment?: string;
+  lookupText?: string;
+  rootCanonicalKey?: string;
+  facetCode?: string;
+  occurredAtIso?: string | null;
+  occurredAtRaw?: string | null;
+  temporalPrecision?: string;
+};
+
+type CandidateTrace = {
+  canonicalKey?: string;
+  title?: string;
+  description?: string | null;
+  facetCode?: string;
+  objectKindCode?: string | null;
+  allowedParameterCodes?: string[];
+};
+
+type CandidateGroupTrace = {
+  segmentId?: string;
+  resolutionMode?: "exact" | "bounded_candidates" | string;
+  exactMatchKind?: string | null;
+  candidates?: CandidateTrace[];
+};
+
 type GlobalPreview = {
   ok?: boolean;
   contractVersion?: string;
@@ -48,6 +88,10 @@ type GlobalPreview = {
   timeZone?: string;
   locale?: string;
   rows?: GlobalRow[];
+  analysisTrace?: {
+    routing?: RoutingTraceRow[];
+    candidateGroups?: CandidateGroupTrace[];
+  };
   safety?: {
     hardCapUsd?: number;
     providerCallsUsed?: number;
@@ -62,21 +106,12 @@ type GlobalPreview = {
 };
 
 type SemanticPackage = {
-  packageId?: string;
-  status?: string;
   recognition?: {
     status?: string;
-    confidence?: number;
-    reason?: string;
     detectedActivityTitle?: string;
-    shouldAskUserBeforeSaving?: boolean;
   };
   measures?: Array<Record<string, unknown>>;
   semanticCategories?: Array<Record<string, unknown>>;
-  valueObjectMatches?: Array<Record<string, unknown>>;
-  factPreviews?: Array<Record<string, unknown>>;
-  missingValueObjectCandidates?: Array<Record<string, unknown>>;
-  counters?: Record<string, unknown>;
 };
 
 type SemanticPreview = {
@@ -86,11 +121,6 @@ type SemanticPreview = {
   errors?: string[];
 };
 
-type TraceLine = {
-  kind: "system" | "ai" | "server" | "fact" | "warning";
-  text: string;
-};
-
 type AnalysisResult =
   | {
       mode: "global";
@@ -98,7 +128,7 @@ type AnalysisResult =
       trace: TraceLine[];
     }
   | {
-      mode: "semantic-fallback";
+      mode: "fallback";
       payload: SemanticPreview;
       trace: TraceLine[];
       globalError: string;
@@ -122,7 +152,7 @@ function createOperationId() {
   return `activity-ai-lab-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function formatConfidence(value: unknown) {
+function formatModelConfidence(value: unknown) {
   return typeof value === "number" && Number.isFinite(value)
     ? `${Math.round(value * 100)}%`
     : "не указана";
@@ -133,7 +163,11 @@ function formatUnknown(value: unknown) {
     return null;
   }
 
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
     return String(value);
   }
 
@@ -144,7 +178,7 @@ function formatUnknown(value: unknown) {
   }
 }
 
-function formatGlobalFactValue(fact: GlobalFact) {
+function formatFactValue(fact: GlobalFact) {
   if (typeof fact.valueNumeric === "number") {
     return `${fact.valueNumeric}${fact.unit ? ` ${fact.unit}` : ""}`;
   }
@@ -162,66 +196,129 @@ function formatGlobalFactValue(fact: GlobalFact) {
 
 function buildGlobalTrace(inputText: string, payload: GlobalPreview): TraceLine[] {
   const rows = payload.rows ?? [];
+  const routing = payload.analysisTrace?.routing ?? [];
+  const candidateGroups = payload.analysisTrace?.candidateGroups ?? [];
+  const groupBySegment = new Map(
+    candidateGroups.map((group) => [group.segmentId ?? "", group]),
+  );
+  const routingBySegment = new Map(
+    routing.map((segment) => [segment.segmentId ?? "", segment]),
+  );
+
   const trace: TraceLine[] = [
     {
       kind: "system",
-      text: `Получил сообщение: «${inputText}»`,
+      text: `Получено сообщение: «${inputText}»`,
     },
     {
-      kind: "server",
-      text: `Запущен защищённый анализ. Модель: ${payload.model ?? "не указана"}, уровень: ${payload.modelTier ?? "не указан"}.`,
-    },
-    {
-      kind: "ai",
-      text: `После проверки сервером получено наблюдений: ${rows.length}.`,
+      kind: "system",
+      text:
+        `Запущен полный анализ Global Reality. Модель: ${payload.model ?? "не указана"}; ` +
+        `уровень: ${payload.modelTier ?? "не указан"}.`,
     },
   ];
 
   rows.forEach((row, index) => {
-    const fragment = row.sourceFragment?.trim() || "(фрагмент не указан)";
-    const selected = row.selected;
+    const segmentId = row.segmentId ?? "";
+    const route = routingBySegment.get(segmentId);
+    const group = groupBySegment.get(segmentId);
+    const fragment =
+      row.sourceFragment?.trim() ||
+      route?.sourceFragment?.trim() ||
+      "(фрагмент не указан)";
 
-    if (selected) {
-      trace.push({
-        kind: "ai",
-        text:
-          `Наблюдение ${index + 1}: «${fragment}» → считаю наиболее подходящим ЦО ` +
-          `«${selected.title ?? selected.canonicalKey ?? "без названия"}» ` +
-          `(${selected.canonicalKey ?? "canonical key не указан"}), ` +
-          `грань ${selected.facetCode ?? "не указана"}, уверенность ${formatConfidence(row.confidence)}.`,
-      });
+    trace.push({
+      kind: "model",
+      text:
+        `Наблюдение ${index + 1}: модель выделила фрагмент «${fragment}». ` +
+        `Для поиска сформулировано «${route?.lookupText ?? "не указано"}». ` +
+        `Предварительная область: ${route?.rootCanonicalKey ?? "не указана"}; ` +
+        `грань: ${route?.facetCode ?? "не указана"}.`,
+    });
 
-      trace.push({
-        kind: "server",
-        text:
-          `Способ сопоставления: ${selected.semanticMatchMethodCode ?? "не указан"}. ` +
-          `Сервер разрешил этот ЦО только после проверки допустимого набора кандидатов.`,
-      });
+    const candidates = group?.candidates ?? [];
+
+    if (group) {
+      if (group.resolutionMode === "exact" && candidates.length === 1) {
+        trace.push({
+          kind: "check",
+          text:
+            `Проверка ЦО: сервер нашёл точное совпадение в живом глобальном реестре: ` +
+            `«${candidates[0]?.title ?? candidates[0]?.canonicalKey ?? "без названия"}». ` +
+            `Тип совпадения: ${group.exactMatchKind ?? "точное"}.`,
+        });
+      } else {
+        const candidateText =
+          candidates.length > 0
+            ? candidates
+                .map(
+                  (candidate) =>
+                    `«${candidate.title ?? candidate.canonicalKey ?? "без названия"}»` +
+                    (candidate.canonicalKey
+                      ? ` [${candidate.canonicalKey}]`
+                      : ""),
+                )
+                .join("; ")
+            : "кандидатов нет";
+
+        trace.push({
+          kind: "check",
+          text:
+            `Проверка ЦО: сервер реально прочитал глобальную онтологию и сформировал ` +
+            `ограниченный список из ${candidates.length} кандидатов. ${candidateText}.`,
+        });
+      }
     } else {
       trace.push({
-        kind: "warning",
+        kind: "unresolved",
         text:
-          `Наблюдение ${index + 1}: «${fragment}» → уверенного листового ЦО не выбрано. ` +
-          `Уверенность ответа ${formatConfidence(row.confidence)}. Неизвестность сохранена.`,
+          "Список серверных кандидатов в ответе отсутствует. Такой результат нельзя считать прозрачным.",
       });
     }
 
-    const temporal = row.temporal;
-    if (temporal?.occurredAtRaw || temporal?.occurredAtIso) {
+    if (row.selected) {
       trace.push({
-        kind: "server",
+        kind: "model",
         text:
-          `Время наблюдения: источник «${temporal.occurredAtRaw ?? "нет буквального фрагмента"}», ` +
-          `точность ${temporal.temporalPrecision ?? "unknown"}, ` +
-          `нормализованное время ${temporal.occurredAtIso ?? "не вычислено"}.`,
+          `Выбор модели: «${row.selected.title ?? row.selected.canonicalKey ?? "без названия"}» ` +
+          `(${row.selected.canonicalKey ?? "canonical key не указан"}). ` +
+          `Указанная моделью уверенность выбора среди разрешённых кандидатов: ` +
+          `${formatModelConfidence(row.confidence)}. Это не вероятность истинности факта.`,
+      });
+
+      trace.push({
+        kind: "check",
+        text:
+          `Сервер подтвердил, что выбранный ЦО был внутри разрешённого набора. ` +
+          `Способ сопоставления: ${row.selected.semanticMatchMethodCode ?? "не указан"}.`,
+      });
+    } else {
+      trace.push({
+        kind: "unresolved",
+        text:
+          `Для фрагмента «${fragment}» модель не выбрала листовой ЦО. ` +
+          `Это сохраняется как неопределённость, а не заменяется выдуманным объектом.`,
+      });
+    }
+
+    if (row.temporal?.occurredAtRaw || row.temporal?.occurredAtIso) {
+      trace.push({
+        kind: "check",
+        text:
+          `Время: исходный фрагмент «${row.temporal.occurredAtRaw ?? "нет"}»; ` +
+          `точность ${row.temporal.temporalPrecision ?? "unknown"}; ` +
+          `нормализованное время ${row.temporal.occurredAtIso ?? "не вычислено"}.`,
       });
     }
 
     const facts = row.facts ?? [];
+
     if (facts.length === 0) {
       trace.push({
-        kind: "server",
-        text: `Для наблюдения ${index + 1} явных разрешённых количественных/качественных фактов не извлечено.`,
+        kind: "check",
+        text:
+          `Для наблюдения ${index + 1} нет явных фактов, которые одновременно присутствуют ` +
+          `в тексте и разрешены параметрами выбранного ЦО.`,
       });
     }
 
@@ -229,21 +326,24 @@ function buildGlobalTrace(inputText: string, payload: GlobalPreview): TraceLine[
       trace.push({
         kind: "fact",
         text:
-          `Факт: ${fact.parameterCode ?? "параметр"} = ${formatGlobalFactValue(fact)}. ` +
-          `Основание в тексте: «${fact.rawFragment ?? "не указано"}». ` +
+          `${fact.parameterCode ?? "параметр"} = ${formatFactValue(fact)}. ` +
+          `Основание: «${fact.rawFragment ?? "не указано"}». ` +
           `Статус: ${fact.factStatus ?? "proposed"}.`,
       });
     });
   });
 
-  const cost = payload.safety?.actualProviderCostUsd;
+  const actualCost = payload.safety?.actualProviderCostUsd;
   trace.push({
-    kind: "server",
+    kind: "check",
     text:
-      `Проверка безопасности: вызовов модели ${payload.safety?.providerCallsUsed ?? "?"}, ` +
-      `автоповторов ${payload.safety?.automaticProviderRetries ?? 0}, ` +
-      `фактическая стоимость ${typeof cost === "number" ? `$${cost.toFixed(6)}` : "пока неизвестна"}, ` +
-      `жёсткий предел операции $${payload.safety?.hardCapUsd ?? 0.1}.`,
+      `Безопасность операции: вызовов модели ${payload.safety?.providerCallsUsed ?? "?"}; ` +
+      `автоповторов ${payload.safety?.automaticProviderRetries ?? 0}; ` +
+      `стоимость ${
+        typeof actualCost === "number"
+          ? `$${actualCost.toFixed(6)}`
+          : "не определена"
+      }; жёсткий предел $${payload.safety?.hardCapUsd ?? 0.1}.`,
   });
 
   trace.push({
@@ -251,50 +351,50 @@ function buildGlobalTrace(inputText: string, payload: GlobalPreview): TraceLine[
     text:
       payload.dbFactWriteExecuted === true
         ? "ВНИМАНИЕ: ответ сообщает о записи факта."
-        : "Этот экран только анализирует сообщение. Сам анализ не записывает факты в Reality Graph.",
+        : "Анализ завершён без записи фактов. Сохранение выполняется только отдельным подтверждением.",
   });
 
   (payload.warnings ?? []).forEach((warning) => {
-    trace.push({ kind: "warning", text: warning });
+    trace.push({ kind: "unresolved", text: warning });
   });
 
   return trace;
 }
 
-function buildSemanticFallbackTrace(
+function buildFallbackTrace(
   inputText: string,
   payload: SemanticPreview,
   globalError: string,
 ): TraceLine[] {
   const pkg = payload.activityProcessingPackage;
-  const recognition = pkg?.recognition;
   const categories = pkg?.semanticCategories ?? [];
-  const matches = pkg?.valueObjectMatches ?? [];
   const measures = pkg?.measures ?? [];
-  const facts = pkg?.factPreviews ?? [];
-  const missing = pkg?.missingValueObjectCandidates ?? [];
 
   const trace: TraceLine[] = [
-    { kind: "system", text: `Получил сообщение: «${inputText}»` },
     {
-      kind: "warning",
-      text:
-        `Новый Global Reality анализатор не завершил запрос: ${globalError}. ` +
-        "Показываю результат уже существующего семантического конвейера.",
+      kind: "system",
+      text: `Получено сообщение: «${inputText}»`,
     },
     {
-      kind: "ai",
+      kind: "fallback",
       text:
-        `Распознавание: ${recognition?.status ?? "не указано"}, ` +
-        `уверенность ${formatConfidence(recognition?.confidence)}. ` +
-        `${recognition?.reason ?? ""}`.trim(),
+        `Полный Global Reality анализ не выполнился: ${globalError}. ` +
+        `Включён резервный технический разбор.`,
+    },
+    {
+      kind: "fallback",
+      text:
+        "Важно: в резервном режиме OpenAI-модель НЕ вызывается и база ЦО НЕ читается. " +
+        "Поэтому здесь нет настоящего сопоставления с ценными объектами и нельзя показывать проценты как уверенность AI.",
     },
   ];
 
-  if (recognition?.detectedActivityTitle) {
+  if (pkg?.recognition?.detectedActivityTitle) {
     trace.push({
-      kind: "ai",
-      text: `Основная активность: «${recognition.detectedActivityTitle}».`,
+      kind: "fallback",
+      text:
+        `Старый программный разбор сохранил текст активности как: ` +
+        `«${pkg.recognition.detectedActivityTitle}».`,
     });
   }
 
@@ -306,22 +406,10 @@ function buildSemanticFallbackTrace(
       `категория ${index + 1}`;
 
     trace.push({
-      kind: "ai",
+      kind: "fallback",
       text:
-        `Смысловая категория ${index + 1}: ${label}; ` +
-        `слой ${formatUnknown(category.layer) ?? "не указан"}; ` +
-        `уверенность ${formatConfidence(category.confidence)}.`,
-    });
-  });
-
-  matches.forEach((match, index) => {
-    trace.push({
-      kind: "server",
-      text:
-        `Сопоставление с ЦО ${index + 1}: ` +
-        `${formatUnknown(match.valueObjectTitle) ?? formatUnknown(match.valueObjectId) ?? "ЦО не найден"}; ` +
-        `статус ${formatUnknown(match.matchStatus) ?? "не указан"}; ` +
-        `уверенность ${formatConfidence(match.confidence)}.`,
+        `Программное правило ${index + 1} заметило категорию «${label}». ` +
+        "Это только словарное правило старого конвейера, не результат AI и не найденный ЦО.",
     });
   });
 
@@ -329,46 +417,39 @@ function buildSemanticFallbackTrace(
     trace.push({
       kind: "fact",
       text:
-        `Измерение ${index + 1}: ${formatUnknown(measure.measureType) ?? "параметр"} = ` +
+        `Простое правило извлечения величин ${index + 1}: ` +
+        `${formatUnknown(measure.measureType) ?? "параметр"} = ` +
         `${formatUnknown(measure.numericValue) ?? formatUnknown(measure.textValue) ?? "не указано"} ` +
         `${formatUnknown(measure.unit) ?? ""}`.trim(),
     });
   });
 
-  facts.forEach((fact, index) => {
-    trace.push({
-      kind: "fact",
-      text:
-        `Предлагаемый факт ${index + 1}: ` +
-        `${formatUnknown(fact.semanticObjectKey) ?? formatUnknown(fact.valueObjectTitle) ?? "без ЦО"}; ` +
-        `значение ${formatUnknown(fact.numericValue) ?? formatUnknown(fact.textValue) ?? "не указано"} ` +
-        `${formatUnknown(fact.unit) ?? ""}; статус ${formatUnknown(fact.status) ?? "candidate"}.`,
-    });
-  });
-
-  if (missing.length > 0) {
-    trace.push({
-      kind: "warning",
-      text: `Найдены смысловые объекты без готового ЦО: ${missing.length}. Они не создаются автоматически.`,
-    });
-  }
-
   trace.push({
-    kind: "system",
+    kind: "unresolved",
     text:
-      "Это запасной семантический preview. Для фактического сохранения сообщения используй кнопку «Добавить как прошедшую активность».",
+      "ЦО в живой базе не искались. Сохранение этой активности с данного экрана заблокировано до успешного полного анализа.",
   });
 
   return trace;
 }
 
 function TracePanel({ lines, loading }: { lines: TraceLine[]; loading: boolean }) {
-  const prefix: Record<TraceLine["kind"], string> = {
-    system: "SYSTEM",
-    ai: "AI",
-    server: "SERVER",
-    fact: "FACT",
-    warning: "WARN",
+  const label: Record<TraceKind, string> = {
+    system: "СИСТЕМА",
+    model: "МОДЕЛЬ",
+    check: "ПРОВЕРКА",
+    fact: "ФАКТ",
+    unresolved: "НЕОПР.",
+    fallback: "РЕЗЕРВ",
+  };
+
+  const style: Record<TraceKind, string> = {
+    system: "text-zinc-500",
+    model: "text-fuchsia-300",
+    check: "text-emerald-400",
+    fact: "text-sky-400",
+    unresolved: "text-amber-400",
+    fallback: "text-orange-400",
   };
 
   return (
@@ -378,47 +459,41 @@ function TracePanel({ lines, loading }: { lines: TraceLine[]; loading: boolean }
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-400">
             Журнал анализа
           </p>
-          <p className="mt-1 text-xs text-zinc-500">
-            Показывает проверяемые этапы обработки, а не скрытые внутренние рассуждения модели.
+          <p className="mt-1 text-xs leading-5 text-zinc-500">
+            Здесь показано, что модель предложила и что затем проверил сервер. Проценты
+            показываются только там, где это действительно самооценка выбора модели.
           </p>
         </div>
         <span className="rounded-full border border-zinc-800 px-3 py-1 text-xs text-zinc-500">
-          {loading ? "processing" : "ready"}
+          {loading ? "обработка" : "готово"}
         </span>
       </div>
 
-      <div className="max-h-[620px] space-y-2 overflow-auto font-mono text-xs leading-6">
+      <div className="max-h-[650px] space-y-2 overflow-auto font-mono text-xs leading-6">
         {lines.length === 0 ? (
           <p className="text-zinc-600">
-            &gt; Введите сообщение и нажмите «Разобрать».
+            &gt; Введите сообщение и нажмите «Разобрать сообщение».
           </p>
         ) : null}
 
         {lines.map((line, index) => (
-          <div className="grid grid-cols-[64px_1fr] gap-3" key={`${index}-${line.text}`}>
-            <span
-              className={
-                line.kind === "warning"
-                  ? "text-amber-400"
-                  : line.kind === "fact"
-                    ? "text-sky-400"
-                    : line.kind === "ai"
-                      ? "text-fuchsia-300"
-                      : line.kind === "server"
-                        ? "text-emerald-400"
-                        : "text-zinc-500"
-              }
-            >
-              {prefix[line.kind]}
+          <div
+            className="grid grid-cols-[82px_1fr] gap-3"
+            key={`${index}-${line.text}`}
+          >
+            <span className={style[line.kind]}>{label[line.kind]}</span>
+            <span className="whitespace-pre-wrap break-words text-zinc-200">
+              {line.text}
             </span>
-            <span className="whitespace-pre-wrap break-words text-zinc-200">{line.text}</span>
           </div>
         ))}
 
         {loading ? (
-          <div className="grid grid-cols-[64px_1fr] gap-3">
-            <span className="text-emerald-400">SYSTEM</span>
-            <span className="animate-pulse text-zinc-400">Анализ выполняется…</span>
+          <div className="grid grid-cols-[82px_1fr] gap-3">
+            <span className="text-zinc-500">СИСТЕМА</span>
+            <span className="animate-pulse text-zinc-400">
+              Выполняется полный анализ…
+            </span>
           </div>
         ) : null}
       </div>
@@ -432,7 +507,7 @@ export default function ActivityAiLabPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [liveTrace, setLiveTrace] = useState<TraceLine[]>([]);
+  const [trace, setTrace] = useState<TraceLine[]>([]);
 
   const timeZone =
     typeof Intl !== "undefined"
@@ -440,38 +515,29 @@ export default function ActivityAiLabPage() {
       : "UTC";
 
   const reviewHref = useMemo(() => {
-    const text = inputText.trim();
-
-    if (!text) {
-      return "/activity-today?locale=ru";
-    }
-
     const params = new URLSearchParams({
       locale,
       returnTo: "activity-journal",
       temporalDirection: "past",
-      text,
+      text: inputText.trim(),
     });
 
     return `/calendar/activity-review?${params.toString()}`;
   }, [inputText, locale]);
 
   const futureHref = useMemo(() => {
-    const text = inputText.trim();
-
-    if (!text) {
-      return "/calendar";
-    }
-
     const params = new URLSearchParams({
       locale,
       returnTo: "calendar",
       temporalDirection: "future",
-      text,
+      text: inputText.trim(),
     });
 
     return `/calendar/activity-review?${params.toString()}`;
   }, [inputText, locale]);
+
+  const fullAnalysisSucceeded =
+    result?.mode === "global" && result.payload.ok === true;
 
   async function analyze() {
     const text = inputText.trim();
@@ -484,98 +550,93 @@ export default function ActivityAiLabPage() {
     setLoading(true);
     setError(null);
     setResult(null);
-    setLiveTrace([
-      { kind: "system", text: `Получил сообщение: «${text}»` },
+    setTrace([
+      { kind: "system", text: `Получено сообщение: «${text}»` },
       {
         kind: "system",
         text:
-          "Запускаю анализ: выделение наблюдений → поиск ЦО → извлечение только явно указанных фактов → серверная проверка.",
+          "Запускаю полный анализ: выделение наблюдений → реальные кандидаты ЦО → выбор модели → проверка фактов сервером.",
       },
     ]);
 
-    const operationId = createOperationId();
-
     try {
-      const globalResponse = await fetch("/api/ai/reality/global-observation-preview", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
+      const globalResponse = await fetch(
+        "/api/ai/reality/global-observation-preview",
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            inputText: text,
+            locale,
+            timeZone,
+            operationId: createOperationId(),
+          }),
         },
-        body: JSON.stringify({
-          inputText: text,
-          locale,
-          timeZone,
-          operationId,
-        }),
-      });
+      );
 
-      const globalPayload = (await globalResponse.json().catch(() => null)) as
-        | GlobalPreview
-        | null;
+      const globalPayload = (await globalResponse
+        .json()
+        .catch(() => null)) as GlobalPreview | null;
 
       if (globalResponse.ok && globalPayload?.ok === true) {
-        const trace = buildGlobalTrace(text, globalPayload);
-        setResult({ mode: "global", payload: globalPayload, trace });
-        setLiveTrace(trace);
+        const nextTrace = buildGlobalTrace(text, globalPayload);
+        setResult({ mode: "global", payload: globalPayload, trace: nextTrace });
+        setTrace(nextTrace);
         return;
       }
 
       const globalError =
         globalPayload?.error ||
         globalPayload?.code ||
-        `Global preview HTTP ${globalResponse.status}`;
+        `HTTP ${globalResponse.status}`;
 
-      setLiveTrace((current) => [
-        ...current,
+      const fallbackResponse = await fetch(
+        "/api/activity/semantic-orchestration-preview",
         {
-          kind: "warning",
-          text: `Основной анализатор не завершил запрос: ${globalError}. Пробую существующий семантический preview.`,
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            rawText: text,
+            inputLanguage: locale === "uk" ? "ru" : locale,
+            source: "manual",
+            mode: "preview_only",
+          }),
         },
-      ]);
+      );
 
-      const semanticResponse = await fetch("/api/activity/semantic-orchestration-preview", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          rawText: text,
-          inputLanguage: locale === "uk" ? "ru" : locale,
-          source: "manual",
-          mode: "preview_only",
-        }),
-      });
+      const fallbackPayload = (await fallbackResponse
+        .json()
+        .catch(() => null)) as SemanticPreview | null;
 
-      const semanticPayload = (await semanticResponse.json().catch(() => null)) as
-        | SemanticPreview
-        | null;
-
-      if (!semanticResponse.ok || !semanticPayload) {
-        const fallbackError =
-          semanticPayload?.error ||
-          semanticPayload?.errors?.join("; ") ||
-          `Semantic preview HTTP ${semanticResponse.status}`;
-        throw new Error(`${globalError}; fallback: ${fallbackError}`);
+      if (!fallbackPayload) {
+        throw new Error(
+          `${globalError}; резервный разбор также не вернул корректный ответ.`,
+        );
       }
 
-      const trace = buildSemanticFallbackTrace(text, semanticPayload, globalError);
+      const nextTrace = buildFallbackTrace(text, fallbackPayload, globalError);
       setResult({
-        mode: "semantic-fallback",
-        payload: semanticPayload,
-        trace,
+        mode: "fallback",
+        payload: fallbackPayload,
+        trace: nextTrace,
         globalError,
       });
-      setLiveTrace(trace);
+      setTrace(nextTrace);
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : "Неизвестная ошибка анализа.";
+      const message =
+        caught instanceof Error ? caught.message : "Неизвестная ошибка анализа.";
       setError(message);
-      setLiveTrace((current) => [
+      setTrace((current) => [
         ...current,
-        { kind: "warning", text: `Анализ остановлен: ${message}` },
+        { kind: "unresolved", text: `Анализ остановлен: ${message}` },
       ]);
     } finally {
       setLoading(false);
@@ -595,15 +656,14 @@ export default function ActivityAiLabPage() {
             Сообщить, что произошло
           </h1>
           <p className="mt-3 max-w-4xl text-sm leading-6 text-zinc-400">
-            Лучше описывать один основной эпизод за сообщение. В этом же сообщении можно
-            указать, что одновременно происходило ещё, что ты думал, чувствовал, с кем
-            взаимодействовал и какие величины были измерены.
+            Лучше описывать один основной эпизод за сообщение. В том же сообщении можно
+            указать параллельные действия, мысли, чувства, участников и измеренные величины.
           </p>
           <div className="mt-4 rounded-2xl border border-amber-900/60 bg-amber-950/20 p-4 text-xs leading-5 text-amber-100">
-            Здесь нет доступа к скрытой цепочке внутренних рассуждений модели. Вместо неё
-            показывается подробный проверяемый журнал: какие фрагменты распознаны, какие ЦО
-            предложены, какая уверенность, какие факты извлечены, на каком тексте они
-            основаны и что пропустил/разрешил сервер.
+            Журнал не показывает скрытые внутренние рассуждения модели. Он показывает
+            проверяемый результат обработки: что выделила модель, какие реальные ЦО
+            сервер дал ей на выбор, что она выбрала, какие факты извлечены и что сервер
+            подтвердил или оставил неопределённым.
           </div>
         </header>
 
@@ -615,11 +675,12 @@ export default function ActivityAiLabPage() {
             >
               Сообщение
             </label>
+
             <textarea
               className="mt-3 min-h-52 w-full rounded-2xl border border-zinc-800 bg-black px-4 py-4 text-base leading-7 text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-emerald-500"
               id="activity-ai-input"
               onChange={(event) => setInputText(event.target.value)}
-              placeholder="Например: Гулял 35 минут с дочерью, разговаривали о школе, сначала нервничал, потом успокоился."
+              placeholder="Например: сходил в магазин, купил две консервы тунца и макароны, заплатил 20 злотых."
               value={inputText}
             />
 
@@ -641,6 +702,7 @@ export default function ActivityAiLabPage() {
                   ))}
                 </select>
               </div>
+
               <div className="rounded-2xl border border-zinc-800 bg-black/50 p-4">
                 <p className="text-xs text-zinc-500">Часовой пояс</p>
                 <p className="mt-2 break-all text-sm text-zinc-200">{timeZone}</p>
@@ -662,6 +724,7 @@ export default function ActivityAiLabPage() {
               >
                 {loading ? "Разбираю…" : "Разобрать сообщение"}
               </button>
+
               <button
                 className="rounded-2xl border border-zinc-700 px-4 py-3 text-sm text-zinc-300 hover:border-zinc-500"
                 disabled={loading}
@@ -669,7 +732,7 @@ export default function ActivityAiLabPage() {
                   setInputText("");
                   setResult(null);
                   setError(null);
-                  setLiveTrace([]);
+                  setTrace([]);
                 }}
                 type="button"
               >
@@ -681,38 +744,32 @@ export default function ActivityAiLabPage() {
               <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                 После проверки
               </p>
-              <div className="mt-3 grid gap-3">
-                <Link
-                  className={[
-                    "rounded-2xl px-4 py-3 text-center text-sm font-semibold",
-                    inputText.trim()
-                      ? "bg-blue-500 text-black hover:bg-blue-400"
-                      : "pointer-events-none bg-zinc-800 text-zinc-600",
-                  ].join(" ")}
-                  href={reviewHref}
-                >
-                  Добавить как прошедшую активность
-                </Link>
-                <Link
-                  className={[
-                    "rounded-2xl border px-4 py-3 text-center text-sm font-semibold",
-                    inputText.trim()
-                      ? "border-violet-700 text-violet-200 hover:border-violet-500"
-                      : "pointer-events-none border-zinc-800 text-zinc-700",
-                  ].join(" ")}
-                  href={futureHref}
-                >
-                  Запланировать эту активность
-                </Link>
-              </div>
-              <p className="mt-3 text-xs leading-5 text-zinc-600">
-                Кнопка сохранения ведёт в существующий Activity Review / save-gate. Сам
-                терминал анализа ничего в Reality Graph не записывает автоматически.
-              </p>
+
+              {fullAnalysisSucceeded ? (
+                <div className="mt-3 grid gap-3">
+                  <Link
+                    className="rounded-2xl bg-blue-500 px-4 py-3 text-center text-sm font-semibold text-black hover:bg-blue-400"
+                    href={reviewHref}
+                  >
+                    Добавить как прошедшую активность
+                  </Link>
+                  <Link
+                    className="rounded-2xl border border-violet-700 px-4 py-3 text-center text-sm font-semibold text-violet-200 hover:border-violet-500"
+                    href={futureHref}
+                  >
+                    Запланировать эту активность
+                  </Link>
+                </div>
+              ) : (
+                <div className="mt-3 rounded-2xl border border-zinc-800 bg-black/40 p-4 text-sm leading-6 text-zinc-500">
+                  Сохранение станет доступно только после успешного полного анализа с
+                  реальным поиском по ЦО. Резервный разбор недостаточен.
+                </div>
+              )}
             </div>
           </div>
 
-          <TracePanel lines={liveTrace} loading={loading} />
+          <TracePanel lines={trace} loading={loading} />
         </section>
 
         {rawPayload ? (
@@ -732,12 +789,6 @@ export default function ActivityAiLabPage() {
             href="/activity-today?locale=ru"
           >
             Мой журнал активностей
-          </Link>
-          <Link
-            className="rounded-full border border-zinc-800 px-4 py-2 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200"
-            href="/activity-capture"
-          >
-            Старый Activity Capture
           </Link>
         </footer>
       </div>

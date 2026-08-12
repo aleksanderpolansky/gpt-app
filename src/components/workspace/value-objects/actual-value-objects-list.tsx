@@ -110,9 +110,9 @@ type LocalCopy = {
 const COPY: Record<LocaleCode, LocalCopy> = {
   en: {
     eyebrow: "Observation objects",
-    title: "My observation objects",
+    title: "Observation objects",
     description:
-      "Roots, intermediate nodes and leaves of the active profile. The list is organized for fast navigation through the observation tree.",
+      "Global system objects plus roots, intermediate nodes and leaves of the active profile. Search and structural filters work across the combined catalog.",
     total: "Total",
     roots: "Roots",
     intermediate: "Intermediate",
@@ -143,7 +143,7 @@ const COPY: Record<LocaleCode, LocalCopy> = {
   },
   pl: {
     eyebrow: "Obiekty obserwacji",
-    title: "Moje obiekty obserwacji",
+    title: "Obiekty obserwacji",
     description:
       "Korzenie, obiekty pośrednie i liście aktywnego profilu. Lista jest uporządkowana tak, aby szybko poruszać się po drzewie obserwacji.",
     total: "Razem",
@@ -176,9 +176,9 @@ const COPY: Record<LocaleCode, LocalCopy> = {
   },
   ru: {
     eyebrow: "Объекты наблюдения",
-    title: "Мои объекты наблюдения",
+    title: "Все объекты наблюдения",
     description:
-      "Корни, промежуточные объекты и листья активного профиля. Список устроен так, чтобы быстро видеть структуру и переходить к нужному объекту.",
+      "Глобальные системные ЦО/ОН и объекты активного профиля в одном каталоге. Поиск и структурные фильтры работают по всей совокупности.",
     total: "Всего",
     roots: "Корни",
     intermediate: "Промежуточные",
@@ -209,7 +209,7 @@ const COPY: Record<LocaleCode, LocalCopy> = {
   },
   uk: {
     eyebrow: "Об’єкти спостереження",
-    title: "Мої об’єкти спостереження",
+    title: "Об’єкти спостереження",
     description:
       "Корені, проміжні об’єкти та листи активного профілю. Список організовано для швидкої навігації деревом спостережень.",
     total: "Разом",
@@ -242,7 +242,7 @@ const COPY: Record<LocaleCode, LocalCopy> = {
   },
   de: {
     eyebrow: "Beobachtungsobjekte",
-    title: "Meine Beobachtungsobjekte",
+    title: "Beobachtungsobjekte",
     description:
       "Wurzeln, Zwischenobjekte und Blätter des aktiven Profils. Die Liste ist für eine schnelle Navigation im Beobachtungsbaum aufgebaut.",
     total: "Gesamt",
@@ -275,7 +275,7 @@ const COPY: Record<LocaleCode, LocalCopy> = {
   },
   es: {
     eyebrow: "Objetos de observación",
-    title: "Mis objetos de observación",
+    title: "Objetos de observación",
     description:
       "Raíces, objetos intermedios y hojas del perfil activo. La lista está organizada para navegar rápidamente por el árbol de observación.",
     total: "Total",
@@ -308,7 +308,7 @@ const COPY: Record<LocaleCode, LocalCopy> = {
   },
   cs: {
     eyebrow: "Objekty pozorování",
-    title: "Moje objekty pozorování",
+    title: "Objekty pozorování",
     description:
       "Kořeny, mezilehlé objekty a listy aktivního profilu. Seznam je uspořádán pro rychlou navigaci ve stromu pozorování.",
     total: "Celkem",
@@ -971,15 +971,21 @@ export function ActualValueObjectsList() {
                           </span>
                         </div>
 
-                        <Link
-                          href={buildLocaleAwareHref(
-                            getObjectDetailHref(valueObject),
-                            locale,
-                          )}
-                          className="shrink-0 text-[12px] font-bold text-[#3b6ef8] hover:underline"
-                        >
-                          {copy.open}
-                        </Link>
+                        {valueObject.scope_code === "global" ? (
+                          <span className="shrink-0 rounded-full border border-[#dfe4ff] bg-[#eef2ff] px-2.5 py-1 text-[10px] font-bold text-[#3b6ef8]">
+                            {copy.system}
+                          </span>
+                        ) : (
+                          <Link
+                            href={buildLocaleAwareHref(
+                              getObjectDetailHref(valueObject),
+                              locale,
+                            )}
+                            className="shrink-0 text-[12px] font-bold text-[#3b6ef8] hover:underline"
+                          >
+                            {copy.open}
+                          </Link>
+                        )}
                       </div>
 
                       <h2 className="mt-2 truncate text-[16px] font-bold text-[#111827]">
@@ -991,6 +997,12 @@ export function ActualValueObjectsList() {
                         <span aria-hidden="true">·</span>
                         <span>{getKindLabel(valueObject)}</span>
                       </div>
+
+                      {valueObject.canonical_key ? (
+                        <div className="mt-1 truncate font-mono text-[10px] text-[#8b91a7]">
+                          {valueObject.canonical_key}
+                        </div>
+                      ) : null}
 
                       <p className="mt-2 max-h-10 overflow-hidden text-[12px] leading-5 text-[#5a5f7a]">
                         {valueObject.description?.trim() || copy.noDescription}
