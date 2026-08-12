@@ -21,12 +21,27 @@ export type RunAiStructuredOutputContract = {
   strict?: boolean;
 };
 
+type RunAiReasoningEffort = "none" | "low" | "medium" | "high" | "xhigh";
+
 type RunAiJsonRequest = {
   system: string;
   user: unknown;
   model?: string;
   maxOutputTokens?: number;
   structuredOutput?: RunAiStructuredOutputContract;
+
+  // Optional per-request controls. Existing callers retain the historical
+  // defaults when these are omitted. The GSR pilot supplies all of them
+  // explicitly so a provider retry can never bypass its operation budget.
+  requestTimeoutMs?: number;
+  maxRetries?: number;
+  signal?: AbortSignal;
+  store?: boolean;
+  reasoningEffort?: RunAiReasoningEffort;
+
+  // Allows a tightly controlled caller to use a ceiling different from the
+  // global OPENAI_MAX_OUTPUT_TOKENS setting. This is not user-controlled.
+  outputTokenCeiling?: number;
 };
 
 export type RunAiJsonUsageMetadata = {
@@ -61,11 +76,16 @@ function asPositiveInteger(value: unknown): number | null {
   return null;
 }
 
-function getSafeMaxOutputTokens(maxOutputTokens?: number) {
+function getSafeMaxOutputTokens(
+  maxOutputTokens?: number,
+  outputTokenCeiling?: number,
+) {
   const configuredLimit = asPositiveInteger(OPENAI_MAX_OUTPUT_TOKENS) ?? 800;
-  const requestedLimit = asPositiveInteger(maxOutputTokens) ?? configuredLimit;
+  const explicitCeiling = asPositiveInteger(outputTokenCeiling);
+  const effectiveCeiling = explicitCeiling ?? configuredLimit;
+  const requestedLimit = asPositiveInteger(maxOutputTokens) ?? effectiveCeiling;
 
-  return Math.max(1, Math.min(requestedLimit, configuredLimit));
+  return Math.max(1, Math.min(requestedLimit, effectiveCeiling));
 }
 
 function extractOutputText(response: unknown) {
@@ -150,7 +170,10 @@ function readNumberField(record: Record<string, unknown> | null, keys: string[])
   return 0;
 }
 
-function extractUsageMetadata(response: unknown, fallbackModel: string): RunAiJsonUsageMetadata {
+function extractUsageMetadata(
+  response: unknown,
+  fallbackModel: string,
+): RunAiJsonUsageMetadata {
   const responseRecord = readRecord(response);
   const usageRecord = readRecord(responseRecord?.usage);
   const inputDetails = readRecord(
@@ -204,6 +227,12 @@ export async function runAiJsonWithUsageMetadata<T = unknown>({
   model,
   maxOutputTokens,
   structuredOutput,
+  requestTimeoutMs,
+  maxRetries,
+  signal,
+  store,
+  reasoningEffort,
+  outputTokenCeiling,
 }: RunAiJsonRequest): Promise<RunAiJsonWithUsageMetadataResult<T>> {
   if (!AI_ENABLED) {
     throw new Error("AI is disabled by AI_ENABLED=false");
@@ -211,10 +240,10 @@ export async function runAiJsonWithUsageMetadata<T = unknown>({
 
   const resolvedModel = model || OPENAI_DEFAULT_MODEL;
 
-  const response = await openai.responses.create({
+  const requestBody = {
     model: resolvedModel,
     reasoning: {
-      effort: "low",
+      effort: reasoningEffort ?? "low",
     },
     input: [
       {
@@ -226,7 +255,10 @@ export async function runAiJsonWithUsageMetadata<T = unknown>({
         content: JSON.stringify(user),
       },
     ],
-    max_output_tokens: getSafeMaxOutputTokens(maxOutputTokens),
+    max_output_tokens: getSafeMaxOutputTokens(
+      maxOutputTokens,
+      outputTokenCeiling,
+    ),
     text: {
       format: structuredOutput
         ? {
@@ -239,7 +271,21 @@ export async function runAiJsonWithUsageMetadata<T = unknown>({
             type: "json_object",
           },
     },
-  });
+    ...(typeof store === "boolean" ? { store } : {}),
+  };
+
+  const requestOptions = {
+    ...(typeof requestTimeoutMs === "number"
+      ? { timeout: requestTimeoutMs }
+      : {}),
+    ...(typeof maxRetries === "number" ? { maxRetries } : {}),
+    ...(signal ? { signal } : {}),
+  };
+
+  const response = await openai.responses.create(
+    requestBody as never,
+    requestOptions,
+  );
 
   const outputText = extractOutputText(response);
 
@@ -267,6 +313,12 @@ export async function runAiJson<T = unknown>({
   model,
   maxOutputTokens,
   structuredOutput,
+  requestTimeoutMs,
+  maxRetries,
+  signal,
+  store,
+  reasoningEffort,
+  outputTokenCeiling,
 }: RunAiJsonRequest): Promise<T> {
   const result = await runAiJsonWithUsageMetadata<T>({
     system,
@@ -274,6 +326,12 @@ export async function runAiJson<T = unknown>({
     model,
     maxOutputTokens,
     structuredOutput,
+    requestTimeoutMs,
+    maxRetries,
+    signal,
+    store,
+    reasoningEffort,
+    outputTokenCeiling,
   });
 
   return result.parsed;
