@@ -110,6 +110,19 @@ check(
   route.includes("resolveActiveActorContext"),
 );
 
+check(
+  "pilot_domain_facet_pair_enum",
+  pilot.includes("getDomainFacetRouteOptions") &&
+    pilot.includes("domainFacetKey") &&
+    pilot.includes("enum: routeKeys"),
+);
+check(
+  "pilot_measurement_stays_with_event",
+  pilot.includes(
+    "NEVER create a separate segment only for the measurement",
+  ),
+);
+
 const failed = checks.filter((item) => !item.passed);
 
 console.log(

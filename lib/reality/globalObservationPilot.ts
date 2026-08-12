@@ -38,6 +38,13 @@ type DomainFacetOption = {
   facets: string[];
 };
 
+type DomainFacetRouteOption = {
+  domainFacetKey: string;
+  rootCanonicalKey: string;
+  rootTitle: string;
+  facetCode: string;
+};
+
 type RoutingSegment = {
   segmentId: string;
   sourceFragment: string;
@@ -49,8 +56,18 @@ type RoutingSegment = {
   temporalPrecision: string;
 };
 
+type RoutingOutputSegment = {
+  segmentId: string;
+  sourceFragment: string;
+  lookupText: string;
+  domainFacetKey: string;
+  occurredAtIso: string | null;
+  occurredAtRaw: string | null;
+  temporalPrecision: string;
+};
+
 type RoutingOutput = {
-  segments: RoutingSegment[];
+  segments: RoutingOutputSegment[];
 };
 
 type ParameterContract = {
@@ -210,7 +227,34 @@ function estimateInputTokensUpperBound(input: {
   return Buffer.byteLength(serialized, "utf8") + 1_024;
 }
 
-function getRoutingSchema(): Record<string, unknown> {
+function getDomainFacetRouteOptions(
+  catalog: DomainFacetOption[],
+): DomainFacetRouteOption[] {
+  return catalog.flatMap((entry) =>
+    entry.facets.map((facetCode) => ({
+      domainFacetKey: `${entry.rootCanonicalKey}::${facetCode}`,
+      rootCanonicalKey: entry.rootCanonicalKey,
+      rootTitle: entry.title,
+      facetCode,
+    })),
+  );
+}
+
+function getRoutingSchema(
+  catalog: DomainFacetOption[],
+): Record<string, unknown> {
+  const routeKeys = getDomainFacetRouteOptions(catalog).map(
+    (option) => option.domainFacetKey,
+  );
+
+  if (routeKeys.length < 1) {
+    throw new GlobalObservationPilotError(
+      409,
+      "GLOBAL_DOMAIN_FACET_CATALOG_EMPTY",
+      "No active DOMAIN/FACET routes are available.",
+    );
+  }
+
   return {
     type: "object",
     additionalProperties: false,
@@ -227,8 +271,7 @@ function getRoutingSchema(): Record<string, unknown> {
             "segmentId",
             "sourceFragment",
             "lookupText",
-            "rootCanonicalKey",
-            "facetCode",
+            "domainFacetKey",
             "occurredAtIso",
             "occurredAtRaw",
             "temporalPrecision",
@@ -237,8 +280,10 @@ function getRoutingSchema(): Record<string, unknown> {
             segmentId: { type: "string" },
             sourceFragment: { type: "string" },
             lookupText: { type: "string" },
-            rootCanonicalKey: { type: "string" },
-            facetCode: { type: "string" },
+            domainFacetKey: {
+              type: "string",
+              enum: routeKeys,
+            },
             occurredAtIso: { type: ["string", "null"] },
             occurredAtRaw: { type: ["string", "null"] },
             temporalPrecision: {
@@ -419,10 +464,10 @@ function validateRoutingOutput(input: {
     );
   }
 
-  const allowed = new Map(
-    input.catalog.map((entry) => [
-      entry.rootCanonicalKey,
-      new Set(entry.facets),
+  const allowedRoutes = new Map(
+    getDomainFacetRouteOptions(input.catalog).map((option) => [
+      option.domainFacetKey,
+      option,
     ]),
   );
 
@@ -443,8 +488,10 @@ function validateRoutingOutput(input: {
     const segmentId = asText(row.segmentId);
     const sourceFragment = asText(row.sourceFragment);
     const lookupText = asText(row.lookupText);
-    const rootCanonicalKey = asText(row.rootCanonicalKey);
-    const facetCode = asText(row.facetCode).toUpperCase();
+    const domainFacetKey = asText(row.domainFacetKey);
+    const routeOption = allowedRoutes.get(domainFacetKey);
+    const rootCanonicalKey = routeOption?.rootCanonicalKey ?? "";
+    const facetCode = routeOption?.facetCode ?? "";
     const occurredAtIso = asNullableText(row.occurredAtIso);
     const occurredAtRaw = asNullableText(row.occurredAtRaw);
     const temporalPrecision = asText(row.temporalPrecision);
@@ -457,14 +504,14 @@ function validateRoutingOutput(input: {
       !containsFragment(input.sourceText, sourceFragment) ||
       !lookupText ||
       lookupText.length > 120 ||
-      !allowed.get(rootCanonicalKey)?.has(facetCode) ||
+      !routeOption ||
       !TEMPORAL_PRECISIONS.has(temporalPrecision)
     ) {
       throw new GlobalObservationPilotError(
         502,
         "AI_ROUTING_SEGMENT_CONTRACT_FAILED",
         "AI routing output failed deterministic server validation.",
-        { segmentId, rootCanonicalKey, facetCode },
+        { segmentId, domainFacetKey, rootCanonicalKey, facetCode },
       );
     }
 
@@ -1329,15 +1376,18 @@ export async function runGlobalObservationPreview(
   );
 
   try {
-    const routingSchema = getRoutingSchema();
+    const domainFacetRouteOptions = getDomainFacetRouteOptions(catalog);
+    const routingSchema = getRoutingSchema(catalog);
 
     const routingSystem = [
       "You are ARCTor Global System Reality routing stage 1.",
       "Split the user text into independent observed events/states only.",
       `Return 1-${MAX_SEGMENTS} segments.`,
-      "sourceFragment MUST be an exact substring of the user text.",
+      "A simple clause with one observed predicate/event/state MUST remain one segment.",
+      "A duration, count, load, quantity, unit, or other measurement that describes an event MUST stay inside that event segment; NEVER create a separate segment only for the measurement.",
+      "sourceFragment MUST be an exact substring of the user text and must contain the semantic event/state evidence, not only a number or unit.",
       "lookupText is a short semantic noun/activity phrase suitable for exact alias lookup.",
-      "Choose rootCanonicalKey and facetCode ONLY from the supplied live catalog.",
+      "Choose domainFacetKey ONLY from the supplied live DOMAIN/FACET route options. The key already binds a valid root and facet; never invent or recombine them.",
       "Do not invent a new ontology object.",
       "Do not diagnose.",
       "Do not infer calories, caffeine, physiological effects, hidden metrics, or causal relations.",
@@ -1350,7 +1400,7 @@ export async function runGlobalObservationPreview(
       reportedAt: reportedAt.toISOString(),
       timeZone,
       locale,
-      domainFacetCatalog: catalog,
+      domainFacetCatalog: domainFacetRouteOptions,
     };
 
     const routingCall = await runBudgetedJsonCall<RoutingOutput>({
@@ -1360,7 +1410,7 @@ export async function runGlobalObservationPreview(
       model,
       system: routingSystem,
       user: routingUser,
-      schemaName: "arctor_gsr1_routing_v1",
+      schemaName: "arctor_gsr1_routing_v2",
       schema: routingSchema,
       maxOutputTokens: ROUTING_MAX_OUTPUT_TOKENS,
       signal: controller.signal,
