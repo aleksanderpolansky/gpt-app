@@ -10,6 +10,7 @@ type TraceKind =
   | "model"
   | "check"
   | "fact"
+  | "meaning"
   | "unresolved"
   | "fallback";
 
@@ -29,6 +30,21 @@ type GlobalFact = {
   factStatus?: string;
 };
 
+type SemanticProjection = {
+  contractVersion?: string;
+  projectionCode?: string;
+  epistemicStatus?: string;
+  targetCanonicalKey?: string;
+  targetValueObjectId?: string;
+  targetTitle?: string;
+  targetNodeRoleCode?: string;
+  targetFacetCode?: string;
+  basisCode?: string;
+  evidenceFragments?: string[];
+  writeAllowed?: boolean;
+  primaryClassificationChanged?: boolean;
+};
+
 type GlobalRow = {
   segmentId?: string;
   sourceFragment?: string;
@@ -42,6 +58,7 @@ type GlobalRow = {
   } | null;
   confidence?: number;
   facts?: GlobalFact[];
+  semanticProjections?: SemanticProjection[];
   temporal?: {
     occurredAtIso?: string | null;
     occurredAtRaw?: string | null;
@@ -194,6 +211,47 @@ function formatFactValue(fact: GlobalFact) {
   return "значение не распознано";
 }
 
+const SEMANTIC_PROJECTION_LABELS: Record<string, string> = {
+  purchase_contains_food_goods: "Покупка содержит пищевые товары",
+  relevant_to_nutrition: "Связь с питанием и физиологическими потребностями",
+  possible_household_provisioning: "Возможный бытовой контекст обеспечения",
+  possible_family_benefit: "Возможная связь с обеспечением семьи",
+};
+
+const EPISTEMIC_STATUS_LABELS: Record<string, string> = {
+  OBSERVED: "наблюдаемое",
+  DECLARED: "явно сообщено пользователем",
+  DERIVED: "выведено детерминированным правилом",
+  INFERRED: "предположение по контексту",
+  MODEL_HYPOTHESIS: "гипотеза модели",
+};
+
+function formatSemanticProjection(projection: SemanticProjection) {
+  const label =
+    SEMANTIC_PROJECTION_LABELS[projection.projectionCode ?? ""] ??
+    projection.projectionCode ??
+    "Дополнительный смысл";
+  const status =
+    EPISTEMIC_STATUS_LABELS[projection.epistemicStatus ?? ""] ??
+    projection.epistemicStatus ??
+    "статус не указан";
+  const target = projection.targetCanonicalKey
+    ? ` ЦО/область: ${projection.targetTitle ?? projection.targetCanonicalKey}` +
+      ` [${projection.targetCanonicalKey}].`
+    : "";
+  const evidence = (projection.evidenceFragments ?? []).filter(Boolean);
+  const evidenceText =
+    evidence.length > 0
+      ? ` Основание в тексте: ${evidence.map((item) => `«${item}»`).join(", ")}.`
+      : "";
+  const writeBoundary =
+    projection.writeAllowed === false
+      ? " Это только preview-связь и она не записывается в Reality Graph."
+      : "";
+
+  return `${label}. Статус: ${status}.${target}${evidenceText}${writeBoundary}`;
+}
+
 function buildGlobalTrace(inputText: string, payload: GlobalPreview): TraceLine[] {
   const rows = payload.rows ?? [];
   const routing = payload.analysisTrace?.routing ?? [];
@@ -331,6 +389,13 @@ function buildGlobalTrace(inputText: string, payload: GlobalPreview): TraceLine[
           `Статус: ${fact.factStatus ?? "proposed"}.`,
       });
     });
+
+    (row.semanticProjections ?? []).forEach((projection) => {
+      trace.push({
+        kind: "meaning",
+        text: formatSemanticProjection(projection),
+      });
+    });
   });
 
   const actualCost = payload.safety?.actualProviderCostUsd;
@@ -439,6 +504,7 @@ function TracePanel({ lines, loading }: { lines: TraceLine[]; loading: boolean }
     model: "МОДЕЛЬ",
     check: "ПРОВЕРКА",
     fact: "ФАКТ",
+    meaning: "СМЫСЛ",
     unresolved: "НЕОПР.",
     fallback: "РЕЗЕРВ",
   };
@@ -448,6 +514,7 @@ function TracePanel({ lines, loading }: { lines: TraceLine[]; loading: boolean }
     model: "text-fuchsia-300",
     check: "text-emerald-400",
     fact: "text-sky-400",
+    meaning: "text-cyan-300",
     unresolved: "text-amber-400",
     fallback: "text-orange-400",
   };
@@ -663,7 +730,8 @@ export default function ActivityAiLabPage() {
             Журнал не показывает скрытые внутренние рассуждения модели. Он показывает
             проверяемый результат обработки: что выделила модель, какие реальные ЦО
             сервер дал ей на выбор, что она выбрала, какие факты извлечены и что сервер
-            подтвердил или оставил неопределённым.
+            подтвердил или оставил неопределённым, а также какие вторичные смысловые
+            проекции сервер вывел отдельно от основного ЦО.
           </div>
         </header>
 

@@ -1,0 +1,23 @@
+ARCTor.app - AI-A2 / GSR1L-P3 local validation evidence
+Date: 2026-08-13
+Parent checkpoint: eadead1b91fb216156ecd1a330f5e956066a292d
+
+IMPLEMENTATION:
+- primary selection: unchanged AI-A2-P2
+- deterministic semantic projection layer: enabled
+- extra provider calls: 0
+- Reality Graph writes: false
+- cross-segment secondary context: full inputText; food evidence remains selected-fragment bound
+- target validation: active global canonical key + allowlisted node role
+
+CHECKS:
+AI_A2_P1_VALIDATOR=PASS
+AI_A2_P2_VALIDATOR=PASS
+AI_A2_P3_VALIDATOR=PASS
+AI_A1_VALIDATOR=PASS
+GSR1F_VALIDATOR=PASS
+GLOBAL_SEED_VALIDATOR=PASS
+FEATURE_BUILD=PASS
+DIFF_CHECK=PASS
+
+RESULT=PRECOMMIT_VALIDATION_PASS

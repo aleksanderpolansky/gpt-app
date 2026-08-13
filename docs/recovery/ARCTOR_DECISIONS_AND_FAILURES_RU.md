@@ -418,3 +418,15 @@ AI-A2-P1 live acceptance: 14/14 PASS. Stokrotka regression стала обяза
 6. Старые exact/coarse RPC в БД не удаляются, но coarse DOMAIN+FACET fallback больше не участвует в Global Reality preview runtime.
 7. На P2 semantic_tags=[] специально: нельзя подменять будущий neutral semantic frame существующим hard DOMAIN/FACET решением.
 8. Reality Graph write path не меняется; production preview test обязателен перед следующим implementation gate.
+
+## DECISION_AI_A2_P3_SEMANTIC_PROJECTIONS_V1 — 2026-08-13
+
+1. Один физический эпизод и один primary leaf могут иметь несколько secondary semantic projections; это не multi-parent hierarchy и не дублирование активности.
+2. P3 v1 является deterministic server layer после AI-A2-P2 selection. Он не добавляет LLM-вызов.
+3. Любая projection имеет epistemicStatus, evidenceFragments, writeAllowed=false и primaryClassificationChanged=false.
+4. DERIVED разрешён только для детерминированного класса, явно опирающегося на source evidence. INFERRED обязательно видимо маркируется как предположение.
+5. Family benefit запрещено выводить из факта покупки еды без явного family cue или будущего разрешённого personal context.
+6. Cross-segment context разрешён только как вспомогательный контекст secondary projection; primary recognition остаётся segment-bound.
+7. Projection targets ограничены allowlist и повторно проверяются в live Global ontology по canonical key, active status и node role.
+8. Никаких P3 relation/fact writes до отдельного storage/write contract; Activity Review остаётся единственной существующей save boundary.
+9. P2 live acceptance фиксируется как PASS до перехода в P3.

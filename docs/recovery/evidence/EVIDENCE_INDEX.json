@@ -2,7 +2,7 @@
   "generatedAt": "2026-08-13",
   "copiedCount": 57,
   "generatedEvidenceCount": 1,
-  "indexedCount": 61,
+  "indexedCount": 63,
   "missingPatterns": [],
   "files": [
     {
@@ -421,6 +421,20 @@
       "sourceDownloadsName": null,
       "sha256": "c9f2c487e548e5e4f5b45afd0636f6104d66e1e20732c3df8c4c2398992ab48e",
       "origin": "AI_A2_P2_precommit_runtime_integration_validation"
+    },
+    {
+      "group": "GSR1L",
+      "file": "docs/recovery/evidence/GSR1L/ARCTOR_AI_A2_P2_PRODUCTION_RUNTIME_ACCEPTANCE_20260813.txt",
+      "sourceDownloadsName": null,
+      "sha256": "eb68e1e504787b91306e8eb15768d8df650d3e0b6b4b666381191e213c090c81",
+      "origin": "AI_A2_P2_production_runtime_acceptance"
+    },
+    {
+      "group": "GSR1L",
+      "file": "docs/recovery/evidence/GSR1L/ARCTOR_AI_A2_P3_LOCAL_VALIDATION_20260813.txt",
+      "sourceDownloadsName": null,
+      "sha256": "e56ce669b5d0ed2b18b855279d3f18ed2ccaadc1ababa610c5434309469fd640",
+      "origin": "AI_A2_P3_precommit_local_validation"
     }
   ]
 }

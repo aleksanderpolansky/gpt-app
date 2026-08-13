@@ -46,7 +46,8 @@ const manifest = JSON.parse(fs.readFileSync(path.join(root,'docs/recovery/CHECKP
 
 if (
   manifest.documentedState !== 'AI_A2_P1_RECOGNITION_FOUNDATION_V1' &&
-  manifest.documentedState !== 'AI_A2_P2_RUNTIME_INTEGRATION_V1'
+  manifest.documentedState !== 'AI_A2_P2_RUNTIME_INTEGRATION_V1' &&
+  manifest.documentedState !== 'AI_A2_P3_SEMANTIC_PROJECTION_PREVIEW_V1'
 ) fail('manifest documentedState mismatch');
 
 if (!manifest.gsr1lImplementation || manifest.gsr1lImplementation.liveAcceptance !== '14/14 PASS') {

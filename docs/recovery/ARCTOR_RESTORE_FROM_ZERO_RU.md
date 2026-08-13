@@ -179,3 +179,23 @@ Restore behavior:
 - AI-A1 manifests, budget, 2-call maximum, store=false, retries=0 and preview-only no-write boundary remain active.
 
 Do not rerun AI-A2-P1 migration merely to restore P2 source. Validate the live DB first. Production runtime acceptance for P2 is intentionally pending until a real preview regression is run.
+
+## AI-A2 P3 restore point - 2026-08-13
+
+Parent production checkpoint: eadead1b91fb216156ecd1a330f5e956066a292d.
+P2 production runtime acceptance: PASS (Stokrotka purchase routing + generic sleep unresolved).
+
+P3 source contract:
+- lib/reality/globalObservationPilot.ts normalized SHA256 4c27579bc52e65a347da0c67ed72ecac808ad58bbdcf81bdb6e363f6a61f8063
+- lib/reality/semanticProjectionPolicy.ts normalized SHA256 71b073a1ab176fd7f21962e2c330aa4f78d83a5f9bbdfad3f094369816fd13f1
+- src/app/activity-ai-lab/page.tsx normalized SHA256 14aca5088717591579fad9b6ac53fb9de613d6153856bf113c09c954f670fd66
+- scripts/validate-ai-a2-p3-semantic-projections-v1.mjs normalized SHA256 4e3589c9aefc8c46bb44a9cb87e68040a86a974408f83d20df87438d603311ff
+- docs/reality-core/ARCTOR_AI_A2_P3_SEMANTIC_PROJECTION_CONTRACT_V1_RU.md normalized SHA256 6d9c545ea1ed80d877c9950615285cbeb5e402637c42d48e5367aac09cb5f996
+
+Restore invariants:
+- AI-A2-P2 recognition candidate RPC and limit=5 remain authoritative for primary leaf selection.
+- semantic projections are deterministic preview only; no graph write and no extra provider calls.
+- plain Stokrotka may show food/nutrition/possible household, but not family without explicit family cue.
+- unresolved sleep has zero P3 semantic projections.
+- target canonical keys are allowlisted and validated against active Global ontology.
+- do not rerun AI-A2-P1 migration to restore P3 source.

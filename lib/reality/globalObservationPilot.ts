@@ -24,6 +24,10 @@ import {
   type RecognitionEvidenceClass,
   type RecognitionStatus,
 } from "./recognitionCandidatePolicy";
+import {
+  SEMANTIC_PROJECTION_CONTRACT_VERSION,
+  buildSemanticProjections,
+} from "./semanticProjectionPolicy";
 
 const ROUTE_PATH = "/api/ai/reality/global-observation-preview";
 const PILOT_MODEL_TIER = "nano";
@@ -1974,6 +1978,95 @@ function validateSelectionOutput(input: {
   });
 }
 
+type SemanticProjectionTarget = {
+  id: string;
+  canonical_key: string;
+  title: string;
+  ontology_node_role_code: string;
+  facet_code: string;
+};
+
+const SEMANTIC_PROJECTION_TARGET_NODE_ROLE_BY_KEY = new Map<string, string>([
+  ["entity.food.item", "leaf"],
+  ["domain.nutrition_consumption", "root"],
+  ["process.home.household_task", "leaf"],
+  ["domain.relationships_social_life", "root"],
+]);
+
+async function loadSemanticProjectionTargets(canonicalKeys: string[]) {
+  const uniqueKeys = [...new Set(canonicalKeys.filter(Boolean))].sort();
+
+  if (uniqueKeys.length === 0) {
+    return new Map<string, SemanticProjectionTarget>();
+  }
+
+  const unexpectedKeys = uniqueKeys.filter(
+    (canonicalKey) =>
+      !SEMANTIC_PROJECTION_TARGET_NODE_ROLE_BY_KEY.has(canonicalKey),
+  );
+
+  if (unexpectedKeys.length > 0) {
+    throw new GlobalObservationPilotError(
+      500,
+      "SEMANTIC_PROJECTION_TARGET_NOT_ALLOWLISTED",
+      `Semantic projection target is not allowlisted: ${unexpectedKeys.join(", ")}.`,
+      { unexpectedCanonicalKeys: unexpectedKeys },
+    );
+  }
+
+  const { data, error } = await supabase
+    .from("value_objects")
+    .select("id, canonical_key, title, ontology_node_role_code, facet_code")
+    .eq("scope_code", "global")
+    .eq("status", "active")
+    .in("canonical_key", uniqueKeys);
+
+  if (error) {
+    throw new GlobalObservationPilotError(
+      500,
+      "SEMANTIC_PROJECTION_TARGET_READ_FAILED",
+      error.message,
+    );
+  }
+
+  const rows = (data ?? []) as SemanticProjectionTarget[];
+  const byKey = new Map(rows.map((row) => [row.canonical_key, row]));
+  const missing = uniqueKeys.filter((canonicalKey) => !byKey.has(canonicalKey));
+
+  if (missing.length > 0) {
+    throw new GlobalObservationPilotError(
+      409,
+      "SEMANTIC_PROJECTION_TARGET_CONTRACT_FAILED",
+      `Active global semantic projection targets are missing: ${missing.join(", ")}.`,
+      { missingCanonicalKeys: missing },
+    );
+  }
+
+  const roleMismatches = rows
+    .filter(
+      (row) =>
+        SEMANTIC_PROJECTION_TARGET_NODE_ROLE_BY_KEY.get(row.canonical_key) !==
+        row.ontology_node_role_code,
+    )
+    .map((row) => ({
+      canonicalKey: row.canonical_key,
+      expectedNodeRoleCode:
+        SEMANTIC_PROJECTION_TARGET_NODE_ROLE_BY_KEY.get(row.canonical_key),
+      actualNodeRoleCode: row.ontology_node_role_code,
+    }));
+
+  if (roleMismatches.length > 0) {
+    throw new GlobalObservationPilotError(
+      409,
+      "SEMANTIC_PROJECTION_TARGET_ROLE_CONTRACT_FAILED",
+      "Semantic projection target node-role contract failed.",
+      { roleMismatches },
+    );
+  }
+
+  return byKey;
+}
+
 export async function runGlobalObservationPreview(
   request: GlobalObservationPreviewRequest,
 ) {
@@ -2242,6 +2335,48 @@ export async function runGlobalObservationPreview(
       throw error;
     }
 
+    const previewRowsWithProjectionCandidates = previewRows.map((row) => ({
+      ...row,
+      semanticProjections: buildSemanticProjections({
+        selectedCanonicalKey: row.selected?.canonicalKey ?? null,
+        sourceFragment: row.sourceFragment,
+        contextText: inputText,
+        locale,
+      }),
+    }));
+
+    const projectionTargetByCanonicalKey = await loadSemanticProjectionTargets(
+      previewRowsWithProjectionCandidates.flatMap((row) =>
+        row.semanticProjections.map((projection) => projection.targetCanonicalKey),
+      ),
+    );
+
+    const previewRowsWithSemanticProjections =
+      previewRowsWithProjectionCandidates.map((row) => ({
+        ...row,
+        semanticProjections: row.semanticProjections.map((projection) => {
+          const target = projectionTargetByCanonicalKey.get(
+            projection.targetCanonicalKey,
+          );
+
+          if (!target) {
+            throw new GlobalObservationPilotError(
+              409,
+              "SEMANTIC_PROJECTION_TARGET_MISSING",
+              `Semantic projection target is unavailable: ${projection.targetCanonicalKey}.`,
+            );
+          }
+
+          return {
+            ...projection,
+            targetValueObjectId: target.id,
+            targetTitle: target.title,
+            targetNodeRoleCode: target.ontology_node_role_code,
+            targetFacetCode: target.facet_code,
+          };
+        }),
+      }));
+
     await completeAiAnalysisExecution(analysisExecutionId);
 
     const reservedMaxUsd = Math.max(
@@ -2267,6 +2402,12 @@ export async function runGlobalObservationPreview(
       timeZone,
       locale,
       analysisTrace: {
+        semanticProjectionPolicy: {
+          contractVersion: SEMANTIC_PROJECTION_CONTRACT_VERSION,
+          deterministic: true,
+          previewOnly: true,
+          realityGraphWriteExecuted: false,
+        },
         routing: segments.map((segment) => ({
           segmentId: segment.segmentId,
           sourceFragment: segment.sourceFragment,
@@ -2300,7 +2441,7 @@ export async function runGlobalObservationPreview(
           })),
         })),
       },
-      rows: previewRows,
+      rows: previewRowsWithSemanticProjections,
       safety: {
         hardCapUsd: HARD_CAP_USD,
         maxProviderCallsConfigured: MAX_PROVIDER_CALLS,

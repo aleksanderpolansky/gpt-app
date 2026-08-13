@@ -373,3 +373,15 @@ Candidate set ограничен 5. NO_MATCH, UNRESOLVED и UNRESOLVED_TOO_BROAD
 AI-A1 execution/context manifests, два provider calls max, nano tier, store=false, maxRetries=0, budget/timeout fuses и preview-only dbFactWriteExecuted=false сохранены.
 
 Production runtime acceptance AI-A2-P2 ещё PENDING. После release нужен живой preview Stokrotka и отдельный unresolved sleep regression; ничего не сохранять в Reality Graph до прохождения preview gates.
+
+## AI_A2_P3_SEMANTIC_PROJECTION_PREVIEW_V1 — 2026-08-13
+
+AI-A2-P2 code checkpoint eadead1b91fb216156ecd1a330f5e956066a292d прошёл live production acceptance: Stokrotka распознаётся через process.finance.purchase без старого household primary route; generic «спал примерно 6 часов» остаётся unresolved между day/night.
+
+P3 добавляет только детерминированный preview дополнительных смыслов вокруг уже выбранного primary leaf. Primary classification не меняется, новые структурные родители не создаются, Reality Graph не пишется, дополнительных provider calls нет.
+
+Для selected process.finance.purchase P3 v1 различает: пищевые товары -> entity.food.item (DERIVED); релевантность питанию -> domain.nutrition_consumption (DERIVED); возможный бытовой provisioning -> process.home.household_task (INFERRED) только при food cue + store cue; возможный family benefit -> domain.relationships_social_life (INFERRED) только при явном family cue. Продукты сами по себе не являются доказательством интереса семьи.
+
+Stage 1 может разбить один эпизод на несколько fragments. Для secondary projection разрешён полный исходный inputText как context, но food cue обязан присутствовать в sourceFragment выбранной покупки. Projection target обязательно проверяется в live global active value_objects и по allowlisted node role.
+
+/activity-ai-lab показывает эти строки отдельной меткой СМЫСЛ и их epistemic status. Это preview-аннотация; save path пока их не сохраняет. P3 production runtime acceptance после release остаётся PENDING.

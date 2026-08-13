@@ -7,7 +7,6 @@ import { createRequire } from "node:module";
 const root = process.cwd();
 const pilotRel = "lib/reality/globalObservationPilot.ts";
 const policyRel = "lib/reality/recognitionCandidatePolicy.ts";
-const pilotExpectedSha = "51c7af7b85e9086c4c623eddeee61ffbb5c94fa72647e6336e4b367310f98f44";
 const policyExpectedSha = "7d438f901326596a14496ef1548664e34cbf134fac72c2d360930fe07afdc124";
 
 function fail(message) {
@@ -51,9 +50,6 @@ const policyBuffer = read(policyRel);
 const pilotHash = normalizedTextSha256(pilotBuffer);
 const policyHash = normalizedTextSha256(policyBuffer);
 
-if (pilotHash !== pilotExpectedSha) {
-  fail(`pilot sha256 mismatch: ${pilotHash}`);
-}
 if (policyHash !== policyExpectedSha) {
   fail(`policy sha256 mismatch: ${policyHash}`);
 }
@@ -260,16 +256,26 @@ requireToken(current, "AI_A2_P2_RUNTIME_INTEGRATION_V1");
 requireToken(decisions, "DECISION_AI_A2_P2_RECOGNITION_RUNTIME_V1");
 requireToken(restore, "AI-A2 P2 restore point - 2026-08-13");
 
-if (manifest.documentedState !== "AI_A2_P2_RUNTIME_INTEGRATION_V1") {
+if (
+  manifest.documentedState !== "AI_A2_P2_RUNTIME_INTEGRATION_V1" &&
+  manifest.documentedState !== "AI_A2_P3_SEMANTIC_PROJECTION_PREVIEW_V1"
+) {
   fail(`checkpoint documentedState mismatch: ${manifest.documentedState}`);
 }
 if (!manifest.gsr1lImplementation) fail("gsr1lImplementation missing");
 if (manifest.gsr1lImplementation.runtimeIntegrated !== true) {
   fail("runtimeIntegrated must be true after P2 code integration");
 }
-if (manifest.gsr1lImplementation.productionRuntimeAcceptance !== "PENDING") {
-  fail("productionRuntimeAcceptance must remain PENDING before live preview");
+if (manifest.gsr1lImplementation.productionRuntimeAcceptance !== "PASS") {
+  fail("productionRuntimeAcceptance must be PASS after live P2 regressions");
 }
+
+const p2Live = read(
+  "docs/recovery/evidence/GSR1L/ARCTOR_AI_A2_P2_PRODUCTION_RUNTIME_ACCEPTANCE_20260813.txt",
+).toString("utf8");
+requireToken(p2Live, "RESULT=PASS", "P2 live acceptance result");
+requireToken(p2Live, "STOKROTKA=PASS", "P2 Stokrotka acceptance");
+requireToken(p2Live, "GENERIC_SLEEP_UNRESOLVED=PASS", "P2 generic sleep acceptance");
 
 const p1Migration = read(
   "supabase/manual-applied/20260813_ai_a2_p1_recognition_foundation_v1.sql",

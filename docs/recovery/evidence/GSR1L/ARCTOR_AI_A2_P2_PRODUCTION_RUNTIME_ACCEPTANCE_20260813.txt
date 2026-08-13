@@ -1,0 +1,24 @@
+ARCTor.app - AI-A2 / GSR1L-P2 production runtime acceptance
+Date: 2026-08-13
+Code commit: eadead1b91fb216156ecd1a330f5e956066a292d
+
+STOKROTKA=PASS
+Input: сходил в магазин стокротка возле меня, купил две консервы тунца и макароны, заплатил 20 злотых
+Server bounded candidate: process.finance.purchase
+Known wrong primary candidate process.home.household_task: absent
+Selected purchase on purchase/payment segments: yes
+Explicit fact: monetary_amount_pln=20 pln
+Provider calls: 2
+Automatic retries: 0
+Reality Graph write: false
+
+GENERIC_SLEEP_UNRESOLVED=PASS
+Input: спал примерно 6 часов
+Candidates: process.sleep.day_episode + process.sleep.night_episode
+Selected leaf: none
+Uncertainty preserved: true
+Provider calls: 2
+Automatic retries: 0
+Reality Graph write: false
+
+RESULT=PASS
