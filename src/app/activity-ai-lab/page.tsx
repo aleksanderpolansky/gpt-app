@@ -13,6 +13,9 @@ import {
   type AiLabSaveTemporalDirection,
 } from "@/lib/activity/aiLabDirectSave";
 import {
+  buildAiLabFactMaterializationCandidates,
+} from "@/lib/activity/aiLabFactMaterialization";
+import {
   datetimeLocalToIsoPp1,
   formatActivityTimingDraftPp1,
   getTimingFocusDatePp1,
@@ -1222,6 +1225,17 @@ export default function ActivityAiLabPage() {
   const analysisOperationId =
     result?.mode === "global" ? result.payload.operationId?.trim() ?? "" : "";
 
+  const factMaterializationCandidates = useMemo(
+    () =>
+      result?.mode === "global"
+        ? buildAiLabFactMaterializationCandidates(
+            result.payload.rows,
+            result.payload.contractVersion ?? null,
+          )
+        : [],
+    [result],
+  );
+
   const fullAnalysisSucceeded =
     result?.mode === "global" &&
     result.payload.ok === true &&
@@ -1524,6 +1538,48 @@ export default function ActivityAiLabPage() {
         setSaveCheckpoint(checkpoint);
       }
 
+      if (factMaterializationCandidates.length > 0) {
+        if (!analysisOperationId) {
+          throw new Error(
+            "Явные факты требуют идентификатор завершённого анализа.",
+          );
+        }
+
+        const factMaterializeResponse = await fetch(
+          "/api/ai/reality/fact-materialize",
+          {
+            credentials: "include",
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({
+              activityEventId: checkpoint.activityEventId,
+              operationId: analysisOperationId,
+              candidates: factMaterializationCandidates,
+            }),
+          },
+        );
+
+        const factMaterializePayload = (await factMaterializeResponse
+          .json()
+          .catch(() => null)) as
+          | {
+              ok?: boolean;
+              error?: string;
+              materializedFactCount?: number;
+            }
+          | null;
+
+        if (!factMaterializeResponse.ok || factMaterializePayload?.ok !== true) {
+          throw new Error(
+            factMaterializePayload?.error ||
+              `Активность создана, но явные факты не материализованы: HTTP ${factMaterializeResponse.status}`,
+          );
+        }
+      }
+
       if (checkpoint.manualFeedbackIds.length > 0) {
         const materializeResponse = await fetch(
           "/api/ai/reality/manual-link-materialize",
@@ -1775,13 +1831,15 @@ export default function ActivityAiLabPage() {
                       <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-xs leading-5 text-zinc-500">
                         <div>Время: {timingLabel}</div>
                         <div>Ручных semantic_exposure связей: {manualLinks.length}</div>
+                        <div>Явных фактов к материализации: {factMaterializationCandidates.length}</div>
                         {saveMode === "future" ? (
                           <div>Целей плановой активности: {plannedTargetValueObjectIds.length}</div>
                         ) : null}
                         <div>
-                          Факты и смысловые догадки из анализа не записываются автоматически:
-                          подтверждения остаются append-only Data Capital до отдельного
-                          контролируемого materialization шага.
+                          Явные факты из полного анализа материализуются при сохранении активности.
+                          Подтверждённые факты получают статус confirmed; отклонённые не записываются;
+                          неподтверждённые остаются proposed. Смысловые догадки пока остаются только
+                          append-only Data Capital.
                         </div>
                       </div>
 

@@ -50,7 +50,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Run production acceptance: direct-save one past activity and one future planned activity from /activity-ai-lab without visiting /calendar/activity-review; verify manual leaf semantic_exposure materialization with a read-only DB postcheck.",
+  "nextAction": "AI-A3-P5A production acceptance, then P5B mutual activity/fact/value-object links in UI.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -61,7 +61,7 @@
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
   "previousRecoveryCommit": "442af9b04248a66cf06d82d305b6246df0d09107",
-  "documentedState": "AI_A3_P4_FACT_CONTRACT_RESILIENCE_V1",
+  "documentedState": "AI_A3_P5A_ACTIVITY_FACT_MATERIALIZATION_V1",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -256,5 +256,21 @@
     "automaticProviderRetries": 0,
     "realityGraphWriteChanged": false,
     "nextAction": "rerun purchase and future-walk Global Reality previews, then direct-save acceptance"
+  },
+  "aiA3P5AActivityFactMaterialization": {
+    "status": "implemented_pending_production_acceptance",
+    "baselineCommit": "ede332c7bda6f00cafe9836b3b6ca0e80f4a60fb",
+    "liveFoundationPreflight": "24/24 PASS",
+    "writer": "attach_global_observation_facts_gsr1_v1",
+    "writes": [
+      "activity_event_measures",
+      "activity_object_facts",
+      "activity_value_object_links.semantic_exposure"
+    ],
+    "rejectedFactPolicy": "skip",
+    "confirmedFactPolicy": "confirmed + is_user_confirmed",
+    "unreviewedFactPolicy": "proposed",
+    "semanticProjectionWrite": false,
+    "nextAction": "direct-save a fact-bearing activity, read-only DB postcheck, then P5B mutual UI links"
   }
 }

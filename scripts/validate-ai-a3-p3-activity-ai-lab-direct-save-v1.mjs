@@ -131,7 +131,7 @@ for (const marker of [
   'Сохранить в журнал',
   'Сохранить и открыть календарь',
   'Промежуточный «Контейнер активности» для этого маршрута больше',
-  'Факты и смысловые догадки из анализа не записываются автоматически',
+  'Явные факты из полного анализа материализуются при сохранении активности.',
   'disabled={Boolean(saveCheckpoint?.activityEventId)}',
   'disabled={loading || !inputText.trim() || Boolean(saveCheckpoint?.activityEventId)}',
   'disabled={loading || Boolean(saveCheckpoint?.activityEventId)}',
@@ -156,11 +156,11 @@ forbidToken(
 );
 
 for (const marker of [
-  'AI_A3_P3_ACTIVITY_AI_LAB_DIRECT_SAVE_V1',
+  'AI_A3_P5A_ACTIVITY_FACT_MATERIALIZATION_V1',
   'activityRoleCode: input.temporalDirection === "future" ? "planned" : "actual"',
   'status: input.temporalDirection === "future" ? "planned" : "completed"',
   'sourceSurface: "activity_ai_lab"',
-  'factMaterializationPolicy: "confirmed_feedback_only_not_materialized_in_p3"',
+  'factMaterializationPolicy: "server_validated_explicit_facts_on_save_p5a"',
   'future.createCalendarProjection = true;',
   'return `/activity-today?${new URLSearchParams({ locale: params.locale }).toString()}`;',
   'return `/calendar?${query.toString()}`;',

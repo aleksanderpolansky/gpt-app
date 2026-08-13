@@ -1,0 +1,25 @@
+ARCTor.app - AI-A3-P5A Activity Fact Materialization local validation
+DATE=2026-08-13
+STATUS=PASS_LOCAL
+
+LIVE_READ_ONLY_FOUNDATION_PREFLIGHT=24/24 PASS (performed manually before release)
+GLOBAL_FACT_WRITER=attach_global_observation_facts_gsr1_v1
+WRITER_TRANSACTIONAL_MEASURE_FACT_LINK=true
+WRITER_IDEMPOTENT=true
+WRITER_SERVICE_ROLE_ONLY=true
+GLOBAL_LEAF_BASELINE=103
+
+LOCAL_CHECKS:
+TypeScript transpile page/helper/route/direct-save=PASS
+P5A behavioral policy tests=12/12 PASS
+P5A static validator=18/18 PASS
+Explicit evidence fragment required=true
+Rejected feedback skips fact=true
+Confirmed feedback produces confirmed fact=true
+Unreviewed fact remains proposed=true
+Semantic projections auto-write=false
+Manual leaf materialization preserved=true
+Preview Global Reality writer boundary unchanged=true
+
+PRODUCTION_ACCEPTANCE=PENDING
+NEXT=save one fact-bearing past/future activity, then read-only cross-link postcheck and P5B mutual UI links.

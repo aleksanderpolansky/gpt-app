@@ -99,12 +99,12 @@ export function buildAiLabDirectActivityRequest(
     privacyScope: "private",
     metadata: {
       sourceSurface: "activity_ai_lab",
-      directSaveContract: "AI_A3_P3_ACTIVITY_AI_LAB_DIRECT_SAVE_V1",
+      directSaveContract: "AI_A3_P5A_ACTIVITY_FACT_MATERIALIZATION_V1",
       locale: input.locale,
       aiAnalysisOperationId: input.analysisOperationId,
       manualLeafFeedbackIntentCount: manualFeedbackIds.length,
       observedDate: input.temporalDirection === "past" ? input.observedDate : null,
-      factMaterializationPolicy: "confirmed_feedback_only_not_materialized_in_p3",
+      factMaterializationPolicy: "server_validated_explicit_facts_on_save_p5a",
     },
   };
 

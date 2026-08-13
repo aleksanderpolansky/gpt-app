@@ -466,3 +466,7 @@ AI-A2-P1 live acceptance: 14/14 PASS. Stokrotka regression стала обяза
 ## AI_A3_P4_OPTIONAL_FACT_FAILURE_BOUNDARY — 2026-08-13
 
 Observed after commit 5f86c97830423ee2e6b9992bb9443d213942f74d: ordinary purchase and future walking phrases fell back because stage-2 returned an optional fact whose value fields did not exactly match the server parameter contract. This was not a candidate-routing failure. Decision: fail closed at the individual optional-fact boundary, not at the entire semantic-analysis boundary. Unsupported parameter/unit/evidence or missing expected typed value is dropped; server-authorized typed values may be normalized by clearing extraneous model fields. No automatic fact write is added. Release V1 additionally exposed a precommit TypeScript TS2677 failure in the fact-array null filter; V2 corrects the predicate without changing runtime facts. V1 created no commit and pushed nothing.
+
+## AI_A3_P5A_FACT_PERSISTENCE_DECISION — 2026-08-13
+
+Decision after 24/24 live persistence preflight: reuse the existing canonical GLOBAL fact writer and existing activity_object_facts.value_object_id / activity_value_object_links semantic_exposure contracts. Do not create a competing fact-to-VO join table. Saving an activity may persist explicit validated facts as proposed even without per-fact confirmation; explicit rejection blocks that fact; explicit confirmation upgrades it to confirmed. This preserves the distinction between observed user text, AI extraction, and user confirmation.

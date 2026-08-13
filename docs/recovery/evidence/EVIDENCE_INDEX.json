@@ -2,7 +2,7 @@
   "generatedAt": "2026-08-13",
   "copiedCount": 57,
   "generatedEvidenceCount": 1,
-  "indexedCount": 69,
+  "indexedCount": 70,
   "missingPatterns": [],
   "files": [
     {
@@ -477,6 +477,13 @@
       "sourceDownloadsName": null,
       "sha256": "417b06016749bc9d47a9f2c30da9183e441248f1398b80f0f2a4f0a2169df0f1",
       "origin": "AI_A3_P4_fact_contract_resilience_local_validation"
+    },
+    {
+      "group": "AI_A3",
+      "file": "docs/recovery/evidence/AI_A3/ARCTOR_AI_A3_P5A_ACTIVITY_FACT_MATERIALIZATION_LOCAL_VALIDATION_20260813.txt",
+      "sourceDownloadsName": null,
+      "sha256": "3223fc5c83f9da346844edba7ec298cd25a3aa58a456913fa3e4770c990bc831",
+      "origin": "AI_A3_P5A_fact_materialization_local_validation_and_live_preflight_24_24"
     }
   ]
 }

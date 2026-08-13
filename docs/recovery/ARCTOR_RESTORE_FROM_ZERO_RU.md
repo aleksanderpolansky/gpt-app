@@ -235,3 +235,7 @@ Rollback of source commit does not roll back AI-A3-P1 additive DB tables. Restor
 ## AI-A3 P4 fact-contract resilience restore point - 2026-08-13
 
 Baseline before this release: 5f86c97830423ee2e6b9992bb9443d213942f74d. New files: lib/reality/factContractPolicy.ts, P4 validator/test, contract and local evidence. Modified runtime: lib/reality/globalObservationPilot.ts. Revert only this P4 layer if production acceptance fails; do not remove AI-A3-P3 direct-save behavior.
+
+## AI-A3 P5A activity fact materialization restore point - 2026-08-13
+
+Baseline before this release: ede332c7bda6f00cafe9836b3b6ca0e80f4a60fb. Modified: /activity-ai-lab direct-save page and aiLabDirectSave metadata. New: fact materialization helper, server route, tests, validator, contract and evidence. The existing database writer/schema is reused; this release executes no SQL migration. Revert this commit only if direct-save fact persistence fails; P4 analysis resilience remains independent.
