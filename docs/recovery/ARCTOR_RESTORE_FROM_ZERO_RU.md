@@ -243,3 +243,8 @@ Baseline before this release: ede332c7bda6f00cafe9836b3b6ca0e80f4a60fb. Modified
 ## AI-A3 P5B restore point — 2026-08-13
 
 Restore requires: P5A code baseline plus live writer rowtype hotfix V3 (`supabase/manual-applied/20260813_ai_a3_p5a_global_fact_writer_rowtype_hotfix_v3.sql`), then P5B mutual links UI/API. Verify P5A evidence 12/12 and writer V3 8/8. Canonical fact semantics: one neutral measure may have 1..N leaf projections sharing measure_id. Do not reconstruct semantic prefixes into activity titles.
+
+
+## AI-A3 P5B GLOBAL detail hotfix restore point — 2026-08-13
+
+Baseline: P5B commit `1061958ef8a43b375b82f70eb7342acb8afc47e6`. The hotfix changes only source/recovery; no SQL/schema migration. Required invariant: `/value-objects/[id]` may read an object when it is either owned by the active app user/actor OR is `scope_code=global` + `origin_type_code=system_model`. GLOBAL System objects are read-only and use GLOBAL tree/path resolution. Reverting this hotfix restores the P5B 404 for GLOBAL leaf links but does not alter P5A/P5B stored data.

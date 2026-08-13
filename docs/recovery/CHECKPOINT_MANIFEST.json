@@ -1,10 +1,10 @@
 {
   "schemaVersion": 6,
-  "generatedAt": "2026-08-13",
+  "generatedAt": "2026-08-13T17:32:00+02:00",
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
   "branch": "feat/gsr1-global-system-reality-machine-contract-v1-20260811",
-  "originMainAtCheckpoint": "95676a1ff0a85641a95f77cbadc3aac48784464f",
+  "originMainAtCheckpoint": "1061958ef8a43b375b82f70eb7342acb8afc47e6",
   "checkpointMeaning": "AI-A3 P5B mutual read/display links over accepted P5A neutral-measure persistence; source release pending live UI acceptance.",
   "globalReality": {
     "p8Blocked": true,
@@ -51,7 +51,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "P5B production UI acceptance, then P5C quick capture + 24h review buffer/quarantine design.",
+  "nextAction": "Deploy GLOBAL System value-object detail hotfix; repeat P5B live UI acceptance; then P5C quick capture + review buffer.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -62,7 +62,7 @@
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
   "previousRecoveryCommit": "95676a1ff0a85641a95f77cbadc3aac48784464f",
-  "documentedState": "AI_A3_P5B_MUTUAL_LINKS_V1",
+  "documentedState": "AI_A3_P5B_GLOBAL_SYSTEM_VALUE_OBJECT_DETAIL_HOTFIX_V1",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -239,7 +239,7 @@
     "automaticSemanticProjectionWrite": false,
     "providerCallsAdded": 0,
     "p2ProductionRuntimeAcceptance": "PARTIAL_UI_PASS_LEGACY_MATERIALIZATION_NOT_ACCEPTED",
-    "nextBlock": "AI_A3_P5B_PRODUCTION_UI_ACCEPTANCE_THEN_P5C_REVIEW_BUFFER",
+    "nextBlock": "AI_A3_P5B_GLOBAL_DETAIL_HOTFIX_RELEASE_THEN_LIVE_ACCEPTANCE_THEN_P5C",
     "directSaveFromAiLabIntegrated": true,
     "directSaveLegacyContainerBypassed": true,
     "legacyActivityReviewRouteRetained": true,
@@ -259,7 +259,9 @@
     "activityTitlePreservesUserWording": true,
     "p5bScope": "read-only mutual UI links; no new DB writes; no OpenAI calls",
     "p5bNeutralMeasureDisplay": "one neutral measure grouped by measure_id with 1..N leaf projections",
-    "p5bValueObjectHistory": "leaf-specific facts plus linked activity context"
+    "p5bValueObjectHistory": "leaf-specific facts plus linked activity context",
+    "p5bProductionUiAcceptance": "PARTIAL_PASS_FACTS_AND_JOURNAL_PASS_GLOBAL_LEAF_DETAIL_404",
+    "p5bGlobalSystemDetailHotfix": "CODE_READY_FOR_RELEASE"
   },
   "aiA3P4FactContractResilience": {
     "status": "implemented_pending_production_acceptance",

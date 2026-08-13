@@ -474,3 +474,8 @@ Decision after 24/24 live persistence preflight: reuse the existing canonical GL
 ## AI_A3_P5A_WRITER_HOTFIX_AND_P5B_DECISION — 2026-08-13
 
 Failure chain preserved: P5A direct-save created activity_event, but fact materialization failed because the canonical writer selected a composite assignment row into a `%rowtype` variable as `select assignment` instead of `select assignment.*`. Hotfix V1 and V2 failed closed because their source matching was too formatting-specific and changed nothing. Hotfix V3 matched semantically across whitespace, preserved the live function body/security grants, and passed 8/8. P5A then passed 12/12 live. Decision: a measurement is neutral and stored once; multiple leaf object facts may reference the same measure_id. Activity title remains the user's wording; semantic classifications are separate links. P5B is read/display only.
+
+
+## AI_A3_P5B_GLOBAL_DETAIL_404_FAILURE_AND_DECISION — 2026-08-13
+
+Live P5B acceptance: Facts page showed `31 minute`, the linked `Ходьба` chip and Activity Journal showed both `Ходьба` + `31 minute`; clicking the GLOBAL leaf produced `/value-objects/<global-id>?locale=en` -> 404. Source cause is the old detail-page owner-only query. Decision: GLOBAL System ontology objects are readable from the authenticated combined catalog but read-only. Non-global objects keep the existing active-user/actor ownership gate. Global System objects must not inherit edit/restructure controls.

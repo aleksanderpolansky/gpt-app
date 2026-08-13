@@ -58,10 +58,13 @@ type ValueObjectRow = {
   privacy_level: string | null;
   sensitivity_level: string | null;
   source: string | null;
-  owner_actor_id: string;
+  owner_user_id: string | null;
+  owner_actor_id: string | null;
   organization_id: string | null;
   metadata_json: Record<string, unknown> | null;
   canonical_key: string | null;
+  scope_code: string | null;
+  origin_type_code: string | null;
   facet_code: string | null;
   object_kind_code: string | null;
   ontology_node_role_code: string | null;
@@ -78,6 +81,8 @@ type TreeNodeRow = {
   title: string;
   node_role_code: string | null;
   object_kind: string | null;
+  object_kind_code: string | null;
+  ontology_node_role_code: string | null;
   branch_type_code: string | null;
   root_value_object_id: string | null;
   parent_value_object_id: string | null;
@@ -780,6 +785,15 @@ async function resolveOwnerPresentation(
     }
   }
 
+  if (!valueObject.owner_actor_id) {
+    return {
+      displayName: labels.actor,
+      kindLabel: labels.actor,
+      imageUrl: null,
+      href: null,
+    };
+  }
+
   const [{ data: profileData, error: profileError }, { data: actorData, error: actorError }] =
     await Promise.all([
       supabase
@@ -1081,10 +1095,13 @@ export default async function ValueObjectDetailPage({
       privacy_level,
       sensitivity_level,
       source,
+      owner_user_id,
       owner_actor_id,
       organization_id,
       metadata_json,
       canonical_key,
+      scope_code,
+      origin_type_code,
       facet_code,
       object_kind_code,
       ontology_node_role_code,
@@ -1097,8 +1114,6 @@ export default async function ValueObjectDetailPage({
     `,
     )
     .eq("id", id)
-    .eq("owner_user_id", actorContext.appUserId)
-    .eq("owner_actor_id", actorContext.actorId)
     .maybeSingle();
 
   if (valueObjectError) {
@@ -1111,11 +1126,29 @@ export default async function ValueObjectDetailPage({
     notFound();
   }
 
+  const isGlobalSystemObject =
+    valueObject.scope_code === "global" &&
+    valueObject.origin_type_code === "system_model";
+  const isOwnedByActiveActor =
+    valueObject.owner_user_id === actorContext.appUserId &&
+    valueObject.owner_actor_id === actorContext.actorId;
+
+  if (!isGlobalSystemObject && !isOwnedByActiveActor) {
+    notFound();
+  }
+
   const publicProfileMetadata = parsePublicProfileMetadata(
     valueObject.metadata_json,
   );
   const [ownerPresentation, organizationLocation] = await Promise.all([
-    resolveOwnerPresentation(valueObject, locale),
+    isGlobalSystemObject
+      ? Promise.resolve<ValueObjectOwnerPresentation>({
+          displayName: "ARCTor Global System",
+          kindLabel: "System",
+          imageUrl: null,
+          href: null,
+        })
+      : resolveOwnerPresentation(valueObject, locale),
     resolveOrganizationLocation(valueObject.organization_id),
   ]);
   const hasOwnLocation = hasLocationData(publicProfileMetadata.location);
@@ -1125,44 +1158,56 @@ export default async function ValueObjectDetailPage({
   const rootValueObjectId =
     valueObject.root_value_object_id ?? valueObject.id;
 
-  const [
-    { data: treeData, error: treeError },
-    { data: criteriaData, error: criteriaError },
-  ] = await Promise.all([
-    supabase
-      .from("value_objects")
-      .select(
-        `
-        id,
-        title,
-        node_role_code,
-        object_kind,
-        branch_type_code,
-        root_value_object_id,
-        parent_value_object_id,
-        status,
-        created_at
-      `,
-      )
-      .eq("owner_user_id", actorContext.appUserId)
-      .eq("owner_actor_id", actorContext.actorId)
-      .eq("root_value_object_id", rootValueObjectId)
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("value_object_outcome_criteria")
-      .select("id, criterion_type_code, title, status")
-      .eq("owner_user_id", actorContext.appUserId)
-      .eq("owner_actor_id", actorContext.actorId)
-      .eq("value_object_id", valueObject.id)
-      .order("created_at", { ascending: true }),
-  ]);
+  const treeQueryBase = supabase
+    .from("value_objects")
+    .select(
+      `
+      id,
+      title,
+      node_role_code,
+      object_kind,
+      object_kind_code,
+      ontology_node_role_code,
+      branch_type_code,
+      root_value_object_id,
+      parent_value_object_id,
+      status,
+      created_at
+    `,
+    )
+    .eq("root_value_object_id", rootValueObjectId);
+
+  const treeQuery = isGlobalSystemObject
+    ? treeQueryBase.eq("scope_code", "global")
+    : treeQueryBase
+        .eq("owner_user_id", actorContext.appUserId)
+        .eq("owner_actor_id", actorContext.actorId);
+
+  const { data: treeData, error: treeError } = await treeQuery.order(
+    "created_at",
+    { ascending: true },
+  );
 
   if (treeError) {
     throw new Error(treeError.message);
   }
 
-  if (criteriaError) {
-    throw new Error(criteriaError.message);
+  let criteriaData: CriterionRow[] = [];
+
+  if (!isGlobalSystemObject) {
+    const { data, error } = await supabase
+      .from("value_object_outcome_criteria")
+      .select("id, criterion_type_code, title, status")
+      .eq("owner_user_id", actorContext.appUserId)
+      .eq("owner_actor_id", actorContext.actorId)
+      .eq("value_object_id", valueObject.id)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    criteriaData = (data ?? []) as CriterionRow[];
   }
 
   const treeNodes = (treeData ?? []) as TreeNodeRow[];
@@ -1206,17 +1251,21 @@ export default async function ValueObjectDetailPage({
     (criterion) => criterion.criterion_type_code === "failure",
   );
   const isRoot =
-    valueObject.parent_value_object_id === null &&
-    valueObject.root_value_object_id === valueObject.id;
+    valueObject.ontology_node_role_code === "root" ||
+    (valueObject.parent_value_object_id === null &&
+      valueObject.root_value_object_id === valueObject.id);
   const isLeaf =
-    valueObject.node_role_code === "activity_leaf" &&
-    isValueObjectLeafKindV2(valueObject.object_kind) &&
-    valueObject.parent_value_object_id !== null;
+    valueObject.ontology_node_role_code === "leaf" ||
+    (valueObject.node_role_code === "activity_leaf" &&
+      isValueObjectLeafKindV2(valueObject.object_kind) &&
+      valueObject.parent_value_object_id !== null);
   const isIntermediate =
-    valueObject.node_role_code === "structural" &&
-    !isRoot &&
-    valueObject.parent_value_object_id !== null;
+    valueObject.ontology_node_role_code === "intermediate" ||
+    (valueObject.node_role_code === "structural" &&
+      !isRoot &&
+      valueObject.parent_value_object_id !== null);
   const isStructural =
+    !isGlobalSystemObject &&
     valueObject.node_role_code === "structural" &&
     isValueObjectStructuralKindV2(valueObject.object_kind) &&
     (valueObject.status === "draft" || valueObject.status === "active");
@@ -1231,11 +1280,13 @@ export default async function ValueObjectDetailPage({
       valueObject.ontology_node_role_code &&
       valueObject.definition_version !== null,
   );
-  const canEdit = isSemanticOntologyObject
-    ? valueObject.status === "draft" ||
-      valueObject.status === "active" ||
-      valueObject.status === "inactive"
-    : valueObject.status === "draft";
+  const canEdit =
+    !isGlobalSystemObject &&
+    (isSemanticOntologyObject
+      ? valueObject.status === "draft" ||
+        valueObject.status === "active" ||
+        valueObject.status === "inactive"
+      : valueObject.status === "draft");
   const viewHref = buildValueObjectModeHref(valueObject.id, locale, "view");
   const editHref = buildValueObjectModeHref(valueObject.id, locale, "edit");
 
@@ -1398,15 +1449,17 @@ export default async function ValueObjectDetailPage({
           className="rounded-2xl border border-[#e5e7eb] bg-[#fafbff] p-4 transition hover:border-[#c9d5ff] hover:bg-[#f5f7ff]"
         >
           <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#7c8099]">
-            {child.node_role_code || "—"} · {child.object_kind || "—"} ·{" "}
-            {child.status}
+            {child.ontology_node_role_code || child.node_role_code || "—"} ·{" "}
+            {child.object_kind_code || child.object_kind || "—"} · {child.status}
           </div>
           <div className="mt-1 text-[16px] font-bold text-[#111827]">
             {child.title}
           </div>
         </Link>
 
-        {child.node_role_code === "structural"
+        {child.ontology_node_role_code === "root" ||
+        child.ontology_node_role_code === "intermediate" ||
+        child.node_role_code === "structural"
           ? renderSubtree(child.id, depth + 1)
           : null}
       </div>
@@ -1451,15 +1504,17 @@ export default async function ValueObjectDetailPage({
             </button>
           )}
 
-          <Link
-            href={buildLocaleHref(
-              `/value-objects/${valueObject.id}/restructure`,
-              locale,
-            )}
-            className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"
-          >
-            {copy.restructure}
-          </Link>
+          {!isGlobalSystemObject ? (
+            <Link
+              href={buildLocaleHref(
+                `/value-objects/${valueObject.id}/restructure`,
+                locale,
+              )}
+              className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"
+            >
+              {copy.restructure}
+            </Link>
+          ) : null}
 
           {isLeaf ? (
             <Link

@@ -1,0 +1,22 @@
+ARCTor.app - AI-A3-P5B GLOBAL System Value Object Detail Hotfix V1
+LOCAL_VALIDATION=PASS
+DATE=2026-08-13
+
+LIVE_FAILURE:
+- /activity-facts: 31 minute displayed and linked to GLOBAL leaf process.movement.walking
+- /activity-today: Walking + 31 minute displayed
+- opening /value-objects/33ebed64-4fbe-549a-9feb-17745a356453?locale=en returned 404
+
+ROOT_CAUSE:
+- src/app/value-objects/[id]/page.tsx selected by id AND current owner_user_id AND current owner_actor_id.
+- GLOBAL System ontology rows therefore could not be loaded by the detail page.
+
+HOTFIX_INVARIANTS:
+- authenticated session + active actor context still required
+- non-global detail remains owner_user_id + owner_actor_id gated
+- GLOBAL detail allowed only for scope_code=global AND origin_type_code=system_model
+- GLOBAL objects are not editable and restructure control is hidden
+- GLOBAL tree/path is scope_code=global
+- ontology_node_role_code drives GLOBAL root/intermediate/leaf
+- ActivityMutualLinksPanel remains leaf-only
+- no DB writes/schema changes/OpenAI calls

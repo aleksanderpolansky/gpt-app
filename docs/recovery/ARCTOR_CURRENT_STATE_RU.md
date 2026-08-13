@@ -419,3 +419,8 @@ The live read-only P5 foundation preflight passed 24/24. Direct save now materia
 ## AI_A3_P5B_MUTUAL_LINKS_V1 — 2026-08-13
 
 AI-A3-P5A production acceptance is closed 12/12. The canonical writer hotfix V3 is live 8/8 and is now checkpointed in source/recovery. P5B adds mutual read/display links across Activity Journal/Calendar, Activity Facts and leaf Value Object pages. Neutral measures are grouped by measure_id; one measure may fan out to several leaf projections without duplicating the measured value. Activity titles preserve the user's wording and no longer receive an automatic semantic prefix. P5B adds no OpenAI calls and no new persistence tables.
+
+
+## AI_A3_P5B_GLOBAL_SYSTEM_VALUE_OBJECT_DETAIL_HOTFIX_V1 — 2026-08-13
+
+P5B live UI acceptance confirmed mutual links on /activity-facts and /activity-today, but opening the linked GLOBAL leaf `process.movement.walking` returned 404. Root cause: `/value-objects/[id]` still loaded only `owner_user_id + owner_actor_id` rows even though the combined catalog and P5B APIs already expose GLOBAL System objects. The hotfix allows authenticated read-only detail for active/system GLOBAL ontology objects while preserving actor ownership for non-global objects. Global objects remain non-editable/non-restructurable. Their tree/path is read from `scope_code=global`, and ontology node roles drive root/intermediate/leaf rendering so the P5B leaf history panel can render. No DB writes/OpenAI calls are added.
