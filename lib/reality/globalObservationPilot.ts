@@ -5,6 +5,15 @@ import {
   type RunAiJsonUsageMetadata,
 } from "../ai/openaiClient";
 import { supabase } from "../supabase";
+import {
+  completeAiAnalysisExecution,
+  createAiAnalysisExecution,
+  createAiContextManifest,
+  failAiAnalysisExecution,
+  markAiContextManifestFailed,
+  markAiContextManifestProviderCompleted,
+  markAiContextManifestValidated,
+} from "../ai/contextManifest";
 
 const ROUTE_PATH = "/api/ai/reality/global-observation-preview";
 const PILOT_MODEL_TIER = "nano";
@@ -129,7 +138,9 @@ type BudgetPreflight = {
 
 type BudgetedCallResult<T> = {
   parsed: T;
+  outputText: string;
   usage: RunAiJsonUsageMetadata;
+  contextManifestId: string;
   reservedMaxCostUsd: number;
   operationReservedMaxCostUsd: number;
   actualProviderCostUsd: number | null;
@@ -1277,6 +1288,7 @@ async function reserveBudget(input: {
 
 async function createUsageEvent(input: {
   appUserId: string;
+  analysisExecutionId: string;
   operationId: string;
   stage: string;
   model: string;
@@ -1288,6 +1300,7 @@ async function createUsageEvent(input: {
     .from("ai_usage_events")
     .insert({
       app_user_id: input.appUserId,
+      analysis_execution_id: input.analysisExecutionId,
       selected_tier_code: PILOT_MODEL_TIER,
       model_name: input.model,
       provider: "openai",
@@ -1403,16 +1416,13 @@ async function markUsageFailed(input: {
   usageEventId: string;
   error: unknown;
 }) {
-  const errorMessage =
-    input.error instanceof Error ? input.error.message : String(input.error);
-
   await supabase
     .from("ai_usage_events")
     .update({
       status: "openai_failed",
       error_code:
         input.error instanceof Error ? input.error.name : "OPENAI_CALL_FAILED",
-      error_message: errorMessage.slice(0, 2_000),
+      error_message: "OpenAI provider call failed; raw provider output is not stored in this field.",
       completed_at: new Date().toISOString(),
     })
     .eq("id", input.usageEventId);
@@ -1420,14 +1430,21 @@ async function markUsageFailed(input: {
 
 async function runBudgetedJsonCall<T>(input: {
   appUserId: string;
+  analysisExecutionId: string;
   operationId: string;
   stage: string;
+  stageSequence: number;
+  protocolCode: string;
+  protocolVersion: string;
   model: string;
   system: string;
   user: unknown;
   schemaName: string;
   schema: Record<string, unknown>;
   maxOutputTokens: number;
+  retrievalSnapshot: JsonRecord;
+  instructionRefs: unknown[];
+  contextMetadata?: JsonRecord;
   signal: AbortSignal;
 }): Promise<BudgetedCallResult<T>> {
   const estimatedInputTokens = estimateInputTokensUpperBound({
@@ -1458,6 +1475,7 @@ async function runBudgetedJsonCall<T>(input: {
 
   const usageEventId = await createUsageEvent({
     appUserId: input.appUserId,
+    analysisExecutionId: input.analysisExecutionId,
     operationId: input.operationId,
     stage: input.stage,
     model: input.model,
@@ -1465,6 +1483,42 @@ async function runBudgetedJsonCall<T>(input: {
     estimatedInputTokens,
     maxOutputTokens: input.maxOutputTokens,
   });
+
+  let contextManifestId: string;
+
+  try {
+    contextManifestId = await createAiContextManifest({
+      analysisExecutionId: input.analysisExecutionId,
+      stageCode: input.stage,
+      stageSequence: input.stageSequence,
+      aiUsageEventId: usageEventId,
+      protocolCode: input.protocolCode,
+      protocolVersion: input.protocolVersion,
+      schemaName: input.schemaName,
+      schemaVersion: "v2",
+      schema: input.schema,
+      systemPrompt: input.system,
+      requestPayload: input.user,
+      provider: "openai",
+      modelName: input.model,
+      modelTier: PILOT_MODEL_TIER,
+      storeProviderState: false,
+      maxRetries: 0,
+      maxOutputTokens: input.maxOutputTokens,
+      instructionRefs: input.instructionRefs,
+      retrievalSnapshot: input.retrievalSnapshot,
+      toolPermissions: [],
+      modelConfig: {
+        reasoningEffort: "none",
+        requestTimeoutMs: PROVIDER_CALL_TIMEOUT_MS,
+        outputTokenCeiling: PILOT_OUTPUT_TOKEN_CEILING,
+      },
+      contextMetadata: input.contextMetadata,
+    });
+  } catch (error) {
+    await markUsageFailed({ usageEventId, error });
+    throw error;
+  }
 
   try {
     const result = await runAiJsonWithUsageMetadata<T>({
@@ -1485,6 +1539,11 @@ async function runBudgetedJsonCall<T>(input: {
       reasoningEffort: "none",
     });
 
+    await markAiContextManifestProviderCompleted(
+      contextManifestId,
+      result.outputText,
+    );
+
     const finalized = await finalizeUsageEvent({
       usageEventId,
       usage: result.usage,
@@ -1493,7 +1552,9 @@ async function runBudgetedJsonCall<T>(input: {
 
     return {
       parsed: result.parsed,
+      outputText: result.outputText,
       usage: result.usage,
+      contextManifestId,
       reservedMaxCostUsd: reservation.requestedCallMaxCostUsd ?? 0,
       operationReservedMaxCostUsd:
         reservation.operationReservedMaxCostUsd ?? 0,
@@ -1501,6 +1562,7 @@ async function runBudgetedJsonCall<T>(input: {
       usageLogWarning: finalized.warning,
     };
   } catch (error) {
+    await markAiContextManifestFailed(contextManifestId, error);
     await markUsageFailed({ usageEventId, error });
     throw error;
   }
@@ -1842,6 +1904,21 @@ export async function runGlobalObservationPreview(
   const model = await getNanoPilotModel();
   const catalog = await loadDomainFacetCatalog();
   const reportedAt = new Date();
+  const analysisExecutionId = await createAiAnalysisExecution({
+    appUserId: request.appUserId,
+    actorId: request.actorId,
+    externalOperationId: request.operationId,
+    surfaceCode: "global_observation_preview",
+    operationKind: "activity_semantic_intake",
+    localeCode: locale,
+    timeZone,
+    inputText,
+    metadata: {
+      contractVersion: "GSR1F_GLOBAL_OBSERVATION_PREVIEW_V1",
+      previewOnly: true,
+      dbFactWriteExecuted: false,
+    },
+  });
 
   const controller = new AbortController();
   const deadlineTimer = setTimeout(
@@ -1884,32 +1961,70 @@ export async function runGlobalObservationPreview(
 
     const routingCall = await runBudgetedJsonCall<RoutingOutput>({
       appUserId: request.appUserId,
+      analysisExecutionId,
       operationId: request.operationId,
       stage: "domain_facet_routing",
+      stageSequence: 1,
+      protocolCode: "GSR1F_GLOBAL_OBSERVATION_PREVIEW",
+      protocolVersion: "v1",
       model,
       system: routingSystem,
       user: routingUser,
       schemaName: "arctor_gsr1_routing_v2",
       schema: routingSchema,
       maxOutputTokens: ROUTING_MAX_OUTPUT_TOKENS,
+      retrievalSnapshot: {
+        ontologyScope: "global_system",
+        domainFacetOptions: domainFacetRouteOptions.map((option) => ({
+          domainFacetKey: option.domainFacetKey,
+          rootCanonicalKey: option.rootCanonicalKey,
+          facetCode: option.facetCode,
+        })),
+      },
+      instructionRefs: [
+        {
+          kind: "embedded_runtime_instruction",
+          code: "GSR1_ROUTING_STAGE1",
+          version: "v2",
+        },
+      ],
+      contextMetadata: {
+        operationalInstructionLayerApplied: false,
+        rawInputPersistedInManifest: false,
+      },
       signal: controller.signal,
     });
 
-    const aiSegments = validateRoutingOutput({
-      output: routingCall.parsed,
-      sourceText: inputText,
-      catalog,
-      reportedAt,
-      locale,
-      timeZone,
-    });
+    let aiSegments: RoutingSegment[];
+    let segments: RoutingSegment[];
 
-    const segments =
-      buildDeterministicRussianAvailableTimeSegment({
+    try {
+      aiSegments = validateRoutingOutput({
+        output: routingCall.parsed,
         sourceText: inputText,
+        catalog,
+        reportedAt,
         locale,
-        existingSegments: aiSegments,
-      }) ?? aiSegments;
+        timeZone,
+      });
+
+      segments =
+        buildDeterministicRussianAvailableTimeSegment({
+          sourceText: inputText,
+          locale,
+          existingSegments: aiSegments,
+        }) ?? aiSegments;
+
+      await markAiContextManifestValidated(routingCall.contextManifestId, {
+        passed: true,
+        validator: "validateRoutingOutput",
+        segmentCount: segments.length,
+        deterministicAvailableTimeOverrideApplied: segments !== aiSegments,
+      });
+    } catch (error) {
+      await markAiContextManifestFailed(routingCall.contextManifestId, error);
+      throw error;
+    }
 
     const candidateGroups = await buildCandidateGroups(segments, locale);
 
@@ -1939,23 +2054,70 @@ export async function runGlobalObservationPreview(
 
     const selectionCall = await runBudgetedJsonCall<SelectionOutput>({
       appUserId: request.appUserId,
+      analysisExecutionId,
       operationId: request.operationId,
       stage: "leaf_parameter_selection",
+      stageSequence: 2,
+      protocolCode: "GSR1F_GLOBAL_OBSERVATION_PREVIEW",
+      protocolVersion: "v1",
       model,
       system: selectionSystem,
       user: selectionUser,
       schemaName: "arctor_gsr1_leaf_parameter_selection_v2",
       schema: selectionSchema,
       maxOutputTokens: SELECTION_MAX_OUTPUT_TOKENS,
+      retrievalSnapshot: {
+        ontologyScope: "global_system",
+        candidateGroups: candidateGroups.map((group) => ({
+          segmentId: group.segmentId,
+          resolutionMode: group.resolutionMode,
+          exactMatchKind: group.exactMatchKind,
+          candidates: group.candidates.map((candidate) => ({
+            valueObjectId: candidate.valueObjectId,
+            canonicalKey: candidate.canonicalKey,
+            facetCode: candidate.facetCode,
+            objectKindCode: candidate.objectKindCode,
+            allowedParameterCodes: candidate.parameters.map(
+              (parameter) => parameter.parameterCode,
+            ),
+          })),
+        })),
+      },
+      instructionRefs: [
+        {
+          kind: "embedded_runtime_instruction",
+          code: "GSR1_ROUTING_STAGE2",
+          version: "v2",
+        },
+      ],
+      contextMetadata: {
+        operationalInstructionLayerApplied: false,
+        rawInputPersistedInManifest: false,
+      },
       signal: controller.signal,
     });
 
-    const previewRows = validateSelectionOutput({
-      output: selectionCall.parsed,
-      segments,
-      groups: candidateGroups,
-      locale,
-    });
+    let previewRows: ReturnType<typeof validateSelectionOutput>;
+
+    try {
+      previewRows = validateSelectionOutput({
+        output: selectionCall.parsed,
+        segments,
+        groups: candidateGroups,
+        locale,
+      });
+
+      await markAiContextManifestValidated(selectionCall.contextManifestId, {
+        passed: true,
+        validator: "validateSelectionOutput",
+        rowCount: previewRows.length,
+      });
+    } catch (error) {
+      await markAiContextManifestFailed(selectionCall.contextManifestId, error);
+      throw error;
+    }
+
+    await completeAiAnalysisExecution(analysisExecutionId);
 
     const reservedMaxUsd = Math.max(
       routingCall.operationReservedMaxCostUsd,
@@ -1972,6 +2134,7 @@ export async function runGlobalObservationPreview(
       previewOnly: true,
       dbFactWriteExecuted: false,
       operationId: request.operationId,
+      analysisExecutionId,
       actorId: request.actorId,
       modelTier: PILOT_MODEL_TIER,
       model,
@@ -2026,6 +2189,9 @@ export async function runGlobalObservationPreview(
         selectionCall.usageLogWarning,
       ].filter((value): value is string => Boolean(value)),
     };
+  } catch (error) {
+    await failAiAnalysisExecution(analysisExecutionId, error);
+    throw error;
   } finally {
     clearTimeout(deadlineTimer);
   }

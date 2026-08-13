@@ -1,0 +1,34 @@
+ARCTor.app — AI-A1 Live DB Postcheck — 2026-08-12
+Contract: ARCTOR_AI_A0_LIVE_DB_READONLY_VERIFY_V1 + AI-A1 DDL postcheck
+
+AI-A1 schema postcheck: 16/16 PASS
+
+check_name,passed,detail
+01_ai_analysis_executions_exists,true,ai_analysis_executions
+02_ai_context_manifests_exists,true,ai_context_manifests
+03_ai_usage_events_execution_link_column,true,uuid
+04_ai_usage_events_execution_fk,true,ai_usage_events_analysis_execution_id_v1_fkey
+05_execution_rls_enabled,true,true
+06_manifest_rls_enabled,true,true
+07_anon_no_execution_privileges,true,false
+08_authenticated_no_execution_privileges,true,false
+09_anon_no_manifest_privileges,true,false
+10_authenticated_no_manifest_privileges,true,false
+11_service_role_execution_rw,true,true
+12_service_role_manifest_rw,true,true
+13_no_raw_text_column_in_execution,true,raw text columns absent
+14_no_raw_text_column_in_manifest,true,raw prompt/message columns absent
+15_manifest_json_shape_guard_present,true,ai_context_manifests_json_shapes_v1_check
+16_existing_ai_usage_rows_untouched,true,additive nullable FK only; no UPDATE executed
+
+AI-A0 live facts:
+- global Value Objects: 150 = 12 root + 35 intermediate + 103 leaf
+- approved/published global aliases: 89
+- global leaves with active alias: 23
+- active global system parameter assignments: 52
+- extensions observed: pgcrypto, uuid-ossp
+- value_object_recognition_profiles absent at A0
+- universal Data Capital / Rights / Optimizer / Dataset tables absent at A0
+
+Safety:
+- read-only verification returned no raw user rows, instruction text, feedback text or personal identifiers.

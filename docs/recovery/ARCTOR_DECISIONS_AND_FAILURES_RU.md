@@ -377,3 +377,20 @@ actor-owned ЦО/ОН. Страница `/activity-ai-lab` — только inta
 `owner_user_id + owner_actor_id`, поэтому 150 Global System Reality объектов
 существовали в live DB и использовались recognizer-ом, но не отображались
 пользователю на странице каталога.
+
+## 2026-08-12 — AI Architecture physical storage decision / AI-A1
+
+Маркер: `DECISION_AI_ARCHITECTURE_STORAGE_AND_CONTEXT_V1`
+
+Зафиксировано:
+- OpenAI не является долговременной памятью ARCTor;
+- Git хранит protocol/schema/validators;
+- PostgreSQL/Supabase хранит изменяемое структурированное знание и Data Capital;
+- Object Storage используется для тяжёлых материалов/dataset artifacts;
+- каждый production provider call должен быть связан с `ai_analysis_execution` и `ai_context_manifest`;
+- raw input не копируется в Context Manifest: сохраняются hash/refs и bounded context;
+- пользовательские corrections должны сохраняться append-only как стратегический Data Capital с provenance и future rights/purpose lineage;
+- existing activity corrections/reviews/logs не выбрасываются и не дублируются без необходимости; общий Data Capital layer позже связывает их как evidence sources;
+- embeddings/search indexes являются производными, а не источником истины.
+
+AI-A0 live audit подтвердил, что `value_object_recognition_profiles`, универсальные Data Capital/rights/optimizer/dataset tables отсутствовали и должны создаваться отдельными gated этапами.

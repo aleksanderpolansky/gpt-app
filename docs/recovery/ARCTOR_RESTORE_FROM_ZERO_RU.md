@@ -123,3 +123,24 @@ G24:
 ## 9. Что остаётся заблокированным
 
 P8 Goal World Compiler остаётся заблокированным до завершения Global System Reality one-week pilot gates.
+
+## AI Architecture restore point — 2026-08-12
+
+После восстановления проекта проверить наличие:
+- `docs/reality-core/ARCTOR_AI_ARCHITECTURE_LOCK_V1_RU.md`;
+- `lib/ai/contextManifest.ts`;
+- `supabase/manual-applied/20260812_ai_a1_context_manifest_foundation_v1.sql`;
+- `supabase/diagnostics/20260812_ai_a1_context_manifest_runtime_postcheck_READONLY.sql`;
+- `scripts/validate-ai-a1-context-manifest-v1.mjs`.
+
+Обязательные проверки:
+```powershell
+node scripts/validate-ai-a1-context-manifest-v1.mjs
+node scripts/validate-gsr1f-global-observation-preview-v1.mjs
+node scripts/validate-global-system-reality-seed-v1.mjs
+npm run build
+```
+
+AI-A1 production acceptance после deploy: выполнить один обычный `/activity-ai-lab` Global Reality preview и затем read-only `20260812_ai_a1_context_manifest_runtime_postcheck_READONLY.sql`. Ожидается один completed execution, два validated manifests и два linked usage events; `store=false`, retries=0 и все hashes присутствуют.
+
+Следующий архитектурный блок: AI-A2 Recognition Profiles.

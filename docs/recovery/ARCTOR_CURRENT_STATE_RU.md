@@ -325,3 +325,23 @@ Global Reality preview включён по умолчанию. Точное зн
 `GSR1_OPENAI_PILOT_ENABLED=false` остаётся аварийным OFF. Response получает
 безопасный `analysisTrace` с реальными bounded candidate groups; скрытая
 chain-of-thought не возвращается.
+
+## 2026-08-12 — AI-A0 закрыт; AI-A1 Context Manifest foundation
+
+Маркер: `AI_A1_CONTEXT_MANIFEST_FOUNDATION_V1`
+
+AI-A0 подтверждён по source intake и live read-only DB audit. Фактически переиспользуются существующие system/personal AI instructions, Value Objects/aliases/parameters/relations, AI usage/budget и предметные activity logs/corrections/reviews.
+
+AI-A1 создаёт универсальный execution/context provenance поверх существующей инфраструктуры:
+- `ai_analysis_executions` — одна логическая AI-операция ARCTor;
+- `ai_context_manifests` — один воспроизводимый manifest на provider stage;
+- `ai_usage_events.analysis_execution_id` связывает provider usage с общей операцией.
+
+Runtime Global Reality использует один analysis execution для двух Nano stage. Каждый stage хранит protocol/schema/prompt/request/response hashes, bounded retrieval snapshot, provider controls и validator result. Raw user text и полный prompt не дублируются в manifest.
+
+Сохраняются существующие safety-gates: preview-only, Reality Graph write=false, Nano, максимум 2 provider calls, automatic retries=0, `store=false`, существующий budget preflight/hard cap.
+
+Канонический AI Architecture Lock: `docs/reality-core/ARCTOR_AI_ARCHITECTURE_LOCK_V1_RU.md`.
+Матрица AI-A0 REUSE/ALTER/CREATE: `docs/recovery/specs/ARCTOR_AI_A0_REUSE_ALTER_CREATE_V1_RU.md`.
+
+Следующий блок после production runtime postcheck AI-A1: **AI-A2 Recognition Profiles**.

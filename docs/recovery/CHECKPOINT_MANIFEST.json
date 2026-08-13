@@ -1,11 +1,11 @@
 {
     "schemaVersion":  6,
-    "generatedAt":  "2026-08-12",
+    "generatedAt":  "2026-08-13",
     "project":  "ARCTor.app",
     "repository":  "aleksanderpolansky/gpt-app",
     "branch":  "feat/gsr1-global-system-reality-machine-contract-v1-20260811",
     "originMainAtCheckpoint":  "220af0b45d6e91163c25d764d052658ffac32937",
-    "checkpointMeaning":  "GSR1L architecture v1.1 approved after repository/environment and live Supabase intake, including the one-primary-episode interaction rule.",
+    "checkpointMeaning":  "AI-A1 Context Manifest foundation integrated after AI-A0 source/live DB audit; universal provider execution provenance is now the canonical next runtime layer.",
     "globalReality":  {
                           "p8Blocked":  true,
                           "objectsTotal":  150,
@@ -49,7 +49,7 @@
                                    ],
                        "note":  "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
                    },
-    "nextAction":  "IMPLEMENTATION GSR1L-P1: minimal versioned recognition-profile table, read-only assembled profile/candidate RPC, limited pilot seed; no Reality Graph write change.",
+    "nextAction":  "AI-A1 production runtime postcheck, then AI-A2 Recognition Profiles: versioned recognition data + assembled bounded candidates + NO_MATCH/PROPOSAL_NEEDED; no Reality Graph write change.",
     "recoveryDocs":  [
                          "docs/recovery/README_RU.md",
                          "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -60,7 +60,7 @@
                      ],
     "checkpointPolicy":  "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
     "previousRecoveryCommit":  "a78638c3cb118cb27cd6dff74777c1887e0ec9c9",
-    "documentedState":  "GSR1L_RECOGNITION_ARCHITECTURE_V1_1_APPROVED_IMPLEMENTATION_P1_NEXT",
+    "documentedState":  "AI_A1_CONTEXT_MANIFEST_FOUNDATION_V1",
     "costSafetyPolicy":  {
                              "perOperationHardCapUsd":  0.1,
                              "meaning":  "emergency runaway fuse, not a target test budget",
@@ -164,5 +164,20 @@
                         "realityGraphWriteChanged":  false,
                         "liveDbEvidenceMode":  "verified_summary_from_reviewed_read_only_intake",
                         "rawLiveDbExportRequiredForCheckpoint":  false
-                    }
+                    },
+    "aiArchitecture":  {
+                           "status":  "AI_A1_IMPLEMENTATION",
+                           "sourceBaseline":  "07e5b82d8e9c9ee22c995bfb64297e685fefe918",
+                           "architectureLock":  "docs/reality-core/ARCTOR_AI_ARCHITECTURE_LOCK_V1_RU.md",
+                           "storageAudit":  "docs/recovery/specs/ARCTOR_AI_A0_REUSE_ALTER_CREATE_V1_RU.md",
+                           "analysisExecutionTable":  "public.ai_analysis_executions",
+                           "contextManifestTable":  "public.ai_context_manifests",
+                           "aiUsageLink":  "public.ai_usage_events.analysis_execution_id",
+                           "liveDbFoundationPostcheck":  "16/16 PASS",
+                           "rawInputDuplicatedInManifest":  false,
+                           "providerStore":  false,
+                           "automaticProviderRetries":  0,
+                           "maxProviderCalls":  2,
+                           "nextBlock":  "AI_A2_RECOGNITION_PROFILES"
+                       }
 }
