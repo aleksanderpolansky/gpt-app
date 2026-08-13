@@ -31,6 +31,9 @@ type ValueObjectRow = {
   identity_attributes_json: unknown;
   created_at: string | null;
   updated_at: string | null;
+  canonical_key: string | null;
+  ontology_node_role_code: string | null;
+  scope_code: string | null;
 };
 
 type SelectorPathItem = {
@@ -53,6 +56,8 @@ type SelectorItem = {
   pathText: string;
   createdAt: string | null;
   updatedAt: string | null;
+  canonicalKey: string | null;
+  scopeCode: string | null;
 };
 
 function asRecord(value: unknown): JsonRecord {
@@ -89,6 +94,10 @@ function normalizeLevel(value: string | null): SelectorLevel {
   }
 
   return "all";
+}
+
+function normalizeBooleanFlag(value: string | null): boolean {
+  return value === "1" || value === "true";
 }
 
 function normalizeLimit(value: string | null): number {
@@ -159,7 +168,22 @@ function extractAliases(row: ValueObjectRow): string[] {
 
 function resolveLevel(
   row: ValueObjectRow,
+  preferOntologyRole: boolean,
 ): Exclude<SelectorLevel, "all"> | null {
+  if (preferOntologyRole) {
+    if (row.ontology_node_role_code === "root") {
+      return "root";
+    }
+
+    if (row.ontology_node_role_code === "intermediate") {
+      return "intermediate";
+    }
+
+    if (row.ontology_node_role_code === "leaf") {
+      return "leaf";
+    }
+  }
+
   if (
     row.node_role_code === "structural" &&
     row.parent_value_object_id === null
@@ -216,13 +240,14 @@ function buildPath(
 function toSelectorItem(
   row: ValueObjectRow,
   byId: Map<string, ValueObjectRow>,
+  preferOntologyRole: boolean,
 ): SelectorItem | null {
   const title = asString(row.title);
   const nodeRoleCode = asString(row.node_role_code);
   const branchTypeCode = asString(row.branch_type_code);
   const objectKind = asString(row.object_kind);
   const rootValueObjectId = asString(row.root_value_object_id);
-  const level = resolveLevel(row);
+  const level = resolveLevel(row, preferOntologyRole);
 
   if (
     !title ||
@@ -252,6 +277,8 @@ function toSelectorItem(
     pathText: path.map((item) => item.title).join(" › "),
     createdAt: asString(row.created_at),
     updatedAt: asString(row.updated_at),
+    canonicalKey: asString(row.canonical_key),
+    scopeCode: asString(row.scope_code),
   };
 }
 
@@ -333,55 +360,89 @@ export async function GET(request: Request) {
   );
   const level = normalizeLevel(url.searchParams.get("level"));
   const parentOnly = url.searchParams.get("parentOnly") === "1";
+  const includeGlobal = normalizeBooleanFlag(
+    url.searchParams.get("includeGlobal"),
+  );
   const resultLimit = normalizeLimit(url.searchParams.get("limit"));
   const pinnedIds = normalizeUuidList(
     url.searchParams.get("pinnedIds"),
   );
 
-  const [{ data: rowsData, error: rowsError }, { data: profileData }] =
-    await Promise.all([
-      supabase
-        .from("value_objects")
-        .select(
-          `
-          id,
-          title,
-          node_role_code,
-          branch_type_code,
-          object_kind,
-          root_value_object_id,
-          parent_value_object_id,
-          status,
-          metadata_json,
-          identity_attributes_json,
-          created_at,
-          updated_at
-        `,
-        )
-        .eq("owner_user_id", actorContext.appUserId)
-        .eq("owner_actor_id", actorContext.actorId)
-        .in("status", ["draft", "active"])
-        .order("updated_at", { ascending: false })
-        .limit(SOURCE_ROW_LIMIT),
-      supabase
-        .from("actor_public_profiles")
-        .select("display_name, profile_kind")
-        .eq("owner_user_id", actorContext.appUserId)
-        .eq("actor_id", actorContext.actorId)
-        .maybeSingle(),
-    ]);
+  const selectShape = `
+    id,
+    title,
+    node_role_code,
+    branch_type_code,
+    object_kind,
+    root_value_object_id,
+    parent_value_object_id,
+    status,
+    metadata_json,
+    identity_attributes_json,
+    created_at,
+    updated_at,
+    canonical_key,
+    ontology_node_role_code,
+    scope_code
+  `;
 
-  if (rowsError) {
+  const { data: ownedRowsData, error: ownedRowsError } = await supabase
+    .from("value_objects")
+    .select(selectShape)
+    .eq("owner_user_id", actorContext.appUserId)
+    .eq("owner_actor_id", actorContext.actorId)
+    .in("status", ["draft", "active"])
+    .order("updated_at", { ascending: false })
+    .limit(SOURCE_ROW_LIMIT);
+
+  if (ownedRowsError) {
     return NextResponse.json(
-      { ok: false, error: rowsError.message },
+      { ok: false, error: ownedRowsError.message },
       { status: 500 },
     );
   }
 
-  const rows = (rowsData ?? []) as ValueObjectRow[];
+  let globalRowsData: ValueObjectRow[] = [];
+
+  if (includeGlobal) {
+    const { data, error } = await supabase
+      .from("value_objects")
+      .select(selectShape)
+      .eq("scope_code", "global")
+      .eq("status", "active")
+      .order("updated_at", { ascending: false })
+      .limit(SOURCE_ROW_LIMIT);
+
+    if (error) {
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: 500 },
+      );
+    }
+
+    globalRowsData = (data ?? []) as ValueObjectRow[];
+  }
+
+  const { data: profileData } = await supabase
+    .from("actor_public_profiles")
+    .select("display_name, profile_kind")
+    .eq("owner_user_id", actorContext.appUserId)
+    .eq("actor_id", actorContext.actorId)
+    .maybeSingle();
+
+  const mergedRows = new Map<string, ValueObjectRow>();
+
+  for (const row of [
+    ...globalRowsData,
+    ...((ownedRowsData ?? []) as ValueObjectRow[]),
+  ]) {
+    mergedRows.set(row.id, row);
+  }
+
+  const rows = [...mergedRows.values()];
   const byId = new Map(rows.map((row) => [row.id, row]));
   const allItems = rows.flatMap((row) => {
-    const item = toSelectorItem(row, byId);
+    const item = toSelectorItem(row, byId, includeGlobal);
     return item ? [item] : [];
   });
 
@@ -421,13 +482,20 @@ export async function GET(request: Request) {
         branchTypeCode,
         level,
         parentOnly,
+        includeGlobal,
       },
       valueObjects: filtered.slice(0, resultLimit),
       pinnedValueObjects,
       totalMatched: filtered.length,
       returned: Math.min(filtered.length, resultLimit),
       sourceRows: rows.length,
-      sourceTruncated: rows.length >= SOURCE_ROW_LIMIT,
+      sourceTruncated:
+        ((ownedRowsData ?? []).length >= SOURCE_ROW_LIMIT) ||
+        globalRowsData.length >= SOURCE_ROW_LIMIT,
+      counts: {
+        global: allItems.filter((item) => item.scopeCode === "global").length,
+        actorOwned: allItems.filter((item) => item.scopeCode !== "global").length,
+      },
     },
     {
       headers: {

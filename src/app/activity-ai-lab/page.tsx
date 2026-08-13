@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Locale = "ru" | "en" | "pl" | "uk" | "de" | "es" | "cs";
 
@@ -14,9 +14,55 @@ type TraceKind =
   | "unresolved"
   | "fallback";
 
+type FeedbackTargetKind =
+  | "primary_selection"
+  | "fact"
+  | "semantic_projection"
+  | "unresolved";
+
+type FeedbackDescriptor = {
+  targetKind: FeedbackTargetKind;
+  targetKey: string;
+  targetValueObjectId?: string | null;
+  sourceContractCode?: string | null;
+  proposalSnapshot: Record<string, unknown>;
+  rationale: string;
+};
+
 type TraceLine = {
   kind: TraceKind;
   text: string;
+  feedback?: FeedbackDescriptor;
+};
+
+type FeedbackStatus = {
+  phase: "saving" | "saved" | "error";
+  verdict?: "confirmed" | "rejected" | "commented";
+  message?: string;
+};
+
+type SelectorItem = {
+  id: string;
+  title: string;
+  canonicalKey?: string | null;
+  scopeCode?: string | null;
+  level?: string;
+  pathText?: string;
+};
+
+type SelectorResponse = {
+  ok?: boolean;
+  valueObjects?: SelectorItem[];
+  error?: string;
+};
+
+type ManualLinkIntent = {
+  feedbackEventId: string;
+  valueObjectId: string;
+  title: string;
+  canonicalKey?: string | null;
+  pathText?: string;
+  scopeCode?: string | null;
 };
 
 type GlobalFact = {
@@ -78,6 +124,7 @@ type RoutingTraceRow = {
 };
 
 type CandidateTrace = {
+  valueObjectId?: string;
   canonicalKey?: string;
   title?: string;
   description?: string | null;
@@ -99,6 +146,7 @@ type GlobalPreview = {
   previewOnly?: boolean;
   dbFactWriteExecuted?: boolean;
   operationId?: string;
+  analysisExecutionId?: string;
   modelTier?: string;
   model?: string;
   reportedAt?: string;
@@ -167,6 +215,38 @@ function createOperationId() {
   }
 
   return `activity-ai-lab-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function createClientFeedbackId() {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+
+  const bytes = new Uint8Array(16);
+
+  if (typeof globalThis.crypto?.getRandomValues === "function") {
+    globalThis.crypto.getRandomValues(bytes);
+  } else {
+    for (let index = 0; index < bytes.length; index += 1) {
+      bytes[index] = Math.floor(Math.random() * 256);
+    }
+  }
+
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+  const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function compactCandidateSnapshot(candidates: CandidateTrace[]) {
+  return candidates.map((candidate) => ({
+    valueObjectId: candidate.valueObjectId ?? null,
+    canonicalKey: candidate.canonicalKey ?? null,
+    title: candidate.title ?? null,
+    facetCode: candidate.facetCode ?? null,
+  }));
 }
 
 function formatModelConfidence(value: unknown) {
@@ -342,6 +422,28 @@ function buildGlobalTrace(inputText: string, payload: GlobalPreview): TraceLine[
           `(${row.selected.canonicalKey ?? "canonical key не указан"}). ` +
           `Указанная моделью уверенность выбора среди разрешённых кандидатов: ` +
           `${formatModelConfidence(row.confidence)}. Это не вероятность истинности факта.`,
+        feedback: {
+          targetKind: "primary_selection",
+          targetKey: `segment:${segmentId || index + 1}:primary_selection`,
+          targetValueObjectId: row.selected.valueObjectId ?? null,
+          sourceContractCode: payload.contractVersion ?? null,
+          proposalSnapshot: {
+            segmentId: segmentId || null,
+            sourceFragment: fragment,
+            selected: {
+              valueObjectId: row.selected.valueObjectId ?? null,
+              canonicalKey: row.selected.canonicalKey ?? null,
+              title: row.selected.title ?? null,
+              semanticMatchMethodCode:
+                row.selected.semanticMatchMethodCode ?? null,
+            },
+            confidence: row.confidence ?? null,
+            candidates: compactCandidateSnapshot(candidates),
+          },
+          rationale:
+            `Модель выбирала только из ${candidates.length} серверных кандидатов. ` +
+            `Её самооценка выбора: ${formatModelConfidence(row.confidence)}.`,
+        },
       });
 
       trace.push({
@@ -356,6 +458,21 @@ function buildGlobalTrace(inputText: string, payload: GlobalPreview): TraceLine[
         text:
           `Для фрагмента «${fragment}» модель не выбрала листовой ЦО. ` +
           `Это сохраняется как неопределённость, а не заменяется выдуманным объектом.`,
+        feedback: {
+          targetKind: "unresolved",
+          targetKey: `segment:${segmentId || index + 1}:unresolved`,
+          targetValueObjectId: null,
+          sourceContractCode: payload.contractVersion ?? null,
+          proposalSnapshot: {
+            segmentId: segmentId || null,
+            sourceFragment: fragment,
+            candidates: compactCandidateSnapshot(candidates),
+          },
+          rationale:
+            candidates.length > 0
+              ? `Сервер допустил ${candidates.length} вариантов, но модель не нашла достаточного основания выбрать один.`
+              : "Сервер не нашёл допустимого листового кандидата для уверенного выбора.",
+        },
       });
     }
 
@@ -380,20 +497,68 @@ function buildGlobalTrace(inputText: string, payload: GlobalPreview): TraceLine[
       });
     }
 
-    facts.forEach((fact) => {
+    facts.forEach((fact, factIndex) => {
+      const parameterCode = fact.parameterCode ?? `fact_${factIndex + 1}`;
+
       trace.push({
         kind: "fact",
         text:
           `${fact.parameterCode ?? "параметр"} = ${formatFactValue(fact)}. ` +
           `Основание: «${fact.rawFragment ?? "не указано"}». ` +
           `Статус: ${fact.factStatus ?? "proposed"}.`,
+        feedback: {
+          targetKind: "fact",
+          targetKey: `segment:${segmentId || index + 1}:fact:${parameterCode}:${factIndex + 1}`,
+          targetValueObjectId: row.selected?.valueObjectId ?? null,
+          sourceContractCode: payload.contractVersion ?? null,
+          proposalSnapshot: {
+            segmentId: segmentId || null,
+            parameterCode: fact.parameterCode ?? null,
+            unit: fact.unit ?? null,
+            valueType: fact.valueType ?? null,
+            valueNumeric: fact.valueNumeric ?? null,
+            valueText: fact.valueText ?? null,
+            valueBoolean: fact.valueBoolean ?? null,
+            rawFragment: fact.rawFragment ?? null,
+            factStatus: fact.factStatus ?? "proposed",
+            selectedCanonicalKey: row.selected?.canonicalKey ?? null,
+          },
+          rationale:
+            `Факт предложен только из явного фрагмента «${fact.rawFragment ?? "не указано"}» ` +
+            `и параметров выбранного ЦО.`,
+        },
       });
     });
 
-    (row.semanticProjections ?? []).forEach((projection) => {
+    (row.semanticProjections ?? []).forEach((projection, projectionIndex) => {
+      const projectionCode =
+        projection.projectionCode ?? `projection_${projectionIndex + 1}`;
+
       trace.push({
         kind: "meaning",
         text: formatSemanticProjection(projection),
+        feedback: {
+          targetKind: "semantic_projection",
+          targetKey: `segment:${segmentId || index + 1}:projection:${projectionCode}`,
+          targetValueObjectId: projection.targetValueObjectId ?? null,
+          sourceContractCode:
+            projection.contractVersion ?? payload.contractVersion ?? null,
+          proposalSnapshot: {
+            segmentId: segmentId || null,
+            projectionCode: projection.projectionCode ?? null,
+            epistemicStatus: projection.epistemicStatus ?? null,
+            targetCanonicalKey: projection.targetCanonicalKey ?? null,
+            targetValueObjectId: projection.targetValueObjectId ?? null,
+            targetTitle: projection.targetTitle ?? null,
+            targetNodeRoleCode: projection.targetNodeRoleCode ?? null,
+            basisCode: projection.basisCode ?? null,
+            evidenceFragments: projection.evidenceFragments ?? [],
+            writeAllowed: projection.writeAllowed ?? false,
+          },
+          rationale:
+            `Статус: ${EPISTEMIC_STATUS_LABELS[projection.epistemicStatus ?? ""] ?? projection.epistemicStatus ?? "не указан"}. ` +
+            `Основание: ${(projection.evidenceFragments ?? []).filter(Boolean).map((item) => `«${item}»`).join(", ") || "не указано"}.`,
+        },
       });
     });
   });
@@ -498,7 +663,27 @@ function buildFallbackTrace(
   return trace;
 }
 
-function TracePanel({ lines, loading }: { lines: TraceLine[]; loading: boolean }) {
+function TracePanel({
+  lines,
+  loading,
+  operationId,
+}: {
+  lines: TraceLine[];
+  loading: boolean;
+  operationId: string | null;
+}) {
+  const [feedbackState, setFeedbackState] = useState<Record<string, FeedbackStatus>>({});
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [commentDraft, setCommentDraft] = useState("");
+  const [whyOpen, setWhyOpen] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    setFeedbackState({});
+    setEditingKey(null);
+    setCommentDraft("");
+    setWhyOpen({});
+  }, [operationId]);
+
   const label: Record<TraceKind, string> = {
     system: "СИСТЕМА",
     model: "МОДЕЛЬ",
@@ -518,6 +703,81 @@ function TracePanel({ lines, loading }: { lines: TraceLine[]; loading: boolean }
     unresolved: "text-amber-400",
     fallback: "text-orange-400",
   };
+
+  async function submitFeedback(
+    feedback: FeedbackDescriptor,
+    verdictCode: "confirmed" | "rejected" | "commented",
+    explanationText?: string,
+  ) {
+    if (!operationId) {
+      return;
+    }
+
+    const targetKey = feedback.targetKey;
+    setFeedbackState((current) => ({
+      ...current,
+      [targetKey]: { phase: "saving", verdict: verdictCode },
+    }));
+
+    try {
+      const response = await fetch("/api/ai/reality/feedback", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          operationId,
+          clientFeedbackId: createClientFeedbackId(),
+          targetKind: feedback.targetKind,
+          targetKey: feedback.targetKey,
+          targetValueObjectId: feedback.targetValueObjectId ?? null,
+          verdictCode,
+          sourceContractCode: feedback.sourceContractCode ?? null,
+          proposalSnapshot: feedback.proposalSnapshot,
+          explanationText: explanationText?.trim() || null,
+          metadata: {
+            interaction: "activity_ai_lab_trace_review",
+          },
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | { ok?: boolean; error?: string }
+        | null;
+
+      if (!response.ok || payload?.ok !== true) {
+        throw new Error(payload?.error || `Feedback save failed: ${response.status}`);
+      }
+
+      setFeedbackState((current) => ({
+        ...current,
+        [targetKey]: {
+          phase: "saved",
+          verdict: verdictCode,
+          message:
+            verdictCode === "confirmed"
+              ? "подтверждено"
+              : verdictCode === "rejected"
+                ? "отклонено"
+                : "комментарий сохранён",
+        },
+      }));
+      setEditingKey(null);
+      setCommentDraft("");
+    } catch (caught) {
+      setFeedbackState((current) => ({
+        ...current,
+        [targetKey]: {
+          phase: "error",
+          verdict: verdictCode,
+          message:
+            caught instanceof Error ? caught.message : "Не удалось сохранить обратную связь",
+        },
+      }));
+    }
+  }
 
   return (
     <div className="rounded-3xl border border-emerald-900/70 bg-black p-5 shadow-2xl shadow-emerald-950/20">
@@ -543,17 +803,130 @@ function TracePanel({ lines, loading }: { lines: TraceLine[]; loading: boolean }
           </p>
         ) : null}
 
-        {lines.map((line, index) => (
-          <div
-            className="grid grid-cols-[82px_1fr] gap-3"
-            key={`${index}-${line.text}`}
-          >
-            <span className={style[line.kind]}>{label[line.kind]}</span>
-            <span className="whitespace-pre-wrap break-words text-zinc-200">
-              {line.text}
-            </span>
-          </div>
-        ))}
+        {lines.map((line, index) => {
+          const feedback = line.feedback;
+          const state = feedback ? feedbackState[feedback.targetKey] : undefined;
+          const isEditing = feedback ? editingKey === feedback.targetKey : false;
+          const isWhyOpen = feedback ? whyOpen[feedback.targetKey] === true : false;
+          const locked = state?.phase === "saving" || state?.phase === "saved";
+
+          return (
+            <div
+              className="grid grid-cols-[82px_1fr] gap-3"
+              key={`${index}-${line.text}`}
+            >
+              <span className={style[line.kind]}>{label[line.kind]}</span>
+              <div className="min-w-0">
+                <span className="whitespace-pre-wrap break-words text-zinc-200">
+                  {line.text}
+                </span>
+
+                {feedback && operationId ? (
+                  <div className="mt-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5 font-sans">
+                      <button
+                        aria-label="Подтвердить"
+                        className="rounded-lg border border-emerald-900 px-2 py-0.5 text-xs font-semibold text-emerald-300 hover:border-emerald-600 disabled:cursor-not-allowed disabled:opacity-40"
+                        disabled={locked}
+                        onClick={() => void submitFeedback(feedback, "confirmed")}
+                        title="Подтвердить"
+                        type="button"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        aria-label="Отклонить"
+                        className="rounded-lg border border-red-900 px-2 py-0.5 text-xs font-semibold text-red-300 hover:border-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                        disabled={locked}
+                        onClick={() => void submitFeedback(feedback, "rejected")}
+                        title="Отклонить"
+                        type="button"
+                      >
+                        ✕
+                      </button>
+                      <button
+                        aria-label="Добавить объяснение"
+                        className="rounded-lg border border-sky-900 px-2 py-0.5 text-xs font-semibold text-sky-300 hover:border-sky-600 disabled:cursor-not-allowed disabled:opacity-40"
+                        disabled={locked}
+                        onClick={() => {
+                          setEditingKey(isEditing ? null : feedback.targetKey);
+                          setCommentDraft("");
+                        }}
+                        title="Добавить объяснение"
+                        type="button"
+                      >
+                        ✎
+                      </button>
+                      <button
+                        aria-label="Почему система так решила"
+                        className="rounded-lg border border-zinc-700 px-2 py-0.5 text-xs font-semibold text-zinc-300 hover:border-zinc-500"
+                        onClick={() =>
+                          setWhyOpen((current) => ({
+                            ...current,
+                            [feedback.targetKey]: !isWhyOpen,
+                          }))
+                        }
+                        title="Почему?"
+                        type="button"
+                      >
+                        ?
+                      </button>
+                      {state?.phase === "saving" ? (
+                        <span className="text-zinc-500">сохраняю…</span>
+                      ) : null}
+                      {state?.phase === "saved" ? (
+                        <span className="text-emerald-400">{state.message}</span>
+                      ) : null}
+                      {state?.phase === "error" ? (
+                        <span className="text-red-400">{state.message}</span>
+                      ) : null}
+                    </div>
+
+                    {isWhyOpen ? (
+                      <div className="mt-1 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 font-sans text-xs leading-5 text-zinc-400">
+                        {feedback.rationale}
+                      </div>
+                    ) : null}
+
+                    {isEditing ? (
+                      <div className="mt-2 flex flex-col gap-2 font-sans">
+                        <textarea
+                          className="min-h-20 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs leading-5 text-zinc-200 outline-none focus:border-sky-600"
+                          maxLength={4000}
+                          onChange={(event) => setCommentDraft(event.target.value)}
+                          placeholder="Что именно система поняла правильно или неправильно?"
+                          value={commentDraft}
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            className="rounded-lg border border-sky-800 px-3 py-1 text-xs font-semibold text-sky-300 disabled:cursor-not-allowed disabled:opacity-40"
+                            disabled={!commentDraft.trim() || state?.phase === "saving"}
+                            onClick={() =>
+                              void submitFeedback(feedback, "commented", commentDraft)
+                            }
+                            type="button"
+                          >
+                            Сохранить комментарий
+                          </button>
+                          <button
+                            className="rounded-lg border border-zinc-800 px-3 py-1 text-xs text-zinc-400"
+                            onClick={() => {
+                              setEditingKey(null);
+                              setCommentDraft("");
+                            }}
+                            type="button"
+                          >
+                            Отмена
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          );
+        })}
 
         {loading ? (
           <div className="grid grid-cols-[82px_1fr] gap-3">
@@ -568,6 +941,220 @@ function TracePanel({ lines, loading }: { lines: TraceLine[]; loading: boolean }
   );
 }
 
+function ManualLeafLinkPicker({
+  operationId,
+  links,
+  onLinksChange,
+}: {
+  operationId: string;
+  links: ManualLinkIntent[];
+  onLinksChange: (links: ManualLinkIntent[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<SelectorItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [addingId, setAddingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || query.trim().length < 2) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const params = new URLSearchParams({
+          q: query.trim(),
+          level: "leaf",
+          limit: "24",
+          includeGlobal: "1",
+        });
+        const response = await fetch(`/api/value-objects/selector?${params.toString()}`, {
+          credentials: "include",
+          headers: { Accept: "application/json" },
+          signal: controller.signal,
+        });
+        const payload = (await response.json().catch(() => null)) as SelectorResponse | null;
+
+        if (!response.ok || payload?.ok !== true) {
+          throw new Error(payload?.error || `VO search failed: ${response.status}`);
+        }
+
+        setResults((payload.valueObjects ?? []).filter((item) => item.level === "leaf"));
+      } catch (caught) {
+        if (controller.signal.aborted) {
+          return;
+        }
+        setError(caught instanceof Error ? caught.message : "Не удалось выполнить поиск ЦО");
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [open, query]);
+
+  async function addManualLink(item: SelectorItem) {
+    if (links.some((link) => link.valueObjectId === item.id)) {
+      return;
+    }
+
+    setAddingId(item.id);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/ai/reality/feedback", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          operationId,
+          clientFeedbackId: createClientFeedbackId(),
+          targetKind: "manual_leaf_link",
+          targetKey: `manual_leaf_link:${item.id}`,
+          targetValueObjectId: item.id,
+          verdictCode: "manual_link_added",
+          sourceContractCode: "AI_A3_P2_FEEDBACK_REVIEW_UX_V1",
+          proposalSnapshot: {
+            valueObjectId: item.id,
+            canonicalKey: item.canonicalKey ?? null,
+            title: item.title,
+            pathText: item.pathText ?? null,
+            scopeCode: item.scopeCode ?? null,
+            source: "manual_leaf_search",
+          },
+          metadata: {
+            interaction: "activity_ai_lab_manual_leaf_link",
+          },
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            error?: string;
+            feedbackEvent?: { id?: string };
+          }
+        | null;
+
+      if (!response.ok || payload?.ok !== true || !payload.feedbackEvent?.id) {
+        throw new Error(payload?.error || `Manual link save failed: ${response.status}`);
+      }
+
+      onLinksChange([
+        ...links,
+        {
+          feedbackEventId: payload.feedbackEvent.id,
+          valueObjectId: item.id,
+          title: item.title,
+          canonicalKey: item.canonicalKey ?? null,
+          pathText: item.pathText,
+          scopeCode: item.scopeCode ?? null,
+        },
+      ]);
+      setQuery("");
+      setResults([]);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Не удалось добавить связь");
+    } finally {
+      setAddingId(null);
+    }
+  }
+
+  return (
+    <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-4">
+      <button
+        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-zinc-700 bg-black/40 px-4 py-3 text-left text-sm font-semibold text-zinc-200 hover:border-emerald-700"
+        onClick={() => setOpen((current) => !current)}
+        type="button"
+      >
+        <span>+ Добавить связь с ЦО</span>
+        <span className="text-xs font-normal text-zinc-500">
+          только листовой объект
+        </span>
+      </button>
+
+      {links.length > 0 ? (
+        <div className="mt-3 space-y-2">
+          {links.map((link) => (
+            <div
+              className="rounded-xl border border-emerald-900/70 bg-emerald-950/20 px-3 py-2 text-xs leading-5"
+              key={link.feedbackEventId}
+            >
+              <span className="font-semibold text-emerald-300">✓ {link.title}</span>
+              {link.canonicalKey ? (
+                <span className="ml-2 text-zinc-500">[{link.canonicalKey}]</span>
+              ) : null}
+              {link.pathText ? (
+                <div className="text-zinc-500">{link.pathText}</div>
+              ) : null}
+            </div>
+          ))}
+          <p className="text-xs leading-5 text-zinc-500">
+            Эти ручные связи уже сохранены как намерения Data Capital и будут
+            материализованы как semantic_exposure после создания прошедшей активности.
+          </p>
+        </div>
+      ) : null}
+
+      {open ? (
+        <div className="mt-3 space-y-3">
+          <input
+            className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-emerald-600"
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Начни вводить название ЦО…"
+            value={query}
+          />
+
+          {query.trim().length < 2 ? (
+            <p className="text-xs text-zinc-600">Введи минимум 2 символа.</p>
+          ) : null}
+          {loading ? <p className="text-xs text-zinc-500">Ищу…</p> : null}
+          {error ? <p className="text-xs text-red-400">{error}</p> : null}
+
+          {results.length > 0 ? (
+            <div className="max-h-72 space-y-1 overflow-auto rounded-2xl border border-zinc-800 bg-black p-2">
+              {results.map((item) => {
+                const selected = links.some((link) => link.valueObjectId === item.id);
+                return (
+                  <button
+                    className="w-full rounded-xl px-3 py-2 text-left hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={selected || addingId === item.id}
+                    key={item.id}
+                    onClick={() => void addManualLink(item)}
+                    type="button"
+                  >
+                    <div className="text-sm font-semibold text-zinc-200">
+                      {selected ? "✓ " : ""}{item.title}
+                    </div>
+                    <div className="text-xs leading-5 text-zinc-600">
+                      {item.pathText || item.canonicalKey || item.id}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function ActivityAiLabPage() {
   const [inputText, setInputText] = useState("");
   const [locale, setLocale] = useState<Locale>("ru");
@@ -575,11 +1162,15 @@ export default function ActivityAiLabPage() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [trace, setTrace] = useState<TraceLine[]>([]);
+  const [manualLinks, setManualLinks] = useState<ManualLinkIntent[]>([]);
 
   const timeZone =
     typeof Intl !== "undefined"
       ? Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
       : "UTC";
+
+  const analysisOperationId =
+    result?.mode === "global" ? result.payload.operationId?.trim() ?? "" : "";
 
   const reviewHref = useMemo(() => {
     const params = new URLSearchParams({
@@ -589,8 +1180,19 @@ export default function ActivityAiLabPage() {
       text: inputText.trim(),
     });
 
+    if (analysisOperationId) {
+      params.set("analysisOperationId", analysisOperationId);
+    }
+
+    if (manualLinks.length > 0) {
+      params.set(
+        "manualFeedbackIds",
+        manualLinks.map((link) => link.feedbackEventId).join(","),
+      );
+    }
+
     return `/calendar/activity-review?${params.toString()}`;
-  }, [inputText, locale]);
+  }, [analysisOperationId, inputText, locale, manualLinks]);
 
   const futureHref = useMemo(() => {
     const params = new URLSearchParams({
@@ -617,6 +1219,7 @@ export default function ActivityAiLabPage() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setManualLinks([]);
     setTrace([
       { kind: "system", text: `Получено сообщение: «${text}»` },
       {
@@ -801,6 +1404,7 @@ export default function ActivityAiLabPage() {
                   setResult(null);
                   setError(null);
                   setTrace([]);
+                  setManualLinks([]);
                 }}
                 type="button"
               >
@@ -837,7 +1441,20 @@ export default function ActivityAiLabPage() {
             </div>
           </div>
 
-          <TracePanel lines={trace} loading={loading} />
+          <div className="space-y-4">
+            <TracePanel
+              lines={trace}
+              loading={loading}
+              operationId={analysisOperationId || null}
+            />
+            {fullAnalysisSucceeded && analysisOperationId ? (
+              <ManualLeafLinkPicker
+                links={manualLinks}
+                onLinksChange={setManualLinks}
+                operationId={analysisOperationId}
+              />
+            ) : null}
+          </div>
         </section>
 
         {rawPayload ? (

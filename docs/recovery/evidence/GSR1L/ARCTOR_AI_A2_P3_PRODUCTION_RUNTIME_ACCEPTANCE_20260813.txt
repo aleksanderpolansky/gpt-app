@@ -1,0 +1,42 @@
+ARCTor.app - AI-A2 / GSR1L-P3 production runtime acceptance
+Date: 2026-08-13
+Parent code checkpoint: df260c2a5b928350b2a02c8f1b55a06b21d3aecb
+
+STOKROTKA=PASS
+Input: сходил в магазин стокротка возле меня, купил две консервы тунца и макароны, заплатил 20 злотых
+Primary candidate/selection: process.finance.purchase
+Semantic projections:
+- purchase_contains_food_goods -> entity.food.item, DERIVED
+- relevant_to_nutrition -> domain.nutrition_consumption, DERIVED
+- possible_household_provisioning -> process.home.household_task, INFERRED
+- possible_family_benefit: ABSENT
+Explicit fact: monetary_amount_pln=20 pln
+Provider calls: 2
+Automatic retries: 0
+Reality Graph write: false
+
+GENERIC_SLEEP_UNRESOLVED=PASS
+Input: спал примерно 6 часов
+Candidates: process.sleep.day_episode + process.sleep.night_episode
+Selected leaf: none
+Semantic projections: none
+Uncertainty preserved: true
+Provider calls: 2
+Automatic retries: 0
+Reality Graph write: false
+
+EXPLICIT_FAMILY_PURCHASE=PASS
+Input: купил в магазине продукты жене и детям, заплатил 30 злотых
+Primary selection: process.finance.purchase
+Semantic projections:
+- purchase_contains_food_goods -> entity.food.item, DERIVED
+- relevant_to_nutrition -> domain.nutrition_consumption, DERIVED
+- possible_household_provisioning -> process.home.household_task, INFERRED
+- possible_family_benefit -> domain.relationships_social_life, INFERRED
+Family basis: explicit cues «жене», «детям», «продукты»
+Explicit fact: monetary_amount_pln=30 pln
+Provider calls: 2
+Automatic retries: 0
+Reality Graph write: false
+
+P3_RESULT=PASS

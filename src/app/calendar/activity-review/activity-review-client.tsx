@@ -423,6 +423,30 @@ function normalizeFocusDate(value: string | null): string | null {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
 }
 
+function normalizeOperationId(value: string | null): string | null {
+  const normalized = (value ?? "").trim();
+  return normalized && normalized.length <= 180 ? normalized : null;
+}
+
+function normalizeFeedbackIds(value: string | null): string[] {
+  if (!value) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      value
+        .split(",")
+        .map((item) => item.trim())
+        .filter((item) =>
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+            item,
+          ),
+        ),
+    ),
+  ).slice(0, 24);
+}
+
 function buildReturnUrl(target: CalendarReturnTarget, locale: Locale, focusDate: string) {
   if (target === "activity-journal") {
     return `/activity-today?${new URLSearchParams({ locale }).toString()}`;
@@ -1035,6 +1059,12 @@ export default function ActivityReviewClient() {
   const t = UI[locale];
   const actionText = ACTION_UI[locale];
   const rawText = searchParams.get("text") ?? "";
+  const analysisOperationId = normalizeOperationId(
+    searchParams.get("analysisOperationId"),
+  );
+  const manualFeedbackIds = normalizeFeedbackIds(
+    searchParams.get("manualFeedbackIds"),
+  );
   const calendarHref =
     returnTo === "activity-journal"
       ? {
@@ -1236,6 +1266,8 @@ export default function ActivityReviewClient() {
           sourceFocusDate,
           observedDate: temporalDirection === "past" ? timingDraft.observedDate || null : null,
           previewSummary: review.summary,
+          aiAnalysisOperationId: analysisOperationId,
+          manualLeafFeedbackIntentCount: manualFeedbackIds.length,
         },
       };
 
@@ -1290,6 +1322,46 @@ export default function ActivityReviewClient() {
 
       if (!activityEventId) {
         throw new Error("Canonical activity_event id was not returned.");
+      }
+
+      if (manualFeedbackIds.length > 0) {
+        if (!analysisOperationId) {
+          throw new Error(
+            "Manual VO link intents require analysisOperationId.",
+          );
+        }
+
+        const materializeResponse = await fetch(
+          "/api/ai/reality/manual-link-materialize",
+          {
+            credentials: "include",
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({
+              activityEventId,
+              operationId: analysisOperationId,
+              feedbackEventIds: manualFeedbackIds,
+            }),
+          },
+        );
+
+        const materializePayload = (await materializeResponse
+          .json()
+          .catch(() => null)) as {
+          ok?: boolean;
+          error?: string;
+          linkCount?: number;
+        } | null;
+
+        if (!materializeResponse.ok || materializePayload?.ok !== true) {
+          throw new Error(
+            materializePayload?.error ||
+              `Manual VO link materialization failed: ${materializeResponse.status}`,
+          );
+        }
       }
 
       await saveFactsForActivityContainer({
@@ -1409,6 +1481,18 @@ export default function ActivityReviewClient() {
             <div className="rounded-[24px] border border-black/[0.06] bg-white p-5 shadow-sm">
               <p className="mb-4 text-xs font-extrabold uppercase tracking-[0.24em] text-[#9ca3b8]">{t.actions}</p>
               <div className="space-y-3">
+                {manualFeedbackIds.length > 0 ? (
+                  <div className="rounded-[18px] border border-[#86efac] bg-[#ecfdf5] px-4 py-3">
+                    <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#047857]">
+                      Ручные связи с ЦО
+                    </p>
+                    <p className="mt-1 text-sm font-semibold leading-6 text-[#065f46]">
+                      {manualFeedbackIds.length} связей будут прикреплены как semantic_exposure
+                      после создания активности.
+                    </p>
+                  </div>
+                ) : null}
+
                 <ActivityTimingEditorPp1
                   locale={locale}
                   temporalDirection={temporalDirection}

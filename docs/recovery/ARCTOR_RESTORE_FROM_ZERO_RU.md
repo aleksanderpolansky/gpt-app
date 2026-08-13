@@ -199,3 +199,19 @@ Restore invariants:
 - unresolved sleep has zero P3 semantic projections.
 - target canonical keys are allowlisted and validated against active Global ontology.
 - do not rerun AI-A2-P1 migration to restore P3 source.
+
+## AI-A3 P2 restore point - 2026-08-13
+
+Parent production checkpoint: df260c2a5b928350b2a02c8f1b55a06b21d3aecb.
+Database external state before source release: AI-A3-P1 Data Capital Foundation V2 already applied manually, live acceptance 20/20 PASS. Do not rerun the migration.
+
+Source invariants:
+- feedback is append-only and execution/ownership bound;
+- ? is no-write;
+- selector includeGlobal is opt-in;
+- only leaf manual link intents materialize after canonical activity_event exists;
+- materialization uses semantic_exposure/manual/user_confirmed and does not overwrite an existing semantic_exposure row;
+- P3 automatic projections remain preview-only;
+- no new OpenAI call is introduced.
+
+Rollback of source commit does not roll back the additive AI-A3-P1 database migration. Restore DB state by forward migration only if schema evolution later requires it.

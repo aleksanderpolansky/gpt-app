@@ -44,10 +44,12 @@ if (!restore.includes('AI-A2 P1 restore point - 2026-08-13')) fail('restore mark
 
 const manifest = JSON.parse(fs.readFileSync(path.join(root,'docs/recovery/CHECKPOINT_MANIFEST.json'),'utf8'));
 
+const documentedState = String(manifest.documentedState ?? '');
 if (
-  manifest.documentedState !== 'AI_A2_P1_RECOGNITION_FOUNDATION_V1' &&
-  manifest.documentedState !== 'AI_A2_P2_RUNTIME_INTEGRATION_V1' &&
-  manifest.documentedState !== 'AI_A2_P3_SEMANTIC_PROJECTION_PREVIEW_V1'
+  documentedState !== 'AI_A2_P1_RECOGNITION_FOUNDATION_V1' &&
+  documentedState !== 'AI_A2_P2_RUNTIME_INTEGRATION_V1' &&
+  documentedState !== 'AI_A2_P3_SEMANTIC_PROJECTION_PREVIEW_V1' &&
+  !documentedState.startsWith('AI_A3_')
 ) fail('manifest documentedState mismatch');
 
 if (!manifest.gsr1lImplementation || manifest.gsr1lImplementation.liveAcceptance !== '14/14 PASS') {

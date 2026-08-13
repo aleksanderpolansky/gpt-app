@@ -256,9 +256,11 @@ requireToken(current, "AI_A2_P2_RUNTIME_INTEGRATION_V1");
 requireToken(decisions, "DECISION_AI_A2_P2_RECOGNITION_RUNTIME_V1");
 requireToken(restore, "AI-A2 P2 restore point - 2026-08-13");
 
+const documentedState = String(manifest.documentedState ?? "");
 if (
-  manifest.documentedState !== "AI_A2_P2_RUNTIME_INTEGRATION_V1" &&
-  manifest.documentedState !== "AI_A2_P3_SEMANTIC_PROJECTION_PREVIEW_V1"
+  documentedState !== "AI_A2_P2_RUNTIME_INTEGRATION_V1" &&
+  documentedState !== "AI_A2_P3_SEMANTIC_PROJECTION_PREVIEW_V1" &&
+  !documentedState.startsWith("AI_A3_")
 ) {
   fail(`checkpoint documentedState mismatch: ${manifest.documentedState}`);
 }

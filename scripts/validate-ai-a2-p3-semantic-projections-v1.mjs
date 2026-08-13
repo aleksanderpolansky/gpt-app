@@ -305,7 +305,11 @@ requireToken(current, "AI_A2_P3_SEMANTIC_PROJECTION_PREVIEW_V1");
 requireToken(decisions, "DECISION_AI_A2_P3_SEMANTIC_PROJECTIONS_V1");
 requireToken(restore, "AI-A2 P3 restore point - 2026-08-13");
 
-if (manifest.documentedState !== "AI_A2_P3_SEMANTIC_PROJECTION_PREVIEW_V1") {
+const documentedState = String(manifest.documentedState ?? "");
+if (
+  documentedState !== "AI_A2_P3_SEMANTIC_PROJECTION_PREVIEW_V1" &&
+  !documentedState.startsWith("AI_A3_")
+) {
   fail(`manifest documentedState mismatch: ${manifest.documentedState}`);
 }
 if (manifest.gsr1lImplementation?.productionRuntimeAcceptance !== "PASS") {

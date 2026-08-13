@@ -385,3 +385,15 @@ P3 добавляет только детерминированный preview д
 Stage 1 может разбить один эпизод на несколько fragments. Для secondary projection разрешён полный исходный inputText как context, но food cue обязан присутствовать в sourceFragment выбранной покупки. Projection target обязательно проверяется в live global active value_objects и по allowlisted node role.
 
 /activity-ai-lab показывает эти строки отдельной меткой СМЫСЛ и их epistemic status. Это preview-аннотация; save path пока их не сохраняет. P3 production runtime acceptance после release остаётся PENDING.
+
+## AI_A3_P2_FEEDBACK_REVIEW_UX_V1 — 2026-08-13
+
+AI-A2-P3 production acceptance завершён PASS: обычная Stokrotka даёт purchase + food/nutrition + possible household без family; generic sleep остаётся unresolved без projections; явная покупка жене и детям даёт family только как INFERRED.
+
+AI-A3-P1 Data Capital foundation V2 применён вручную и принят 20/20. Таблицы ai_feedback_events / ai_feedback_corrections / ai_feedback_outcomes append-only для application service role; migration не создала пользовательских строк.
+
+P2 добавляет review controls ✓ / ✕ / ✎ / ? на /activity-ai-lab. ✓/✕/✎ создают append-only ai_feedback_events, привязанные к completed ai_analysis_execution текущего app user + active actor. ? только показывает основание локально и ничего не пишет. Один feedback click является evidence конкретного события и не изменяет global truth/ontology.
+
+Добавлен + Добавить связь с ЦО. Поиск использует существующий selector с opt-in includeGlobal=1 и level=leaf, объединяя active GLOBAL leaves и ЦО активного профиля. До сохранения активности выбор хранится как manual_leaf_link intent в Data Capital. После создания canonical activity_event Activity Review материализует intent в activity_value_object_links как semantic_exposure/manual/user_confirmed. Существующая такая связь не перезаписывается: manual materialization использует ignoreDuplicates=true, а пользовательское подтверждение остаётся отдельным Data Capital event.
+
+P3 automatic semantic projections остаются preview-only и не материализуются. Дополнительных OpenAI calls P2 не добавляет. Production acceptance нового UX после release = PENDING.

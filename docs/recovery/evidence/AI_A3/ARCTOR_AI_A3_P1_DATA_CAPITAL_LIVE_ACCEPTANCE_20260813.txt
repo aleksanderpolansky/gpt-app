@@ -1,0 +1,30 @@
+ARCTor.app - AI-A3-P1 Data Capital live database acceptance
+Date: 2026-08-13
+Migration source: ARCTOR_AI_A3_P1_DATA_CAPITAL_FOUNDATION_V2.sql
+MIGRATION_SHA256=1ba4295aba98abd3a3f2d1abc60e5bab34574d6272f1a15162021e9e2b38aab8
+AI_A3_P1_LIVE_ACCEPTANCE=20/20_PASS
+
+01_tables_exist=true
+02_events_columns_ready=true
+03_corrections_columns_ready=true
+04_outcomes_columns_ready=true
+05_events_execution_fk=true
+06_events_client_idempotency_unique=true
+07_correction_one_per_feedback_event=true
+08_rls_enabled_all=true
+09_anon_has_no_table_privileges=true
+10_authenticated_has_no_table_privileges=true
+11_service_role_select_insert_only=true
+12_service_role_policies_ready=true
+13_manual_link_shape_guard_present=true
+14_existing_feedback_sources_preserved=true
+15_ai_a1_execution_foundation_preserved=true
+16_activity_link_contract_preserved=true
+17_global_leaf_baseline_unchanged=true
+18_new_tables_start_empty=true
+19_feedback_insert_guard_ready=true
+20_correction_insert_guard_ready=true
+
+DATABASE_USER_ROWS_CREATED_BY_MIGRATION=0
+ACTIVITY_VALUE_OBJECT_LINKS_CHANGED_BY_MIGRATION=false
+GLOBAL_LEAF_COUNT=103

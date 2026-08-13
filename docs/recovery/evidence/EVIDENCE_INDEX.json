@@ -2,7 +2,7 @@
   "generatedAt": "2026-08-13",
   "copiedCount": 57,
   "generatedEvidenceCount": 1,
-  "indexedCount": 63,
+  "indexedCount": 66,
   "missingPatterns": [],
   "files": [
     {
@@ -435,6 +435,27 @@
       "sourceDownloadsName": null,
       "sha256": "e56ce669b5d0ed2b18b855279d3f18ed2ccaadc1ababa610c5434309469fd640",
       "origin": "AI_A2_P3_precommit_local_validation"
+    },
+    {
+      "group": "GSR1L",
+      "file": "docs/recovery/evidence/GSR1L/ARCTOR_AI_A2_P3_PRODUCTION_RUNTIME_ACCEPTANCE_20260813.txt",
+      "sourceDownloadsName": null,
+      "sha256": "478214a9ffe40e77e656179b90a574b09339f5b10383135d22a6c71c8b0e105e",
+      "origin": "AI_A2_P3_production_runtime_acceptance"
+    },
+    {
+      "group": "AI_A3",
+      "file": "docs/recovery/evidence/AI_A3/ARCTOR_AI_A3_P1_DATA_CAPITAL_LIVE_ACCEPTANCE_20260813.txt",
+      "sourceDownloadsName": null,
+      "sha256": "894983143820341b40946ef7db910ce47284e4502598596ea10651b03ffcd600",
+      "origin": "AI_A3_P1_data_capital_live_acceptance"
+    },
+    {
+      "group": "AI_A3",
+      "file": "docs/recovery/evidence/AI_A3/ARCTOR_AI_A3_P2_LOCAL_VALIDATION_20260813.txt",
+      "sourceDownloadsName": null,
+      "sha256": "2cae22c1cf9eba5af3812d081705c8e9bd1bd124e3c9ef84d15d65e865899949",
+      "origin": "AI_A3_P2_local_release_validation"
     }
   ]
 }

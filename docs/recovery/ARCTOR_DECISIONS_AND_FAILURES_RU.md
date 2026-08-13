@@ -430,3 +430,19 @@ AI-A2-P1 live acceptance: 14/14 PASS. Stokrotka regression стала обяза
 7. Projection targets ограничены allowlist и повторно проверяются в live Global ontology по canonical key, active status и node role.
 8. Никаких P3 relation/fact writes до отдельного storage/write contract; Activity Review остаётся единственной существующей save boundary.
 9. P2 live acceptance фиксируется как PASS до перехода в P3.
+
+## AI_A3_P1_V1_SQL_FAILURE_20260813
+
+Первая версия AI-A3-P1 migration не была применена: Supabase остановил SQL на syntax error near UNION (line 777). Причина — лишняя запятая перед UNION ALL в acceptance CTE. Повторная локальная ревизия также обнаружила, что V1 ownership guard ошибочно отвергал бы active GLOBAL leaf из-за обязательного owner_user_id/owner_actor_id. V2 убрал синтаксическую ошибку и разрешил GLOBAL leaf при сохранении ownership guard для non-global. V2 затем прошёл live acceptance 20/20. V1 не запускать повторно.
+
+## DECISION_AI_A3_P2_FEEDBACK_AND_MANUAL_LINK_V1 — 2026-08-13
+
+1. User feedback является append-only evidence, а не командой немедленно переписать global ontology/rule.
+2. ✓ = confirmed, ✕ = rejected, ✎ = commented с explanation; ? = объяснение без записи. Исходное AI proposal snapshot сохраняется.
+3. Structured correction через ai_feedback_corrections в P2 намеренно не используется: event+correction позже должен записываться атомарным RPC, чтобы исключить partial write.
+4. Selector расширяется только opt-in параметром includeGlobal=1; существующее поведение вызовов без этого параметра не меняется.
+5. Manual link intent допустим только к leaf VO; active GLOBAL leaf разрешён, non-global leaf обязан принадлежать текущему app user/active actor согласно DB guard.
+6. До создания activity_event manual link существует как Data Capital intent. После canonical activity create он материализуется как semantic_exposure с provenance=manual и semantic_match_method_code=user_confirmed.
+7. Existing semantic_exposure не перезаписывается manual materialization; feedback evidence сохраняет факт явного выбора пользователя.
+8. Automatic P3 projections по-прежнему writeAllowed=false. Только явный пользовательский manual link может перейти через save-gate в activity_value_object_links.
+9. Feedback/materialization endpoints не вызывают OpenAI и не меняют лимит 2 provider calls analysis preview.
