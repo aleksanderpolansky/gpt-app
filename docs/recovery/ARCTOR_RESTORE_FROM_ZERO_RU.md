@@ -215,3 +215,19 @@ Source invariants:
 - no new OpenAI call is introduced.
 
 Rollback of source commit does not roll back the additive AI-A3-P1 database migration. Restore DB state by forward migration only if schema evolution later requires it.
+
+## AI-A3 P3 direct-save restore point - 2026-08-13
+
+Parent production checkpoint: 442af9b04248a66cf06d82d305b6246df0d09107.
+Database external state: AI-A3-P1 Data Capital Foundation V2 уже применён 20/20 PASS; новых DB migrations в P3 direct-save нет.
+
+Source invariants:
+- /activity-ai-lab direct-saves through /api/activity/events;
+- text/locale must still match the completed Global Reality analysis;
+- manual leaf intent materializes only after activity_event create;
+- retry after partial create must reuse checkpoint/idempotency and must not duplicate activity;
+- future planned targets remain separate from semantic_exposure;
+- automatic facts/P3 projections remain no-write;
+- legacy /calendar/activity-review remains present for non-AI-Lab callers until separate migration.
+
+Rollback of source commit does not roll back AI-A3-P1 additive DB tables. Restore DB by forward migration only if later schema evolution requires it.

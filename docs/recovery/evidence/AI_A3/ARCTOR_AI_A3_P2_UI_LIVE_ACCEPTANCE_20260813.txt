@@ -1,0 +1,15 @@
+ARCTor.app - AI-A3-P2 live UI acceptance before direct-save consolidation
+DATE=2026-08-13
+AI_A3_P2_UI_LIVE_ACCEPTANCE=PARTIAL_PASS
+
+CONFIRM_CONTROL=PASS (UI showed «подтверждено»)
+REJECT_CONTROL=PASS (UI showed «отклонено»)
+COMMENT_CONTROL=PASS (UI showed «комментарий сохранён»)
+WHY_CONTROL=PASS_UI_EXPLANATION_VISIBLE; DB no-write was not independently postchecked in this observation
+MANUAL_GLOBAL_LEAF_SEARCH=PASS
+MANUAL_SELECTED=entity.food.item / «Пищевой продукт/блюдо»
+MANUAL_INTENT_PERSISTED_IN_UI=PASS
+HANDOFF_CARRIED_MANUAL_INTENT_TO_LEGACY_ACTIVITY_REVIEW=PASS (screen showed 1 pending manual link)
+MANUAL_LINK_MATERIALIZATION=NOT_ACCEPTED_ON_LEGACY_ROUTE
+
+LEGACY_CONTAINER_FINDING=The old Activity Review Container repeated a separate semantic preview after Global Reality analysis and live screenshots showed mojibake in several Russian field labels. P3 direct-save removes this container from the AI-Lab flow while retaining the route for other callers.

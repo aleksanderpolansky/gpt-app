@@ -1,7 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import { ActivityTimingEditorPp1 } from "@/components/activity/pp1/activity-timing-editor";
+import { PlannedTargetSelectorPp1 } from "@/components/activity/pp1/planned-target-selector";
+import {
+  buildAiLabDirectActivityRequest,
+  buildAiLabDirectSaveReturnUrl,
+  deriveAiLabActivityTitle,
+  type AiLabSaveTemporalDirection,
+} from "@/lib/activity/aiLabDirectSave";
+import {
+  datetimeLocalToIsoPp1,
+  formatActivityTimingDraftPp1,
+  getTimingFocusDatePp1,
+  inferActivityTimingDraftPp1,
+  parsePositiveDurationMinutesPp1,
+  validateActivityTimingDraftPp1,
+  type ActivityTimingDraftPp1,
+} from "@/lib/activity/pp1/activityTiming";
 
 type Locale = "ru" | "en" | "pl" | "uk" | "de" | "es" | "cs";
 
@@ -64,6 +83,17 @@ type ManualLinkIntent = {
   pathText?: string;
   scopeCode?: string | null;
 };
+
+type DirectSaveStatus = "idle" | "saving" | "error";
+
+type DirectSaveCheckpoint = {
+  temporalDirection: AiLabSaveTemporalDirection;
+  requestBodyHash: string;
+  activityEventId: string;
+  calendarEventId: string | null;
+  manualFeedbackIds: string[];
+};
+
 
 type GlobalFact = {
   parameterCode?: string;
@@ -945,10 +975,12 @@ function ManualLeafLinkPicker({
   operationId,
   links,
   onLinksChange,
+  disabled = false,
 }: {
   operationId: string;
   links: ManualLinkIntent[];
   onLinksChange: (links: ManualLinkIntent[]) => void;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -1007,7 +1039,7 @@ function ManualLeafLinkPicker({
   }, [open, query]);
 
   async function addManualLink(item: SelectorItem) {
-    if (links.some((link) => link.valueObjectId === item.id)) {
+    if (disabled || links.some((link) => link.valueObjectId === item.id)) {
       return;
     }
 
@@ -1078,7 +1110,8 @@ function ManualLeafLinkPicker({
   return (
     <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-4">
       <button
-        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-zinc-700 bg-black/40 px-4 py-3 text-left text-sm font-semibold text-zinc-200 hover:border-emerald-700"
+        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-zinc-700 bg-black/40 px-4 py-3 text-left text-sm font-semibold text-zinc-200 hover:border-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+        disabled={disabled}
         onClick={() => setOpen((current) => !current)}
         type="button"
       >
@@ -1106,7 +1139,7 @@ function ManualLeafLinkPicker({
           ))}
           <p className="text-xs leading-5 text-zinc-500">
             Эти ручные связи уже сохранены как намерения Data Capital и будут
-            материализованы как semantic_exposure после создания прошедшей активности.
+            материализованы как semantic_exposure после создания активности.
           </p>
         </div>
       ) : null}
@@ -1114,7 +1147,8 @@ function ManualLeafLinkPicker({
       {open ? (
         <div className="mt-3 space-y-3">
           <input
-            className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-emerald-600"
+            className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={disabled}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Начни вводить название ЦО…"
             value={query}
@@ -1133,7 +1167,7 @@ function ManualLeafLinkPicker({
                 return (
                   <button
                     className="w-full rounded-xl px-3 py-2 text-left hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
-                    disabled={selected || addingId === item.id}
+                    disabled={disabled || selected || addingId === item.id}
                     key={item.id}
                     onClick={() => void addManualLink(item)}
                     type="button"
@@ -1156,6 +1190,7 @@ function ManualLeafLinkPicker({
 }
 
 export default function ActivityAiLabPage() {
+  const router = useRouter();
   const [inputText, setInputText] = useState("");
   const [locale, setLocale] = useState<Locale>("ru");
   const [loading, setLoading] = useState(false);
@@ -1163,6 +1198,21 @@ export default function ActivityAiLabPage() {
   const [error, setError] = useState<string | null>(null);
   const [trace, setTrace] = useState<TraceLine[]>([]);
   const [manualLinks, setManualLinks] = useState<ManualLinkIntent[]>([]);
+  const [analyzedText, setAnalyzedText] = useState<string | null>(null);
+  const [analyzedLocale, setAnalyzedLocale] = useState<Locale | null>(null);
+  const [saveMode, setSaveMode] = useState<AiLabSaveTemporalDirection | null>(null);
+  const [saveTitle, setSaveTitle] = useState("");
+  const [timingDraft, setTimingDraft] = useState<ActivityTimingDraftPp1>(() =>
+    inferActivityTimingDraftPp1("", "past"),
+  );
+  const [plannedTargetValueObjectIds, setPlannedTargetValueObjectIds] = useState<string[]>([]);
+  const [saveStatus, setSaveStatus] = useState<DirectSaveStatus>("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveCheckpoint, setSaveCheckpoint] = useState<DirectSaveCheckpoint | null>(null);
+  const saveRequestIds = useRef<Record<AiLabSaveTemporalDirection, string>>({
+    past: createOperationId(),
+    future: createOperationId(),
+  });
 
   const timeZone =
     typeof Intl !== "undefined"
@@ -1172,41 +1222,70 @@ export default function ActivityAiLabPage() {
   const analysisOperationId =
     result?.mode === "global" ? result.payload.operationId?.trim() ?? "" : "";
 
-  const reviewHref = useMemo(() => {
-    const params = new URLSearchParams({
-      locale,
-      returnTo: "activity-journal",
-      temporalDirection: "past",
-      text: inputText.trim(),
-    });
-
-    if (analysisOperationId) {
-      params.set("analysisOperationId", analysisOperationId);
-    }
-
-    if (manualLinks.length > 0) {
-      params.set(
-        "manualFeedbackIds",
-        manualLinks.map((link) => link.feedbackEventId).join(","),
-      );
-    }
-
-    return `/calendar/activity-review?${params.toString()}`;
-  }, [analysisOperationId, inputText, locale, manualLinks]);
-
-  const futureHref = useMemo(() => {
-    const params = new URLSearchParams({
-      locale,
-      returnTo: "calendar",
-      temporalDirection: "future",
-      text: inputText.trim(),
-    });
-
-    return `/calendar/activity-review?${params.toString()}`;
-  }, [inputText, locale]);
-
   const fullAnalysisSucceeded =
-    result?.mode === "global" && result.payload.ok === true;
+    result?.mode === "global" &&
+    result.payload.ok === true &&
+    analyzedText === inputText.trim() &&
+    analyzedLocale === locale;
+
+  const timingValidation = useMemo(
+    () =>
+      saveMode
+        ? validateActivityTimingDraftPp1(timingDraft, saveMode)
+        : { ok: true, errors: [] },
+    [saveMode, timingDraft],
+  );
+
+  const timingLabel = useMemo(
+    () =>
+      saveMode
+        ? formatActivityTimingDraftPp1(timingDraft, saveMode, locale)
+        : "",
+    [locale, saveMode, timingDraft],
+  );
+
+  const timingFocusDate = useMemo(
+    () => (saveMode ? getTimingFocusDatePp1(timingDraft, saveMode) : null),
+    [saveMode, timingDraft],
+  );
+
+  function resetSaveState() {
+    setSaveMode(null);
+    setSaveTitle("");
+    setPlannedTargetValueObjectIds([]);
+    setSaveStatus("idle");
+    setSaveError(null);
+    setSaveCheckpoint(null);
+    saveRequestIds.current = {
+      past: createOperationId(),
+      future: createOperationId(),
+    };
+  }
+
+  function invalidateAnalysisArtifacts() {
+    setResult(null);
+    setTrace([]);
+    setManualLinks([]);
+    setAnalyzedText(null);
+    setAnalyzedLocale(null);
+    setError(null);
+    resetSaveState();
+  }
+
+  function openDirectSave(mode: AiLabSaveTemporalDirection) {
+    if (!fullAnalysisSucceeded || result?.mode !== "global") {
+      return;
+    }
+
+    setSaveMode(mode);
+    setTimingDraft(inferActivityTimingDraftPp1(inputText.trim(), mode));
+    setSaveTitle(deriveAiLabActivityTitle(inputText.trim(), result.payload.rows));
+    setPlannedTargetValueObjectIds([]);
+    setSaveStatus("idle");
+    setSaveError(null);
+    setSaveCheckpoint(null);
+    saveRequestIds.current[mode] = createOperationId();
+  }
 
   async function analyze() {
     const text = inputText.trim();
@@ -1220,6 +1299,9 @@ export default function ActivityAiLabPage() {
     setError(null);
     setResult(null);
     setManualLinks([]);
+    setAnalyzedText(null);
+    setAnalyzedLocale(null);
+    resetSaveState();
     setTrace([
       { kind: "system", text: `Получено сообщение: «${text}»` },
       {
@@ -1256,6 +1338,8 @@ export default function ActivityAiLabPage() {
         const nextTrace = buildGlobalTrace(text, globalPayload);
         setResult({ mode: "global", payload: globalPayload, trace: nextTrace });
         setTrace(nextTrace);
+        setAnalyzedText(text);
+        setAnalyzedLocale(locale);
         return;
       }
 
@@ -1300,6 +1384,8 @@ export default function ActivityAiLabPage() {
         globalError,
       });
       setTrace(nextTrace);
+      setAnalyzedText(text);
+      setAnalyzedLocale(locale);
     } catch (caught) {
       const message =
         caught instanceof Error ? caught.message : "Неизвестная ошибка анализа.";
@@ -1310,6 +1396,182 @@ export default function ActivityAiLabPage() {
       ]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDirectSave() {
+    if (
+      !saveMode ||
+      !fullAnalysisSucceeded ||
+      result?.mode !== "global" ||
+      saveStatus === "saving"
+    ) {
+      return;
+    }
+
+    const rawText = inputText.trim();
+    const title = saveTitle.trim();
+
+    if (!rawText || !title) {
+      setSaveStatus("error");
+      setSaveError("Нужно указать название активности.");
+      return;
+    }
+
+    if (!timingValidation.ok) {
+      setSaveStatus("error");
+      setSaveError(`Проверь время: ${timingValidation.errors.join(", ")}`);
+      return;
+    }
+
+    const manualFeedbackIds = manualLinks.map((link) => link.feedbackEventId);
+
+    if (manualFeedbackIds.length > 0 && !analysisOperationId) {
+      setSaveStatus("error");
+      setSaveError("Ручные связи с ЦО требуют идентификатор завершённого анализа.");
+      return;
+    }
+
+    const startedAt = datetimeLocalToIsoPp1(timingDraft.startedAtLocal);
+    const endedAt = datetimeLocalToIsoPp1(timingDraft.endedAtLocal);
+    const deadlineAt = datetimeLocalToIsoPp1(timingDraft.deadlineLocal);
+    const durationMinutes = parsePositiveDurationMinutesPp1(
+      timingDraft.durationMinutes,
+    );
+
+    const requestBody = buildAiLabDirectActivityRequest({
+      idempotencyKey: saveRequestIds.current[saveMode],
+      temporalDirection: saveMode,
+      rawText,
+      title,
+      locale,
+      timingLabel,
+      analysisOperationId: analysisOperationId || null,
+      manualFeedbackIds,
+      durationMinutes,
+      observedDate: timingDraft.observedDate || null,
+      startedAt,
+      endedAt,
+      scheduleModeCode: timingDraft.scheduleModeCode,
+      scheduledDate: timingDraft.scheduledDate || null,
+      scheduleStartDate: timingDraft.scheduleStartDate || null,
+      scheduleEndDate: timingDraft.scheduleEndDate || null,
+      deadlineAt,
+      plannedTargetValueObjectIds,
+    });
+
+    const requestBodyHash = JSON.stringify(requestBody);
+
+    if (
+      saveCheckpoint &&
+      (saveCheckpoint.temporalDirection !== saveMode ||
+        saveCheckpoint.requestBodyHash !== requestBodyHash)
+    ) {
+      setSaveStatus("error");
+      setSaveError(
+        "Активность уже создана, поэтому параметры сохранения зафиксированы. Повтори завершение сохранения без изменения полей.",
+      );
+      return;
+    }
+
+    setSaveStatus("saving");
+    setSaveError(null);
+
+    let checkpoint = saveCheckpoint;
+
+    try {
+      if (!checkpoint) {
+        const response = await fetch("/api/activity/events", {
+          credentials: "include",
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        const payload = (await response.json().catch(() => null)) as
+          | {
+              ok?: boolean;
+              error?: string;
+              event?: { id?: string | null };
+              activityEvent?: { id?: string | null };
+              calendarEvent?: { id?: string | null } | null;
+            }
+          | null;
+
+        if (!response.ok || payload?.ok === false) {
+          throw new Error(
+            payload?.error || `Не удалось создать активность: HTTP ${response.status}`,
+          );
+        }
+
+        const activityEventId =
+          payload?.activityEvent?.id ?? payload?.event?.id ?? null;
+
+        if (!activityEventId) {
+          throw new Error("Сервер не вернул id созданной активности.");
+        }
+
+        checkpoint = {
+          temporalDirection: saveMode,
+          requestBodyHash,
+          activityEventId,
+          calendarEventId: payload?.calendarEvent?.id ?? null,
+          manualFeedbackIds,
+        };
+        setSaveCheckpoint(checkpoint);
+      }
+
+      if (checkpoint.manualFeedbackIds.length > 0) {
+        const materializeResponse = await fetch(
+          "/api/ai/reality/manual-link-materialize",
+          {
+            credentials: "include",
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({
+              activityEventId: checkpoint.activityEventId,
+              operationId: analysisOperationId,
+              feedbackEventIds: checkpoint.manualFeedbackIds,
+            }),
+          },
+        );
+
+        const materializePayload = (await materializeResponse
+          .json()
+          .catch(() => null)) as
+          | {
+              ok?: boolean;
+              error?: string;
+            }
+          | null;
+
+        if (!materializeResponse.ok || materializePayload?.ok !== true) {
+          throw new Error(
+            materializePayload?.error ||
+              `Активность создана, но ручные связи с ЦО не завершены: HTTP ${materializeResponse.status}`,
+          );
+        }
+      }
+
+      setSaveStatus("idle");
+      router.push(
+        buildAiLabDirectSaveReturnUrl({
+          temporalDirection: saveMode,
+          locale,
+          focusDate: timingFocusDate,
+        }),
+      );
+    } catch (caught) {
+      setSaveStatus("error");
+      setSaveError(
+        caught instanceof Error ? caught.message : "Не удалось сохранить активность.",
+      );
     }
   }
 
@@ -1348,9 +1610,18 @@ export default function ActivityAiLabPage() {
             </label>
 
             <textarea
-              className="mt-3 min-h-52 w-full rounded-2xl border border-zinc-800 bg-black px-4 py-4 text-base leading-7 text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-emerald-500"
+              className="mt-3 min-h-52 w-full rounded-2xl border border-zinc-800 bg-black px-4 py-4 text-base leading-7 text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={Boolean(saveCheckpoint?.activityEventId)}
               id="activity-ai-input"
-              onChange={(event) => setInputText(event.target.value)}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+
+                if (analyzedText !== null && nextValue.trim() !== analyzedText) {
+                  invalidateAnalysisArtifacts();
+                }
+
+                setInputText(nextValue);
+              }}
               placeholder="Например: сходил в магазин, купил две консервы тунца и макароны, заплатил 20 злотых."
               value={inputText}
             />
@@ -1361,9 +1632,18 @@ export default function ActivityAiLabPage() {
                   Язык сообщения
                 </label>
                 <select
-                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm outline-none focus:border-emerald-500"
+                  className="mt-2 w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={Boolean(saveCheckpoint?.activityEventId)}
                   id="activity-ai-locale"
-                  onChange={(event) => setLocale(event.target.value as Locale)}
+                  onChange={(event) => {
+                    const nextLocale = event.target.value as Locale;
+
+                    if (analyzedLocale !== null && nextLocale !== analyzedLocale) {
+                      invalidateAnalysisArtifacts();
+                    }
+
+                    setLocale(nextLocale);
+                  }}
                   value={locale}
                 >
                   {LOCALES.map((item) => (
@@ -1389,7 +1669,7 @@ export default function ActivityAiLabPage() {
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <button
                 className="rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={loading || !inputText.trim()}
+                disabled={loading || !inputText.trim() || Boolean(saveCheckpoint?.activityEventId)}
                 onClick={() => void analyze()}
                 type="button"
               >
@@ -1398,13 +1678,10 @@ export default function ActivityAiLabPage() {
 
               <button
                 className="rounded-2xl border border-zinc-700 px-4 py-3 text-sm text-zinc-300 hover:border-zinc-500"
-                disabled={loading}
+                disabled={loading || Boolean(saveCheckpoint?.activityEventId)}
                 onClick={() => {
                   setInputText("");
-                  setResult(null);
-                  setError(null);
-                  setTrace([]);
-                  setManualLinks([]);
+                  invalidateAnalysisArtifacts();
                 }}
                 type="button"
               >
@@ -1418,19 +1695,132 @@ export default function ActivityAiLabPage() {
               </p>
 
               {fullAnalysisSucceeded ? (
-                <div className="mt-3 grid gap-3">
-                  <Link
-                    className="rounded-2xl bg-blue-500 px-4 py-3 text-center text-sm font-semibold text-black hover:bg-blue-400"
-                    href={reviewHref}
-                  >
-                    Добавить как прошедшую активность
-                  </Link>
-                  <Link
-                    className="rounded-2xl border border-violet-700 px-4 py-3 text-center text-sm font-semibold text-violet-200 hover:border-violet-500"
-                    href={futureHref}
-                  >
-                    Запланировать эту активность
-                  </Link>
+                <div className="mt-3 space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <button
+                      className="rounded-2xl bg-blue-500 px-4 py-3 text-center text-sm font-semibold text-black hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={saveStatus === "saving" || Boolean(saveCheckpoint?.activityEventId)}
+                      onClick={() => openDirectSave("past")}
+                      type="button"
+                    >
+                      Сохранить как прошедшую
+                    </button>
+                    <button
+                      className="rounded-2xl border border-violet-700 px-4 py-3 text-center text-sm font-semibold text-violet-200 hover:border-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={saveStatus === "saving" || Boolean(saveCheckpoint?.activityEventId)}
+                      onClick={() => openDirectSave("future")}
+                      type="button"
+                    >
+                      Запланировать
+                    </button>
+                  </div>
+
+                  {saveMode ? (
+                    <div className="rounded-2xl border border-zinc-700 bg-black/40 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-100">
+                            {saveMode === "past"
+                              ? "Прошедшая активность → журнал"
+                              : "Будущая активность → календарь"}
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-zinc-500">
+                            Промежуточный «Контейнер активности» для этого маршрута больше
+                            не используется. Сохраняется каноническая activity_event.
+                          </p>
+                        </div>
+                        <span className="rounded-full border border-zinc-700 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                          direct save
+                        </span>
+                      </div>
+
+                      {saveCheckpoint?.activityEventId ? (
+                        <div className="mt-3 rounded-xl border border-amber-800 bg-amber-950/30 px-3 py-2 text-xs leading-5 text-amber-200">
+                          Активность уже создана. Поля зафиксированы; повторный запуск
+                          завершит только оставшиеся ручные связи с ЦО и не создаст дубль.
+                        </div>
+                      ) : null}
+
+                      <fieldset
+                        className="mt-4 space-y-4"
+                        disabled={Boolean(saveCheckpoint?.activityEventId)}
+                      >
+                        <label className="block text-xs font-semibold text-zinc-400">
+                          Название активности
+                          <input
+                            className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-zinc-100 outline-none focus:border-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+                            maxLength={180}
+                            onChange={(event) => setSaveTitle(event.target.value)}
+                            value={saveTitle}
+                          />
+                        </label>
+
+                        <ActivityTimingEditorPp1
+                          draft={timingDraft}
+                          locale={locale}
+                          onChange={setTimingDraft}
+                          temporalDirection={saveMode}
+                          valid={timingValidation.ok}
+                        />
+
+                        {saveMode === "future" ? (
+                          <PlannedTargetSelectorPp1
+                            locale={locale}
+                            onChange={setPlannedTargetValueObjectIds}
+                            selectedIds={plannedTargetValueObjectIds}
+                          />
+                        ) : null}
+                      </fieldset>
+
+                      <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-xs leading-5 text-zinc-500">
+                        <div>Время: {timingLabel}</div>
+                        <div>Ручных semantic_exposure связей: {manualLinks.length}</div>
+                        {saveMode === "future" ? (
+                          <div>Целей плановой активности: {plannedTargetValueObjectIds.length}</div>
+                        ) : null}
+                        <div>
+                          Факты и смысловые догадки из анализа не записываются автоматически:
+                          подтверждения остаются append-only Data Capital до отдельного
+                          контролируемого materialization шага.
+                        </div>
+                      </div>
+
+                      {saveError ? (
+                        <div className="mt-3 rounded-xl border border-red-900 bg-red-950/30 px-3 py-2 text-xs leading-5 text-red-200">
+                          {saveError}
+                        </div>
+                      ) : null}
+
+                      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                        <button
+                          className="rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                          disabled={
+                            saveStatus === "saving" ||
+                            !saveTitle.trim() ||
+                            !timingValidation.ok
+                          }
+                          onClick={() => void handleDirectSave()}
+                          type="button"
+                        >
+                          {saveStatus === "saving"
+                            ? "Сохраняю…"
+                            : saveCheckpoint?.activityEventId
+                              ? "Завершить сохранение"
+                              : saveMode === "past"
+                                ? "Сохранить в журнал"
+                                : "Сохранить и открыть календарь"}
+                        </button>
+                        <button
+                          className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-zinc-300 hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
+                          disabled={saveStatus === "saving" || Boolean(saveCheckpoint?.activityEventId)}
+                          onClick={resetSaveState}
+                          type="button"
+                        >
+                          Отмена
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               ) : (
                 <div className="mt-3 rounded-2xl border border-zinc-800 bg-black/40 p-4 text-sm leading-6 text-zinc-500">
@@ -1449,6 +1839,7 @@ export default function ActivityAiLabPage() {
             />
             {fullAnalysisSucceeded && analysisOperationId ? (
               <ManualLeafLinkPicker
+                disabled={Boolean(saveCheckpoint?.activityEventId)}
                 links={manualLinks}
                 onLinksChange={setManualLinks}
                 operationId={analysisOperationId}

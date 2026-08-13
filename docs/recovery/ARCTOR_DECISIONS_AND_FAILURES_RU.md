@@ -446,3 +446,19 @@ AI-A2-P1 live acceptance: 14/14 PASS. Stokrotka regression стала обяза
 7. Existing semantic_exposure не перезаписывается manual materialization; feedback evidence сохраняет факт явного выбора пользователя.
 8. Automatic P3 projections по-прежнему writeAllowed=false. Только явный пользовательский manual link может перейти через save-gate в activity_value_object_links.
 9. Feedback/materialization endpoints не вызывают OpenAI и не меняют лимит 2 provider calls analysis preview.
+
+## AI_A3_P2_V1_NPM_SPAWN_FAILURE_20260813
+
+Первая release-версия AI-A3-P2 дошла до BUILD_FEATURE после PASS всех validators, но build не стартовал: Node child_process spawn("npm", shell=false) на Windows вернул ENOENT, потому что Windows npm entrypoint — npm.cmd/npm-cli.js. Commit/push не выполнялись; runner очистил только собственные precommit changes. V2 исправил запуск: на Windows npm-cli.js запускается через node.exe и npm preflight выполняется до repository writes. AI-A3-P2 V2 затем прошёл feature/main build и release PASS. Новые release runners обязаны сохранять NODE_NPM_CLI strategy.
+
+## DECISION_AI_A3_P3_DIRECT_SAVE_BYPASS_LEGACY_CONTAINER_V1 — 2026-08-13
+
+1. /activity-ai-lab является основным экраном AI intake и после полного Global Reality анализа должен сам содержать последние необходимые поля save-gate: title, timing, planned targets и manual leaf links.
+2. AI Lab больше не обязан переходить через /calendar/activity-review: повторный старый semantic preview после уже выполненного Global Reality анализа является дублированием и создаёт риск расхождения.
+3. Legacy Activity Review route в этом release сохраняется неизменным для других существующих callers; удаление route допустимо только после отдельной caller inventory/migration.
+4. Canonical write остаётся POST /api/activity/events. Past = actual/completed; future = planned. Planned target и semantic_exposure остаются разными типами связи.
+5. Manual leaf intent materializes только после activity_event create через существующий manual-link-materialize endpoint; existing semantic exposure не overwrite.
+6. Изменение input text или locale после анализа инвалидирует полный analysis provenance и запрещает save без повторного анализа.
+7. После successful activity create + failed link materialization UI хранит activity_event checkpoint, блокирует изменяемые поля и retry не делает второй activity create.
+8. Fact/projection auto-write этим шагом не включается. Data Capital confirmations не становятся Reality Graph rows автоматически.
+9. Direct save не добавляет OpenAI provider calls и не меняет AI-A2 лимиты.

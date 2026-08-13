@@ -4,8 +4,8 @@
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
   "branch": "feat/gsr1-global-system-reality-machine-contract-v1-20260811",
-  "originMainAtCheckpoint": "df260c2a5b928350b2a02c8f1b55a06b21d3aecb",
-  "checkpointMeaning": "AI-A3-P2 adds append-only feedback review and explicit manual leaf-link intents/materialization while preserving P3 automatic projection no-write boundary.",
+  "originMainAtCheckpoint": "442af9b04248a66cf06d82d305b6246df0d09107",
+  "checkpointMeaning": "AI-A3-P3 bypasses the duplicate legacy Activity Review Container for AI Lab saves and writes canonical activities directly with stale-analysis and partial-save guards.",
   "globalReality": {
     "p8Blocked": true,
     "objectsTotal": 150,
@@ -50,7 +50,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Run AI-A3-P2 production acceptance: confirm/reject/comment a projection, verify ? no-write, search/add a GLOBAL leaf manually, save a past activity, and verify semantic_exposure materialization. Do not treat feedback as global truth.",
+  "nextAction": "Run production acceptance: direct-save one past activity and one future planned activity from /activity-ai-lab without visiting /calendar/activity-review; verify manual leaf semantic_exposure materialization with a read-only DB postcheck.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -60,8 +60,8 @@
     "docs/recovery/evidence/EVIDENCE_INDEX.json"
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
-  "previousRecoveryCommit": "df260c2a5b928350b2a02c8f1b55a06b21d3aecb",
-  "documentedState": "AI_A3_P2_FEEDBACK_REVIEW_UX_V1",
+  "previousRecoveryCommit": "442af9b04248a66cf06d82d305b6246df0d09107",
+  "documentedState": "AI_A3_P3_ACTIVITY_AI_LAB_DIRECT_SAVE_V1",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -167,7 +167,7 @@
     "rawLiveDbExportRequiredForCheckpoint": false
   },
   "aiArchitecture": {
-    "status": "AI_A3_P2_CODE_RELEASED_AWAITING_LIVE_RUNTIME",
+    "status": "AI_A3_P3_DIRECT_SAVE_CODE_RELEASED_AWAITING_LIVE_RUNTIME",
     "sourceBaseline": "07e5b82d8e9c9ee22c995bfb64297e685fefe918",
     "architectureLock": "docs/reality-core/ARCTOR_AI_ARCHITECTURE_LOCK_V1_RU.md",
     "storageAudit": "docs/recovery/specs/ARCTOR_AI_A0_REUSE_ALTER_CREATE_V1_RU.md",
@@ -179,7 +179,7 @@
     "providerStore": false,
     "automaticProviderRetries": 0,
     "maxProviderCalls": 2,
-    "nextBlock": "AI_A3_P2_PRODUCTION_RUNTIME_ACCEPTANCE"
+    "nextBlock": "AI_A3_P3_DIRECT_SAVE_PRODUCTION_ACCEPTANCE"
   },
   "gsr1lImplementation": {
     "status": "AI_A2_P3_CODE_RELEASED_AWAITING_LIVE_RUNTIME",
@@ -226,7 +226,7 @@
     "p3ProductionRuntimeAcceptance": "PASS"
   },
   "aiA3Implementation": {
-    "status": "AI_A3_P2_CODE_RELEASED_AWAITING_LIVE_RUNTIME",
+    "status": "AI_A3_P3_DIRECT_SAVE_CODE_RELEASED_AWAITING_LIVE_RUNTIME",
     "dataCapitalFoundationApplied": true,
     "dataCapitalLiveAcceptance": "20/20 PASS",
     "feedbackReviewUxIntegrated": true,
@@ -237,7 +237,14 @@
     "selectorGlobalOptIn": true,
     "automaticSemanticProjectionWrite": false,
     "providerCallsAdded": 0,
-    "p2ProductionRuntimeAcceptance": "PENDING",
-    "nextBlock": "AI_A3_P2_PRODUCTION_RUNTIME_ACCEPTANCE"
+    "p2ProductionRuntimeAcceptance": "PARTIAL_UI_PASS_LEGACY_MATERIALIZATION_NOT_ACCEPTED",
+    "nextBlock": "AI_A3_P3_DIRECT_SAVE_PRODUCTION_ACCEPTANCE",
+    "directSaveFromAiLabIntegrated": true,
+    "directSaveLegacyContainerBypassed": true,
+    "legacyActivityReviewRouteRetained": true,
+    "directSaveStaleAnalysisGuard": true,
+    "directSavePartialSaveResume": true,
+    "automaticFactProjectionMaterialization": false,
+    "directSaveProductionAcceptance": "PENDING"
   }
 }

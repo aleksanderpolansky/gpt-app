@@ -397,3 +397,13 @@ P2 добавляет review controls ✓ / ✕ / ✎ / ? на /activity-ai-lab.
 Добавлен + Добавить связь с ЦО. Поиск использует существующий selector с opt-in includeGlobal=1 и level=leaf, объединяя active GLOBAL leaves и ЦО активного профиля. До сохранения активности выбор хранится как manual_leaf_link intent в Data Capital. После создания canonical activity_event Activity Review материализует intent в activity_value_object_links как semantic_exposure/manual/user_confirmed. Существующая такая связь не перезаписывается: manual materialization использует ignoreDuplicates=true, а пользовательское подтверждение остаётся отдельным Data Capital event.
 
 P3 automatic semantic projections остаются preview-only и не материализуются. Дополнительных OpenAI calls P2 не добавляет. Production acceptance нового UX после release = PENDING.
+
+## AI_A3_P3_ACTIVITY_AI_LAB_DIRECT_SAVE_V1 — 2026-08-13
+
+AI-A3-P2 live UI проверен: ✓ подтверждает, ✕ отклоняет, ✎ сохраняет комментарий, ? показывает основание; manual leaf selector нашёл GLOBAL leaf «Пищевой продукт/блюдо» и сохранил manual intent. При переходе к сохранению выяснилось, что AI Lab всё ещё отправляет пользователя в legacy /calendar/activity-review. Этот экран повторно запускает старый semantic preview, дублирует уже завершённый Global Reality анализ и в live UI показал mojibake в части русских заголовков. Manual materialization через этот старый маршрут не принят как production gate.
+
+P3 выводит Activity AI Lab из legacy container: после успешного полного Global Reality анализа past/future сохраняются прямо с /activity-ai-lab через canonical POST /api/activity/events. На AI Lab добавлены редактируемый title, общий PP1 timing editor и planned target selector для future. Past после успеха открывает /activity-today; future — /calendar. Exact future schedule сохраняет существующую calendar projection policy API.
+
+Manual leaf intents после создания activity_event материализуются существующим /api/ai/reality/manual-link-materialize как semantic_exposure/manual/user_confirmed без overwrite существующей связи. Text/locale edit после анализа инвалидирует provenance; после partial create поля и исходное сообщение блокируются, retry завершает links без повторного activity create.
+
+Legacy /calendar/activity-review этим шагом физически не удаляется: другие calendar/journal callers ещё могут от него зависеть. Полное удаление — отдельная миграция callers. Automatic facts и P3 semantic projections P3 direct-save не материализует; подтверждения остаются Data Capital до отдельного controlled materialization шага. Production acceptance direct-save = PENDING.

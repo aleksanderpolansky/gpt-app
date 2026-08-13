@@ -2,7 +2,7 @@
   "generatedAt": "2026-08-13",
   "copiedCount": 57,
   "generatedEvidenceCount": 1,
-  "indexedCount": 66,
+  "indexedCount": 68,
   "missingPatterns": [],
   "files": [
     {
@@ -456,6 +456,20 @@
       "sourceDownloadsName": null,
       "sha256": "2cae22c1cf9eba5af3812d081705c8e9bd1bd124e3c9ef84d15d65e865899949",
       "origin": "AI_A3_P2_local_release_validation"
+    },
+    {
+      "group": "AI_A3",
+      "file": "docs/recovery/evidence/AI_A3/ARCTOR_AI_A3_P2_UI_LIVE_ACCEPTANCE_20260813.txt",
+      "sourceDownloadsName": null,
+      "sha256": "2f6334b208301a605f3b9ba8d62965a665ddca50e146c0f90a51902d1dd13929",
+      "origin": "AI_A3_P2_live_UI_partial_acceptance"
+    },
+    {
+      "group": "AI_A3",
+      "file": "docs/recovery/evidence/AI_A3/ARCTOR_AI_A3_P3_DIRECT_SAVE_LOCAL_VALIDATION_20260813.txt",
+      "sourceDownloadsName": null,
+      "sha256": "2028e97ce7cd4aeb287b20972235f66fd6eabae4e3cec3f54f903033c60ccb09",
+      "origin": "AI_A3_P3_direct_save_local_release_validation"
     }
   ]
 }
