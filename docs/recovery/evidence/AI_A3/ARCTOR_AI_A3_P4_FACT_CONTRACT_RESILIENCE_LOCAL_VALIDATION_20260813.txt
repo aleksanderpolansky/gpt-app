@@ -1,0 +1,38 @@
+ARCTor.app - AI-A3-P4 Fact Contract Resilience local validation
+DATE=2026-08-13
+STATUS=PASS_LOCAL
+
+OBSERVED_PRODUCTION_FAILURE:
+- phrase: сегодня купил бутылку воды и яблоки, заплатил 12 злотых
+- phrase: завтра вечером пойти на прогулку на 40 минут
+- Global Reality fallback reason: AI fact value failed the system parameter contract
+- direct save correctly remained blocked in fallback mode
+
+ROOT_CAUSE:
+- optional AI fact row can populate extra value fields or declare valueType inconsistent with the server parameter contract
+- old validator aborted the whole analysis instead of rejecting/normalizing only that optional fact
+
+LOCAL_CHECKS:
+- factContractPolicy TypeScript syntax: PASS
+- patched globalObservationPilot TypeScript syntax: PASS
+- policy behavioral tests: 11/11 PASS
+- malformed/unsupported fact stays fail-closed at fact boundary: PASS
+- selection/unresolved guards preserved: PASS_STATIC
+- provider max calls 2 / retries 0 preserved: PASS_STATIC
+- no automatic fact/Reality Graph write introduced: PASS_STATIC
+
+PRODUCTION_ACCEPTANCE=PENDING
+NEXT=rerun the two failed live phrases; full Global Reality analysis must complete without fallback, then direct-save past/future acceptance continues.
+
+RELEASE_V1_BUILD_FAILURE:
+- validators before build: PASS
+- Next.js compile: PASS
+- TypeScript build: FAIL TS2677 at globalObservationPilot.ts filter type predicate
+- commit: not created
+- feature/main push: not executed
+- runner cleanup: tracked P4 changes restored
+
+RELEASE_V2_CORRECTION:
+- invalid predicate `fact is ProposedFact` replaced by `fact is NonNullable<typeof fact>`
+- isolated TypeScript reproduction: V1 fails TS2677; V2 passes
+- P4 validator now explicitly checks safe predicate and absence of the invalid predicate

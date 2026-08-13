@@ -231,3 +231,7 @@ Source invariants:
 - legacy /calendar/activity-review remains present for non-AI-Lab callers until separate migration.
 
 Rollback of source commit does not roll back AI-A3-P1 additive DB tables. Restore DB by forward migration only if later schema evolution requires it.
+
+## AI-A3 P4 fact-contract resilience restore point - 2026-08-13
+
+Baseline before this release: 5f86c97830423ee2e6b9992bb9443d213942f74d. New files: lib/reality/factContractPolicy.ts, P4 validator/test, contract and local evidence. Modified runtime: lib/reality/globalObservationPilot.ts. Revert only this P4 layer if production acceptance fails; do not remove AI-A3-P3 direct-save behavior.

@@ -462,3 +462,7 @@ AI-A2-P1 live acceptance: 14/14 PASS. Stokrotka regression стала обяза
 7. После successful activity create + failed link materialization UI хранит activity_event checkpoint, блокирует изменяемые поля и retry не делает второй activity create.
 8. Fact/projection auto-write этим шагом не включается. Data Capital confirmations не становятся Reality Graph rows автоматически.
 9. Direct save не добавляет OpenAI provider calls и не меняет AI-A2 лимиты.
+
+## AI_A3_P4_OPTIONAL_FACT_FAILURE_BOUNDARY — 2026-08-13
+
+Observed after commit 5f86c97830423ee2e6b9992bb9443d213942f74d: ordinary purchase and future walking phrases fell back because stage-2 returned an optional fact whose value fields did not exactly match the server parameter contract. This was not a candidate-routing failure. Decision: fail closed at the individual optional-fact boundary, not at the entire semantic-analysis boundary. Unsupported parameter/unit/evidence or missing expected typed value is dropped; server-authorized typed values may be normalized by clearing extraneous model fields. No automatic fact write is added. Release V1 additionally exposed a precommit TypeScript TS2677 failure in the fact-array null filter; V2 corrects the predicate without changing runtime facts. V1 created no commit and pushed nothing.

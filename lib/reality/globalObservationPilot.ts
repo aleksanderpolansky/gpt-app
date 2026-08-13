@@ -28,6 +28,9 @@ import {
   SEMANTIC_PROJECTION_CONTRACT_VERSION,
   buildSemanticProjections,
 } from "./semanticProjectionPolicy";
+import {
+  normalizeAiFactAgainstParameterContract,
+} from "./factContractPolicy";
 
 const ROUTE_PATH = "/api/ai/reality/global-observation-preview";
 const PILOT_MODEL_TIER = "nano";
@@ -1717,6 +1720,7 @@ function validateSelectionOutput(input: {
   segments: RoutingSegment[];
   groups: CandidateGroup[];
   locale: string;
+  factWarnings?: string[];
 }) {
   const outputRecord = asRecord(input.output);
   const rawSelections = asArray(outputRecord?.selections);
@@ -1778,11 +1782,8 @@ function validateSelectionOutput(input: {
 
     if (selectedCanonicalKey === "__NONE__") {
       if (asArray(row.facts).length > 0) {
-        throw new GlobalObservationPilotError(
-          502,
-          "AI_SELECTION_FACT_WITHOUT_TARGET",
-          "AI returned facts without a selected semantic leaf.",
-          { selectionKey, segmentId },
+        input.factWarnings?.push(
+          `FACTS_DROPPED_WITHOUT_SELECTED_LEAF:${segmentId}`,
         );
       }
 
@@ -1851,74 +1852,42 @@ function validateSelectionOutput(input: {
         });
       })
       .map((rawFact) => {
-      const fact = asRecord(rawFact);
+        const fact = asRecord(rawFact);
+        const parameterCode = asText(fact?.parameterCode);
+        const contract = parameterByCode.get(parameterCode);
+        const normalized = normalizeAiFactAgainstParameterContract({
+          rawFact,
+          sourceFragment: segment.sourceFragment,
+          contract: contract ?? null,
+        });
 
-      if (!fact) {
-        throw new GlobalObservationPilotError(
-          502,
-          "AI_FACT_ROW_INVALID",
-          "AI returned a non-object fact.",
-        );
-      }
+        if (!normalized.accepted) {
+          input.factWarnings?.push(
+            `FACT_DROPPED:${segmentId}:${parameterCode || "unknown"}:${normalized.reason}`,
+          );
+          return null;
+        }
 
-      const parameterCode = asText(fact.parameterCode);
-      const unit = asText(fact.unit);
-      const valueType = asText(fact.valueType);
-      const rawFragment = asText(fact.rawFragment);
-      const contract = parameterByCode.get(parameterCode);
+        if (normalized.normalizationApplied) {
+          input.factWarnings?.push(
+            `FACT_VALUE_NORMALIZED_TO_SERVER_CONTRACT:${segmentId}:${normalized.fact.parameterCode}`,
+          );
+        }
 
-      if (
-        !contract ||
-        !contract.allowedUnitCodes.includes(unit) ||
-        !rawFragment ||
-        !containsFragment(segment.sourceFragment, rawFragment)
-      ) {
-        throw new GlobalObservationPilotError(
-          502,
-          "AI_FACT_PARAMETER_OR_EVIDENCE_INVALID",
-          "AI fact was outside the candidate parameter contract or lacked source evidence.",
-          { segmentId, canonicalKey, parameterCode, unit },
-        );
-      }
-
-      const valueNumeric = asFiniteNumber(fact.valueNumeric);
-      const valueText = asNullableText(fact.valueText);
-      const valueBoolean = asBoolean(fact.valueBoolean);
-
-      const populated =
-        (valueNumeric !== null ? 1 : 0) +
-        (valueText !== null ? 1 : 0) +
-        (valueBoolean !== null ? 1 : 0);
-
-      if (
-        populated !== 1 ||
-        !["numeric", "text", "boolean"].includes(valueType) ||
-        valueType !== contract.valueTypeCode ||
-        (valueType === "numeric" && valueNumeric === null) ||
-        (valueType === "text" && valueText === null) ||
-        (valueType === "boolean" && valueBoolean === null)
-      ) {
-        throw new GlobalObservationPilotError(
-          502,
-          "AI_FACT_VALUE_CONTRACT_INVALID",
-          "AI fact value failed the system parameter contract.",
-          { segmentId, canonicalKey, parameterCode },
-        );
-      }
-
-      return {
-        parameterCode,
-        unit,
-        valueType,
-        valueNumeric,
-        valueText,
-        valueBoolean,
-        rawFragment,
-        valueOriginCode: "user_explicit",
-        sourceReliabilityCode: "user_reported",
-        factStatus: "proposed",
-      };
-    });
+        return {
+          parameterCode: normalized.fact.parameterCode,
+          unit: normalized.fact.unit,
+          valueType: normalized.fact.valueType,
+          valueNumeric: normalized.fact.valueNumeric,
+          valueText: normalized.fact.valueText,
+          valueBoolean: normalized.fact.valueBoolean,
+          rawFragment: normalized.fact.rawFragment,
+          valueOriginCode: "user_explicit",
+          sourceReliabilityCode: "user_reported",
+          factStatus: "proposed",
+        };
+      })
+      .filter((fact): fact is NonNullable<typeof fact> => fact !== null);
 
     const mealLabelContract = parameterByCode.get("meal_label");
     const explicitMealLabel =
@@ -2315,6 +2284,7 @@ export async function runGlobalObservationPreview(
       signal: controller.signal,
     });
 
+    const factValidationWarnings: string[] = [];
     let previewRows: ReturnType<typeof validateSelectionOutput>;
 
     try {
@@ -2323,6 +2293,7 @@ export async function runGlobalObservationPreview(
         segments,
         groups: candidateGroups,
         locale,
+        factWarnings: factValidationWarnings,
       });
 
       await markAiContextManifestValidated(selectionCall.contextManifestId, {
@@ -2460,6 +2431,7 @@ export async function runGlobalObservationPreview(
       warnings: [
         routingCall.usageLogWarning,
         selectionCall.usageLogWarning,
+        ...factValidationWarnings,
       ].filter((value): value is string => Boolean(value)),
     };
   } catch (error) {

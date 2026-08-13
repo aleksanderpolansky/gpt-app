@@ -61,7 +61,7 @@
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
   "previousRecoveryCommit": "442af9b04248a66cf06d82d305b6246df0d09107",
-  "documentedState": "AI_A3_P3_ACTIVITY_AI_LAB_DIRECT_SAVE_V1",
+  "documentedState": "AI_A3_P4_FACT_CONTRACT_RESILIENCE_V1",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -246,5 +246,15 @@
     "directSavePartialSaveResume": true,
     "automaticFactProjectionMaterialization": false,
     "directSaveProductionAcceptance": "PENDING"
+  },
+  "aiA3P4FactContractResilience": {
+    "status": "implemented_pending_production_acceptance",
+    "baselineCommit": "5f86c97830423ee2e6b9992bb9443d213942f74d",
+    "optionalFactFailureBoundary": "drop_or_server_normalize_fact_not_entire_analysis",
+    "selectionContractChanged": false,
+    "maxProviderCalls": 2,
+    "automaticProviderRetries": 0,
+    "realityGraphWriteChanged": false,
+    "nextAction": "rerun purchase and future-walk Global Reality previews, then direct-save acceptance"
   }
 }
