@@ -144,3 +144,17 @@ npm run build
 AI-A1 production acceptance после deploy: выполнить один обычный `/activity-ai-lab` Global Reality preview и затем read-only `20260812_ai_a1_context_manifest_runtime_postcheck_READONLY.sql`. Ожидается один completed execution, два validated manifests и два linked usage events; `store=false`, retries=0 и все hashes присутствуют.
 
 Следующий архитектурный блок: AI-A2 Recognition Profiles.
+
+## AI-A2 P1 restore point - 2026-08-13
+
+После checkout authoritative checkpoint восстановить/проверить следующие слои:
+
+1. AI-A1: public.ai_analysis_executions, public.ai_context_manifests и public.ai_usage_events.analysis_execution_id. Production runtime evidence: 6/6 PASS.
+2. AI-A2-P1 manual-applied SQL: supabase/manual-applied/20260813_ai_a2_p1_recognition_foundation_v1.sql. Live acceptance: 14/14 PASS.
+3. Recognition table: public.value_object_recognition_profiles; active pilot profiles=11; direct table SELECT blocked for anon/authenticated/service_role.
+4. Read RPCs: public.get_global_value_object_recognition_profile_v1(uuid) and public.get_global_value_object_recognition_candidates_v1(text,text,jsonb,integer), service_role-only.
+5. Existing concept_aliases/exact recognizer are reused and preserved. Do not create a duplicate aliases table.
+6. Stokrotka regression: purchase must be candidate; process.home.household_task must be absent. Generic sleep without day/night remains unresolved.
+7. Runtime integration is NOT yet part of P1. /activity-ai-lab remains on the previous candidate path until AI-A2-P2. Reality Graph writes remain disabled for preview.
+
+If live DB already contains the AI-A2-P1 table/functions, do not rerun the migration blindly; run its read-only/live postchecks or compare schema first.

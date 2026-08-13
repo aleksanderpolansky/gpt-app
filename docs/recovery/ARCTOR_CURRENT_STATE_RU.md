@@ -345,3 +345,15 @@ Runtime Global Reality использует один analysis execution для �
 Матрица AI-A0 REUSE/ALTER/CREATE: `docs/recovery/specs/ARCTOR_AI_A0_REUSE_ALTER_CREATE_V1_RU.md`.
 
 Следующий блок после production runtime postcheck AI-A1: **AI-A2 Recognition Profiles**.
+
+## AI_A2_P1_RECOGNITION_FOUNDATION_V1 — 2026-08-13
+
+AI-A1 production runtime postcheck закрыт: 6/6 PASS. Один production Global Reality preview создал одну completed analysis execution, два validated context manifests и два связанных ai_usage_events; store=false, automatic retries=0, обязательные hashes присутствуют.
+
+AI-A2 / GSR1L-P1 применён в live Supabase и прошёл 14/14 acceptance checks. Создан versioned recognition-profile layer для global leaf, 11 активных pilot profiles, service-role-only assembled-profile/candidate RPC boundary. Existing concept_aliases и старый exact recognizer сохранены; global ontology осталась 150 объектов.
+
+Контрольная фраза Stokrotka на уровне нового bounded candidate RPC включает process.finance.purchase и не включает ошибочный process.home.household_task. Generic sleep остаётся unresolved между day/night и не угадывается.
+
+Важно: /activity-ai-lab runtime ещё не переведён на новый AI-A2 candidate assembler. Reality Graph write path не менялся.
+
+Следующий блок: AI-A2-P2 runtime integration — подключить get_global_value_object_recognition_candidates_v1 к Global Reality preview, сохранив bounded choice, UNKNOWN/UNRESOLVED, два provider calls max, AI-A1 manifests и preview-only boundary.

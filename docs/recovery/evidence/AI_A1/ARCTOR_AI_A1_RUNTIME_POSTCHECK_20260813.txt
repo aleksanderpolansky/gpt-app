@@ -1,0 +1,11 @@
+ARCTor.app - AI-A1 production runtime postcheck
+Date: 2026-08-13
+
+01_execution_completed=true
+02_two_validated_manifests=true
+03_two_usage_events_linked=true
+04_store_false=true
+05_zero_automatic_retries=true
+06_all_hashes_present=true
+
+RESULT=6/6 PASS

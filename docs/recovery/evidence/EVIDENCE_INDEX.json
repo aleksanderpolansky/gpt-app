@@ -1,407 +1,419 @@
 {
-    "generatedAt":  "2026-08-12T14:21:42",
-    "copiedCount":  57,
-    "generatedEvidenceCount":  1,
-    "indexedCount":  58,
-    "missingPatterns":  [
-
-                        ],
-    "files":  [
-                  {
-                      "group":  "GSR1G",
-                      "file":  "docs/recovery/evidence/GSR1G/ARCTOR_GSR1G_ROUTING_CONTRACT_FIX_SMOKE_V3_20260812_070940_REPORT.txt",
-                      "sourceDownloadsName":  "ARCTOR_GSR1G_ROUTING_CONTRACT_FIX_SMOKE_V3_20260812_070940_REPORT.txt",
-                      "sha256":  "7d51e280d745a334e49d111f02fc588b3b75558acdb671d2084515de19c60557"
-                  },
-                  {
-                      "group":  "GSR1H",
-                      "file":  "docs/recovery/evidence/GSR1H/ARCTOR_GSR1H_SMALL_GOLD_CORPUS_PREVIEW_V1_20260812_072550_REPORT.txt",
-                      "sourceDownloadsName":  "ARCTOR_GSR1H_SMALL_GOLD_CORPUS_PREVIEW_V1_20260812_072550_REPORT.txt",
-                      "sha256":  "39cc445140cd81f69e178dedf1a5dfaeeaafea5b7c21d0343f05d14b7c838746"
-                  },
-                  {
-                      "group":  "GSR1H",
-                      "file":  "docs/recovery/evidence/GSR1H/ARCTOR_GSR1H_SMALL_GOLD_CORPUS_PREVIEW_V2_20260812_073343_REPORT.txt",
-                      "sourceDownloadsName":  "ARCTOR_GSR1H_SMALL_GOLD_CORPUS_PREVIEW_V2_20260812_073343_REPORT.txt",
-                      "sha256":  "a36b8ae6f7b39890be57a01d7ecefd1974cd40a456cd539ce06b4ba9cb546f0e"
-                  },
-                  {
-                      "group":  "GSR1H",
-                      "file":  "docs/recovery/evidence/GSR1H/ARCTOR_GSR1H_SMALL_GOLD_CORPUS_PREVIEW_V3_20260812_073617_REPORT.txt",
-                      "sourceDownloadsName":  "ARCTOR_GSR1H_SMALL_GOLD_CORPUS_PREVIEW_V3_20260812_073617_REPORT.txt",
-                      "sha256":  "dc9041e1c78c7845379683e70f20addba7a9cd9bdbea6284ab70f8a457b58586"
-                  },
-                  {
-                      "group":  "GSR1H",
-                      "file":  "docs/recovery/evidence/GSR1H/ARCTOR_GSR1H_SMALL_GOLD_CORPUS_PREVIEW_V4_20260812_074042_REPORT.txt",
-                      "sourceDownloadsName":  "ARCTOR_GSR1H_SMALL_GOLD_CORPUS_PREVIEW_V4_20260812_074042_REPORT.txt",
-                      "sha256":  "c49ae7c705a091fa674e9d2a72b7f70bdfb1cdfd950cd763f7f8185c60127dc6"
-                  },
-                  {
-                      "group":  "GSR1H",
-                      "file":  "docs/recovery/evidence/GSR1H/ARCTOR_GSR1H_FAILED_CASE_DIAGNOSTIC_V5_20260812_074922_REPORT.txt",
-                      "sourceDownloadsName":  "ARCTOR_GSR1H_FAILED_CASE_DIAGNOSTIC_V5_20260812_074922_REPORT.txt",
-                      "sha256":  "563607735ecd577df96bd59cf82131a1729ff969b5d30b29481ef286b8a4cc88"
-                  },
-                  {
-                      "group":  "GSR1I",
-                      "file":  "docs/recovery/evidence/GSR1I/ARCTOR_GSR1I_ROUTING_TEMPORAL_FIX_SMOKE_V1_20260812_080150_REPORT.txt",
-                      "sourceDownloadsName":  "ARCTOR_GSR1I_ROUTING_TEMPORAL_FIX_SMOKE_V1_20260812_080150_REPORT.txt",
-                      "sha256":  "93ccb80d6f6f1023ac1ef0de52419bfc4c2d88ae53421ab7792ed9bb2e82acc5"
-                  },
-                  {
-                      "group":  "GSR1I",
-                      "file":  "docs/recovery/evidence/GSR1I/ARCTOR_GSR1I_ROUTING_TEMPORAL_FIX_SMOKE_V2_20260812_081154_REPORT.txt",
-                      "sourceDownloadsName":  "ARCTOR_GSR1I_ROUTING_TEMPORAL_FIX_SMOKE_V2_20260812_081154_REPORT.txt",
-                      "sha256":  "ff20d2859b0e2e95447bbd4b602eec8d68b38b6202f21332883a56eb8af7c087"
-                  },
-                  {
-                      "group":  "GSR1I",
-                      "file":  "docs/recovery/evidence/GSR1I/ARCTOR_GSR1I_ROUTING_TEMPORAL_FIX_SMOKE_V3_20260812_082518_REPORT.txt",
-                      "sourceDownloadsName":  "ARCTOR_GSR1I_ROUTING_TEMPORAL_FIX_SMOKE_V3_20260812_082518_REPORT.txt",
-                      "sha256":  "097e21f83bfa02ab562819ff14c992786eff8a91560c4ea447e1b015b353a7cb"
-                  },
-                  {
-                      "group":  "GSR1I",
-                      "file":  "docs/recovery/evidence/GSR1I/ARCTOR_GSR1I_DINNER_CANONICAL_LABEL_SMOKE_V4_20260812_083611_REPORT.txt",
-                      "sourceDownloadsName":  "ARCTOR_GSR1I_DINNER_CANONICAL_LABEL_SMOKE_V4_20260812_083611_REPORT.txt",
-                      "sha256":  "300d3963a81f0e0143ad652cac4484c73f840458f29e5dfb2f3d7c556ea6a6dc"
-                  },
-                  {
-                      "group":  "RECOVERY",
-                      "file":  "docs/recovery/evidence/RECOVERY/ARCTOR_RECOVERY_KNOWLEDGE_BASE_V1_VERIFICATION_REPORT.txt",
-                      "sourceDownloadsName":  null,
-                      "sha256":  "05970052fdae549c2fdbf3b70dcc3ed360b08695675ded2a66983824429308dd",
-                      "origin":  "generated_precommit_verification"
-                  },
-                  {
-                      "group":  "GSR1I",
-                      "file":  "docs/recovery/evidence/GSR1I/ARCTOR_GSR1I_DINNER_TEMPORAL_DURATION_GUARD_SMOKE_V5_20260812_092215_REPORT.txt",
-                      "sourceDownloadsName":  "ARCTOR_GSR1I_DINNER_TEMPORAL_DURATION_GUARD_SMOKE_V5_20260812_092215_REPORT.txt",
-                      "sha256":  "af8350c978a34e64fe15457565973cd362170f2a6de77d52b15df2b7c624f056",
-                      "origin":  "GSR1I_V5_gold_closure"
-                  },
-                  {
-                      "group":  "GSR1I",
-                      "file":  "docs/recovery/evidence/GSR1I/ARCTOR_GSR1I_DINNER_TEMPORAL_DURATION_GUARD_SMOKE_V5_20260812_092215_CASE_G24_DINNER_RESPONSE.json",
-                      "sourceDownloadsName":  "ARCTOR_GSR1I_DINNER_TEMPORAL_DURATION_GUARD_SMOKE_V5_20260812_092215_CASE_G24_DINNER_RESPONSE.json",
-                      "sha256":  "dc5d7caa4f84c09c0c8ab535c7f35fe16ee0013382b6cdadbea2994a24367d3c",
-                      "origin":  "GSR1I_V5_gold_closure"
-                  },
-                  {
-                      "group":  "GSR1I",
-                      "file":  "docs/recovery/evidence/GSR1I/ARCTOR_GSR1I_DINNER_TEMPORAL_DURATION_GUARD_SMOKE_V5_20260812_092215_TWO_CASE_RESULTS.json",
-                      "sourceDownloadsName":  "ARCTOR_GSR1I_DINNER_TEMPORAL_DURATION_GUARD_SMOKE_V5_20260812_092215_TWO_CASE_RESULTS.json",
-                      "sha256":  "8dd471893320b118270a4384499b2f0c2cd2e15932f3dca11fa319c040f72d1a",
-                      "origin":  "GSR1I_V5_gold_closure"
-                  },
-                  {
-                      "group":  "GSR1J",
-                      "file":  "docs/recovery/evidence/GSR1J/ARCTOR_GSR1J_FULL_GOLD_CONTRACT_COVERAGE_PREFLIGHT_V1_20260812_095655_REPORT.txt",
-                      "sourceDownloadsName":  "ARCTOR_GSR1J_FULL_GOLD_CONTRACT_COVERAGE_PREFLIGHT_V1_20260812_095655_REPORT.txt",
-                      "sha256":  "6ca76d97f29c5865378c66047fee126de376ebfd9d53aa51a8ec1a4de7b10df2",
-                      "origin":  "GSR1J_diagnostic_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1J",
-                      "file":  "docs/recovery/evidence/GSR1J/ARCTOR_GSR1J_TARGETED_PAID_DIAGNOSTIC_BATCH_V1_20260812_101944_REPORT.txt",
-                      "sourceDownloadsName":  "ARCTOR_GSR1J_TARGETED_PAID_DIAGNOSTIC_BATCH_V1_20260812_101944_REPORT.txt",
-                      "sha256":  "b00dc6bd047942c57b0869d672ad00797d842c8023f8641795769807d95a0f59",
-                      "origin":  "GSR1J_diagnostic_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1J",
-                      "file":  "docs/recovery/evidence/GSR1J/FIXTURE_COVERAGE.json",
-                      "sourceDownloadsName":  "FIXTURE_COVERAGE.json",
-                      "sha256":  "e09c77486d7a61e7eae7b53649bb45697abaf0318039ace4a1214f9c0457ddae",
-                      "origin":  "GSR1J_diagnostic_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1J",
-                      "file":  "docs/recovery/evidence/GSR1J/PILOT_CONTRACT_CAPABILITIES.json",
-                      "sourceDownloadsName":  "PILOT_CONTRACT_CAPABILITIES.json",
-                      "sha256":  "77b02ee5e3821fb120a7132c581aee9cadf1abd0d4747fbae70a3f0874230faf",
-                      "origin":  "GSR1J_diagnostic_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1J",
-                      "file":  "docs/recovery/evidence/GSR1J/DIAGNOSTIC_RESULTS.json",
-                      "sourceDownloadsName":  "DIAGNOSTIC_RESULTS.json",
-                      "sha256":  "3563b276959c62209e773c022cd7e6d5b6d16cbea5e97cc5979378a3a05b58d2",
-                      "origin":  "GSR1J_diagnostic_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1J",
-                      "file":  "docs/recovery/evidence/GSR1J/CASE_G01_MULTI_PLANK_RESPONSE.json",
-                      "sourceDownloadsName":  "CASE_G01_MULTI_PLANK_RESPONSE.json",
-                      "sha256":  "49c15ff3f831e3c2faae8c650924a65892d0fadd1aaffe747b77446ce0a9773c",
-                      "origin":  "GSR1J_diagnostic_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1J",
-                      "file":  "docs/recovery/evidence/GSR1J/CASE_G05_SLEEP_APPROX_RESPONSE.json",
-                      "sourceDownloadsName":  "CASE_G05_SLEEP_APPROX_RESPONSE.json",
-                      "sha256":  "84ab2098299d6b8ef8dd7927a5aec524f7c51c81b6af82ca3ab732f8b246ca31",
-                      "origin":  "GSR1J_diagnostic_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1J",
-                      "file":  "docs/recovery/evidence/GSR1J/CASE_G08_BLOOD_PRESSURE_RESPONSE.json",
-                      "sourceDownloadsName":  "CASE_G08_BLOOD_PRESSURE_RESPONSE.json",
-                      "sha256":  "f80b4a2fb284d1f49c38bf75dc4cc73e5ed1735f003caf6622fcf0058ee9b7b0",
-                      "origin":  "GSR1J_diagnostic_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1J",
-                      "file":  "docs/recovery/evidence/GSR1J/CASE_G12_ENERGY_EXPLICIT_RESPONSE.json",
-                      "sourceDownloadsName":  "CASE_G12_ENERGY_EXPLICIT_RESPONSE.json",
-                      "sha256":  "814b5199af83c5d545069d165e905604c6f35ca678bbd19f3f9676a7bc6c8039",
-                      "origin":  "GSR1J_diagnostic_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1J",
-                      "file":  "docs/recovery/evidence/GSR1J/CASE_G14_TWO_CUPS_COFFEE_RESPONSE.json",
-                      "sourceDownloadsName":  "CASE_G14_TWO_CUPS_COFFEE_RESPONSE.json",
-                      "sha256":  "a81a3f1c91d062e3793e19412b57511d5c7a8cd9af25d3674e5ef51d134f7ed1",
-                      "origin":  "GSR1J_diagnostic_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/ARCTOR_GSR1K_EVENT_LINK_TEMPORAL_PREVIEW_SMOKE_V1_20260812_110218_REPORT.txt",
-                      "sourceDownloadsName":  "ARCTOR_GSR1K_EVENT_LINK_TEMPORAL_PREVIEW_SMOKE_V1_20260812_110218_REPORT.txt",
-                      "sha256":  "f248af352812f20f3fde80b0542314d1d83f31a1c11e5349729ddc1348c52444",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V1_LINK_TEMPORAL_RESULTS.json",
-                      "sourceDownloadsName":  "V1_LINK_TEMPORAL_RESULTS.json",
-                      "sha256":  "bab9a085c44217cf1446f36ed9119e6fe3cf384585896afbe01d0673c6f8b3dd",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V1_CASE_G03_PAIN_LOCATION_TEMPORAL_RESPONSE.json",
-                      "sourceDownloadsName":  "V1_CASE_G03_PAIN_LOCATION_TEMPORAL_RESPONSE.json",
-                      "sha256":  "8d9d70654791d926c6a0205f06b1109b21cc7feb413d048fc41e7d525b11f204",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V1_CASE_G11_MEAL_CONSUMES_RESPONSE.json",
-                      "sourceDownloadsName":  "V1_CASE_G11_MEAL_CONSUMES_RESPONSE.json",
-                      "sha256":  "93d3d91c473dbd0e27009a3398650722768cbf432fbbd8a2ff621ad36d82a5c6",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V1_CASE_G20_GUITAR_CALMER_RESPONSE.json",
-                      "sourceDownloadsName":  "V1_CASE_G20_GUITAR_CALMER_RESPONSE.json",
-                      "sha256":  "58e294ed3750d759e1dc04550f1080e892b690f7cbfa6047f523f9a0f66e8c2d",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V1_GSR1F_VALIDATION.txt",
-                      "sourceDownloadsName":  "V1_GSR1F_VALIDATION.txt",
-                      "sha256":  "22501b713644b852712a58b8ed64d30d7bb52eeff7a75b437d936816acdc62d2",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V1_GLOBAL_SEED_VALIDATION.txt",
-                      "sourceDownloadsName":  "V1_GLOBAL_SEED_VALIDATION.txt",
-                      "sha256":  "504736b45429e654bb915412b56e74a0ac7b6b9c96fce27c22240fbb2dda963a",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/ARCTOR_GSR1K_EVENT_LINK_TEMPORAL_PREVIEW_SMOKE_V2_20260812_111513_REPORT.txt",
-                      "sourceDownloadsName":  "ARCTOR_GSR1K_EVENT_LINK_TEMPORAL_PREVIEW_SMOKE_V2_20260812_111513_REPORT.txt",
-                      "sha256":  "6524bb5c01e50b6a3741b1ed42e7eda082ee7ad6098e6a755525d9fbeb4d564d",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V2_LINK_TEMPORAL_RESULTS.json",
-                      "sourceDownloadsName":  "V2_LINK_TEMPORAL_RESULTS.json",
-                      "sha256":  "dbbe669cd5ae58b04294d32535c56e6afd6072d7048f890b9ff43457c39329f1",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V2_CASE_G03_PAIN_LOCATION_TEMPORAL_RESPONSE.json",
-                      "sourceDownloadsName":  "V2_CASE_G03_PAIN_LOCATION_TEMPORAL_RESPONSE.json",
-                      "sha256":  "251fc1d6a0a84402a463e9234f21b63cebf5e5a8bf31c2fdd885b63f36cf1302",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V2_CASE_G11_MEAL_CONSUMES_RESPONSE.json",
-                      "sourceDownloadsName":  "V2_CASE_G11_MEAL_CONSUMES_RESPONSE.json",
-                      "sha256":  "0ce36dca7db10e7b8c1279f54e7bd6d678ac3c3e34ea8bf7d8254c8151302503",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V2_GSR1F_VALIDATION.txt",
-                      "sourceDownloadsName":  "V2_GSR1F_VALIDATION.txt",
-                      "sha256":  "a9b54b59c7cfa157583df8db1c5ca9888f3773a9fb1c5f719166fca263fd94c4",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V2_GLOBAL_SEED_VALIDATION.txt",
-                      "sourceDownloadsName":  "V2_GLOBAL_SEED_VALIDATION.txt",
-                      "sha256":  "504736b45429e654bb915412b56e74a0ac7b6b9c96fce27c22240fbb2dda963a",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/ARCTOR_GSR1K_G03_RAW_ROUTING_DIAGNOSTIC_V3_20260812_113021_REPORT.txt",
-                      "sourceDownloadsName":  "ARCTOR_GSR1K_G03_RAW_ROUTING_DIAGNOSTIC_V3_20260812_113021_REPORT.txt",
-                      "sha256":  "2b15fb8b07415ced7fa56f22030e5433f777d003553074a32a769ed504200653",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V3_LINK_TEMPORAL_RESULTS.json",
-                      "sourceDownloadsName":  "V3_LINK_TEMPORAL_RESULTS.json",
-                      "sha256":  "5e8826de28f02145650efe3fa33124414dc2ae3c16e01a97b15327c1c2057e9a",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V3_CASE_G03_PAIN_LOCATION_TEMPORAL_RESPONSE.json",
-                      "sourceDownloadsName":  "V3_CASE_G03_PAIN_LOCATION_TEMPORAL_RESPONSE.json",
-                      "sha256":  "344384af8deec0f29cdc41dfc54156c3e61bbd5923386c7ff6e24c917b38775f",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V3_GSR1F_VALIDATION.txt",
-                      "sourceDownloadsName":  "V3_GSR1F_VALIDATION.txt",
-                      "sha256":  "493b5abc1afcb67bafde00604ba488c1f69487bea541ce748a8bc72fa7831384",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V3_GLOBAL_SEED_VALIDATION.txt",
-                      "sourceDownloadsName":  "V3_GLOBAL_SEED_VALIDATION.txt",
-                      "sha256":  "504736b45429e654bb915412b56e74a0ac7b6b9c96fce27c22240fbb2dda963a",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/ARCTOR_GSR1K_G03_DETERMINISTIC_TEMPORAL_EVIDENCE_V4_20260812_114356_REPORT.txt",
-                      "sourceDownloadsName":  "ARCTOR_GSR1K_G03_DETERMINISTIC_TEMPORAL_EVIDENCE_V4_20260812_114356_REPORT.txt",
-                      "sha256":  "1efb8f0f69b8a0c0d0ef08f83a2660f9475f38f430478a95b56af7169d6b52cd",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V4_GSR1F_VALIDATION.txt",
-                      "sourceDownloadsName":  "V4_GSR1F_VALIDATION.txt",
-                      "sha256":  "1d57dd23077408d702a810a5de4ff6106a65dec0abb11716287f28e471b75d3b",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/ARCTOR_GSR1K_G03_DETERMINISTIC_TEMPORAL_EVIDENCE_V5_20260812_115614_REPORT.txt",
-                      "sourceDownloadsName":  "ARCTOR_GSR1K_G03_DETERMINISTIC_TEMPORAL_EVIDENCE_V5_20260812_115614_REPORT.txt",
-                      "sha256":  "07e5f285c3f5b175edd658417c1ad0919ad0371860629e72e2724c5c4639fe21",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V5_LINK_TEMPORAL_RESULTS.json",
-                      "sourceDownloadsName":  "V5_LINK_TEMPORAL_RESULTS.json",
-                      "sha256":  "a4a84740f8e8d1cce4aa0b4b563967c09208eb9557ba4c64497b4571b25a955e",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V5_CASE_G03_PAIN_LOCATION_TEMPORAL_RESPONSE.json",
-                      "sourceDownloadsName":  "V5_CASE_G03_PAIN_LOCATION_TEMPORAL_RESPONSE.json",
-                      "sha256":  "64881d8290bcbf793f36e0763e47276841c976e5810f5aed3abeb2cc8bb12e59",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V5_GSR1F_VALIDATION.txt",
-                      "sourceDownloadsName":  "V5_GSR1F_VALIDATION.txt",
-                      "sha256":  "194ea1c99297414a6b918c2ed3f07679408cc34ded7c47742e1e3a8b23dc1293",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V5_GLOBAL_SEED_VALIDATION.txt",
-                      "sourceDownloadsName":  "V5_GLOBAL_SEED_VALIDATION.txt",
-                      "sha256":  "504736b45429e654bb915412b56e74a0ac7b6b9c96fce27c22240fbb2dda963a",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/ARCTOR_GSR1K_G03_ROUTING_STABILITY_DIAGNOSTIC_V6_20260812_120931_REPORT.txt",
-                      "sourceDownloadsName":  "ARCTOR_GSR1K_G03_ROUTING_STABILITY_DIAGNOSTIC_V6_20260812_120931_REPORT.txt",
-                      "sha256":  "ae9271e912b9977769acf5b0b673df0f7714cca440abda5f8f7ee315c0e38075",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V6_LINK_TEMPORAL_RESULTS.json",
-                      "sourceDownloadsName":  "V6_LINK_TEMPORAL_RESULTS.json",
-                      "sha256":  "72f34bb4b5d6c0472c59690851458e4504b30cd5b9c20bdad9e64e8e3aacc1b3",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V6_CASE_G03_PAIN_LOCATION_TEMPORAL_RESPONSE.json",
-                      "sourceDownloadsName":  "V6_CASE_G03_PAIN_LOCATION_TEMPORAL_RESPONSE.json",
-                      "sha256":  "da6470948f03f108fe87d02bfd38c0cfa3719f2491c71ef41242e3dd55edbdac",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V6_GSR1F_VALIDATION.txt",
-                      "sourceDownloadsName":  "V6_GSR1F_VALIDATION.txt",
-                      "sha256":  "194ea1c99297414a6b918c2ed3f07679408cc34ded7c47742e1e3a8b23dc1293",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1K",
-                      "file":  "docs/recovery/evidence/GSR1K/V6_GLOBAL_SEED_VALIDATION.txt",
-                      "sourceDownloadsName":  "V6_GLOBAL_SEED_VALIDATION.txt",
-                      "sha256":  "504736b45429e654bb915412b56e74a0ac7b6b9c96fce27c22240fbb2dda963a",
-                      "origin":  "GSR1K_architecture_pivot_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1L",
-                      "file":  "docs/recovery/evidence/GSR1L/ARCTOR_GSR1L_COMPREHENSIVE_INTAKE_V2_20260812_131749_REPORT.txt",
-                      "sourceDownloadsName":  "ARCTOR_GSR1L_COMPREHENSIVE_INTAKE_V2_20260812_131749_REPORT.txt",
-                      "sha256":  "995e8ebc038920a04c902ed05b133a3b976a57519d3a4f12333bf2b769d56813",
-                      "origin":  "GSR1L_design_recovery_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1L",
-                      "file":  "docs/recovery/evidence/GSR1L/GSR1L_DESIGN_CHECKPOINT_V1_FILENAME_MATCH_FAILURE_REPORT.txt",
-                      "sourceDownloadsName":  "GSR1L_DESIGN_CHECKPOINT_V1_FILENAME_MATCH_FAILURE_REPORT.txt",
-                      "sha256":  "8ce92782d1d3b54bed66e6f7631149e7b5059bcba28b1ae03e38276c950f87aa",
-                      "origin":  "GSR1L_design_recovery_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1L",
-                      "file":  "docs/recovery/evidence/GSR1L/GSR1L_DESIGN_CHECKPOINT_V2_CONTENT_MATCH_FAILURE_REPORT.txt",
-                      "sourceDownloadsName":  "GSR1L_DESIGN_CHECKPOINT_V2_CONTENT_MATCH_FAILURE_REPORT.txt",
-                      "sha256":  "642cddb7360b7dd34051775397ef148719f3f4168636c39a106ab5197bbd5143",
-                      "origin":  "GSR1L_design_recovery_checkpoint"
-                  },
-                  {
-                      "group":  "GSR1L",
-                      "file":  "docs/recovery/evidence/GSR1L/GSR1L_LIVE_DB_RECOGNITION_INFRASTRUCTURE_VERIFIED_SUMMARY_20260812.txt",
-                      "sourceDownloadsName":  "GSR1L_LIVE_DB_RECOGNITION_INFRASTRUCTURE_VERIFIED_SUMMARY_20260812.txt",
-                      "sha256":  "e03c02a5bc85472cb1a855838987b26298fa5faca739c3d491784d0ec428e3b4",
-                      "origin":  "GSR1L_design_recovery_checkpoint"
-                  }
-              ]
+  "generatedAt": "2026-08-13",
+  "copiedCount": 57,
+  "generatedEvidenceCount": 1,
+  "indexedCount": 60,
+  "missingPatterns": [],
+  "files": [
+    {
+      "group": "GSR1G",
+      "file": "docs/recovery/evidence/GSR1G/ARCTOR_GSR1G_ROUTING_CONTRACT_FIX_SMOKE_V3_20260812_070940_REPORT.txt",
+      "sourceDownloadsName": "ARCTOR_GSR1G_ROUTING_CONTRACT_FIX_SMOKE_V3_20260812_070940_REPORT.txt",
+      "sha256": "7d51e280d745a334e49d111f02fc588b3b75558acdb671d2084515de19c60557"
+    },
+    {
+      "group": "GSR1H",
+      "file": "docs/recovery/evidence/GSR1H/ARCTOR_GSR1H_SMALL_GOLD_CORPUS_PREVIEW_V1_20260812_072550_REPORT.txt",
+      "sourceDownloadsName": "ARCTOR_GSR1H_SMALL_GOLD_CORPUS_PREVIEW_V1_20260812_072550_REPORT.txt",
+      "sha256": "39cc445140cd81f69e178dedf1a5dfaeeaafea5b7c21d0343f05d14b7c838746"
+    },
+    {
+      "group": "GSR1H",
+      "file": "docs/recovery/evidence/GSR1H/ARCTOR_GSR1H_SMALL_GOLD_CORPUS_PREVIEW_V2_20260812_073343_REPORT.txt",
+      "sourceDownloadsName": "ARCTOR_GSR1H_SMALL_GOLD_CORPUS_PREVIEW_V2_20260812_073343_REPORT.txt",
+      "sha256": "a36b8ae6f7b39890be57a01d7ecefd1974cd40a456cd539ce06b4ba9cb546f0e"
+    },
+    {
+      "group": "GSR1H",
+      "file": "docs/recovery/evidence/GSR1H/ARCTOR_GSR1H_SMALL_GOLD_CORPUS_PREVIEW_V3_20260812_073617_REPORT.txt",
+      "sourceDownloadsName": "ARCTOR_GSR1H_SMALL_GOLD_CORPUS_PREVIEW_V3_20260812_073617_REPORT.txt",
+      "sha256": "dc9041e1c78c7845379683e70f20addba7a9cd9bdbea6284ab70f8a457b58586"
+    },
+    {
+      "group": "GSR1H",
+      "file": "docs/recovery/evidence/GSR1H/ARCTOR_GSR1H_SMALL_GOLD_CORPUS_PREVIEW_V4_20260812_074042_REPORT.txt",
+      "sourceDownloadsName": "ARCTOR_GSR1H_SMALL_GOLD_CORPUS_PREVIEW_V4_20260812_074042_REPORT.txt",
+      "sha256": "c49ae7c705a091fa674e9d2a72b7f70bdfb1cdfd950cd763f7f8185c60127dc6"
+    },
+    {
+      "group": "GSR1H",
+      "file": "docs/recovery/evidence/GSR1H/ARCTOR_GSR1H_FAILED_CASE_DIAGNOSTIC_V5_20260812_074922_REPORT.txt",
+      "sourceDownloadsName": "ARCTOR_GSR1H_FAILED_CASE_DIAGNOSTIC_V5_20260812_074922_REPORT.txt",
+      "sha256": "563607735ecd577df96bd59cf82131a1729ff969b5d30b29481ef286b8a4cc88"
+    },
+    {
+      "group": "GSR1I",
+      "file": "docs/recovery/evidence/GSR1I/ARCTOR_GSR1I_ROUTING_TEMPORAL_FIX_SMOKE_V1_20260812_080150_REPORT.txt",
+      "sourceDownloadsName": "ARCTOR_GSR1I_ROUTING_TEMPORAL_FIX_SMOKE_V1_20260812_080150_REPORT.txt",
+      "sha256": "93ccb80d6f6f1023ac1ef0de52419bfc4c2d88ae53421ab7792ed9bb2e82acc5"
+    },
+    {
+      "group": "GSR1I",
+      "file": "docs/recovery/evidence/GSR1I/ARCTOR_GSR1I_ROUTING_TEMPORAL_FIX_SMOKE_V2_20260812_081154_REPORT.txt",
+      "sourceDownloadsName": "ARCTOR_GSR1I_ROUTING_TEMPORAL_FIX_SMOKE_V2_20260812_081154_REPORT.txt",
+      "sha256": "ff20d2859b0e2e95447bbd4b602eec8d68b38b6202f21332883a56eb8af7c087"
+    },
+    {
+      "group": "GSR1I",
+      "file": "docs/recovery/evidence/GSR1I/ARCTOR_GSR1I_ROUTING_TEMPORAL_FIX_SMOKE_V3_20260812_082518_REPORT.txt",
+      "sourceDownloadsName": "ARCTOR_GSR1I_ROUTING_TEMPORAL_FIX_SMOKE_V3_20260812_082518_REPORT.txt",
+      "sha256": "097e21f83bfa02ab562819ff14c992786eff8a91560c4ea447e1b015b353a7cb"
+    },
+    {
+      "group": "GSR1I",
+      "file": "docs/recovery/evidence/GSR1I/ARCTOR_GSR1I_DINNER_CANONICAL_LABEL_SMOKE_V4_20260812_083611_REPORT.txt",
+      "sourceDownloadsName": "ARCTOR_GSR1I_DINNER_CANONICAL_LABEL_SMOKE_V4_20260812_083611_REPORT.txt",
+      "sha256": "300d3963a81f0e0143ad652cac4484c73f840458f29e5dfb2f3d7c556ea6a6dc"
+    },
+    {
+      "group": "RECOVERY",
+      "file": "docs/recovery/evidence/RECOVERY/ARCTOR_RECOVERY_KNOWLEDGE_BASE_V1_VERIFICATION_REPORT.txt",
+      "sourceDownloadsName": null,
+      "sha256": "05970052fdae549c2fdbf3b70dcc3ed360b08695675ded2a66983824429308dd",
+      "origin": "generated_precommit_verification"
+    },
+    {
+      "group": "GSR1I",
+      "file": "docs/recovery/evidence/GSR1I/ARCTOR_GSR1I_DINNER_TEMPORAL_DURATION_GUARD_SMOKE_V5_20260812_092215_REPORT.txt",
+      "sourceDownloadsName": "ARCTOR_GSR1I_DINNER_TEMPORAL_DURATION_GUARD_SMOKE_V5_20260812_092215_REPORT.txt",
+      "sha256": "af8350c978a34e64fe15457565973cd362170f2a6de77d52b15df2b7c624f056",
+      "origin": "GSR1I_V5_gold_closure"
+    },
+    {
+      "group": "GSR1I",
+      "file": "docs/recovery/evidence/GSR1I/ARCTOR_GSR1I_DINNER_TEMPORAL_DURATION_GUARD_SMOKE_V5_20260812_092215_CASE_G24_DINNER_RESPONSE.json",
+      "sourceDownloadsName": "ARCTOR_GSR1I_DINNER_TEMPORAL_DURATION_GUARD_SMOKE_V5_20260812_092215_CASE_G24_DINNER_RESPONSE.json",
+      "sha256": "dc5d7caa4f84c09c0c8ab535c7f35fe16ee0013382b6cdadbea2994a24367d3c",
+      "origin": "GSR1I_V5_gold_closure"
+    },
+    {
+      "group": "GSR1I",
+      "file": "docs/recovery/evidence/GSR1I/ARCTOR_GSR1I_DINNER_TEMPORAL_DURATION_GUARD_SMOKE_V5_20260812_092215_TWO_CASE_RESULTS.json",
+      "sourceDownloadsName": "ARCTOR_GSR1I_DINNER_TEMPORAL_DURATION_GUARD_SMOKE_V5_20260812_092215_TWO_CASE_RESULTS.json",
+      "sha256": "8dd471893320b118270a4384499b2f0c2cd2e15932f3dca11fa319c040f72d1a",
+      "origin": "GSR1I_V5_gold_closure"
+    },
+    {
+      "group": "GSR1J",
+      "file": "docs/recovery/evidence/GSR1J/ARCTOR_GSR1J_FULL_GOLD_CONTRACT_COVERAGE_PREFLIGHT_V1_20260812_095655_REPORT.txt",
+      "sourceDownloadsName": "ARCTOR_GSR1J_FULL_GOLD_CONTRACT_COVERAGE_PREFLIGHT_V1_20260812_095655_REPORT.txt",
+      "sha256": "6ca76d97f29c5865378c66047fee126de376ebfd9d53aa51a8ec1a4de7b10df2",
+      "origin": "GSR1J_diagnostic_checkpoint"
+    },
+    {
+      "group": "GSR1J",
+      "file": "docs/recovery/evidence/GSR1J/ARCTOR_GSR1J_TARGETED_PAID_DIAGNOSTIC_BATCH_V1_20260812_101944_REPORT.txt",
+      "sourceDownloadsName": "ARCTOR_GSR1J_TARGETED_PAID_DIAGNOSTIC_BATCH_V1_20260812_101944_REPORT.txt",
+      "sha256": "b00dc6bd047942c57b0869d672ad00797d842c8023f8641795769807d95a0f59",
+      "origin": "GSR1J_diagnostic_checkpoint"
+    },
+    {
+      "group": "GSR1J",
+      "file": "docs/recovery/evidence/GSR1J/FIXTURE_COVERAGE.json",
+      "sourceDownloadsName": "FIXTURE_COVERAGE.json",
+      "sha256": "e09c77486d7a61e7eae7b53649bb45697abaf0318039ace4a1214f9c0457ddae",
+      "origin": "GSR1J_diagnostic_checkpoint"
+    },
+    {
+      "group": "GSR1J",
+      "file": "docs/recovery/evidence/GSR1J/PILOT_CONTRACT_CAPABILITIES.json",
+      "sourceDownloadsName": "PILOT_CONTRACT_CAPABILITIES.json",
+      "sha256": "77b02ee5e3821fb120a7132c581aee9cadf1abd0d4747fbae70a3f0874230faf",
+      "origin": "GSR1J_diagnostic_checkpoint"
+    },
+    {
+      "group": "GSR1J",
+      "file": "docs/recovery/evidence/GSR1J/DIAGNOSTIC_RESULTS.json",
+      "sourceDownloadsName": "DIAGNOSTIC_RESULTS.json",
+      "sha256": "3563b276959c62209e773c022cd7e6d5b6d16cbea5e97cc5979378a3a05b58d2",
+      "origin": "GSR1J_diagnostic_checkpoint"
+    },
+    {
+      "group": "GSR1J",
+      "file": "docs/recovery/evidence/GSR1J/CASE_G01_MULTI_PLANK_RESPONSE.json",
+      "sourceDownloadsName": "CASE_G01_MULTI_PLANK_RESPONSE.json",
+      "sha256": "49c15ff3f831e3c2faae8c650924a65892d0fadd1aaffe747b77446ce0a9773c",
+      "origin": "GSR1J_diagnostic_checkpoint"
+    },
+    {
+      "group": "GSR1J",
+      "file": "docs/recovery/evidence/GSR1J/CASE_G05_SLEEP_APPROX_RESPONSE.json",
+      "sourceDownloadsName": "CASE_G05_SLEEP_APPROX_RESPONSE.json",
+      "sha256": "84ab2098299d6b8ef8dd7927a5aec524f7c51c81b6af82ca3ab732f8b246ca31",
+      "origin": "GSR1J_diagnostic_checkpoint"
+    },
+    {
+      "group": "GSR1J",
+      "file": "docs/recovery/evidence/GSR1J/CASE_G08_BLOOD_PRESSURE_RESPONSE.json",
+      "sourceDownloadsName": "CASE_G08_BLOOD_PRESSURE_RESPONSE.json",
+      "sha256": "f80b4a2fb284d1f49c38bf75dc4cc73e5ed1735f003caf6622fcf0058ee9b7b0",
+      "origin": "GSR1J_diagnostic_checkpoint"
+    },
+    {
+      "group": "GSR1J",
+      "file": "docs/recovery/evidence/GSR1J/CASE_G12_ENERGY_EXPLICIT_RESPONSE.json",
+      "sourceDownloadsName": "CASE_G12_ENERGY_EXPLICIT_RESPONSE.json",
+      "sha256": "814b5199af83c5d545069d165e905604c6f35ca678bbd19f3f9676a7bc6c8039",
+      "origin": "GSR1J_diagnostic_checkpoint"
+    },
+    {
+      "group": "GSR1J",
+      "file": "docs/recovery/evidence/GSR1J/CASE_G14_TWO_CUPS_COFFEE_RESPONSE.json",
+      "sourceDownloadsName": "CASE_G14_TWO_CUPS_COFFEE_RESPONSE.json",
+      "sha256": "a81a3f1c91d062e3793e19412b57511d5c7a8cd9af25d3674e5ef51d134f7ed1",
+      "origin": "GSR1J_diagnostic_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/ARCTOR_GSR1K_EVENT_LINK_TEMPORAL_PREVIEW_SMOKE_V1_20260812_110218_REPORT.txt",
+      "sourceDownloadsName": "ARCTOR_GSR1K_EVENT_LINK_TEMPORAL_PREVIEW_SMOKE_V1_20260812_110218_REPORT.txt",
+      "sha256": "f248af352812f20f3fde80b0542314d1d83f31a1c11e5349729ddc1348c52444",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V1_LINK_TEMPORAL_RESULTS.json",
+      "sourceDownloadsName": "V1_LINK_TEMPORAL_RESULTS.json",
+      "sha256": "bab9a085c44217cf1446f36ed9119e6fe3cf384585896afbe01d0673c6f8b3dd",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V1_CASE_G03_PAIN_LOCATION_TEMPORAL_RESPONSE.json",
+      "sourceDownloadsName": "V1_CASE_G03_PAIN_LOCATION_TEMPORAL_RESPONSE.json",
+      "sha256": "8d9d70654791d926c6a0205f06b1109b21cc7feb413d048fc41e7d525b11f204",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V1_CASE_G11_MEAL_CONSUMES_RESPONSE.json",
+      "sourceDownloadsName": "V1_CASE_G11_MEAL_CONSUMES_RESPONSE.json",
+      "sha256": "93d3d91c473dbd0e27009a3398650722768cbf432fbbd8a2ff621ad36d82a5c6",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V1_CASE_G20_GUITAR_CALMER_RESPONSE.json",
+      "sourceDownloadsName": "V1_CASE_G20_GUITAR_CALMER_RESPONSE.json",
+      "sha256": "58e294ed3750d759e1dc04550f1080e892b690f7cbfa6047f523f9a0f66e8c2d",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V1_GSR1F_VALIDATION.txt",
+      "sourceDownloadsName": "V1_GSR1F_VALIDATION.txt",
+      "sha256": "22501b713644b852712a58b8ed64d30d7bb52eeff7a75b437d936816acdc62d2",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V1_GLOBAL_SEED_VALIDATION.txt",
+      "sourceDownloadsName": "V1_GLOBAL_SEED_VALIDATION.txt",
+      "sha256": "504736b45429e654bb915412b56e74a0ac7b6b9c96fce27c22240fbb2dda963a",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/ARCTOR_GSR1K_EVENT_LINK_TEMPORAL_PREVIEW_SMOKE_V2_20260812_111513_REPORT.txt",
+      "sourceDownloadsName": "ARCTOR_GSR1K_EVENT_LINK_TEMPORAL_PREVIEW_SMOKE_V2_20260812_111513_REPORT.txt",
+      "sha256": "6524bb5c01e50b6a3741b1ed42e7eda082ee7ad6098e6a755525d9fbeb4d564d",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V2_LINK_TEMPORAL_RESULTS.json",
+      "sourceDownloadsName": "V2_LINK_TEMPORAL_RESULTS.json",
+      "sha256": "dbbe669cd5ae58b04294d32535c56e6afd6072d7048f890b9ff43457c39329f1",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V2_CASE_G03_PAIN_LOCATION_TEMPORAL_RESPONSE.json",
+      "sourceDownloadsName": "V2_CASE_G03_PAIN_LOCATION_TEMPORAL_RESPONSE.json",
+      "sha256": "251fc1d6a0a84402a463e9234f21b63cebf5e5a8bf31c2fdd885b63f36cf1302",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V2_CASE_G11_MEAL_CONSUMES_RESPONSE.json",
+      "sourceDownloadsName": "V2_CASE_G11_MEAL_CONSUMES_RESPONSE.json",
+      "sha256": "0ce36dca7db10e7b8c1279f54e7bd6d678ac3c3e34ea8bf7d8254c8151302503",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V2_GSR1F_VALIDATION.txt",
+      "sourceDownloadsName": "V2_GSR1F_VALIDATION.txt",
+      "sha256": "a9b54b59c7cfa157583df8db1c5ca9888f3773a9fb1c5f719166fca263fd94c4",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V2_GLOBAL_SEED_VALIDATION.txt",
+      "sourceDownloadsName": "V2_GLOBAL_SEED_VALIDATION.txt",
+      "sha256": "504736b45429e654bb915412b56e74a0ac7b6b9c96fce27c22240fbb2dda963a",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/ARCTOR_GSR1K_G03_RAW_ROUTING_DIAGNOSTIC_V3_20260812_113021_REPORT.txt",
+      "sourceDownloadsName": "ARCTOR_GSR1K_G03_RAW_ROUTING_DIAGNOSTIC_V3_20260812_113021_REPORT.txt",
+      "sha256": "2b15fb8b07415ced7fa56f22030e5433f777d003553074a32a769ed504200653",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V3_LINK_TEMPORAL_RESULTS.json",
+      "sourceDownloadsName": "V3_LINK_TEMPORAL_RESULTS.json",
+      "sha256": "5e8826de28f02145650efe3fa33124414dc2ae3c16e01a97b15327c1c2057e9a",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V3_CASE_G03_PAIN_LOCATION_TEMPORAL_RESPONSE.json",
+      "sourceDownloadsName": "V3_CASE_G03_PAIN_LOCATION_TEMPORAL_RESPONSE.json",
+      "sha256": "344384af8deec0f29cdc41dfc54156c3e61bbd5923386c7ff6e24c917b38775f",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V3_GSR1F_VALIDATION.txt",
+      "sourceDownloadsName": "V3_GSR1F_VALIDATION.txt",
+      "sha256": "493b5abc1afcb67bafde00604ba488c1f69487bea541ce748a8bc72fa7831384",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V3_GLOBAL_SEED_VALIDATION.txt",
+      "sourceDownloadsName": "V3_GLOBAL_SEED_VALIDATION.txt",
+      "sha256": "504736b45429e654bb915412b56e74a0ac7b6b9c96fce27c22240fbb2dda963a",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/ARCTOR_GSR1K_G03_DETERMINISTIC_TEMPORAL_EVIDENCE_V4_20260812_114356_REPORT.txt",
+      "sourceDownloadsName": "ARCTOR_GSR1K_G03_DETERMINISTIC_TEMPORAL_EVIDENCE_V4_20260812_114356_REPORT.txt",
+      "sha256": "1efb8f0f69b8a0c0d0ef08f83a2660f9475f38f430478a95b56af7169d6b52cd",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V4_GSR1F_VALIDATION.txt",
+      "sourceDownloadsName": "V4_GSR1F_VALIDATION.txt",
+      "sha256": "1d57dd23077408d702a810a5de4ff6106a65dec0abb11716287f28e471b75d3b",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/ARCTOR_GSR1K_G03_DETERMINISTIC_TEMPORAL_EVIDENCE_V5_20260812_115614_REPORT.txt",
+      "sourceDownloadsName": "ARCTOR_GSR1K_G03_DETERMINISTIC_TEMPORAL_EVIDENCE_V5_20260812_115614_REPORT.txt",
+      "sha256": "07e5f285c3f5b175edd658417c1ad0919ad0371860629e72e2724c5c4639fe21",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V5_LINK_TEMPORAL_RESULTS.json",
+      "sourceDownloadsName": "V5_LINK_TEMPORAL_RESULTS.json",
+      "sha256": "a4a84740f8e8d1cce4aa0b4b563967c09208eb9557ba4c64497b4571b25a955e",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V5_CASE_G03_PAIN_LOCATION_TEMPORAL_RESPONSE.json",
+      "sourceDownloadsName": "V5_CASE_G03_PAIN_LOCATION_TEMPORAL_RESPONSE.json",
+      "sha256": "64881d8290bcbf793f36e0763e47276841c976e5810f5aed3abeb2cc8bb12e59",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V5_GSR1F_VALIDATION.txt",
+      "sourceDownloadsName": "V5_GSR1F_VALIDATION.txt",
+      "sha256": "194ea1c99297414a6b918c2ed3f07679408cc34ded7c47742e1e3a8b23dc1293",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V5_GLOBAL_SEED_VALIDATION.txt",
+      "sourceDownloadsName": "V5_GLOBAL_SEED_VALIDATION.txt",
+      "sha256": "504736b45429e654bb915412b56e74a0ac7b6b9c96fce27c22240fbb2dda963a",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/ARCTOR_GSR1K_G03_ROUTING_STABILITY_DIAGNOSTIC_V6_20260812_120931_REPORT.txt",
+      "sourceDownloadsName": "ARCTOR_GSR1K_G03_ROUTING_STABILITY_DIAGNOSTIC_V6_20260812_120931_REPORT.txt",
+      "sha256": "ae9271e912b9977769acf5b0b673df0f7714cca440abda5f8f7ee315c0e38075",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V6_LINK_TEMPORAL_RESULTS.json",
+      "sourceDownloadsName": "V6_LINK_TEMPORAL_RESULTS.json",
+      "sha256": "72f34bb4b5d6c0472c59690851458e4504b30cd5b9c20bdad9e64e8e3aacc1b3",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V6_CASE_G03_PAIN_LOCATION_TEMPORAL_RESPONSE.json",
+      "sourceDownloadsName": "V6_CASE_G03_PAIN_LOCATION_TEMPORAL_RESPONSE.json",
+      "sha256": "da6470948f03f108fe87d02bfd38c0cfa3719f2491c71ef41242e3dd55edbdac",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V6_GSR1F_VALIDATION.txt",
+      "sourceDownloadsName": "V6_GSR1F_VALIDATION.txt",
+      "sha256": "194ea1c99297414a6b918c2ed3f07679408cc34ded7c47742e1e3a8b23dc1293",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1K",
+      "file": "docs/recovery/evidence/GSR1K/V6_GLOBAL_SEED_VALIDATION.txt",
+      "sourceDownloadsName": "V6_GLOBAL_SEED_VALIDATION.txt",
+      "sha256": "504736b45429e654bb915412b56e74a0ac7b6b9c96fce27c22240fbb2dda963a",
+      "origin": "GSR1K_architecture_pivot_checkpoint"
+    },
+    {
+      "group": "GSR1L",
+      "file": "docs/recovery/evidence/GSR1L/ARCTOR_GSR1L_COMPREHENSIVE_INTAKE_V2_20260812_131749_REPORT.txt",
+      "sourceDownloadsName": "ARCTOR_GSR1L_COMPREHENSIVE_INTAKE_V2_20260812_131749_REPORT.txt",
+      "sha256": "995e8ebc038920a04c902ed05b133a3b976a57519d3a4f12333bf2b769d56813",
+      "origin": "GSR1L_design_recovery_checkpoint"
+    },
+    {
+      "group": "GSR1L",
+      "file": "docs/recovery/evidence/GSR1L/GSR1L_DESIGN_CHECKPOINT_V1_FILENAME_MATCH_FAILURE_REPORT.txt",
+      "sourceDownloadsName": "GSR1L_DESIGN_CHECKPOINT_V1_FILENAME_MATCH_FAILURE_REPORT.txt",
+      "sha256": "8ce92782d1d3b54bed66e6f7631149e7b5059bcba28b1ae03e38276c950f87aa",
+      "origin": "GSR1L_design_recovery_checkpoint"
+    },
+    {
+      "group": "GSR1L",
+      "file": "docs/recovery/evidence/GSR1L/GSR1L_DESIGN_CHECKPOINT_V2_CONTENT_MATCH_FAILURE_REPORT.txt",
+      "sourceDownloadsName": "GSR1L_DESIGN_CHECKPOINT_V2_CONTENT_MATCH_FAILURE_REPORT.txt",
+      "sha256": "642cddb7360b7dd34051775397ef148719f3f4168636c39a106ab5197bbd5143",
+      "origin": "GSR1L_design_recovery_checkpoint"
+    },
+    {
+      "group": "GSR1L",
+      "file": "docs/recovery/evidence/GSR1L/GSR1L_LIVE_DB_RECOGNITION_INFRASTRUCTURE_VERIFIED_SUMMARY_20260812.txt",
+      "sourceDownloadsName": "GSR1L_LIVE_DB_RECOGNITION_INFRASTRUCTURE_VERIFIED_SUMMARY_20260812.txt",
+      "sha256": "e03c02a5bc85472cb1a855838987b26298fa5faca739c3d491784d0ec428e3b4",
+      "origin": "GSR1L_design_recovery_checkpoint"
+    },
+    {
+      "group": "AI_A1",
+      "file": "docs/recovery/evidence/AI_A1/ARCTOR_AI_A1_RUNTIME_POSTCHECK_20260813.txt",
+      "sourceDownloadsName": null,
+      "sha256": "df183d4c7183e3526546eb599a76a94a6fab4aafdc9ef2958fe9027c45fa5b91",
+      "origin": "AI_A1_production_runtime_postcheck_6_of_6"
+    },
+    {
+      "group": "GSR1L",
+      "file": "docs/recovery/evidence/GSR1L/ARCTOR_GSR1L_AI_A2_P1_RECOGNITION_LIVE_ACCEPTANCE_20260813.txt",
+      "sourceDownloadsName": null,
+      "sha256": "814771ebabebbe1d62f6b6251bd052e82c14dec801a60b44c5dd9ab6baafc3f9",
+      "origin": "AI_A2_P1_live_db_acceptance_14_of_14"
+    }
+  ]
 }

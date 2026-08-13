@@ -1,0 +1,19 @@
+ARCTor.app - AI-A2 / GSR1L-P1 live DB acceptance
+Date: 2026-08-13
+
+01_recognition_profiles_table=true | table exists
+02_rls_enabled=true | RLS enabled
+03_active_pilot_profiles=true | 11 active pilot profiles
+04_one_active_per_leaf=true | partial unique active-profile invariant
+05_direct_table_access_blocked=true | anon/authenticated/service_role direct SELECT blocked
+06_profile_rpc_service_role_only=true | assembled profile RPC boundary
+07_candidate_rpc_service_role_only=true | bounded candidate RPC boundary
+08_old_exact_recognizer_preserved=true | existing exact alias path still resolves вес
+09_g03_plank_pain_lumbar_candidates=true | same generic mechanism; no causal write
+10_generic_sleep_unresolved=true | day/night is not guessed
+11_stokrotka_purchase_candidate=true | purchase is in bounded candidates
+12_stokrotka_household_not_candidate=true | known wrong household route is absent
+13_global_ontology_unchanged=true | 150 global objects unchanged
+14_ai_a1_foundation_preserved=true | AI-A1 execution/context foundation still present
+
+RESULT=14/14 PASS

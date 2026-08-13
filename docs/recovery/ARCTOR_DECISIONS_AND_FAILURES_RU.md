@@ -394,3 +394,15 @@ actor-owned ЦО/ОН. Страница `/activity-ai-lab` — только inta
 - embeddings/search indexes являются производными, а не источником истины.
 
 AI-A0 live audit подтвердил, что `value_object_recognition_profiles`, универсальные Data Capital/rights/optimizer/dataset tables отсутствовали и должны создаваться отдельными gated этапами.
+
+## DECISION_AI_A2_RECOGNITION_PROFILES_V1 — 2026-08-13
+
+Закреплено: recognition/disambiguation является отдельным versioned data layer. Aliases, parameter assignments и long-lived semantic relations не дублируются в recognition profiles. AI выбирает только из server-bounded candidates либо возвращает uncertainty; server остаётся владельцем ontology constraints и final validation.
+
+AI-A2-P1 live acceptance: 14/14 PASS. Stokrotka regression стала обязательным архитектурным fixture: process.finance.purchase должен присутствовать среди bounded candidates, process.home.household_task не должен попадать туда по известной ошибочной бытовой маршрутизации.
+
+### AI_A1_RELEASE_FAILURE_CHAIN_20260813
+
+При реализации AI-A1 была допущена серия ошибок управляющей обвязки, которые не должны теряться из recovery history: uninitialized PowerShell variables; interpolation of $npm; UTF-8-no-BOM/PowerShell 5.1 parsing around non-ASCII dash; invalid backslash regex; stderr Git warning LF/CRLF incorrectly treated as fatal; final cached diff check caught an extra blank line at EOF. Содержательная AI-A1 реализация при этом прошла validators/build, а финальный release commit dc2c5243d51def829a1998d0eccb5560ca0baf8d прошёл AI_A1/GSR1F/Global Seed validators, feature/main builds и production runtime 6/6.
+
+Процессное правило: user execution начинается только после максимально доступной машинной проверки orchestration code. Native stderr сам по себе не является failure; authoritative signal — exit code. Precommit, post-commit/push, rollback/resume paths должны проверяться отдельно.
