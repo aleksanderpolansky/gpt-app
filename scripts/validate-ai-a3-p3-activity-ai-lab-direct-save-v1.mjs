@@ -269,14 +269,14 @@ function expectEqual(name, actual, expected) {
 }
 
 expectEqual(
-  "selected title derives from grounded segment",
+  "activity title preserves the user wording",
   deriveTitle("сходил в магазин", [
     {
       sourceFragment: "купил продукты",
       selected: { title: "Покупка", canonicalKey: "process.finance.purchase" },
     },
   ]),
-  "Покупка: купил продукты",
+  "сходил в магазин",
 );
 
 const commonInput = {

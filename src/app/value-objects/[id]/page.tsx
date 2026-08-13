@@ -20,6 +20,7 @@ import {
 import { ValueObjectSemanticRelationsManager } from "@/components/workspace/value-objects/value-object-semantic-relations-manager";
 import { ValueObjectFullCardPanel } from "@/components/workspace/value-objects/value-object-full-card-panel";
 import { ActivityScheduleDisplay } from "./activity-schedule-display";
+import { ActivityMutualLinksPanel } from "@/components/activity/p5b/activity-mutual-links-panel";
 import {
   isValueObjectLeafKindV2,
   isValueObjectStructuralKindV2,
@@ -1570,6 +1571,13 @@ export default async function ValueObjectDetailPage({
           definitionVersion={valueObject.definition_version ?? 1}
           viewHref={viewHref}
         />
+
+        {isLeaf ? (
+          <ActivityMutualLinksPanel
+            locale={locale}
+            valueObjectId={valueObject.id}
+          />
+        ) : null}
 
         <section className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
           <div className="rounded-[26px] border border-black/[0.07] bg-white p-6 shadow-sm">

@@ -415,3 +415,7 @@ AI-A3-P3 direct save remains the canonical path from /activity-ai-lab. Productio
 ## AI_A3_P5A_ACTIVITY_FACT_MATERIALIZATION_V1 — 2026-08-13
 
 The live read-only P5 foundation preflight passed 24/24. Direct save now materializes explicit server-validated Global Reality facts through the existing service-role-only attach_global_observation_facts_gsr1_v1 writer after activity_event creation. The writer transactionally creates activity_event_measures, activity_object_facts(value_object_id=GLOBAL leaf), and activity_value_object_links(semantic_exposure). Confirmed feedback becomes confirmed/is_user_confirmed; rejected facts are skipped; unreviewed facts remain proposed. Semantic projections remain Data Capital only. Manual leaf intents continue through the separate P2 materializer.
+
+## AI_A3_P5B_MUTUAL_LINKS_V1 — 2026-08-13
+
+AI-A3-P5A production acceptance is closed 12/12. The canonical writer hotfix V3 is live 8/8 and is now checkpointed in source/recovery. P5B adds mutual read/display links across Activity Journal/Calendar, Activity Facts and leaf Value Object pages. Neutral measures are grouped by measure_id; one measure may fan out to several leaf projections without duplicating the measured value. Activity titles preserve the user's wording and no longer receive an automatic semantic prefix. P5B adds no OpenAI calls and no new persistence tables.

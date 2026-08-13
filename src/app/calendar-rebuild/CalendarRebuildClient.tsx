@@ -26,6 +26,11 @@ import type {
   CalendarViewMode,
 } from "../../features/calendar-core/types";
 import {
+  formatMutualMetricValue,
+  type MutualLinkActivity,
+  type MutualLinksApiResponse,
+} from "@/lib/activity/mutualLinks";
+import {
   Cux2InlineActivityComposer,
   type Cux4QuickCaptureResult,
 } from "../../components/calendar/cux2-inline-activity-composer";
@@ -196,6 +201,29 @@ type CalendarValueObjectGroup = {
   entries: CalendarTimelineEntry[];
   sortOrder: number;
 };
+
+function mergeP5bCalendarValueObjects(
+  existing: CalendarValueObjectRef[] | undefined,
+  relation: MutualLinkActivity | undefined,
+): CalendarValueObjectRef[] {
+  const merged = new Map<string, CalendarValueObjectRef>();
+
+  for (const valueObject of existing ?? []) {
+    merged.set(valueObject.id, valueObject);
+  }
+
+  for (const valueObject of relation?.valueObjects ?? []) {
+    merged.set(valueObject.id, {
+      id: valueObject.id,
+      title: valueObject.title,
+      branchTypeCode: valueObject.branchTypeCode,
+      objectKind: valueObject.objectKind,
+      parentValueObjectId: valueObject.parentValueObjectId,
+    });
+  }
+
+  return Array.from(merged.values());
+}
 
 type CalendarTimelineAxisCell = {
   key: string;
@@ -1476,6 +1504,8 @@ export default function CalendarRebuildClient({
   const [editEndAt, setEditEndAt] = useState("");
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [allDayItems, setAllDayItems] = useState<CalendarAllDayItem[]>([]);
+  const [mutualLinksByActivityId, setMutualLinksByActivityId] =
+    useState<Record<string, MutualLinkActivity>>({});
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [sourceCounts, setSourceCounts] = useState({
@@ -1515,8 +1545,66 @@ export default function CalendarRebuildClient({
           throw new Error(payload.error ?? `Calendar events request failed: ${response.status}`);
         }
 
-        setEvents(payload.events ?? []);
-        setAllDayItems(payload.allDayItems ?? []);
+        const loadedEvents = payload.events ?? [];
+        const loadedAllDayItems = payload.allDayItems ?? [];
+        const activityIds = Array.from(
+          new Set(
+            [
+              ...loadedEvents.map((event) => event.activityEventId ?? null),
+              ...loadedAllDayItems.map((item) => item.activityEventId ?? null),
+            ].filter((value): value is string => Boolean(value)),
+          ),
+        );
+
+        let mutualByActivityId: Record<string, MutualLinkActivity> = {};
+
+        if (activityIds.length > 0) {
+          try {
+            const mutualParams = new URLSearchParams({
+              activityEventIds: activityIds.join(","),
+            });
+            const mutualResponse = await fetch(
+              `/api/activity/mutual-links?${mutualParams.toString()}`,
+              { signal: abortController.signal, headers: { Accept: "application/json" } },
+            );
+            const mutualPayload = (await mutualResponse.json().catch(() => null)) as
+              | MutualLinksApiResponse
+              | null;
+
+            if (mutualResponse.ok && mutualPayload?.ok) {
+              mutualByActivityId = Object.fromEntries(
+                (mutualPayload.activities ?? []).map((activity) => [
+                  activity.activityEventId,
+                  activity,
+                ]),
+              );
+            }
+          } catch {
+            mutualByActivityId = {};
+          }
+        }
+
+        setMutualLinksByActivityId(mutualByActivityId);
+        setEvents(
+          loadedEvents.map((event) => ({
+            ...event,
+            valueObjects: mergeP5bCalendarValueObjects(
+              event.valueObjects,
+              event.activityEventId
+                ? mutualByActivityId[event.activityEventId]
+                : undefined,
+            ),
+          })),
+        );
+        setAllDayItems(
+          loadedAllDayItems.map((item) => ({
+            ...item,
+            valueObjects: mergeP5bCalendarValueObjects(
+              item.valueObjects,
+              mutualByActivityId[item.activityEventId],
+            ),
+          })),
+        );
         setEventLogs(payload.logs ?? []);
         setSourceCounts({
           calendarEvents: payload.sources?.calendarEvents ?? 0,
@@ -1531,6 +1619,7 @@ export default function CalendarRebuildClient({
 
         setEvents([]);
         setAllDayItems([]);
+        setMutualLinksByActivityId({});
         setEventLogs([]);
         setSourceCounts({
           calendarEvents: 0,
@@ -3697,6 +3786,25 @@ export default function CalendarRebuildClient({
                         {getEventDescription(selectedEvent) || detailUi.noDescription}
                       </div>
                     </div>
+
+                    {selectedEvent.activityEventId ? (
+                      <div className="rounded-xl border border-[#e5e7eb] bg-[#fafbff] p-3">
+                        <ValueObjectChips valueObjects={selectedEvent.valueObjects ?? []} />
+                        {(mutualLinksByActivityId[selectedEvent.activityEventId]?.facts ?? []).length > 0 ? (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {(mutualLinksByActivityId[selectedEvent.activityEventId]?.facts ?? []).map((fact) => (
+                              <Link
+                                key={fact.measureKey}
+                                href={`/activity-facts?locale=${locale}&activityEventId=${encodeURIComponent(selectedEvent.activityEventId as string)}`}
+                                className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-800 no-underline"
+                              >
+                                {formatMutualMetricValue(fact.metricValue)} {fact.unit ?? ""}
+                              </Link>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
 
                     <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#fbfcff] p-3 text-xs leading-relaxed text-[#7c8099]">
                       {detailUi.status}: {selectedEvent.status}<br />

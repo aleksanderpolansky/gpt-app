@@ -2,7 +2,7 @@
   "generatedAt": "2026-08-13",
   "copiedCount": 57,
   "generatedEvidenceCount": 1,
-  "indexedCount": 70,
+  "indexedCount": 72,
   "missingPatterns": [],
   "files": [
     {
@@ -484,6 +484,20 @@
       "sourceDownloadsName": null,
       "sha256": "3223fc5c83f9da346844edba7ec298cd25a3aa58a456913fa3e4770c990bc831",
       "origin": "AI_A3_P5A_fact_materialization_local_validation_and_live_preflight_24_24"
+    },
+    {
+      "group": "AI_A3",
+      "file": "docs/recovery/evidence/AI_A3/ARCTOR_AI_A3_P5A_PRODUCTION_ACCEPTANCE_20260813.txt",
+      "sourceDownloadsName": null,
+      "sha256": "36d4d7308eabaf830039e2b32fe846b365c09be32d1ea2da5de61c9c487e1112",
+      "origin": "P5A_live_acceptance_and_writer_hotfix_v3"
+    },
+    {
+      "group": "AI_A3",
+      "file": "docs/recovery/evidence/AI_A3/ARCTOR_AI_A3_P5B_MUTUAL_LINKS_LOCAL_VALIDATION_20260813.txt",
+      "sourceDownloadsName": null,
+      "sha256": "69c9c82cd511f803e83873ae6ad4daeb23d8a5aba10ca5a88fe3f9767fe5f9bf",
+      "origin": "AI_A3_P5B_mutual_links_local_validation_and_release_runner_selftest"
     }
   ]
 }

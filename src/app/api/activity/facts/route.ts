@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 import {
   ActorContextError,
@@ -6,6 +6,7 @@ import {
 } from "../../../../../lib/actor-context";
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
+import { groupMutualFactProjections } from "@/lib/activity/mutualLinks";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -129,6 +130,7 @@ function normalizeFactRow(row: Row) {
     metricValueSource: normalizeMetricValueSource(row),
     unit: asString(row.unit),
     factStatus: asString(row.fact_status),
+    isUserConfirmed: asBoolean(row.is_user_confirmed),
     sourceType: asString(row.source_type),
     confidence: asNumber(row.confidence),
     performedByActorId: asString(row.performed_by_actor_id),
@@ -237,6 +239,7 @@ export async function GET(request: Request) {
         "value_boolean",
         "unit",
         "fact_status",
+        "is_user_confirmed",
         "source_type",
         "confidence",
         "performed_by_actor_id",
@@ -294,9 +297,198 @@ export async function GET(request: Request) {
     );
   }
 
-  const facts = Array.isArray(data)
+  const normalizedRows = Array.isArray(data)
     ? data.map((row) => normalizeFactRow(asRecord(row)))
     : [];
+
+  const primaryMeasureIds = Array.from(
+    new Set(
+      normalizedRows
+        .map((fact) => fact.measureId)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+
+  let projectionRowsForGrouping = normalizedRows;
+
+  if (primaryMeasureIds.length > 0) {
+    const { data: siblingData, error: siblingError } = await supabase
+      .from("activity_object_facts")
+      .select(
+        [
+          "id",
+          "user_id",
+          "activity_event_id",
+          "measure_id",
+          "semantic_object_key",
+          "value_object_id",
+          "measure_type",
+          "value_numeric",
+          "value_text",
+          "value_boolean",
+          "unit",
+          "fact_status",
+          "is_user_confirmed",
+          "source_type",
+          "confidence",
+          "performed_by_actor_id",
+          "acting_as_actor_id",
+          "acting_for_actor_id",
+          "created_at",
+          "updated_at",
+        ].join(", "),
+      )
+      .eq("user_id", context.appUserId)
+      .eq("acting_as_actor_id", context.actorId)
+      .in("measure_id", primaryMeasureIds);
+
+    if (siblingError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          endpoint: ENDPOINT,
+          readStatus: "error",
+          errorCode: "ACTIVITY_FACTS_READ_PROJECTION_EXPANSION_FAILED",
+          errorMessage: siblingError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const byFactId = new Map(
+      normalizedRows
+        .filter((fact) => Boolean(fact.factId))
+        .map((fact) => [fact.factId as string, fact] as const),
+    );
+
+    for (const row of siblingData ?? []) {
+      const fact = normalizeFactRow(asRecord(row));
+      if (fact.factId && !byFactId.has(fact.factId)) {
+        byFactId.set(fact.factId, fact);
+      }
+    }
+
+    projectionRowsForGrouping = Array.from(byFactId.values());
+  }
+
+  const activityIds = Array.from(
+    new Set(
+      projectionRowsForGrouping
+        .map((fact) => fact.activityEventId)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+  const valueObjectIds = Array.from(
+    new Set(
+      projectionRowsForGrouping
+        .map((fact) => fact.valueObjectId)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+
+  const [activityLookup, valueObjectLookup] = await Promise.all([
+    activityIds.length > 0
+      ? supabase
+          .from("activity_events")
+          .select("id,title")
+          .eq("user_id", context.appUserId)
+          .eq("acting_as_actor_id", context.actorId)
+          .in("id", activityIds)
+      : Promise.resolve({ data: [], error: null }),
+    valueObjectIds.length > 0
+      ? supabase
+          .from("value_objects")
+          .select("id,title,canonical_key,ontology_node_role_code,node_role_code")
+          .in("id", valueObjectIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (activityLookup.error || valueObjectLookup.error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        endpoint: ENDPOINT,
+        readStatus: "error",
+        errorCode: "ACTIVITY_FACTS_READ_ENRICHMENT_FAILED",
+        errorMessage: activityLookup.error?.message ?? valueObjectLookup.error?.message,
+      },
+      { status: 500 },
+    );
+  }
+
+  const activityTitleById = new Map<string, string>();
+  for (const row of activityLookup.data ?? []) {
+    const record = asRecord(row);
+    const id = asString(record.id);
+    if (id) activityTitleById.set(id, asString(record.title) ?? id);
+  }
+
+  const valueObjectById = new Map<
+    string,
+    { id: string; title: string; canonicalKey: string | null }
+  >();
+  for (const row of valueObjectLookup.data ?? []) {
+    const record = asRecord(row);
+    const id = asString(record.id);
+    const ontologyRole = asString(record.ontology_node_role_code);
+    const legacyRole = asString(record.node_role_code);
+    if (!id || (ontologyRole !== "leaf" && legacyRole !== "activity_leaf")) continue;
+    valueObjectById.set(id, {
+      id,
+      title: asString(record.title) ?? asString(record.canonical_key) ?? id,
+      canonicalKey: asString(record.canonical_key),
+    });
+  }
+
+  const grouped = groupMutualFactProjections(
+    projectionRowsForGrouping.flatMap((fact) => {
+      if (!fact.factId || !fact.activityEventId) return [];
+      return [{
+        factId: fact.factId,
+        measureId: fact.measureId,
+        activityEventId: fact.activityEventId,
+        valueObjectId: fact.valueObjectId,
+        measureType: fact.measureType,
+        metricValue: fact.metricValue,
+        unit: fact.unit,
+        factStatus: fact.factStatus,
+        isUserConfirmed: fact.isUserConfirmed,
+        sourceType: fact.sourceType,
+        confidence: fact.confidence,
+        createdAt: fact.createdAt,
+      }];
+    }),
+  );
+
+  const rowsByFactId = new Map(
+    projectionRowsForGrouping
+      .filter((fact) => Boolean(fact.factId))
+      .map((fact) => [fact.factId as string, fact] as const),
+  );
+
+  const facts = grouped.map((group) => {
+    const base = rowsByFactId.get(group.projectionFactIds[0]) ?? projectionRowsForGrouping[0];
+    return {
+      ...base,
+      factId: group.projectionFactIds[0] ?? null,
+      projectionFactIds: group.projectionFactIds,
+      projectionCount: group.projectionFactIds.length,
+      measureId: group.measureId,
+      metricValue: group.metricValue,
+      measureType: group.measureType,
+      unit: group.unit,
+      factStatus: group.factStatus,
+      sourceType: group.sourceType,
+      confidence: group.confidence,
+      createdAt: group.createdAt,
+      activityEventId: group.activityEventId,
+      activityTitle: activityTitleById.get(group.activityEventId) ?? null,
+      valueObjects: group.valueObjectIds.flatMap((id) => {
+        const valueObject = valueObjectById.get(id);
+        return valueObject ? [valueObject] : [];
+      }),
+    };
+  });
 
   return NextResponse.json(
     {
@@ -320,7 +512,7 @@ export async function GET(request: Request) {
       },
       schemaMode: {
         source: "activity_object_facts",
-        strategy: "strict existing-column select",
+        strategy: "measure-centric grouping with linked leaf projections",
         metricValueRule:
           "metricValue is read directly from activity_object_facts.value_numeric/value_text/value_boolean.",
       },

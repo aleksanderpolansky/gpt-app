@@ -4,8 +4,8 @@
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
   "branch": "feat/gsr1-global-system-reality-machine-contract-v1-20260811",
-  "originMainAtCheckpoint": "442af9b04248a66cf06d82d305b6246df0d09107",
-  "checkpointMeaning": "AI-A3-P3 bypasses the duplicate legacy Activity Review Container for AI Lab saves and writes canonical activities directly with stale-analysis and partial-save guards.",
+  "originMainAtCheckpoint": "95676a1ff0a85641a95f77cbadc3aac48784464f",
+  "checkpointMeaning": "AI-A3 P5B mutual read/display links over accepted P5A neutral-measure persistence; source release pending live UI acceptance.",
   "globalReality": {
     "p8Blocked": true,
     "objectsTotal": 150,
@@ -34,7 +34,8 @@
     "supabase/manual-applied/20260811_gsr1e_openai_pilot_price_refresh_budget_hardening_v1.sql",
     "supabase/manual-applied/20260812_ai_a1_context_manifest_foundation_v1.sql",
     "supabase/manual-applied/20260813_ai_a2_p1_recognition_foundation_v1.sql",
-    "supabase/manual-applied/20260813_ai_a3_p1_data_capital_foundation_v2.sql"
+    "supabase/manual-applied/20260813_ai_a3_p1_data_capital_foundation_v2.sql",
+    "supabase/manual-applied/20260813_ai_a3_p5a_global_fact_writer_rowtype_hotfix_v3.sql"
   ],
   "goldStatus": {
     "passed": [
@@ -50,7 +51,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "AI-A3-P5A production acceptance, then P5B mutual activity/fact/value-object links in UI.",
+  "nextAction": "P5B production UI acceptance, then P5C quick capture + 24h review buffer/quarantine design.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -60,8 +61,8 @@
     "docs/recovery/evidence/EVIDENCE_INDEX.json"
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
-  "previousRecoveryCommit": "442af9b04248a66cf06d82d305b6246df0d09107",
-  "documentedState": "AI_A3_P5A_ACTIVITY_FACT_MATERIALIZATION_V1",
+  "previousRecoveryCommit": "95676a1ff0a85641a95f77cbadc3aac48784464f",
+  "documentedState": "AI_A3_P5B_MUTUAL_LINKS_V1",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -226,7 +227,7 @@
     "p3ProductionRuntimeAcceptance": "PASS"
   },
   "aiA3Implementation": {
-    "status": "AI_A3_P3_DIRECT_SAVE_CODE_RELEASED_AWAITING_LIVE_RUNTIME",
+    "status": "AI_A3_P5B_MUTUAL_LINKS_CODE_RELEASED_AWAITING_LIVE_UI_ACCEPTANCE",
     "dataCapitalFoundationApplied": true,
     "dataCapitalLiveAcceptance": "20/20 PASS",
     "feedbackReviewUxIntegrated": true,
@@ -238,14 +239,27 @@
     "automaticSemanticProjectionWrite": false,
     "providerCallsAdded": 0,
     "p2ProductionRuntimeAcceptance": "PARTIAL_UI_PASS_LEGACY_MATERIALIZATION_NOT_ACCEPTED",
-    "nextBlock": "AI_A3_P3_DIRECT_SAVE_PRODUCTION_ACCEPTANCE",
+    "nextBlock": "AI_A3_P5B_PRODUCTION_UI_ACCEPTANCE_THEN_P5C_REVIEW_BUFFER",
     "directSaveFromAiLabIntegrated": true,
     "directSaveLegacyContainerBypassed": true,
     "legacyActivityReviewRouteRetained": true,
     "directSaveStaleAnalysisGuard": true,
     "directSavePartialSaveResume": true,
-    "automaticFactProjectionMaterialization": false,
-    "directSaveProductionAcceptance": "PENDING"
+    "automaticFactProjectionMaterialization": true,
+    "directSaveProductionAcceptance": "P5A 12/12 PASS",
+    "p5aProductionRuntimeAcceptance": "12/12 PASS",
+    "p5aWriterHotfixV3Acceptance": "8/8 PASS",
+    "p5aNeutralMeasureModel": true,
+    "p5aMeasureFanOutSharedMeasureId": true,
+    "mutualLinksReadApiIntegrated": true,
+    "factsMeasureCentricGroupingIntegrated": true,
+    "journalMutualLinksIntegrated": true,
+    "valueObjectFactActivityHistoryIntegrated": true,
+    "calendarMutualLinksIntegrated": true,
+    "activityTitlePreservesUserWording": true,
+    "p5bScope": "read-only mutual UI links; no new DB writes; no OpenAI calls",
+    "p5bNeutralMeasureDisplay": "one neutral measure grouped by measure_id with 1..N leaf projections",
+    "p5bValueObjectHistory": "leaf-specific facts plus linked activity context"
   },
   "aiA3P4FactContractResilience": {
     "status": "implemented_pending_production_acceptance",

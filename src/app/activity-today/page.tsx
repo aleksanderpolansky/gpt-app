@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import {
+  formatMutualMetricValue,
+  type MutualLinkActivity,
+  type MutualLinksApiResponse,
+} from "@/lib/activity/mutualLinks";
+
 type Locale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
 type ActivityEventSummary = {
@@ -576,11 +582,85 @@ function sortJournalItems(left: JournalItem, right: JournalItem) {
   return rightTime - leftTime;
 }
 
+const MUTUAL_UI: Record<Locale, { objects: string; facts: string }> = {
+  en: { objects: "Linked value objects", facts: "Facts" },
+  pl: { objects: "Powiązane obiekty wartości", facts: "Fakty" },
+  ru: { objects: "Связанные ЦО", facts: "Факты" },
+  uk: { objects: "Пов’язані ЦО", facts: "Факти" },
+  de: { objects: "Verknüpfte Wertobjekte", facts: "Fakten" },
+  es: { objects: "Objetos vinculados", facts: "Hechos" },
+  cs: { objects: "Propojené hodnotové objekty", facts: "Fakta" },
+};
+
+function ActivityMutualPreview({
+  relation,
+  locale,
+  compact = false,
+}: {
+  readonly relation: MutualLinkActivity | null;
+  readonly locale: Locale;
+  readonly compact?: boolean;
+}) {
+  if (!relation || (relation.valueObjects.length === 0 && relation.facts.length === 0)) {
+    return null;
+  }
+
+  const labels = MUTUAL_UI[locale];
+
+  return (
+    <div className={compact ? "mt-2 grid gap-2" : "mt-3 grid gap-3 rounded-xl border border-[#e5e7eb] bg-[#fafbff] p-3"}>
+      {relation.valueObjects.length > 0 ? (
+        <div>
+          {!compact ? (
+            <div className="text-[10px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+              {labels.objects}
+            </div>
+          ) : null}
+          <div className={compact ? "flex flex-wrap gap-1.5" : "mt-2 flex flex-wrap gap-2"}>
+            {relation.valueObjects.map((valueObject) => (
+              <Link
+                key={valueObject.id}
+                href={`/value-objects/${encodeURIComponent(valueObject.id)}?locale=${locale}`}
+                className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-black text-blue-700 no-underline"
+              >
+                {valueObject.title}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {relation.facts.length > 0 ? (
+        <div>
+          {!compact ? (
+            <div className="text-[10px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+              {labels.facts}
+            </div>
+          ) : null}
+          <div className={compact ? "flex flex-wrap gap-1.5" : "mt-2 flex flex-wrap gap-2"}>
+            {relation.facts.map((fact) => (
+              <Link
+                key={fact.measureKey}
+                href={`/activity-facts?locale=${locale}&activityEventId=${encodeURIComponent(relation.activityEventId)}`}
+                className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-800 no-underline"
+              >
+                {formatMutualMetricValue(fact.metricValue)} {fact.unit ?? ""}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function ActivityTodayPage() {
   const [locale, setLocale] = useState<Locale>("en");
   const [activityEvents, setActivityEvents] = useState<ActivityEventSummary[]>([]);
   const [calendarLogs, setCalendarLogs] = useState<CalendarLogSummary[]>([]);
+  const [mutualLinksByActivityId, setMutualLinksByActivityId] = useState<Record<string, MutualLinkActivity>>({});
   const [selectedItem, setSelectedItem] = useState<JournalItem | null>(null);
+  const [autoOpenHandled, setAutoOpenHandled] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editDraft, setEditDraft] = useState<EditDraft>({
     description: "",
@@ -666,6 +746,46 @@ export default function ActivityTodayPage() {
     };
   }, [refreshKey]);
 
+  useEffect(() => {
+    const activityIds = activityEvents
+      .map((event) => event.id)
+      .filter((id): id is string => Boolean(id));
+
+    if (activityIds.length === 0) {
+      setMutualLinksByActivityId({});
+      return;
+    }
+
+    let cancelled = false;
+    const params = new URLSearchParams({
+      activityEventIds: activityIds.join(","),
+    });
+
+    fetch(`/api/activity/mutual-links?${params.toString()}`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as MutualLinksApiResponse | null;
+        if (!response.ok || !payload?.ok) {
+          throw new Error(payload?.errorMessage ?? `Mutual links request failed: ${response.status}`);
+        }
+        if (cancelled) return;
+        setMutualLinksByActivityId(
+          Object.fromEntries(
+            (payload.activities ?? []).map((activity) => [activity.activityEventId, activity]),
+          ),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setMutualLinksByActivityId({});
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activityEvents]);
+
   const ui = UI[locale];
 
   const addHref = `/calendar/add?${new URLSearchParams({
@@ -681,6 +801,21 @@ export default function ActivityTodayPage() {
     ].sort(sortJournalItems),
     [activityEvents, calendarLogs, locale]
   );
+
+  useEffect(() => {
+    if (autoOpenHandled || typeof window === "undefined") return;
+    const requestedId = new URLSearchParams(window.location.search).get("activityEventId");
+    if (!requestedId) {
+      setAutoOpenHandled(true);
+      return;
+    }
+    const item = journalItems.find(
+      (candidate) => candidate.kind === "activity" && candidate.sourceId === requestedId,
+    );
+    if (!item) return;
+    setAutoOpenHandled(true);
+    openItem(item);
+  }, [autoOpenHandled, journalItems]);
 
   function openItem(item: JournalItem, edit = false) {
     setSelectedItem(item);
@@ -918,6 +1053,13 @@ export default function ActivityTodayPage() {
                           {ui.eventTime}: {item.eventTime}
                         </div>
                       ) : null}
+                      {item.kind === "activity" && item.sourceId ? (
+                        <ActivityMutualPreview
+                          relation={mutualLinksByActivityId[item.sourceId] ?? null}
+                          locale={locale}
+                          compact
+                        />
+                      ) : null}
                     </div>
 
                     <div className="flex flex-wrap gap-2">
@@ -1096,6 +1238,13 @@ export default function ActivityTodayPage() {
                       {ui.status}: {selectedItem.status}<br />
                       {ui.source}: {selectedItem.source}
                     </div>
+
+                    {selectedItem.kind === "activity" && selectedItem.sourceId ? (
+                      <ActivityMutualPreview
+                        relation={mutualLinksByActivityId[selectedItem.sourceId] ?? null}
+                        locale={locale}
+                      />
+                    ) : null}
 
                     <div className="flex flex-wrap gap-2">
                       <Link

@@ -470,3 +470,7 @@ Observed after commit 5f86c97830423ee2e6b9992bb9443d213942f74d: ordinary purchas
 ## AI_A3_P5A_FACT_PERSISTENCE_DECISION — 2026-08-13
 
 Decision after 24/24 live persistence preflight: reuse the existing canonical GLOBAL fact writer and existing activity_object_facts.value_object_id / activity_value_object_links semantic_exposure contracts. Do not create a competing fact-to-VO join table. Saving an activity may persist explicit validated facts as proposed even without per-fact confirmation; explicit rejection blocks that fact; explicit confirmation upgrades it to confirmed. This preserves the distinction between observed user text, AI extraction, and user confirmation.
+
+## AI_A3_P5A_WRITER_HOTFIX_AND_P5B_DECISION — 2026-08-13
+
+Failure chain preserved: P5A direct-save created activity_event, but fact materialization failed because the canonical writer selected a composite assignment row into a `%rowtype` variable as `select assignment` instead of `select assignment.*`. Hotfix V1 and V2 failed closed because their source matching was too formatting-specific and changed nothing. Hotfix V3 matched semantically across whitespace, preserved the live function body/security grants, and passed 8/8. P5A then passed 12/12 live. Decision: a measurement is neutral and stored once; multiple leaf object facts may reference the same measure_id. Activity title remains the user's wording; semantic classifications are separate links. P5B is read/display only.

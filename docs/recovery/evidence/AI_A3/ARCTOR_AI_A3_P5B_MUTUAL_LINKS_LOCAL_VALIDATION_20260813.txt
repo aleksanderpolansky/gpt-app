@@ -1,0 +1,49 @@
+ARCTor.app - AI-A3-P5B Mutual Links local validation
+DATE=2026-08-13
+STATUS=LOCAL_VALIDATION_PASS
+BASELINE=95676a1ff0a85641a95f77cbadc3aac48784464f
+RELEASE_RUNNER_SHA256=81c81d1e6e58a25e1d03e8dcb33fca2ae2c52c3c7f155fe694ac6d2da93a5b5d
+
+SEMANTIC_CONTRACT:
+- one neutral measure is grouped by canonical measure_id;
+- one measure may fan out to 1..N leaf projections without duplicating measured value;
+- rows without measure_id are NOT guessed together merely because value/unit match;
+- activity title preserves the user's wording; semantic classifiers are separate linked VOs;
+- P5B is read/display only and adds no database writes or OpenAI calls.
+
+SOURCE/BEHAVIOR CHECKS:
+- P5B helper unit test: 16/16 PASS
+- P5B static/TypeScript-syntax validator: PASS
+- mutual-links API ownership filters: PASS static
+- mutual-links API no-write markers: PASS static
+- leaf value-object history facts scoped to requested leaf: PASS static
+- activity-facts sibling projections expanded by canonical measure_id: PASS static
+- legacy null-measure rows remain separate: PASS behavior
+- facts page mutual links: PASS static
+- journal mutual links: PASS static
+- leaf VO history panel: PASS static
+- calendar mutual links: PASS static
+- activity title user wording: PASS behavior/static
+- canonical writer source checkpointed to live V3 assignment.*: PASS static
+- recovery JSON parse: PASS
+- git diff --check in core.autocrlf=true mock: PASS
+
+RELEASE-RUNNER MACHINE SELF-TEST:
+- node --check: PASS
+- Windows npm resolution uses node.exe + npm-cli.js: PASS
+- missing Windows npm-cli fails closed: PASS
+- normal release with harmless stderr exit=0: PASS
+- already-released rerun: PASS
+- dirty preflight blocks and preserves foreign file byte-for-byte: PASS
+- baseline hash mismatch blocks: PASS
+- validator failure precommit rollback: PASS
+- feature build failure precommit rollback: PASS
+- feature push failure preserves local commit and resume succeeds: PASS
+- main build failure preserves feature commit, restores main, resume succeeds: PASS
+- core.autocrlf=true: PASS
+- git clean is not used by release logic.
+
+PRODUCTION LIMITS:
+- Full current Next.js build cannot be executed from source intake because production node_modules are not included.
+- Existing production validator chain cannot be fully executed locally because source intake intentionally omitted some unchanged validator inputs.
+- Production release runner therefore executes the complete validator chain and real npm run build before commit, then repeats build on ff-only main before push.

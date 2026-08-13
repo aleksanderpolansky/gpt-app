@@ -43,36 +43,8 @@ function compactText(value: string, maxLength: number) {
 
 export function deriveAiLabActivityTitle(
   rawText: string,
-  rows: AiLabSelectedRowForTitle[] | null | undefined,
+  _rows: AiLabSelectedRowForTitle[] | null | undefined,
 ) {
-  const selectedRows = (rows ?? []).filter(
-    (row) => row.selected?.title?.trim() && row.sourceFragment?.trim(),
-  );
-
-  if (selectedRows.length > 0) {
-    const first = selectedRows[0];
-    const semanticTitle = first.selected?.title?.trim() ?? "";
-    const fragment = first.sourceFragment?.trim() ?? "";
-    const prefix = semanticTitle ? `${semanticTitle}: ` : "";
-
-    return compactText(
-      `${prefix}${fragment}`,
-      MAX_ACTIVITY_TITLE_CHARS,
-    );
-  }
-
-  const uniqueTitles = Array.from(
-    new Set(
-      (rows ?? [])
-        .map((row) => row.selected?.title?.trim() ?? "")
-        .filter(Boolean),
-    ),
-  );
-
-  if (uniqueTitles.length > 0) {
-    return compactText(uniqueTitles.join(" · "), MAX_ACTIVITY_TITLE_CHARS);
-  }
-
   return compactText(rawText, MAX_ACTIVITY_TITLE_CHARS);
 }
 

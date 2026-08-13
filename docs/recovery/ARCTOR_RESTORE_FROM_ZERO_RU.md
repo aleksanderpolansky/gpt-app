@@ -239,3 +239,7 @@ Baseline before this release: 5f86c97830423ee2e6b9992bb9443d213942f74d. New file
 ## AI-A3 P5A activity fact materialization restore point - 2026-08-13
 
 Baseline before this release: ede332c7bda6f00cafe9836b3b6ca0e80f4a60fb. Modified: /activity-ai-lab direct-save page and aiLabDirectSave metadata. New: fact materialization helper, server route, tests, validator, contract and evidence. The existing database writer/schema is reused; this release executes no SQL migration. Revert this commit only if direct-save fact persistence fails; P4 analysis resilience remains independent.
+
+## AI-A3 P5B restore point — 2026-08-13
+
+Restore requires: P5A code baseline plus live writer rowtype hotfix V3 (`supabase/manual-applied/20260813_ai_a3_p5a_global_fact_writer_rowtype_hotfix_v3.sql`), then P5B mutual links UI/API. Verify P5A evidence 12/12 and writer V3 8/8. Canonical fact semantics: one neutral measure may have 1..N leaf projections sharing measure_id. Do not reconstruct semantic prefixes into activity titles.

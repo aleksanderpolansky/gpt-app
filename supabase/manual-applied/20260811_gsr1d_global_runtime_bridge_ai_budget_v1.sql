@@ -777,7 +777,7 @@ begin
         message='GSR1D_GLOBAL_FACT_CANONICAL_LEAF_NOT_FOUND';
     end if;
 
-    select assignment
+    select assignment.*
     into v_assignment
     from public.value_object_parameter_assignments assignment
     join public.value_object_parameter_definitions definition

@@ -27,6 +27,14 @@ type ActivityFact = {
   actingForActorId: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+  activityTitle?: string | null;
+  projectionFactIds?: string[];
+  projectionCount?: number;
+  valueObjects?: Array<{
+    id: string;
+    title: string;
+    canonicalKey: string | null;
+  }>;
 };
 
 type FactsApiResponse = {
@@ -122,7 +130,7 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     otherSubtitle: "Facts waiting for review, rejected, superseded, or using another status.",
     noFactsInGroup: "No facts in this group.",
     ids: "IDs",
-    semantic: "Semantic",
+    semantic: "Linked value objects",
     measure: "Measure",
     actions: "Actions",
     details: "Details",
@@ -174,7 +182,7 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     otherSubtitle: "Fakty oczekujące na przegląd, odrzucone, zastąpione albo z innym statusem.",
     noFactsInGroup: "Brak faktów w tej grupie.",
     ids: "ID",
-    semantic: "Semantyka",
+    semantic: "Powiązane obiekty wartości",
     measure: "Miara",
     actions: "Akcje",
     details: "Szczegóły",
@@ -226,7 +234,7 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     otherSubtitle: "Факты на проверке, отклонённые, заменённые или с другим статусом.",
     noFactsInGroup: "В этой группе фактов нет.",
     ids: "ID",
-    semantic: "Семантика",
+    semantic: "Связанные ЦО",
     measure: "Измерение",
     actions: "Действия",
     details: "Детали",
@@ -278,7 +286,7 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     otherSubtitle: "Факти на перевірці, відхилені, замінені або з іншим статусом.",
     noFactsInGroup: "У цій групі фактів немає.",
     ids: "ID",
-    semantic: "Семантика",
+    semantic: "Связанные ЦО",
     measure: "Вимір",
     actions: "Дії",
     details: "Деталі",
@@ -330,7 +338,7 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     otherSubtitle: "Fakten in Prüfung, abgelehnt, ersetzt oder mit anderem Status.",
     noFactsInGroup: "Keine Fakten in dieser Gruppe.",
     ids: "IDs",
-    semantic: "Semantik",
+    semantic: "Verknüpfte Wertobjekte",
     measure: "Messwert",
     actions: "Aktionen",
     details: "Details",
@@ -382,7 +390,7 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     otherSubtitle: "Hechos en revisión, rechazados, reemplazados o con otro estado.",
     noFactsInGroup: "No hay hechos en este grupo.",
     ids: "IDs",
-    semantic: "Semántica",
+    semantic: "Objetos vinculados",
     measure: "Medida",
     actions: "Acciones",
     details: "Detalles",
@@ -434,7 +442,7 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     otherSubtitle: "Fakta čekající na kontrolu, odmítnutá, nahrazená nebo s jiným stavem.",
     noFactsInGroup: "V této skupině nejsou žádná fakta.",
     ids: "ID",
-    semantic: "Sémantika",
+    semantic: "Propojené hodnotové objekty",
     measure: "Míra",
     actions: "Akce",
     details: "Detaily",
@@ -640,10 +648,10 @@ function FactRow({
               href={`/activity-today?locale=${locale}&activityEventId=${encodeURIComponent(
                 fact.activityEventId
               )}`}
-              className="font-mono text-blue-700 no-underline"
+              className="text-blue-700 no-underline hover:underline"
               title={fact.activityEventId}
             >
-              A: {truncateMiddle(fact.activityEventId, 6, 6)}
+              {fact.activityTitle ?? `A: ${truncateMiddle(fact.activityEventId, 6, 6)}`}
             </Link>
           ) : (
             <span className="font-mono text-slate-400">A: —</span>
@@ -658,23 +666,29 @@ function FactRow({
         <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
           {copy.semantic}
         </div>
-        <div className="mt-2 break-words font-mono text-sm font-black text-slate-900">
-          {fact.semanticObjectKey ?? "—"}
-        </div>
-        <div className="mt-2 text-xs font-semibold text-slate-500">
-          {copy.valueObject}:{" "}
-          {fact.valueObjectId ? (
-            <Link
-              href={`/value-objects/${encodeURIComponent(fact.valueObjectId)}?locale=${locale}`}
-              className="font-bold text-blue-700 no-underline"
-              title={fact.valueObjectId}
-            >
-              {truncateMiddle(fact.valueObjectId, 6, 6)}
-            </Link>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {(fact.valueObjects ?? []).length > 0 ? (
+            (fact.valueObjects ?? []).map((valueObject) => (
+              <Link
+                key={valueObject.id}
+                href={`/value-objects/${encodeURIComponent(valueObject.id)}?locale=${locale}`}
+                className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-black text-blue-700 no-underline"
+                title={valueObject.canonicalKey ?? valueObject.id}
+              >
+                {valueObject.title}
+              </Link>
+            ))
           ) : (
-            "—"
+            <span className="font-mono text-sm font-black text-slate-500">
+              {fact.semanticObjectKey ?? "—"}
+            </span>
           )}
         </div>
+        {typeof fact.projectionCount === "number" && fact.projectionCount > 1 ? (
+          <div className="mt-2 text-xs font-semibold text-slate-500">
+            {fact.projectionCount} projections share measure {truncateMiddle(fact.measureId, 6, 6)}
+          </div>
+        ) : null}
       </div>
 
       <div>
@@ -782,11 +796,11 @@ function ActivityFactsPageContent() {
   const locale = normalizeLocale(searchParams.get("locale"));
   const copy = COPY[locale];
 
-  const [limit, setLimit] = useState("50");
-  const [semanticObjectKey, setSemanticObjectKey] = useState("");
-  const [valueObjectId, setValueObjectId] = useState("");
-  const [activityEventId, setActivityEventId] = useState("");
-  const [factStatus, setFactStatus] = useState("");
+  const [limit, setLimit] = useState(searchParams.get("limit") ?? "50");
+  const [semanticObjectKey, setSemanticObjectKey] = useState(searchParams.get("semanticObjectKey") ?? "");
+  const [valueObjectId, setValueObjectId] = useState(searchParams.get("valueObjectId") ?? "");
+  const [activityEventId, setActivityEventId] = useState(searchParams.get("activityEventId") ?? "");
+  const [factStatus, setFactStatus] = useState(searchParams.get("factStatus") ?? "");
   const [selectedFactId, setSelectedFactId] = useState<string | null>(null);
   const [state, setState] = useState<LoadState>({
     status: "idle",
@@ -1110,9 +1124,23 @@ function ActivityFactsPageContent() {
                 <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
                   {copy.semantic}
                 </div>
-                <strong className="mt-2 block break-words font-mono">
-                  {selectedFact.semanticObjectKey ?? "—"}
-                </strong>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(selectedFact.valueObjects ?? []).length > 0 ? (
+                    (selectedFact.valueObjects ?? []).map((valueObject) => (
+                      <Link
+                        key={valueObject.id}
+                        href={`/value-objects/${encodeURIComponent(valueObject.id)}?locale=${locale}`}
+                        className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-black text-blue-700 no-underline"
+                      >
+                        {valueObject.title}
+                      </Link>
+                    ))
+                  ) : (
+                    <strong className="break-words font-mono">
+                      {selectedFact.semanticObjectKey ?? "—"}
+                    </strong>
+                  )}
+                </div>
               </div>
 
               <div className="rounded-[22px] border border-slate-200 p-4">
@@ -1146,7 +1174,16 @@ function ActivityFactsPageContent() {
                 </div>
                 <div className="mt-2 flex flex-wrap gap-3 text-sm font-bold">
                   <span className="font-mono">F: {truncateMiddle(selectedFact.factId, 10, 8)}</span>
-                  <span className="font-mono">A: {truncateMiddle(selectedFact.activityEventId, 10, 8)}</span>
+                  {selectedFact.activityEventId ? (
+                    <Link
+                      href={`/activity-today?locale=${locale}&activityEventId=${encodeURIComponent(selectedFact.activityEventId)}`}
+                      className="font-bold text-blue-700 no-underline hover:underline"
+                    >
+                      {selectedFact.activityTitle ?? `A: ${truncateMiddle(selectedFact.activityEventId, 10, 8)}`}
+                    </Link>
+                  ) : (
+                    <span className="font-mono">A: —</span>
+                  )}
                 </div>
               </div>
             </div>

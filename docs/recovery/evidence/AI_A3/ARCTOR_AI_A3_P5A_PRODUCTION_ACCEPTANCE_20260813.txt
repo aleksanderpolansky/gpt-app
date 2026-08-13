@@ -1,0 +1,42 @@
+ARCTor.app — AI-A3-P5A production acceptance evidence
+DATE=2026-08-13
+STATUS=PASS
+
+LIVE_ACTIVITY_INPUT=сегодня гулял 31 минуту
+ACTIVITY_EVENT_ID=3c58928a-937f-49b3-a351-a323fd77d137
+ANALYSIS_OPERATION_ID=1857d556-746a-41db-879c-f30b59d13518
+ANALYSIS_EXECUTION_ID=6ebf59a9-e089-4dde-b408-83ec1acaf4d0
+
+P5A_POSTCHECK=12/12 PASS
+01 exact activity exists once = PASS
+02 P5A client contract = PASS
+03 completed analysis execution = PASS
+04 confirmed duration feedback preserved = PASS
+05 writer operation recorded once = PASS
+06 neutral duration measure 31 minute written once = PASS
+07 Walking projection reuses same measure_id once = PASS
+08 confirmed status applied = PASS
+09 Walking semantic_exposure written once = PASS
+10 ownership coherent = PASS
+11 writer ledger ids match persisted rows = PASS
+12 writer hotfix V3 live = PASS
+
+MEASURE_ID=a90d0ec7-0a9e-4618-b135-c08b2c556669
+OBJECT_FACT_ID=9c3962e6-7f62-4781-95b4-fb55644d1b65
+SEMANTIC_EXPOSURE_LINK_ID=53546888-a8ac-491c-aa7b-1bf042a4ed09
+WALKING_VALUE_OBJECT_ID=33ebed64-4fbe-549a-9feb-17745a356453
+FACT_STATUS=confirmed
+IS_USER_CONFIRMED=true
+
+WRITER_HOTFIX_V3_ACCEPTANCE=8/8 PASS
+- canonical writer exists
+- assignment.* -> v_assignment present once
+- buggy composite select absent
+- rowtype preserved
+- parameter-definition join preserved
+- SECURITY DEFINER preserved
+- search_path/service_role preserved
+- anon/authenticated blocked
+
+SEMANTIC_RULE:
+31 minute is one neutral measure. Leaf associations are projections referencing the same measure_id; additional leaf associations must not duplicate the measured 31 minutes.
