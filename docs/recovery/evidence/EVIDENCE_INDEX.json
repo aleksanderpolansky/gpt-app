@@ -2,7 +2,7 @@
   "generatedAt": "2026-08-13",
   "copiedCount": 57,
   "generatedEvidenceCount": 1,
-  "indexedCount": 60,
+  "indexedCount": 61,
   "missingPatterns": [],
   "files": [
     {
@@ -414,6 +414,13 @@
       "sourceDownloadsName": null,
       "sha256": "814771ebabebbe1d62f6b6251bd052e82c14dec801a60b44c5dd9ab6baafc3f9",
       "origin": "AI_A2_P1_live_db_acceptance_14_of_14"
+    },
+    {
+      "group": "GSR1L",
+      "file": "docs/recovery/evidence/GSR1L/ARCTOR_AI_A2_P2_RUNTIME_INTEGRATION_LOCAL_VALIDATION_20260813.txt",
+      "sourceDownloadsName": null,
+      "sha256": "c9f2c487e548e5e4f5b45afd0636f6104d66e1e20732c3df8c4c2398992ab48e",
+      "origin": "AI_A2_P2_precommit_runtime_integration_validation"
     }
   ]
 }

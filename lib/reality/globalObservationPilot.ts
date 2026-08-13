@@ -14,6 +14,16 @@ import {
   markAiContextManifestProviderCompleted,
   markAiContextManifestValidated,
 } from "../ai/contextManifest";
+import {
+  RECOGNITION_CANDIDATE_CONTRACT_VERSION,
+  RECOGNITION_CANDIDATE_LIMIT,
+  isRecognitionCandidateSelectable,
+  isRecognitionEvidenceClass,
+  isRecognitionStatus,
+  isRecognitionStatusShapeValid,
+  type RecognitionEvidenceClass,
+  type RecognitionStatus,
+} from "./recognitionCandidatePolicy";
 
 const ROUTE_PATH = "/api/ai/reality/global-observation-preview";
 const PILOT_MODEL_TIER = "nano";
@@ -87,7 +97,7 @@ type ParameterContract = {
   allowedUnitCodes: string[];
 };
 
-type Candidate = {
+type CandidateDetails = {
   valueObjectId: string;
   canonicalKey: string;
   title: string;
@@ -97,10 +107,20 @@ type Candidate = {
   parameters: ParameterContract[];
 };
 
+type Candidate = CandidateDetails & {
+  recognitionEvidenceClass: RecognitionEvidenceClass;
+  recognitionProfileVersion: number | null;
+  recognitionUncertaintyPolicyCode: string | null;
+  selectionAllowed: boolean;
+};
+
 type CandidateGroup = {
   segmentId: string;
-  resolutionMode: "exact" | "bounded_candidates";
+  resolutionMode: "recognition_candidates";
   exactMatchKind: string | null;
+  recognitionStatus: RecognitionStatus;
+  recognitionCandidateCount: number;
+  selectionAllowed: boolean;
   candidates: Candidate[];
 };
 
@@ -656,9 +676,11 @@ function getSelectionSchema(
 ): Record<string, unknown> {
   const selectionKeys = groups.flatMap((group) => [
     `${group.segmentId}::__NONE__`,
-    ...group.candidates.map(
-      (candidate) => `${group.segmentId}::${candidate.canonicalKey}`,
-    ),
+    ...group.candidates
+      .filter((candidate) => candidate.selectionAllowed)
+      .map(
+        (candidate) => `${group.segmentId}::${candidate.canonicalKey}`,
+      ),
   ]);
 
   return {
@@ -1076,7 +1098,7 @@ async function loadCandidateDetails(candidateIds: string[]) {
         facetCode: row.facet_code,
         objectKindCode: row.object_kind_code,
         parameters: parameterContracts.get(row.id) ?? [],
-      } satisfies Candidate,
+      } satisfies CandidateDetails,
     ]),
   );
 }
@@ -1087,123 +1109,204 @@ async function buildCandidateGroups(
 ): Promise<CandidateGroup[]> {
   const interim: Array<{
     segment: RoutingSegment;
-    resolutionMode: "exact" | "bounded_candidates";
-    exactMatchKind: string | null;
-    candidateIds: string[];
+    recognitionStatus: RecognitionStatus;
+    recognitionCandidateCount: number;
+    candidates: Array<{
+      valueObjectId: string;
+      canonicalKey: string;
+      evidenceClass: RecognitionEvidenceClass;
+      profileVersion: number | null;
+      uncertaintyPolicyCode: string | null;
+      selectionAllowed: boolean;
+    }>;
   }> = [];
 
   for (const segment of segments) {
-    const { data: exactData, error: exactError } = await supabase.rpc(
-      "recognize_global_value_object_text_v1",
+    const { data, error } = await supabase.rpc(
+      "get_global_value_object_recognition_candidates_v1",
       {
-        p_query_text: segment.lookupText,
+        p_query_text: segment.sourceFragment,
         p_locale: locale,
-        p_root_canonical_key: segment.rootCanonicalKey,
-        p_facet_code: segment.facetCode,
-        p_limit: 12,
+        p_semantic_tags: [],
+        p_limit: RECOGNITION_CANDIDATE_LIMIT,
       },
     );
 
-    if (exactError) {
+    if (error) {
       throw new GlobalObservationPilotError(
         500,
-        "GLOBAL_EXACT_RECOGNITION_FAILED",
-        exactError.message,
+        "GLOBAL_RECOGNITION_CANDIDATES_FAILED",
+        error.message,
       );
     }
 
-    const exactRecord = asRecord(exactData);
-    const exactCandidates = asArray(exactRecord?.candidates)
+    const record = asRecord(data);
+    const contractVersion = asText(record?.contractVersion);
+    const rawStatus = asText(record?.status);
+    const candidateCount = asFiniteNumber(record?.candidateCount);
+    const candidateLimit = asFiniteNumber(record?.candidateLimit);
+    const rawCandidates = asArray(record?.candidates)
       .map(asRecord)
       .filter((row): row is JsonRecord => Boolean(row));
 
-    if (asFiniteNumber(exactRecord?.exactMatchCount) === 1) {
-      const winner = exactCandidates[0];
-      const valueObjectId = asText(winner?.valueObjectId);
+    if (
+      contractVersion !== RECOGNITION_CANDIDATE_CONTRACT_VERSION ||
+      !isRecognitionStatus(rawStatus) ||
+      candidateCount === null ||
+      !Number.isInteger(candidateCount) ||
+      candidateCount < 0 ||
+      candidateLimit !== RECOGNITION_CANDIDATE_LIMIT
+    ) {
+      throw new GlobalObservationPilotError(
+        500,
+        "GLOBAL_RECOGNITION_CANDIDATE_SHAPE_INVALID",
+        "Recognition candidate RPC returned an invalid contract envelope.",
+      );
+    }
 
-      if (!valueObjectId) {
+    const recognitionStatus = rawStatus;
+    const shapeValid = isRecognitionStatusShapeValid({
+      status: recognitionStatus,
+      candidateCount,
+      returnedCandidateCount: rawCandidates.length,
+      limit: RECOGNITION_CANDIDATE_LIMIT,
+    });
+
+    if (!shapeValid) {
+      throw new GlobalObservationPilotError(
+        500,
+        "GLOBAL_RECOGNITION_CANDIDATE_STATUS_INVALID",
+        "Recognition candidate count/status invariants failed.",
+        {
+          recognitionStatus,
+          candidateCount,
+          returnedCandidateCount: rawCandidates.length,
+        },
+      );
+    }
+
+    const ids = new Set<string>();
+    const canonicalKeys = new Set<string>();
+    const candidates = rawCandidates.map((row) => {
+      const valueObjectId = asText(row.valueObjectId);
+      const canonicalKey = asText(row.canonicalKey);
+      const evidenceClassRaw = asText(row.evidenceClass);
+      const profileVersionRaw = asFiniteNumber(row.profileVersion);
+      const uncertaintyPolicyCode = asNullableText(
+        row.uncertaintyPolicyCode,
+      );
+
+      const evidenceClass = isRecognitionEvidenceClass(evidenceClassRaw)
+        ? evidenceClassRaw
+        : null;
+
+      if (
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(
+          valueObjectId,
+        ) ||
+        !canonicalKey ||
+        !evidenceClass ||
+        ids.has(valueObjectId) ||
+        canonicalKeys.has(canonicalKey) ||
+        (profileVersionRaw !== null &&
+          (!Number.isInteger(profileVersionRaw) || profileVersionRaw < 1))
+      ) {
         throw new GlobalObservationPilotError(
           500,
-          "GLOBAL_EXACT_RECOGNITION_SHAPE_INVALID",
-          "Exact recognition returned no Value Object id.",
+          "GLOBAL_RECOGNITION_CANDIDATE_ROW_INVALID",
+          "Recognition candidate RPC returned an invalid or duplicate candidate.",
+          { valueObjectId, canonicalKey, evidenceClass: evidenceClassRaw },
         );
       }
 
-      interim.push({
-        segment,
-        resolutionMode: "exact",
-        exactMatchKind: asNullableText(winner?.matchKind),
-        candidateIds: [valueObjectId],
-      });
-      continue;
-    }
+      ids.add(valueObjectId);
+      canonicalKeys.add(canonicalKey);
 
-    const { data: boundedData, error: boundedError } = await supabase.rpc(
-      "get_global_value_object_leaf_candidates_v1",
-      {
-        p_root_canonical_key: segment.rootCanonicalKey,
-        p_facet_code: segment.facetCode,
-        p_limit: 12,
-      },
-    );
-
-    if (boundedError) {
-      throw new GlobalObservationPilotError(
-        500,
-        "GLOBAL_BOUNDED_CANDIDATES_FAILED",
-        boundedError.message,
-      );
-    }
-
-    const boundedRecord = asRecord(boundedData);
-    const boundedCandidates = asArray(boundedRecord?.candidates)
-      .map(asRecord)
-      .filter((row): row is JsonRecord => Boolean(row));
-
-    const candidateCount = asFiniteNumber(boundedRecord?.candidateCount);
-
-    if (
-      candidateCount === null ||
-      candidateCount > 10 ||
-      boundedCandidates.length > 10
-    ) {
-      throw new GlobalObservationPilotError(
-        409,
-        "GLOBAL_CANDIDATE_BOUND_VIOLATED",
-        "DOMAIN/FACET candidate bound exceeded 10.",
-      );
-    }
+      return {
+        valueObjectId,
+        canonicalKey,
+        evidenceClass,
+        profileVersion: profileVersionRaw,
+        uncertaintyPolicyCode,
+        selectionAllowed: isRecognitionCandidateSelectable(
+          recognitionStatus,
+          evidenceClass,
+        ),
+      };
+    });
 
     interim.push({
       segment,
-      resolutionMode: "bounded_candidates",
-      exactMatchKind: null,
-      candidateIds: boundedCandidates.map((row) => asText(row.valueObjectId)).filter(Boolean),
+      recognitionStatus,
+      recognitionCandidateCount: candidateCount,
+      candidates,
     });
   }
 
   const allIds = [
-    ...new Set(interim.flatMap((row) => row.candidateIds)),
+    ...new Set(
+      interim.flatMap((row) =>
+        row.candidates.map((candidate) => candidate.valueObjectId),
+      ),
+    ),
   ];
   const detailsById = await loadCandidateDetails(allIds);
 
   return interim.map((row) => {
-    const candidates = row.candidateIds
-      .map((id) => detailsById.get(id))
-      .filter((candidate): candidate is Candidate => Boolean(candidate));
+    const candidates = row.candidates.map((recognitionCandidate) => {
+      const details = detailsById.get(recognitionCandidate.valueObjectId);
 
-    if (candidates.length !== row.candidateIds.length) {
+      if (
+        !details ||
+        details.canonicalKey !== recognitionCandidate.canonicalKey
+      ) {
+        throw new GlobalObservationPilotError(
+          409,
+          "GLOBAL_CANDIDATE_DETAIL_MISMATCH",
+          "Recognition candidate no longer resolves to the same active global leaf.",
+          {
+            valueObjectId: recognitionCandidate.valueObjectId,
+            canonicalKey: recognitionCandidate.canonicalKey,
+          },
+        );
+      }
+
+      return {
+        ...details,
+        recognitionEvidenceClass: recognitionCandidate.evidenceClass,
+        recognitionProfileVersion: recognitionCandidate.profileVersion,
+        recognitionUncertaintyPolicyCode:
+          recognitionCandidate.uncertaintyPolicyCode,
+        selectionAllowed: recognitionCandidate.selectionAllowed,
+      } satisfies Candidate;
+    });
+
+    const selectionAllowed = candidates.some(
+      (candidate) => candidate.selectionAllowed,
+    );
+
+    if (
+      row.recognitionStatus === "CANDIDATES_READY" &&
+      !selectionAllowed
+    ) {
       throw new GlobalObservationPilotError(
-        409,
-        "GLOBAL_CANDIDATE_DETAIL_MISMATCH",
-        "One or more candidate Value Objects are no longer active leaves.",
+        500,
+        "GLOBAL_RECOGNITION_READY_WITHOUT_SELECTABLE_EVIDENCE",
+        "Candidate RPC reported model-ready candidates without exact/strong selectable evidence.",
       );
     }
 
     return {
       segmentId: row.segment.segmentId,
-      resolutionMode: row.resolutionMode,
-      exactMatchKind: row.exactMatchKind,
+      resolutionMode: "recognition_candidates",
+      exactMatchKind:
+        candidates.length === 1 &&
+        candidates[0].recognitionEvidenceClass === "exact"
+          ? "recognition_exact"
+          : null,
+      recognitionStatus: row.recognitionStatus,
+      recognitionCandidateCount: row.recognitionCandidateCount,
+      selectionAllowed,
       candidates,
     };
   });
@@ -1693,15 +1796,28 @@ function validateSelectionOutput(input: {
       };
     }
 
+    if (!group.selectionAllowed) {
+      throw new GlobalObservationPilotError(
+        502,
+        "AI_SELECTION_UNRESOLVED_GROUP_BYPASS_BLOCKED",
+        "AI attempted to select a semantic leaf from an unresolved recognition group.",
+        {
+          selectionKey,
+          segmentId,
+          recognitionStatus: group.recognitionStatus,
+        },
+      );
+    }
+
     const candidate = group.candidates.find(
       (item) => item.canonicalKey === selectedCanonicalKey,
     );
 
-    if (!candidate) {
+    if (!candidate || !candidate.selectionAllowed) {
       throw new GlobalObservationPilotError(
         502,
         "AI_SELECTION_KEY_CONTRACT_FAILED",
-        "selectionKey did not resolve inside its segment candidate set.",
+        "selectionKey did not resolve to a server-selectable candidate inside its segment.",
         { selectionKey, segmentId, selectedCanonicalKey },
       );
     }
@@ -1843,10 +1959,8 @@ function validateSelectionOutput(input: {
         facetCode: candidate.facetCode,
         objectKindCode: candidate.objectKindCode,
         semanticMatchMethodCode:
-          group.resolutionMode === "exact"
-            ? group.exactMatchKind === "primary_title"
-              ? "exact_primary_name"
-              : "exact_alias"
+          candidate.recognitionEvidenceClass === "exact"
+            ? "recognition_exact"
             : "ai_candidate",
       },
       confidence,
@@ -1940,7 +2054,7 @@ export async function runGlobalObservationPreview(
       "An explicit amount of free/available time is a resource CONTEXT observation (context.resources.available_time), not leisure activity and not a Time DOMAIN.",
       "sourceFragment MUST be an exact substring of the user text and must contain the semantic event/state evidence, not only a number or unit.",
       "lookupText is a short semantic noun/activity phrase suitable for exact alias lookup.",
-      "Choose domainFacetKey ONLY from the supplied live DOMAIN/FACET route options. The key already binds a valid root and facet; never invent or recombine them.",
+      "Choose domainFacetKey ONLY from the supplied live DOMAIN/FACET route options as a non-authoritative routing hint. The server recognition layer performs final global candidate retrieval and is not constrained to this hint.",
       "Do not invent a new ontology object.",
       "Do not diagnose.",
       "Do not infer calories, caffeine, physiological effects, hidden metrics, or causal relations.",
@@ -2032,7 +2146,9 @@ export async function runGlobalObservationPreview(
     const selectionSystem = [
       "You are ARCTor Global System Reality routing stage 2.",
       "For every segment return exactly one selection row.",
-      "Choose selectionKey ONLY from the schema enum. Each key already binds one segment to one allowed candidate or __NONE__.",
+      "Choose selectionKey ONLY from the schema enum. Each key already binds one segment to one server-selectable candidate or __NONE__.",
+      "If a candidate group has selectionAllowed=false, you MUST choose that segment's __NONE__ key and return zero facts for it.",
+      "Supporting-only recognition evidence is never sufficient for semantic selection in this stage.",
       "Never move a candidate across segments and never output an ontology object not supplied by the server.",
       "For facts use ONLY parameterCode and unit pairs supplied for the selected candidate.",
       "Extract values ONLY when explicitly stated by the user in sourceFragment.",
@@ -2071,12 +2187,21 @@ export async function runGlobalObservationPreview(
         candidateGroups: candidateGroups.map((group) => ({
           segmentId: group.segmentId,
           resolutionMode: group.resolutionMode,
-          exactMatchKind: group.exactMatchKind,
+          recognitionContractVersion:
+            RECOGNITION_CANDIDATE_CONTRACT_VERSION,
+          recognitionStatus: group.recognitionStatus,
+          recognitionCandidateCount: group.recognitionCandidateCount,
+          selectionAllowed: group.selectionAllowed,
           candidates: group.candidates.map((candidate) => ({
             valueObjectId: candidate.valueObjectId,
             canonicalKey: candidate.canonicalKey,
             facetCode: candidate.facetCode,
             objectKindCode: candidate.objectKindCode,
+            recognitionEvidenceClass:
+              candidate.recognitionEvidenceClass,
+            recognitionProfileVersion:
+              candidate.recognitionProfileVersion,
+            selectionAllowed: candidate.selectionAllowed,
             allowedParameterCodes: candidate.parameters.map(
               (parameter) => parameter.parameterCode,
             ),
@@ -2155,13 +2280,20 @@ export async function runGlobalObservationPreview(
         candidateGroups: candidateGroups.map((group) => ({
           segmentId: group.segmentId,
           resolutionMode: group.resolutionMode,
-          exactMatchKind: group.exactMatchKind,
+          recognitionStatus: group.recognitionStatus,
+          recognitionCandidateCount: group.recognitionCandidateCount,
+          selectionAllowed: group.selectionAllowed,
           candidates: group.candidates.map((candidate) => ({
             canonicalKey: candidate.canonicalKey,
             title: candidate.title,
             description: candidate.description,
             facetCode: candidate.facetCode,
             objectKindCode: candidate.objectKindCode,
+            recognitionEvidenceClass:
+              candidate.recognitionEvidenceClass,
+            recognitionProfileVersion:
+              candidate.recognitionProfileVersion,
+            selectionAllowed: candidate.selectionAllowed,
             allowedParameterCodes: candidate.parameters.map(
               (parameter) => parameter.parameterCode,
             ),

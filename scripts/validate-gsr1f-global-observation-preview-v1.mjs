@@ -4,6 +4,7 @@ import path from "node:path";
 const requiredFiles = [
   "lib/ai/openaiClient.ts",
   "lib/reality/globalObservationPilot.ts",
+  "lib/reality/recognitionCandidatePolicy.ts",
   "src/app/api/ai/reality/global-observation-preview/route.ts",
   "docs/reality-core/GSR1_OPENAI_PILOT_SAFETY_CONTRACT_V1.md",
   "supabase/manual-applied/20260811_gsr1c_global_aliases_recognition_v3.sql",
@@ -24,6 +25,10 @@ for (const file of requiredFiles) {
 const client = fs.readFileSync("lib/ai/openaiClient.ts", "utf8");
 const pilot = fs.readFileSync(
   "lib/reality/globalObservationPilot.ts",
+  "utf8",
+);
+const recognitionPolicy = fs.readFileSync(
+  "lib/reality/recognitionCandidatePolicy.ts",
   "utf8",
 );
 const route = fs.readFileSync(
@@ -91,17 +96,32 @@ check(
   pilot.includes('"preflight_ai_pilot_call_budget_v1"'),
 );
 check(
-  "pilot_exact_recognition",
-  pilot.includes('"recognize_global_value_object_text_v1"'),
+  "pilot_recognition_profile_candidates",
+  pilot.includes('"get_global_value_object_recognition_candidates_v1"') &&
+    pilot.includes("p_query_text: segment.sourceFragment") &&
+    pilot.includes("p_semantic_tags: []"),
 );
 check(
-  "pilot_bounded_candidates",
-  pilot.includes('"get_global_value_object_leaf_candidates_v1"'),
+  "pilot_recognition_candidate_bound_5",
+  recognitionPolicy.includes("RECOGNITION_CANDIDATE_LIMIT = 5") &&
+    recognitionPolicy.includes("UNRESOLVED_TOO_BROAD"),
 );
 check(
-  "pilot_candidate_bound_10",
-  pilot.includes("candidateCount > 10") &&
-    pilot.includes("boundedCandidates.length > 10"),
+  "pilot_supporting_only_selection_blocked",
+  recognitionPolicy.includes(
+    'evidenceClass === "exact" || evidenceClass === "strong"',
+  ) &&
+    pilot.includes(".filter((candidate) => candidate.selectionAllowed)"),
+);
+check(
+  "pilot_unresolved_server_guard",
+  pilot.includes("AI_SELECTION_UNRESOLVED_GROUP_BYPASS_BLOCKED") &&
+    pilot.includes("if (!group.selectionAllowed)"),
+);
+check(
+  "pilot_legacy_coarse_runtime_removed",
+  !pilot.includes('"get_global_value_object_leaf_candidates_v1"') &&
+    !pilot.includes("GLOBAL_CANDIDATE_BOUND_VIOLATED"),
 );
 check(
   "preview_does_not_call_fact_writer",

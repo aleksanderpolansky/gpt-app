@@ -4,8 +4,8 @@
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
   "branch": "feat/gsr1-global-system-reality-machine-contract-v1-20260811",
-  "originMainAtCheckpoint": "dc2c5243d51def829a1998d0eccb5560ca0baf8d",
-  "checkpointMeaning": "AI-A2 / GSR1L-P1 recognition-profile foundation is live-accepted and checkpointed in Git after AI-A1 production runtime 6/6.",
+  "originMainAtCheckpoint": "23e1e44ed36e8e01c501f2ddf618d0563c48e630",
+  "checkpointMeaning": "AI-A2 / GSR1L-P2 integrates versioned recognition candidates into Global Reality preview while preserving AI-A1 provenance and preview-only safety.",
   "globalReality": {
     "p8Blocked": true,
     "objectsTotal": 150,
@@ -49,7 +49,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "AI-A2-P2 runtime integration: use get_global_value_object_recognition_candidates_v1 in Global Reality preview, preserve bounded choice + UNKNOWN/UNRESOLVED + AI-A1 manifests + preview-only no-write boundary.",
+  "nextAction": "Run production AI-A2-P2 preview regressions: Stokrotka purchase routing and generic sleep unresolved; do not save incorrect preview rows. After PASS, proceed to the next GSR1L server/neutral-frame gate.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -59,8 +59,8 @@
     "docs/recovery/evidence/EVIDENCE_INDEX.json"
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
-  "previousRecoveryCommit": "dc2c5243d51def829a1998d0eccb5560ca0baf8d",
-  "documentedState": "AI_A2_P1_RECOGNITION_FOUNDATION_V1",
+  "previousRecoveryCommit": "23e1e44ed36e8e01c501f2ddf618d0563c48e630",
+  "documentedState": "AI_A2_P2_RUNTIME_INTEGRATION_V1",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -166,7 +166,7 @@
     "rawLiveDbExportRequiredForCheckpoint": false
   },
   "aiArchitecture": {
-    "status": "AI_A2_P1_LIVE_ACCEPTED",
+    "status": "AI_A2_P2_CODE_RELEASED_AWAITING_LIVE_RUNTIME",
     "sourceBaseline": "07e5b82d8e9c9ee22c995bfb64297e685fefe918",
     "architectureLock": "docs/reality-core/ARCTOR_AI_ARCHITECTURE_LOCK_V1_RU.md",
     "storageAudit": "docs/recovery/specs/ARCTOR_AI_A0_REUSE_ALTER_CREATE_V1_RU.md",
@@ -178,10 +178,10 @@
     "providerStore": false,
     "automaticProviderRetries": 0,
     "maxProviderCalls": 2,
-    "nextBlock": "AI_A2_P2_RUNTIME_INTEGRATION"
+    "nextBlock": "AI_A2_P2_PRODUCTION_RUNTIME_ACCEPTANCE"
   },
   "gsr1lImplementation": {
-    "status": "AI_A2_P1_LIVE_ACCEPTED_AND_REPOSITORY_CHECKPOINTED",
+    "status": "AI_A2_P2_CODE_RELEASED_AWAITING_LIVE_RUNTIME",
     "migration": "supabase/manual-applied/20260813_ai_a2_p1_recognition_foundation_v1.sql",
     "migrationSha256": "ab9c851d3be1f7a1763c535afe585d41ddcc721e5a23eabaefb2aa8d8a732a2d",
     "aiA1ProductionRuntimePostcheck": "6/6 PASS",
@@ -195,8 +195,21 @@
     "stokrotkaPurchaseCandidate": true,
     "stokrotkaHouseholdWrongRouteAbsent": true,
     "genericSleepUnresolved": true,
-    "runtimeIntegrated": false,
+    "runtimeIntegrated": true,
     "realityGraphWriteChanged": false,
-    "nextBlock": "AI_A2_P2_RUNTIME_INTEGRATION"
+    "nextBlock": "AI_A2_P2_PRODUCTION_RUNTIME_ACCEPTANCE",
+    "runtimeCandidateRpc": "public.get_global_value_object_recognition_candidates_v1(text,text,jsonb,integer)",
+    "runtimeCandidateLimit": 5,
+    "runtimeQuerySource": "segment.sourceFragment",
+    "runtimeSemanticTagsMode": "empty_until_neutral_semantic_frame",
+    "supportingOnlySelectable": false,
+    "unresolvedSelectionPolicy": "__NONE__",
+    "legacyCoarseRuntimeFallback": false,
+    "aiA1ContextManifestPreserved": true,
+    "providerCallsMax": 2,
+    "providerStore": false,
+    "automaticProviderRetries": 0,
+    "p1ValidatorLineEndingInvariant": true,
+    "productionRuntimeAcceptance": "PENDING"
   }
 }

@@ -406,3 +406,15 @@ AI-A2-P1 live acceptance: 14/14 PASS. Stokrotka regression стала обяза
 При реализации AI-A1 была допущена серия ошибок управляющей обвязки, которые не должны теряться из recovery history: uninitialized PowerShell variables; interpolation of $npm; UTF-8-no-BOM/PowerShell 5.1 parsing around non-ASCII dash; invalid backslash regex; stderr Git warning LF/CRLF incorrectly treated as fatal; final cached diff check caught an extra blank line at EOF. Содержательная AI-A1 реализация при этом прошла validators/build, а финальный release commit dc2c5243d51def829a1998d0eccb5560ca0baf8d прошёл AI_A1/GSR1F/Global Seed validators, feature/main builds и production runtime 6/6.
 
 Процессное правило: user execution начинается только после максимально доступной машинной проверки orchestration code. Native stderr сам по себе не является failure; authoritative signal — exit code. Precommit, post-commit/push, rollback/resume paths должны проверяться отдельно.
+
+## DECISION_AI_A2_P2_RECOGNITION_RUNTIME_V1 — 2026-08-13
+
+0. P1 migration integrity проверяется по LF-normalized SHA-256, поэтому CRLF/LF checkout не меняет результат validator. Raw-byte SHA working tree больше не используется как cross-platform invariant.
+1. Recognition candidate retrieval в preview является глобальным data-driven поиском по sourceFragment и versioned recognition profiles; Stage-1 DOMAIN/FACET остаётся только неавторитетной подсказкой до следующего redesign neutral semantic frame.
+2. Candidate output bound = 5. Лимит относится к возвращаемому candidate set, а не к размеру ветви ontology.
+3. supporting-only evidence не даёт права выбрать leaf. Выбор разрешён только exact/strong в SINGLE_CANDIDATE или CANDIDATES_READY.
+4. UNRESOLVED / UNRESOLVED_TOO_BROAD / NO_MATCH принудительно дают __NONE__; сервер независимо проверяет этот запрет после ответа модели.
+5. sourceFragment является evidence source для recognition RPC; lookupText модели не используется как authority.
+6. Старые exact/coarse RPC в БД не удаляются, но coarse DOMAIN+FACET fallback больше не участвует в Global Reality preview runtime.
+7. На P2 semantic_tags=[] специально: нельзя подменять будущий neutral semantic frame существующим hard DOMAIN/FACET решением.
+8. Reality Graph write path не меняется; production preview test обязателен перед следующим implementation gate.

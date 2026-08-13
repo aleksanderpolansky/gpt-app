@@ -158,3 +158,24 @@ AI-A1 production acceptance после deploy: выполнить один об�
 7. Runtime integration is NOT yet part of P1. /activity-ai-lab remains on the previous candidate path until AI-A2-P2. Reality Graph writes remain disabled for preview.
 
 If live DB already contains the AI-A2-P1 table/functions, do not rerun the migration blindly; run its read-only/live postchecks or compare schema first.
+
+## AI-A2 P2 restore point - 2026-08-13
+
+Authoritative parent checkpoint: 23e1e44ed36e8e01c501f2ddf618d0563c48e630.
+AI-A2-P1 DB migration: supabase/manual-applied/20260813_ai_a2_p1_recognition_foundation_v1.sql, SHA256 ab9c851d3be1f7a1763c535afe585d41ddcc721e5a23eabaefb2aa8d8a732a2d, live acceptance 14/14 PASS.
+
+P2 runtime files:
+- lib/reality/globalObservationPilot.ts SHA256 ef75dc73e8f1a0eb3acaa9f4f7f195c062a1353540151a75375f062d9f97728f
+- lib/reality/recognitionCandidatePolicy.ts SHA256 8006eb0aa805deb4655fa259e0de6c4371fbdbe40355e6fb4943dc164445bea4
+- scripts/validate-ai-a2-p2-runtime-integration-v1.mjs SHA256 804d94542955219fff520afa734b556666176ae774d5ccbb08a4906ed1ffc3d7
+- scripts/validate-gsr1f-global-observation-preview-v1.mjs SHA256 1d73e0bc1e061c7a499452c0bb310840cd45f01f6fdd0a0473d080b78cceaf11
+
+Restore behavior:
+- Global preview candidate retrieval calls public.get_global_value_object_recognition_candidates_v1(text,text,jsonb,integer).
+- Query evidence is segment.sourceFragment.
+- limit=5, semantic_tags=[] until neutral-frame stage is implemented.
+- supporting-only candidates are visible for trace/disambiguation but never selectable.
+- unresolved/no-match groups force __NONE__ and server validates the guard.
+- AI-A1 manifests, budget, 2-call maximum, store=false, retries=0 and preview-only no-write boundary remain active.
+
+Do not rerun AI-A2-P1 migration merely to restore P2 source. Validate the live DB first. Production runtime acceptance for P2 is intentionally pending until a real preview regression is run.

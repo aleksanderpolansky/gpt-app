@@ -1,0 +1,36 @@
+ARCTor.app - AI-A2 / GSR1L-P2 local release validation evidence
+Date: 2026-08-13
+Parent checkpoint: 23e1e44ed36e8e01c501f2ddf618d0563c48e630
+
+IMPLEMENTATION:
+- recognition RPC: public.get_global_value_object_recognition_candidates_v1(text,text,jsonb,integer)
+- query source: segment.sourceFragment
+- semantic tags: [] for P2
+- candidate limit: 5
+- supporting-only selection: blocked
+- unresolved/no-match selection: forced __NONE__ + server guard
+- old coarse DOMAIN/FACET runtime fallback: removed
+- Reality Graph writes: unchanged / preview-only
+
+CHECKS:
+AI_A2_P1_BASELINE_VALIDATOR=PASS_FIXED_VALIDATOR_RECHECK
+AI_A2_P2_VALIDATOR=PASS
+AI_A1_VALIDATOR=PASS
+GSR1F_VALIDATOR=PASS
+GLOBAL_SEED_VALIDATOR=PASS
+FEATURE_BUILD=PASS
+DIFF_CHECK=PASS
+
+ASSET_HASHES:
+pilot=ef75dc73e8f1a0eb3acaa9f4f7f195c062a1353540151a75375f062d9f97728f
+policy=8006eb0aa805deb4655fa259e0de6c4371fbdbe40355e6fb4943dc164445bea4
+p2_validator=804d94542955219fff520afa734b556666176ae774d5ccbb08a4906ed1ffc3d7
+gsr1f_validator=1d73e0bc1e061c7a499452c0bb310840cd45f01f6fdd0a0473d080b78cceaf11
+p1_validator_fixed=4181fff9fa1d02da9ddb986ecffa553bcdfda7921e06508bda4005c2dab120e9
+
+DATABASE:
+SQL_EXECUTED=false
+SUPABASE_WRITES=false
+OPENAI_CALLS=false
+
+RESULT=PRECOMMIT_VALIDATION_PASS

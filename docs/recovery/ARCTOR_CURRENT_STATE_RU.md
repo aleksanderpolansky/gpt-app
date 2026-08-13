@@ -357,3 +357,19 @@ AI-A2 / GSR1L-P1 применён в live Supabase и прошёл 14/14 accepta
 Важно: /activity-ai-lab runtime ещё не переведён на новый AI-A2 candidate assembler. Reality Graph write path не менялся.
 
 Следующий блок: AI-A2-P2 runtime integration — подключить get_global_value_object_recognition_candidates_v1 к Global Reality preview, сохранив bounded choice, UNKNOWN/UNRESOLVED, два provider calls max, AI-A1 manifests и preview-only boundary.
+
+## AI_A2_P2_RUNTIME_INTEGRATION_V1 — 2026-08-13
+
+AI-A2-P1 recognition foundation ранее применён в live Supabase и принят 14/14; repository checkpoint = 23e1e44ed36e8e01c501f2ddf618d0563c48e630.
+
+P1 validator v1 имел Windows-only дефект: он сравнивал raw SHA working-tree SQL и падал при core.autocrlf=true, хотя Git blob и нормализованный SQL были неизменны. P2 исправляет validator на LF-normalized SHA; миграция и live DB не меняются.
+
+AI-A2-P2 переводит Global Reality preview с старого hard DOMAIN/FACET candidate fallback на public.get_global_value_object_recognition_candidates_v1. Сервер отправляет в recognition RPC точный sourceFragment пользователя, а не AI-перефразированный lookupText. На этом шаге semantic_tags намеренно пусты: Stage 1 ещё не перепроектирован в neutral semantic frame.
+
+Candidate set ограничен 5. NO_MATCH, UNRESOLVED и UNRESOLVED_TOO_BROAD остаются невыбранными; Stage 2 получает только __NONE__ как допустимый selection key. SINGLE_CANDIDATE/CANDIDATES_READY разрешают выбор только candidate с evidenceClass exact или strong. supporting-only candidate и supporting sibling не могут быть выбраны моделью; дополнительный server guard блокирует обход schema enum.
+
+Старый runtime fallback get_global_value_object_leaf_candidates_v1 и hard error по размеру DOMAIN+FACET >10 удалены из preview runtime. Старые DB RPC/aliases физически не удаляются: AI-A2-P1 сохраняет их как совместимый слой.
+
+AI-A1 execution/context manifests, два provider calls max, nano tier, store=false, maxRetries=0, budget/timeout fuses и preview-only dbFactWriteExecuted=false сохранены.
+
+Production runtime acceptance AI-A2-P2 ещё PENDING. После release нужен живой preview Stokrotka и отдельный unresolved sleep regression; ничего не сохранять в Reality Graph до прохождения preview gates.
