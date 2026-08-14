@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-14T05:51:32.122Z",
+  "generatedAt": "2026-08-14T07:02:15.901Z",
   "copiedCount": 57,
   "generatedEvidenceCount": 2,
-  "indexedCount": 75,
+  "indexedCount": 76,
   "missingPatterns": [],
   "files": [
     {
@@ -519,6 +519,13 @@
       "sourceDownloadsName": null,
       "sha256": "98a190eb2b3a5b4fe28ea864eaf6ec2abba9d5b98cace1181c856d66f664d91d",
       "origin": "AI_A3_P5B_global_full_card_read_scope_v1_precommit_validation"
+    },
+    {
+      "group": "AI_A3",
+      "file": "docs/recovery/evidence/AI_A3/ARCTOR_AI_A3_P5B_LEAF_DETAIL_CONSISTENCY_V1_LOCAL_VALIDATION_20260814.txt",
+      "sourceDownloadsName": null,
+      "sha256": "fe60f950ad58b4ba4de2a8a45d2e66d31d96fc9d6aea771ba318bf83c85d0f34",
+      "origin": "AI_A3_P5B_leaf_detail_consistency_v1_precommit_validation"
     }
   ]
 }

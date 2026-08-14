@@ -488,3 +488,10 @@ Live P5B acceptance: Facts page showed `31 minute`, the linked `Ходьба` ch
 Причина: три старых внутренних GET-контракта (ontology, aliases, relations) продолжали трактовать любой ЦО как actor-owned. Основная detail page уже знала scope=global, а hydration-подзапросы — ещё нет.
 
 Решение: разрешать GLOBAL/System только в read-path. Никакие PATCH/POST/lifecycle/restructure права GLOBAL объектам не выдавать. Для GLOBAL relations не смешивать системную онтологию с actor-private relation rows; до отдельного Reference/model relation layer возвращать безопасную read-only системную проекцию. Aliases читать locale-aware, не выдавая русские aliases как польские.
+
+
+## 2026-08-14 — P5B leaf detail: ontology role must dominate legacy role
+
+Наблюдение: GLOBAL leaf «Ходьба» одновременно имел ontology_node_role_code=leaf и legacy node_role_code=structural. Из-за независимых fallback-проверок UI мог считать его и leaf, и intermediate; заголовок выбирал intermediate раньше leaf. Дополнительно верхний linked-activity counter считал только planned_target, а параметрический GET оставался actor-only/legacy-leaf.
+
+Решение: при наличии ontology_node_role_code он является единственным источником структурной роли. Legacy fallback разрешён только если ontology role отсутствует. Linked activity counter использует те же owner-scoped P5B relation sources, что mutual-links. GLOBAL standards GET не получает actor-private данные: для GLOBAL/System semantic leaf он возвращает read-only empty projection, writeActionsEnabled=false.

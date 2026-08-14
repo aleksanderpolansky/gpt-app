@@ -1260,18 +1260,22 @@ export default async function ValueObjectDetailPage({
   const failureCriteria = criteria.filter(
     (criterion) => criterion.criterion_type_code === "failure",
   );
+  const ontologyNodeRole = valueObject.ontology_node_role_code;
   const isRoot =
     valueObject.ontology_node_role_code === "root" ||
-    (valueObject.parent_value_object_id === null &&
+    (!ontologyNodeRole &&
+      valueObject.parent_value_object_id === null &&
       valueObject.root_value_object_id === valueObject.id);
   const isLeaf =
     valueObject.ontology_node_role_code === "leaf" ||
-    (valueObject.node_role_code === "activity_leaf" &&
+    (!ontologyNodeRole &&
+      valueObject.node_role_code === "activity_leaf" &&
       isValueObjectLeafKindV2(valueObject.object_kind) &&
       valueObject.parent_value_object_id !== null);
   const isIntermediate =
     valueObject.ontology_node_role_code === "intermediate" ||
-    (valueObject.node_role_code === "structural" &&
+    (!ontologyNodeRole &&
+      valueObject.node_role_code === "structural" &&
       !isRoot &&
       valueObject.parent_value_object_id !== null);
   const isStructural =
@@ -1300,9 +1304,51 @@ export default async function ValueObjectDetailPage({
   const viewHref = buildValueObjectModeHref(valueObject.id, locale, "view");
   const editHref = buildValueObjectModeHref(valueObject.id, locale, "edit");
 
+  let linkedActivityCount = 0;
   let plannedActivities: PlannedActivityRow[] = [];
 
   if (isLeaf) {
+    const [linkedFactsResult, linkedSemanticResult] = await Promise.all([
+      supabase
+        .from("activity_object_facts")
+        .select("activity_event_id")
+        .eq("user_id", actorContext.appUserId)
+        .eq("acting_as_actor_id", actorContext.actorId)
+        .eq("value_object_id", valueObject.id)
+        .order("created_at", { ascending: false })
+        .limit(100),
+      supabase
+        .from("activity_value_object_links")
+        .select("activity_event_id")
+        .eq("app_user_id", actorContext.appUserId)
+        .eq("actor_id", actorContext.actorId)
+        .eq("value_object_id", valueObject.id)
+        .eq("status", "active")
+        .in("link_type", ["semantic_exposure", "planned_target"])
+        .order("created_at", { ascending: false })
+        .limit(100),
+    ]);
+
+    if (linkedFactsResult.error || linkedSemanticResult.error) {
+      throw new Error(
+        linkedFactsResult.error?.message ??
+          linkedSemanticResult.error?.message ??
+          "P5B_LINKED_ACTIVITY_COUNT_FAILED",
+      );
+    }
+
+    linkedActivityCount = new Set(
+      [
+        ...(linkedFactsResult.data ?? []),
+        ...(linkedSemanticResult.data ?? []),
+      ]
+        .map((row) => row.activity_event_id)
+        .filter(
+          (activityEventId): activityEventId is string =>
+            typeof activityEventId === "string" && activityEventId.length > 0,
+        ),
+    ).size;
+
     const { data: linkData, error: linkError } = await supabase
       .from("activity_value_object_links")
       .select("activity_event_id,created_at")
@@ -1425,7 +1471,7 @@ export default async function ValueObjectDetailPage({
           },
           {
             label: summaryLabels.linkedActivities,
-            value: String(plannedActivities.length),
+            value: String(linkedActivityCount),
           },
           { label: summaryLabels.totalCriteria, value: String(criteria.length) },
         ]

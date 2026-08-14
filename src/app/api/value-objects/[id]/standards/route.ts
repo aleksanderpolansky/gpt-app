@@ -33,11 +33,15 @@ type ValueObjectRow = {
   title: string;
   node_role_code: string | null;
   object_kind: string | null;
+  object_kind_code: string | null;
+  ontology_node_role_code: string | null;
+  scope_code: string | null;
+  origin_type_code: string | null;
   branch_type_code: string | null;
   root_value_object_id: string | null;
   parent_value_object_id: string | null;
-  owner_user_id: string;
-  owner_actor_id: string;
+  owner_user_id: string | null;
+  owner_actor_id: string | null;
 };
 
 type AssignmentRow = {
@@ -299,6 +303,10 @@ export async function GET(_request: Request, context: RouteContext) {
       title,
       node_role_code,
       object_kind,
+      object_kind_code,
+      ontology_node_role_code,
+      scope_code,
+      origin_type_code,
       branch_type_code,
       root_value_object_id,
       parent_value_object_id,
@@ -329,10 +337,14 @@ export async function GET(_request: Request, context: RouteContext) {
     });
   }
 
-  if (
-    valueObject.owner_user_id !== actorContext.appUserId ||
-    valueObject.owner_actor_id !== actorContext.actorId
-  ) {
+  const isGlobalSystemObject =
+    valueObject.scope_code === "global" &&
+    valueObject.origin_type_code === "system_model";
+  const isOwnedByActiveActor =
+    valueObject.owner_user_id === actorContext.appUserId &&
+    valueObject.owner_actor_id === actorContext.actorId;
+
+  if (!isGlobalSystemObject && !isOwnedByActiveActor) {
     return errorResponse({
       status: 403,
       errorCode: "P7_2B1_VALUE_OBJECT_ACCESS_DENIED",
@@ -341,11 +353,14 @@ export async function GET(_request: Request, context: RouteContext) {
     });
   }
 
-  if (
-    valueObject.node_role_code !== "activity_leaf" ||
-    !isValueObjectLeafKindV2(valueObject.object_kind) ||
-    valueObject.parent_value_object_id === null
-  ) {
+  const isSemanticLeaf = valueObject.ontology_node_role_code === "leaf";
+  const isLegacyActivityLeaf =
+    !valueObject.ontology_node_role_code &&
+    valueObject.node_role_code === "activity_leaf" &&
+    isValueObjectLeafKindV2(valueObject.object_kind) &&
+    valueObject.parent_value_object_id !== null;
+
+  if (!isSemanticLeaf && !isLegacyActivityLeaf) {
     return errorResponse({
       status: 409,
       errorCode: "P7_2B1_TARGET_READ_REQUIRES_ACTIVITY_LEAF",
@@ -353,6 +368,51 @@ export async function GET(_request: Request, context: RouteContext) {
         "Parameters and planned targets are available only for an activity observation leaf.",
       dbReadExecuted: true,
     });
+  }
+
+  if (isGlobalSystemObject) {
+    return NextResponse.json(
+      {
+        ok: true,
+        routeMarker: ROUTE_MARKER,
+        readMode: READ_MODE,
+        valueObject: {
+          id: valueObject.id,
+          title: valueObject.title,
+          nodeRoleCode: "leaf",
+          objectKind:
+            valueObject.object_kind_code ?? valueObject.object_kind ?? "unknown",
+          branchTypeCode: valueObject.branch_type_code,
+          rootValueObjectId:
+            valueObject.root_value_object_id ?? valueObject.id,
+          parentValueObjectId: valueObject.parent_value_object_id,
+        },
+        assignments: [],
+        counts: {
+          assignments: 0,
+          activeAssignments: 0,
+          targetSeries: 0,
+          targetVersions: 0,
+        },
+        sideEffects: {
+          dbReadExecuted: true,
+          dbWriteExecuted: false,
+          rowsActuallyWritten: 0,
+        },
+        safety: {
+          serverMediatedOnly: true,
+          directBrowserSupabaseReadAllowed: false,
+          clientProvidedOwnershipTrusted: false,
+          writeActionsEnabled: false,
+        },
+      },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   }
 
   const { data: assignmentData, error: assignmentError } = await supabase
@@ -580,8 +640,11 @@ export async function GET(_request: Request, context: RouteContext) {
     valueObject: {
       id: valueObject.id,
       title: valueObject.title,
-      nodeRoleCode: valueObject.node_role_code,
-      objectKind: valueObject.object_kind,
+      nodeRoleCode: isSemanticLeaf ? "leaf" : "activity_leaf",
+      objectKind:
+        valueObject.object_kind ??
+        valueObject.object_kind_code ??
+        "unknown",
       branchTypeCode: valueObject.branch_type_code,
       rootValueObjectId:
         valueObject.root_value_object_id ?? valueObject.id,

@@ -1003,7 +1003,7 @@ export function ValueObjectFullCardPanel({
   }
 
   const node = ontology?.valueObject ?? null;
-  const isLeaf = node?.nodeRoleCode === "leaf";
+  const isLeaf = node?.nodeRoleCode === "leaf" || initialNodeRoleCode === "leaf";
 
   return (
     <div className="grid gap-5" data-arctor-value-object-full-card-v1>
@@ -1136,7 +1136,7 @@ export function ValueObjectFullCardPanel({
           </div>
         ) : (
           <div className="mt-5 rounded-2xl border border-dashed border-[#dfe3f1] bg-[#fafbff] p-5 text-[13px] leading-5 text-[#5a5f7a]">
-            {copy.leafOnly}
+            {isLeaf ? copy.noAutomation : copy.leafOnly}
           </div>
         )}
       </section>

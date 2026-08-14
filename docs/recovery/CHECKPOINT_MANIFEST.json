@@ -1,11 +1,11 @@
 {
   "schemaVersion": 6,
-  "generatedAt": "2026-08-14T05:51:32.122Z",
+  "generatedAt": "2026-08-14T07:02:15.901Z",
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
   "branch": "feat/gsr1-global-system-reality-machine-contract-v1-20260811",
-  "originMainAtCheckpoint": "b3147d26f7e89382994c323b0f2a6ecaf8ec6914",
-  "checkpointMeaning": "AI-A3 P5B GLOBAL full-card read-scope v1: hydration GET for ontology/aliases/relations understands active GLOBAL System scope while all GLOBAL writes remain disabled.",
+  "originMainAtCheckpoint": "f661ea575d6864092782b2143ddd2f32a2f7d0b0",
+  "checkpointMeaning": "AI-A3 P5B GLOBAL leaf detail consistency v1: ontology role authoritative, GLOBAL leaf parameter empty read projection, linked activity summary aligned to P5B relation sources.",
   "globalReality": {
     "p8Blocked": true,
     "objectsTotal": 150,
@@ -51,7 +51,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Deploy and live-check one GLOBAL root and leaf in PL/EN; if no ACCESS_DENIED and P5B mutual links remain correct, close P5B and start P5C quick capture + review buffer.",
+  "nextAction": "Deploy and live-check GLOBAL leaf Ходьба; if leaf/header/parameters/linked count/mutual reality all agree, close P5B and start P5C quick capture + review buffer.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -227,7 +227,7 @@
     "p3ProductionRuntimeAcceptance": "PASS"
   },
   "aiA3Implementation": {
-    "status": "AI_A3_P5B_GLOBAL_FULL_CARD_READ_SCOPE_CODE_RELEASED_AWAITING_LIVE_ACCEPTANCE",
+    "status": "AI_A3_P5B_LEAF_DETAIL_CONSISTENCY_CODE_RELEASED_AWAITING_LIVE_ACCEPTANCE",
     "dataCapitalFoundationApplied": true,
     "dataCapitalLiveAcceptance": "20/20 PASS",
     "feedbackReviewUxIntegrated": true,
@@ -239,7 +239,7 @@
     "automaticSemanticProjectionWrite": false,
     "providerCallsAdded": 0,
     "p2ProductionRuntimeAcceptance": "PARTIAL_UI_PASS_LEGACY_MATERIALIZATION_NOT_ACCEPTED",
-    "nextBlock": "AI_A3_P5B_LIVE_ACCEPTANCE_THEN_P5C",
+    "nextBlock": "AI_A3_P5B_FINAL_LIVE_ACCEPTANCE_THEN_P5C",
     "directSaveFromAiLabIntegrated": true,
     "directSaveLegacyContainerBypassed": true,
     "legacyActivityReviewRouteRetained": true,
@@ -260,7 +260,7 @@
     "p5bScope": "read-only mutual UI links; no new DB writes; no OpenAI calls",
     "p5bNeutralMeasureDisplay": "one neutral measure grouped by measure_id with 1..N leaf projections",
     "p5bValueObjectHistory": "leaf-specific facts plus linked activity context",
-    "p5bProductionUiAcceptance": "PARTIAL_PASS_LOCALIZATION_PASS_FULL_CARD_READ_SCOPE_HOTFIX_PENDING_LIVE_ACCEPTANCE",
+    "p5bProductionUiAcceptance": "FINAL_LEAF_DETAIL_CONSISTENCY_PENDING_LIVE_ACCEPTANCE",
     "p5bGlobalSystemDetailHotfix": "GLOBAL_FULL_CARD_READ_SCOPE_CODE_RELEASED"
   },
   "aiA3P4FactContractResilience": {
@@ -320,5 +320,18 @@
     "dbWrites": false,
     "openAiCalls": false,
     "next": "P5B live acceptance then P5C quick capture + review buffer"
+  },
+  "aiA3P5BLeafDetailConsistencyV1": {
+    "status": "released_awaiting_live_ui_acceptance",
+    "baselineCommit": "f661ea575d6864092782b2143ddd2f32a2f7d0b0",
+    "ontologyRoleAuthoritative": true,
+    "globalLeafStandardsReadOnlyEmptyProjection": true,
+    "actorPrivateParameterRowsExposed": false,
+    "linkedActivityCountSource": "activity_object_facts_plus_active_semantic_exposure_and_planned_target_links",
+    "linkedRealityPanelChanged": false,
+    "globalWritesEnabled": false,
+    "dbWrites": false,
+    "openAiCalls": false,
+    "next": "P5B final live acceptance then P5C quick capture + review buffer"
   }
 }

@@ -279,3 +279,18 @@ Baseline: `b3147d26f7e89382994c323b0f2a6ecaf8ec6914`.
 7. убедиться, что GLOBAL edit/restructure/PATCH/POST по-прежнему недоступны.
 
 После live PASS закрыть P5B и перейти к P5C quick capture + review buffer.
+
+
+## Restore point — AI-A3 P5B GLOBAL leaf detail consistency v1
+
+Baseline: `f661ea575d6864092782b2143ddd2f32a2f7d0b0`.
+
+После восстановления:
+
+1. `node scripts/validate-ai-a3-p5b-leaf-detail-consistency-v1.mjs`;
+2. full-card read-scope + mobile localization + старые P5B/P5A validators;
+3. `npm run build`;
+4. открыть GLOBAL leaf «Ходьба»;
+5. проверить: leaf в заголовке и основных данных, параметрический блок не пишет «это не лист», Linked activities соответствует P5B mutual links, «Связанная реальность» содержит активность и 31 minute, GLOBAL edit/restructure недоступны.
+
+После live PASS: P5B CLOSED, следующий блок P5C quick capture + review buffer.

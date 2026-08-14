@@ -455,3 +455,17 @@ P5B live UI acceptance confirmed mutual links on /activity-facts and /activity-t
 - GLOBAL edit/restructure/alias mutation/relation mutation права не добавлены;
 - SQL, schema writes и OpenAI calls отсутствуют;
 - следующий шаг: live acceptance root + leaf; после PASS P5B CLOSED и P5C quick capture + review buffer.
+
+
+## AI-A3 P5B GLOBAL leaf detail consistency hotfix v1
+
+Дата: 2026-08-14.
+
+- baseline: `f661ea575d6864092782b2143ddd2f32a2f7d0b0`;
+- GLOBAL full-card read-scope и локализация уже прошли live acceptance;
+- ontology_node_role_code теперь авторитетен для root/intermediate/leaf, legacy node_role_code используется только при отсутствии ontology role;
+- GLOBAL semantic leaf больше не получает ложное сообщение «это не лист» в параметрическом блоке; standards GET возвращает безопасную read-only пустую проекцию до появления отдельного global parameter-assignment слоя и не читает actor-private assignments/targets;
+- верхний счётчик связанных активностей использует P5B relation sources: activity_object_facts + active semantic_exposure/planned_target links;
+- ActivityMutualLinksPanel/«Связанная реальность» не изменён;
+- GLOBAL edit/restructure/write права не добавлены; SQL/schema/OpenAI вызовов нет;
+- следующий шаг: один live screenshot GLOBAL leaf «Ходьба»; при PASS P5B CLOSED и P5C quick capture + review buffer.
