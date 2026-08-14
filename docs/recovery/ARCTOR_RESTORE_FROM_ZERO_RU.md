@@ -314,3 +314,6 @@ Baseline: `f661ea575d6864092782b2143ddd2f32a2f7d0b0`.
 
 ## P5C review controls restore
 После восстановления проверить /activity-review -> Open review. На /activity-ai-lab?reviewActivityEventId=... должны сразу быть видны ✓, ✕, ✎, ?, а ниже «+ Добавить связь с ЦО». TracePanel обязан получать analysisOperationId и в review mode. Для существующей activity_event ручной + должен вызвать /api/ai/reality/manual-link-materialize. Не переводить quickCaptureReviewStatus в resolved этим шагом.
+
+## P5C review refinements restore
+Проверить наличие quickCaptureIntent.ts, quickCaptureSourceText.ts и aiLabUiCopy.ts. В /admin/ai-instructions должны быть видны guards activity_infinitive_intent_future и activity_source_text_preservation. Live controls: поиск «семья» позволяет staged multi-select до Confirm; «выгулять собаку 18.00» на RU создаёт planned activity в ближайшие 18:00 и сохраняет полный source/title; URL locale=en/es не должен заменяться message locale review snapshot.

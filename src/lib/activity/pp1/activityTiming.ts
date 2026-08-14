@@ -321,6 +321,24 @@ function composeLocalDateTime(dateKey: string, clock: { hour: number; minute: nu
   return `${dateKey}T${pad2(clock.hour)}:${pad2(clock.minute)}`;
 }
 
+function nextFutureClockDateKeyPp1(now: Date, clock: { hour: number; minute: number }) {
+  const target = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    clock.hour,
+    clock.minute,
+    0,
+    0,
+  );
+
+  if (target.getTime() <= now.getTime()) {
+    target.setDate(target.getDate() + 1);
+  }
+
+  return toDateKeyPp1(target);
+}
+
 function addMinutesToLocal(value: string, minutes: number) {
   const parsed = new Date(value);
 
@@ -513,6 +531,18 @@ export function inferActivityTimingDraftPp1(
   if (dateKeys[0] && clocks[0]) {
     draft.scheduleModeCode = "exact";
     draft.startedAtLocal = composeLocalDateTime(dateKeys[0], clocks[0]);
+
+    if (explicitDurationMinutes) {
+      draft.endedAtLocal = addMinutesToLocal(draft.startedAtLocal, explicitDurationMinutes);
+    }
+
+    return applyExactStartOnlyDefaultPp1(draft);
+  }
+
+  if (clocks[0]) {
+    const dateKey = nextFutureClockDateKeyPp1(now, clocks[0]);
+    draft.scheduleModeCode = "exact";
+    draft.startedAtLocal = composeLocalDateTime(dateKey, clocks[0]);
 
     if (explicitDurationMinutes) {
       draft.endedAtLocal = addMinutesToLocal(draft.startedAtLocal, explicitDurationMinutes);

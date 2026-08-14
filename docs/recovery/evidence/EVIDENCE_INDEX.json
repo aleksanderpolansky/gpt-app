@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-14T14:05:07.219Z",
+  "generatedAt": "2026-08-14T15:19:08.994Z",
   "copiedCount": 57,
-  "generatedEvidenceCount": 7,
-  "indexedCount": 81,
+  "generatedEvidenceCount": 8,
+  "indexedCount": 82,
   "missingPatterns": [],
   "files": [
     {
@@ -561,6 +561,13 @@
       "sourceDownloadsName": null,
       "sha256": "9a49922dd2424a8d5682b5530394385b2631dab372dbf15fac12350aa197d67e",
       "origin": "AI_A3_P5C_REVIEW_CONTROLS_V1"
+    },
+    {
+      "group": "AI_A3_P5C",
+      "file": "docs/recovery/evidence/AI_A3_P5C/ARCTOR_AI_A3_P5C_REVIEW_REFINEMENTS_V1_EVIDENCE.txt",
+      "sourceDownloadsName": null,
+      "sha256": "24a42c8fe7066379e21d61519dc1e7cc01603c63c233d90711efe5ab956250f6",
+      "origin": "AI_A3_P5C_REVIEW_REFINEMENTS_V1"
     }
   ]
 }

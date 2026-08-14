@@ -7,6 +7,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityTimingEditorPp1 } from "@/components/activity/pp1/activity-timing-editor";
 import { PlannedTargetSelectorPp1 } from "@/components/activity/pp1/planned-target-selector";
 import {
+  AI_LAB_UI_COPY,
+  normalizeAiLabUiLocale,
+  type AiLabManualLinkCopy,
+  type AiLabTraceCopy,
+  type AiLabUiLocale,
+} from "@/lib/activity/aiLabUiCopy";
+import {
   buildAiLabDirectActivityRequest,
   buildAiLabDirectSaveReturnUrl,
   type AiLabSaveTemporalDirection,
@@ -734,10 +741,12 @@ function TracePanel({
   lines,
   loading,
   operationId,
+  copy,
 }: {
   lines: TraceLine[];
   loading: boolean;
   operationId: string | null;
+  copy: AiLabTraceCopy;
 }) {
   const [feedbackState, setFeedbackState] = useState<Record<string, FeedbackStatus>>({});
   const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -751,15 +760,7 @@ function TracePanel({
     setWhyOpen({});
   }, [operationId]);
 
-  const label: Record<TraceKind, string> = {
-    system: "СИСТЕМА",
-    model: "МОДЕЛЬ",
-    check: "ПРОВЕРКА",
-    fact: "ФАКТ",
-    meaning: "СМЫСЛ",
-    unresolved: "НЕОПР.",
-    fallback: "РЕЗЕРВ",
-  };
+  const label: Record<TraceKind, string> = copy.labels;
 
   const style: Record<TraceKind, string> = {
     system: "text-zinc-500",
@@ -825,10 +826,10 @@ function TracePanel({
           verdict: verdictCode,
           message:
             verdictCode === "confirmed"
-              ? "подтверждено"
+              ? copy.confirmed
               : verdictCode === "rejected"
-                ? "отклонено"
-                : "комментарий сохранён",
+                ? copy.rejected
+                : copy.commentSaved,
         },
       }));
       setEditingKey(null);
@@ -839,8 +840,7 @@ function TracePanel({
         [targetKey]: {
           phase: "error",
           verdict: verdictCode,
-          message:
-            caught instanceof Error ? caught.message : "Не удалось сохранить обратную связь",
+          message: caught instanceof Error ? caught.message : copy.feedbackError,
         },
       }));
     }
@@ -851,24 +851,17 @@ function TracePanel({
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-400">
-            Журнал анализа
+            {copy.title}
           </p>
-          <p className="mt-1 text-xs leading-5 text-zinc-500">
-            Здесь показано, что модель предложила и что затем проверил сервер. Проценты
-            показываются только там, где это действительно самооценка выбора модели.
-          </p>
+          <p className="mt-1 text-xs leading-5 text-zinc-500">{copy.subtitle}</p>
         </div>
         <span className="rounded-full border border-zinc-800 px-3 py-1 text-xs text-zinc-500">
-          {loading ? "обработка" : "готово"}
+          {loading ? copy.processing : copy.ready}
         </span>
       </div>
 
       <div className="max-h-[650px] space-y-2 overflow-auto font-mono text-xs leading-6">
-        {lines.length === 0 ? (
-          <p className="text-zinc-600">
-            &gt; Введите сообщение и нажмите «Разобрать сообщение».
-          </p>
-        ) : null}
+        {lines.length === 0 ? <p className="text-zinc-600">&gt; {copy.empty}</p> : null}
 
         {lines.map((line, index) => {
           const feedback = line.feedback;
@@ -878,113 +871,31 @@ function TracePanel({
           const locked = state?.phase === "saving";
 
           return (
-            <div
-              className="grid grid-cols-[82px_1fr] gap-3"
-              key={`${index}-${line.text}`}
-            >
+            <div className="grid grid-cols-[82px_1fr] gap-3" key={`${index}-${line.text}`}>
               <span className={style[line.kind]}>{label[line.kind]}</span>
               <div className="min-w-0">
-                <span className="whitespace-pre-wrap break-words text-zinc-200">
-                  {line.text}
-                </span>
+                <span className="whitespace-pre-wrap break-words text-zinc-200">{line.text}</span>
 
                 {feedback && operationId ? (
                   <div className="mt-1.5">
                     <div className="flex flex-wrap items-center gap-1.5 font-sans">
-                      <button
-                        aria-label="Подтвердить"
-                        className="rounded-lg border border-emerald-900 px-2 py-0.5 text-xs font-semibold text-emerald-300 hover:border-emerald-600 disabled:cursor-not-allowed disabled:opacity-40"
-                        disabled={locked}
-                        onClick={() => void submitFeedback(feedback, "confirmed")}
-                        title="Подтвердить"
-                        type="button"
-                      >
-                        ✓
-                      </button>
-                      <button
-                        aria-label="Отклонить"
-                        className="rounded-lg border border-red-900 px-2 py-0.5 text-xs font-semibold text-red-300 hover:border-red-600 disabled:cursor-not-allowed disabled:opacity-40"
-                        disabled={locked}
-                        onClick={() => void submitFeedback(feedback, "rejected")}
-                        title="Отклонить"
-                        type="button"
-                      >
-                        ✕
-                      </button>
-                      <button
-                        aria-label="Добавить объяснение"
-                        className="rounded-lg border border-sky-900 px-2 py-0.5 text-xs font-semibold text-sky-300 hover:border-sky-600 disabled:cursor-not-allowed disabled:opacity-40"
-                        disabled={locked}
-                        onClick={() => {
-                          setEditingKey(isEditing ? null : feedback.targetKey);
-                          setCommentDraft("");
-                        }}
-                        title="Добавить объяснение"
-                        type="button"
-                      >
-                        ✎
-                      </button>
-                      <button
-                        aria-label="Почему система так решила"
-                        className="rounded-lg border border-zinc-700 px-2 py-0.5 text-xs font-semibold text-zinc-300 hover:border-zinc-500"
-                        onClick={() =>
-                          setWhyOpen((current) => ({
-                            ...current,
-                            [feedback.targetKey]: !isWhyOpen,
-                          }))
-                        }
-                        title="Почему?"
-                        type="button"
-                      >
-                        ?
-                      </button>
-                      {state?.phase === "saving" ? (
-                        <span className="text-zinc-500">сохраняю…</span>
-                      ) : null}
-                      {state?.phase === "saved" ? (
-                        <span className="text-emerald-400">{state.message}</span>
-                      ) : null}
-                      {state?.phase === "error" ? (
-                        <span className="text-red-400">{state.message}</span>
-                      ) : null}
+                      <button aria-label={copy.confirm} className="rounded-lg border border-emerald-900 px-2 py-0.5 text-xs font-semibold text-emerald-300 hover:border-emerald-600 disabled:cursor-not-allowed disabled:opacity-40" disabled={locked} onClick={() => void submitFeedback(feedback, "confirmed")} title={copy.confirm} type="button">✓</button>
+                      <button aria-label={copy.reject} className="rounded-lg border border-red-900 px-2 py-0.5 text-xs font-semibold text-red-300 hover:border-red-600 disabled:cursor-not-allowed disabled:opacity-40" disabled={locked} onClick={() => void submitFeedback(feedback, "rejected")} title={copy.reject} type="button">✕</button>
+                      <button aria-label={copy.explain} className="rounded-lg border border-sky-900 px-2 py-0.5 text-xs font-semibold text-sky-300 hover:border-sky-600 disabled:cursor-not-allowed disabled:opacity-40" disabled={locked} onClick={() => { setEditingKey(isEditing ? null : feedback.targetKey); setCommentDraft(""); }} title={copy.explain} type="button">✎</button>
+                      <button aria-label={copy.why} className="rounded-lg border border-zinc-700 px-2 py-0.5 text-xs font-semibold text-zinc-300 hover:border-zinc-500" onClick={() => setWhyOpen((current) => ({ ...current, [feedback.targetKey]: !isWhyOpen }))} title={copy.why} type="button">?</button>
+                      {state?.phase === "saving" ? <span className="text-zinc-500">{copy.saving}</span> : null}
+                      {state?.phase === "saved" ? <span className="text-emerald-400">{state.message}</span> : null}
+                      {state?.phase === "error" ? <span className="text-red-400">{state.message}</span> : null}
                     </div>
 
-                    {isWhyOpen ? (
-                      <div className="mt-1 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 font-sans text-xs leading-5 text-zinc-400">
-                        {feedback.rationale}
-                      </div>
-                    ) : null}
+                    {isWhyOpen ? <div className="mt-1 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 font-sans text-xs leading-5 text-zinc-400">{feedback.rationale}</div> : null}
 
                     {isEditing ? (
                       <div className="mt-2 flex flex-col gap-2 font-sans">
-                        <textarea
-                          className="min-h-20 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs leading-5 text-zinc-200 outline-none focus:border-sky-600"
-                          maxLength={4000}
-                          onChange={(event) => setCommentDraft(event.target.value)}
-                          placeholder="Что именно система поняла правильно или неправильно?"
-                          value={commentDraft}
-                        />
+                        <textarea className="min-h-20 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs leading-5 text-zinc-200 outline-none focus:border-sky-600" maxLength={4000} onChange={(event) => setCommentDraft(event.target.value)} placeholder={copy.commentPlaceholder} value={commentDraft} />
                         <div className="flex gap-2">
-                          <button
-                            className="rounded-lg border border-sky-800 px-3 py-1 text-xs font-semibold text-sky-300 disabled:cursor-not-allowed disabled:opacity-40"
-                            disabled={!commentDraft.trim() || state?.phase === "saving"}
-                            onClick={() =>
-                              void submitFeedback(feedback, "commented", commentDraft)
-                            }
-                            type="button"
-                          >
-                            Сохранить комментарий
-                          </button>
-                          <button
-                            className="rounded-lg border border-zinc-800 px-3 py-1 text-xs text-zinc-400"
-                            onClick={() => {
-                              setEditingKey(null);
-                              setCommentDraft("");
-                            }}
-                            type="button"
-                          >
-                            Отмена
-                          </button>
+                          <button className="rounded-lg border border-sky-800 px-3 py-1 text-xs font-semibold text-sky-300 disabled:cursor-not-allowed disabled:opacity-40" disabled={!commentDraft.trim() || state?.phase === "saving"} onClick={() => void submitFeedback(feedback, "commented", commentDraft)} type="button">{copy.saveComment}</button>
+                          <button className="rounded-lg border border-zinc-800 px-3 py-1 text-xs text-zinc-400" onClick={() => { setEditingKey(null); setCommentDraft(""); }} type="button">{copy.cancel}</button>
                         </div>
                       </div>
                     ) : null}
@@ -997,10 +908,8 @@ function TracePanel({
 
         {loading ? (
           <div className="grid grid-cols-[82px_1fr] gap-3">
-            <span className="text-zinc-500">СИСТЕМА</span>
-            <span className="animate-pulse text-zinc-400">
-              Выполняется полный анализ…
-            </span>
+            <span className="text-zinc-500">{label.system}</span>
+            <span className="animate-pulse text-zinc-400">{copy.processingLine}</span>
           </div>
         ) : null}
       </div>
@@ -1013,19 +922,22 @@ function ManualLeafLinkPicker({
   activityEventId = null,
   links,
   onLinksChange,
+  copy,
   disabled = false,
 }: {
   operationId: string;
   activityEventId?: string | null;
   links: ManualLinkIntent[];
   onLinksChange: (links: ManualLinkIntent[]) => void;
+  copy: AiLabManualLinkCopy;
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SelectorItem[]>([]);
+  const [pendingItems, setPendingItems] = useState<SelectorItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [addingId, setAddingId] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1061,7 +973,7 @@ function ManualLeafLinkPicker({
         if (controller.signal.aborted) {
           return;
         }
-        setError(caught instanceof Error ? caught.message : "Не удалось выполнить поиск ЦО");
+        setError(caught instanceof Error ? caught.message : copy.searchError);
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);
@@ -1073,18 +985,61 @@ function ManualLeafLinkPicker({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [open, query]);
+  }, [copy.searchError, open, query]);
 
-  async function addManualLink(item: SelectorItem) {
-    if (disabled || links.some((link) => link.valueObjectId === item.id)) {
+  function togglePendingItem(item: SelectorItem) {
+    if (disabled || confirming || links.some((link) => link.valueObjectId === item.id)) {
       return;
     }
 
-    setAddingId(item.id);
-    setError(null);
+    setPendingItems((current) =>
+      current.some((selected) => selected.id === item.id)
+        ? current.filter((selected) => selected.id !== item.id)
+        : [...current, item],
+    );
+  }
 
-    try {
-      const response = await fetch("/api/ai/reality/feedback", {
+  async function persistManualLink(item: SelectorItem): Promise<ManualLinkIntent> {
+    const response = await fetch("/api/ai/reality/feedback", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        operationId,
+        clientFeedbackId: createClientFeedbackId(),
+        targetKind: "manual_leaf_link",
+        targetKey: `manual_leaf_link:${item.id}`,
+        targetValueObjectId: item.id,
+        verdictCode: "manual_link_added",
+        sourceContractCode: "AI_A3_P2_FEEDBACK_REVIEW_UX_V1",
+        proposalSnapshot: {
+          valueObjectId: item.id,
+          canonicalKey: item.canonicalKey ?? null,
+          title: item.title,
+          pathText: item.pathText ?? null,
+          scopeCode: item.scopeCode ?? null,
+          source: "manual_leaf_search",
+        },
+        metadata: {
+          interaction: "activity_ai_lab_manual_leaf_link",
+        },
+      }),
+    });
+    const payload = (await response.json().catch(() => null)) as
+      | { ok?: boolean; error?: string; feedbackEvent?: { id?: string } }
+      | null;
+
+    if (!response.ok || payload?.ok !== true || !payload.feedbackEvent?.id) {
+      throw new Error(payload?.error || `Manual link save failed: ${response.status}`);
+    }
+
+    const feedbackEventId = payload.feedbackEvent.id;
+
+    if (activityEventId) {
+      const materializeResponse = await fetch("/api/ai/reality/manual-link-materialize", {
         method: "POST",
         credentials: "include",
         headers: {
@@ -1092,166 +1047,127 @@ function ManualLeafLinkPicker({
           Accept: "application/json",
         },
         body: JSON.stringify({
+          activityEventId,
           operationId,
-          clientFeedbackId: createClientFeedbackId(),
-          targetKind: "manual_leaf_link",
-          targetKey: `manual_leaf_link:${item.id}`,
-          targetValueObjectId: item.id,
-          verdictCode: "manual_link_added",
-          sourceContractCode: "AI_A3_P2_FEEDBACK_REVIEW_UX_V1",
-          proposalSnapshot: {
-            valueObjectId: item.id,
-            canonicalKey: item.canonicalKey ?? null,
-            title: item.title,
-            pathText: item.pathText ?? null,
-            scopeCode: item.scopeCode ?? null,
-            source: "manual_leaf_search",
-          },
-          metadata: {
-            interaction: "activity_ai_lab_manual_leaf_link",
-          },
+          feedbackEventIds: [feedbackEventId],
         }),
       });
-      const payload = (await response.json().catch(() => null)) as
-        | {
-            ok?: boolean;
-            error?: string;
-            feedbackEvent?: { id?: string };
-          }
+      const materializePayload = (await materializeResponse.json().catch(() => null)) as
+        | { ok?: boolean; error?: string }
         | null;
 
-      if (!response.ok || payload?.ok !== true || !payload.feedbackEvent?.id) {
-        throw new Error(payload?.error || `Manual link save failed: ${response.status}`);
+      if (!materializeResponse.ok || materializePayload?.ok !== true) {
+        throw new Error(
+          materializePayload?.error ||
+            `Manual link materialization failed: ${materializeResponse.status}`,
+        );
       }
+    }
 
-      const feedbackEventId = payload.feedbackEvent.id;
+    return {
+      feedbackEventId,
+      valueObjectId: item.id,
+      title: item.title,
+      canonicalKey: item.canonicalKey ?? null,
+      pathText: item.pathText,
+      scopeCode: item.scopeCode ?? null,
+    };
+  }
 
-      if (activityEventId) {
-        const materializeResponse = await fetch("/api/ai/reality/manual-link-materialize", {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            activityEventId,
-            operationId,
-            feedbackEventIds: [feedbackEventId],
-          }),
-        });
-        const materializePayload = (await materializeResponse.json().catch(() => null)) as
-          | { ok?: boolean; error?: string }
-          | null;
+  async function confirmPendingLinks() {
+    if (disabled || confirming || pendingItems.length === 0) {
+      return;
+    }
 
-        if (!materializeResponse.ok || materializePayload?.ok !== true) {
-          throw new Error(
-            materializePayload?.error ||
-              `Manual link materialization failed: ${materializeResponse.status}`,
-          );
-        }
+    setConfirming(true);
+    setError(null);
+    const succeeded: ManualLinkIntent[] = [];
+    const succeededIds = new Set<string>();
+    const failedTitles: string[] = [];
+
+    for (const item of pendingItems) {
+      try {
+        const persisted = await persistManualLink(item);
+        succeeded.push(persisted);
+        succeededIds.add(item.id);
+      } catch {
+        failedTitles.push(item.title);
       }
+    }
 
+    if (succeeded.length > 0) {
       onLinksChange([
         ...links,
-        {
-          feedbackEventId,
-          valueObjectId: item.id,
-          title: item.title,
-          canonicalKey: item.canonicalKey ?? null,
-          pathText: item.pathText,
-          scopeCode: item.scopeCode ?? null,
-        },
+        ...succeeded.filter(
+          (next) => !links.some((existing) => existing.valueObjectId === next.valueObjectId),
+        ),
       ]);
+    }
+
+    setPendingItems((current) => current.filter((item) => !succeededIds.has(item.id)));
+
+    if (failedTitles.length > 0) {
+      setError(`${copy.partialError} ${failedTitles.join(", ")}`);
+    } else {
       setQuery("");
       setResults([]);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Не удалось добавить связь");
-    } finally {
-      setAddingId(null);
     }
+
+    setConfirming(false);
   }
 
   return (
     <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-4">
-      <button
-        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-zinc-700 bg-black/40 px-4 py-3 text-left text-sm font-semibold text-zinc-200 hover:border-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-        disabled={disabled}
-        onClick={() => setOpen((current) => !current)}
-        type="button"
-      >
-        <span>+ Добавить связь с ЦО</span>
-        <span className="text-xs font-normal text-zinc-500">
-          только листовой объект
-        </span>
+      <button className="flex w-full items-center justify-between gap-3 rounded-2xl border border-zinc-700 bg-black/40 px-4 py-3 text-left text-sm font-semibold text-zinc-200 hover:border-emerald-700 disabled:cursor-not-allowed disabled:opacity-50" disabled={disabled} onClick={() => setOpen((current) => !current)} type="button">
+        <span>{copy.add}</span>
+        <span className="text-xs font-normal text-zinc-500">{copy.leafOnly}</span>
       </button>
 
       {links.length > 0 ? (
         <div className="mt-3 space-y-2">
           {links.map((link) => (
-            <div
-              className="rounded-xl border border-emerald-900/70 bg-emerald-950/20 px-3 py-2 text-xs leading-5"
-              key={link.feedbackEventId}
-            >
+            <div className="rounded-xl border border-emerald-900/70 bg-emerald-950/20 px-3 py-2 text-xs leading-5" key={link.feedbackEventId}>
               <span className="font-semibold text-emerald-300">✓ {link.title}</span>
-              {link.canonicalKey ? (
-                <span className="ml-2 text-zinc-500">[{link.canonicalKey}]</span>
-              ) : null}
-              {link.pathText ? (
-                <div className="text-zinc-500">{link.pathText}</div>
-              ) : null}
+              {link.canonicalKey ? <span className="ml-2 text-zinc-500">[{link.canonicalKey}]</span> : null}
+              {link.pathText ? <div className="text-zinc-500">{link.pathText}</div> : null}
             </div>
           ))}
-          <p className="text-xs leading-5 text-zinc-500">
-            {activityEventId
-              ? "Связь с ЦО сохранена в Data Capital и сразу материализована для этой активности как semantic_exposure."
-              : "Эти ручные связи уже сохранены как намерения Data Capital и будут материализованы как semantic_exposure после создания активности."}
-          </p>
+          <p className="text-xs leading-5 text-zinc-500">{activityEventId ? copy.immediateSaved : copy.deferredSaved}</p>
         </div>
       ) : null}
 
       {open ? (
         <div className="mt-3 space-y-3">
-          <input
-            className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={disabled}
-            onChange={(event) => {
-              const nextQuery = event.target.value;
-              setQuery(nextQuery);
-              if (nextQuery.trim().length < 2) {
-                setResults([]);
-                setLoading(false);
-                setError(null);
-              }
-            }}
-            placeholder="Начни вводить название ЦО…"
-            value={query}
-          />
+          <input className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-emerald-600 disabled:cursor-not-allowed disabled:opacity-50" disabled={disabled || confirming} onChange={(event) => { const nextQuery = event.target.value; setQuery(nextQuery); if (nextQuery.trim().length < 2) { setResults([]); setLoading(false); setError(null); } }} placeholder={copy.searchPlaceholder} value={query} />
 
-          {query.trim().length < 2 ? (
-            <p className="text-xs text-zinc-600">Введи минимум 2 символа.</p>
+          {pendingItems.length > 0 ? (
+            <div className="rounded-2xl border border-blue-900/70 bg-blue-950/20 p-3">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-blue-200">
+                <span>{copy.staged}: {pendingItems.length}</span>
+                <button className="rounded-lg border border-zinc-700 px-2 py-1 text-zinc-300 disabled:opacity-50" disabled={confirming} onClick={() => setPendingItems([])} type="button">{copy.clear}</button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {pendingItems.map((item) => (
+                  <button className="rounded-full border border-blue-700 bg-blue-950/50 px-3 py-1 text-xs text-blue-100 hover:border-red-700" disabled={confirming} key={item.id} onClick={() => togglePendingItem(item)} type="button">✓ {item.title} ×</button>
+                ))}
+              </div>
+              <button className="mt-3 w-full rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-semibold text-black hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50" disabled={confirming || pendingItems.length === 0} onClick={() => void confirmPendingLinks()} type="button">{confirming ? copy.confirming : `${copy.confirm} (${pendingItems.length})`}</button>
+            </div>
           ) : null}
-          {loading ? <p className="text-xs text-zinc-500">Ищу…</p> : null}
+
+          {query.trim().length < 2 ? <p className="text-xs text-zinc-600">{copy.minChars}</p> : null}
+          {loading ? <p className="text-xs text-zinc-500">{copy.searching}</p> : null}
           {error ? <p className="text-xs text-red-400">{error}</p> : null}
 
           {results.length > 0 ? (
             <div className="max-h-72 space-y-1 overflow-auto rounded-2xl border border-zinc-800 bg-black p-2">
               {results.map((item) => {
-                const selected = links.some((link) => link.valueObjectId === item.id);
+                const persisted = links.some((link) => link.valueObjectId === item.id);
+                const staged = pendingItems.some((selected) => selected.id === item.id);
                 return (
-                  <button
-                    className="w-full rounded-xl px-3 py-2 text-left hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
-                    disabled={disabled || selected || addingId === item.id}
-                    key={item.id}
-                    onClick={() => void addManualLink(item)}
-                    type="button"
-                  >
-                    <div className="text-sm font-semibold text-zinc-200">
-                      {selected ? "✓ " : ""}{item.title}
-                    </div>
-                    <div className="text-xs leading-5 text-zinc-600">
-                      {item.pathText || item.canonicalKey || item.id}
-                    </div>
+                  <button className={`w-full rounded-xl px-3 py-2 text-left disabled:cursor-not-allowed disabled:opacity-50 ${staged ? "bg-blue-950/50 ring-1 ring-blue-700" : "hover:bg-zinc-900"}`} disabled={disabled || confirming || persisted} key={item.id} onClick={() => togglePendingItem(item)} type="button">
+                    <div className="text-sm font-semibold text-zinc-200">{persisted || staged ? "✓ " : ""}{item.title}</div>
+                    <div className="text-xs leading-5 text-zinc-600">{item.pathText || item.canonicalKey || item.id}</div>
                   </button>
                 );
               })}
@@ -1267,6 +1183,7 @@ export default function ActivityAiLabPage() {
   const router = useRouter();
   const [inputText, setInputText] = useState("");
   const [locale, setLocale] = useState<Locale>("ru");
+  const [uiLocale, setUiLocale] = useState<AiLabUiLocale>("en");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -1285,6 +1202,7 @@ export default function ActivityAiLabPage() {
   const [saveCheckpoint, setSaveCheckpoint] = useState<DirectSaveCheckpoint | null>(null);
   const [reviewActivityEventId, setReviewActivityEventId] = useState<string | null>(null);
   const [reviewModeInitialized, setReviewModeInitialized] = useState(false);
+  const [reviewChangeMode, setReviewChangeMode] = useState(false);
   const [quickCaptureStatus, setQuickCaptureStatus] = useState<QuickCaptureStatus>("idle");
   const [quickCaptureMessage, setQuickCaptureMessage] = useState<string | null>(null);
   const saveRequestIds = useRef<Record<AiLabSaveTemporalDirection, string>>({
@@ -1292,6 +1210,7 @@ export default function ActivityAiLabPage() {
     future: createOperationId(),
   });
   const durableRequestRef = useRef<{ key: string; requestId: string } | null>(null);
+  const ui = AI_LAB_UI_COPY[uiLocale];
 
   const timeZone =
     typeof Intl !== "undefined"
@@ -1308,8 +1227,13 @@ export default function ActivityAiLabPage() {
 
     const params = new URLSearchParams(window.location.search);
     const activityEventId = params.get("reviewActivityEventId")?.trim() || null;
+    const nextUiLocale = normalizeAiLabUiLocale(params.get("locale"));
     const reviewInitTimer = window.setTimeout(() => {
+      setUiLocale(nextUiLocale);
       setReviewActivityEventId(activityEventId);
+      if (!activityEventId) {
+        setLocale(nextUiLocale);
+      }
       setReviewModeInitialized(true);
     }, 0);
 
@@ -1353,7 +1277,7 @@ export default function ActivityAiLabPage() {
         const nextLocale = payload.reviewSnapshot?.locale;
         const normalizedLocale = LOCALES.some((item) => item.code === nextLocale)
           ? (nextLocale as Locale)
-          : locale;
+          : "ru";
 
         if (!preview || preview.ok !== true || !sourceText) {
           throw new Error("Stored P5C review snapshot is incomplete.");
@@ -1371,6 +1295,7 @@ export default function ActivityAiLabPage() {
         setAnalyzedText(sourceText);
         setAnalyzedLocale(normalizedLocale);
         setManualLinks([]);
+        setReviewChangeMode(false);
         setQuickCaptureStatus("saved");
         setQuickCaptureMessage("Активность уже сохранена и ожидает проверки.");
       } catch (caught) {
@@ -1393,7 +1318,7 @@ export default function ActivityAiLabPage() {
     return () => {
       cancelled = true;
     };
-  }, [locale, reviewActivityEventId, reviewModeInitialized]);
+  }, [reviewActivityEventId, reviewModeInitialized]);
 
   const factMaterializationCandidates = useMemo(
     () =>
@@ -1622,7 +1547,9 @@ export default function ActivityAiLabPage() {
           ? `Сохранено активностей: ${createdCount}. Предупреждений материализации фактов: ${warningCount}.`
           : `Сохранено активностей: ${createdCount}. Они добавлены в «Требуют проверки».`,
       );
-      router.push(reviewHref);
+      const reviewUrl = new URL(reviewHref, window.location.origin);
+      reviewUrl.searchParams.set("locale", uiLocale);
+      router.push(reviewUrl.pathname + "?" + reviewUrl.searchParams.toString());
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "Неизвестная ошибка анализа.";
       if (receiptAccepted) {
@@ -1868,21 +1795,16 @@ export default function ActivityAiLabPage() {
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <header className="rounded-3xl border border-zinc-800 bg-zinc-900/70 p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-400">
-            ARCTor · реальный журнал активности
+            {ui.eyebrow}
           </p>
           <h1 className="mt-2 text-2xl font-semibold text-white md:text-3xl">
-            Сообщить, что произошло
+            {ui.title}
           </h1>
           <p className="mt-3 max-w-4xl text-sm leading-6 text-zinc-400">
-            Лучше описывать один основной эпизод за сообщение. В том же сообщении можно
-            указать параллельные действия, мысли, чувства, участников и измеренные величины.
+            {ui.subtitle}
           </p>
           <div className="mt-4 rounded-2xl border border-amber-900/60 bg-amber-950/20 p-4 text-xs leading-5 text-amber-100">
-            Журнал не показывает скрытые внутренние рассуждения модели. Он показывает
-            проверяемый результат обработки: что выделила модель, какие реальные ЦО
-            сервер дал ей на выбор, что она выбрала, какие факты извлечены и что сервер
-            подтвердил или оставил неопределённым, а также какие вторичные смысловые
-            проекции сервер вывел отдельно от основного ЦО.
+            {ui.transparency}
           </div>
         </header>
 
@@ -1892,7 +1814,7 @@ export default function ActivityAiLabPage() {
               className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500"
               htmlFor="activity-ai-input"
             >
-              Сообщение
+              {ui.message}
             </label>
 
             <textarea
@@ -1908,14 +1830,14 @@ export default function ActivityAiLabPage() {
 
                 setInputText(nextValue);
               }}
-              placeholder="Например: сходил в магазин, купил две консервы тунца и макароны, заплатил 20 злотых."
+              placeholder={ui.messagePlaceholder}
               value={inputText}
             />
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
                 <label className="text-xs text-zinc-500" htmlFor="activity-ai-locale">
-                  Язык сообщения
+                  {ui.messageLanguage}
                 </label>
                 <select
                   className="mt-2 w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
@@ -1941,7 +1863,7 @@ export default function ActivityAiLabPage() {
               </div>
 
               <div className="rounded-2xl border border-zinc-800 bg-black/50 p-4">
-                <p className="text-xs text-zinc-500">Часовой пояс</p>
+                <p className="text-xs text-zinc-500">{ui.timeZone}</p>
                 <p className="mt-2 break-all text-sm text-zinc-200">{timeZone}</p>
               </div>
             </div>
@@ -1959,7 +1881,7 @@ export default function ActivityAiLabPage() {
                 onClick={() => void analyze()}
                 type="button"
               >
-                {loading ? "Разбираю…" : "Разобрать активность"}
+                {loading ? ui.analyzing : ui.analyze}
               </button>
 
               <button
@@ -1971,28 +1893,32 @@ export default function ActivityAiLabPage() {
                 }}
                 type="button"
               >
-                Очистить
+                {ui.clear}
               </button>
             </div>
 
             <div className="mt-6 border-t border-zinc-800 pt-5">
               <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                После проверки
+                {ui.afterReview}
               </p>
 
               {fullAnalysisSucceeded ? (
                 <div className="mt-3 space-y-3">
                   {reviewActivityEventId ? (
                     <button
+                      aria-pressed={reviewChangeMode}
                       className="w-full rounded-2xl bg-blue-500 px-4 py-3 text-center text-sm font-semibold text-black hover:bg-blue-400"
-                      onClick={() =>
-                        document
-                          .getElementById("activity-review-tools")
-                          ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                      }
+                      onClick={() => {
+                        setReviewChangeMode(true);
+                        window.requestAnimationFrame(() =>
+                          document
+                            .getElementById("activity-review-tools")
+                            ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                        );
+                      }}
                       type="button"
                     >
-                      Внести изменения
+                      {reviewChangeMode ? ui.editActive : ui.edit}
                     </button>
                   ) : (
                     <div className="rounded-2xl border border-emerald-900/70 bg-emerald-950/20 p-4 text-sm leading-6 text-emerald-200">
@@ -2126,7 +2052,14 @@ export default function ActivityAiLabPage() {
           </div>
 
           <div className="space-y-4" id="activity-review-tools">
+            {reviewActivityEventId && reviewChangeMode ? (
+              <div className="rounded-2xl border border-blue-800 bg-blue-950/30 p-4 text-sm leading-6 text-blue-100">
+                <div>{ui.editBanner}</div>
+                <div className="mt-2 text-xs text-blue-300/80">{ui.sourceReadOnly}</div>
+              </div>
+            ) : null}
             <TracePanel
+              copy={ui.trace}
               lines={trace}
               loading={loading}
               operationId={analysisOperationId || null}
@@ -2135,6 +2068,7 @@ export default function ActivityAiLabPage() {
             analysisOperationId ? (
               <ManualLeafLinkPicker
                 activityEventId={reviewActivityEventId}
+                copy={ui.manualLink}
                 disabled={Boolean(saveCheckpoint?.activityEventId)}
                 links={manualLinks}
                 onLinksChange={setManualLinks}
@@ -2147,7 +2081,7 @@ export default function ActivityAiLabPage() {
         {rawPayload ? (
           <details className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-5">
             <summary className="cursor-pointer text-sm font-semibold text-zinc-300">
-              Технический JSON результата
+              {ui.technicalJson}
             </summary>
             <pre className="mt-4 max-h-[720px] overflow-auto rounded-2xl border border-zinc-800 bg-black p-4 text-xs leading-6 text-zinc-300">
               {JSON.stringify(rawPayload, null, 2)}
@@ -2158,9 +2092,9 @@ export default function ActivityAiLabPage() {
         <footer className="flex flex-wrap gap-3 text-sm">
           <Link
             className="rounded-full border border-zinc-800 px-4 py-2 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200"
-            href="/activity-today?locale=ru"
+            href={`/activity-today?locale=${uiLocale}`}
           >
-            Мой журнал активностей
+            {ui.journal}
           </Link>
         </footer>
       </div>

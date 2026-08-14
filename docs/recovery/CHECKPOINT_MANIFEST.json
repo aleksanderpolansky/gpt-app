@@ -1,11 +1,11 @@
 {
   "schemaVersion": 7,
-  "generatedAt": "2026-08-14T14:05:07.219Z",
+  "generatedAt": "2026-08-14T15:19:08.994Z",
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
-  "branch": "feat/p5c-review-controls-v1-20260814t140426",
-  "originMainAtCheckpoint": "9fa4e0667b8d2883d7fce0678ea68e2b8b5ec9a2",
-  "checkpointMeaning": "P5C saved-activity review screen exposes feedback and manual leaf-link controls immediately; durable background processing remains unchanged.",
+  "branch": "feat/p5c-review-refinements-v1-20260814t151829",
+  "originMainAtCheckpoint": "010f2bb1ab4eee7b4f4b4eb838c64b96cb689031",
+  "checkpointMeaning": "P5C review refinements: confirmed multi-leaf selection, infinitive future intent, source/time preservation, useful edit-mode feedback and UI/message locale separation.",
   "globalReality": {
     "p8Blocked": true,
     "objectsTotal": 150,
@@ -51,7 +51,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Live-test confirm/reject/comment/why and manual + on a saved review activity, then define explicit review-resolved transition.",
+  "nextAction": "Live-test multi-select manual links, 'выгулять собаку 18.00' calendar routing/time/title preservation, and en/es Activity AI Lab localization; then define review resolved transition.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -61,8 +61,8 @@
     "docs/recovery/evidence/EVIDENCE_INDEX.json"
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
-  "previousRecoveryCommit": "9fa4e0667b8d2883d7fce0678ea68e2b8b5ec9a2",
-  "documentedState": "AI_A3_P5C_REVIEW_CONTROLS_V1",
+  "previousRecoveryCommit": "010f2bb1ab4eee7b4f4b4eb838c64b96cb689031",
+  "documentedState": "AI_A3_P5C_REVIEW_REFINEMENTS_V1",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -168,7 +168,7 @@
     "rawLiveDbExportRequiredForCheckpoint": false
   },
   "aiArchitecture": {
-    "status": "AI_A3_P5C_REVIEW_CONTROLS_CODE_RELEASED_AWAITING_LIVE_ACCEPTANCE",
+    "status": "AI_A3_P5C_REVIEW_REFINEMENTS_CODE_RELEASED_AWAITING_LIVE_ACCEPTANCE",
     "sourceBaseline": "07e5b82d8e9c9ee22c995bfb64297e685fefe918",
     "architectureLock": "docs/reality-core/ARCTOR_AI_ARCHITECTURE_LOCK_V1_RU.md",
     "storageAudit": "docs/recovery/specs/ARCTOR_AI_A0_REUSE_ALTER_CREATE_V1_RU.md",
@@ -264,7 +264,12 @@
     "p5bGlobalSystemDetailHotfix": "GLOBAL_FULL_CARD_READ_SCOPE_CODE_RELEASED",
     "p5cReviewControlsImmediate": true,
     "p5cManualLeafImmediateMaterializationOnReview": true,
-    "p5cReviewResolvedTransitionImplemented": false
+    "p5cReviewResolvedTransitionImplemented": false,
+    "p5cReviewManualMultiSelect": true,
+    "p5cInfinitiveFutureIntentRuUk": true,
+    "p5cSingleRowSourcePreservation": true,
+    "p5cFutureClockWithoutDate": true,
+    "p5cUiLocaleSeparatedFromMessageLocale": true
   },
   "aiA3P4FactContractResilience": {
     "status": "implemented_pending_production_acceptance",

@@ -512,3 +512,11 @@ P5B live UI acceptance confirmed mutual links on /activity-facts and /activity-t
 - «+ Добавить связь с ЦО» доступен сразу; для уже созданной activity_event ручная leaf-связь немедленно материализуется как semantic_exposure.
 - Статус quickCaptureReviewStatus остаётся pending; автоматическое закрытие проверки в этот шаг не добавляется.
 - Следующее действие: live acceptance review controls, затем отдельный контракт завершения проверки.
+
+## AI_A3_P5C_REVIEW_REFINEMENTS_V1
+- Review manual leaf picker переведён на staged multi-select: можно выбрать произвольное число ЦО/ОН и материализовать их одной кнопкой подтверждения.
+- RU/UK task-like инфинитив (например «выгулять собаку») детерминированно считается future intent; future clock без даты назначается на ближайшее предстоящее wall-clock время.
+- Durable source preservation сохраняет полный исходный текст single-row активности, включая «18.00», а multi-row сохраняет независимость действий.
+- UI locale Activity AI Lab отделён от языка сообщения; review snapshot больше не переключает интерфейс на язык исходного текста.
+- Кнопка «Внести изменения» открывает явный change mode и показывает назначение доступных review-инструментов.
+- Следующее действие: live acceptance multi-select, «выгулять собаку 18.00» -> calendar, locale=en/es shell, затем отдельный resolved-transition contract.

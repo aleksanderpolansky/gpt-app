@@ -536,3 +536,10 @@ Live P5B acceptance: Facts page showed `31 minute`, the linked `Ходьба` ch
 - Причина UI-дефекта: reviewActivityEventId + !reviewEditing принудительно передавали operationId=null в TracePanel и скрывали ManualLeafLinkPicker.
 - Исправление не откатывает Durable Handoff: сохранённый analysis operationId используется для append-only feedback; ручной + для существующей activity_event сразу вызывает manual-link-materialize.
 - ✓ / ✕ / ✎ являются решениями/объяснениями review и остаются append-only Data Capital; этот шаг не объявляет review resolved автоматически.
+
+## P5C review refinements: source/time/intent/localization
+- Причина потери «18.00»: durable writer строил rawText/title из model row.sourceFragment вместо полного пользовательского sourceMessageText; temporal evidence оставалось только в preview.
+- Причина записи инфинитивного «выгулять» в past: temporal-direction fallback был past и не имел RU/UK task-like infinitive guard.
+- Clock parser уже распознавал 18.00, но future exact требовал одновременно date+clock; clock-only future теперь выбирает ближайшую будущую дату.
+- UI locale и message locale разделены. Message locale остаётся языком анализа, URL locale управляет интерфейсом.
+- Новые детерминированные правила intent/source зарегистрированы в /admin/ai-instructions как read-only system guards с source path и change steps.

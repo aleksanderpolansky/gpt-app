@@ -11,6 +11,7 @@ import {
   type AiLabQuickCaptureRow,
 } from "@/lib/activity/aiLabQuickCapture";
 import { executeActivityQuickCaptureProcessingRules } from "@/lib/ai/processingRuleExecutor.server";
+import { buildAiLabQuickCaptureSourceTexts } from "@/lib/activity/quickCaptureSourceText";
 import type { ActivityTimingLocalePp1 } from "@/lib/activity/pp1/activityTiming";
 
 export const AI_A3_P5C_DURABLE_HANDOFF_CONTRACT =
@@ -390,7 +391,10 @@ export async function processDurableQuickCaptureSignal(input: {
     }
 
     const rows = (analysis.preview.rows ?? []) as AiLabQuickCaptureRow[];
-    const sourceFragments = rows.map((row) => row.sourceFragment?.trim() || inputText);
+    const sourceFragments = buildAiLabQuickCaptureSourceTexts({
+      rows,
+      sourceMessageText: inputText,
+    });
     const timings = buildAiLabQuickCaptureSequentialTimings({
       rows,
       sourceTexts: sourceFragments,

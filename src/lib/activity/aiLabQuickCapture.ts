@@ -8,6 +8,7 @@ import {
   type ActivityTimingLocalePp1,
   type ActivityTemporalDirectionPp1,
 } from "@/lib/activity/pp1/activityTiming";
+import { hasInfinitiveFutureIntent } from "@/lib/activity/quickCaptureIntent";
 import {
   dateKeyInTimeZone,
   datetimeLocalInTimeZoneToIso,
@@ -191,6 +192,10 @@ export function inferAiLabQuickCaptureTemporalDirection(input: {
     .normalize("NFKC");
 
   if (containsFutureText(temporalEvidence, input.locale)) {
+    return "future";
+  }
+
+  if (hasInfinitiveFutureIntent(input.sourceText, input.locale)) {
     return "future";
   }
 

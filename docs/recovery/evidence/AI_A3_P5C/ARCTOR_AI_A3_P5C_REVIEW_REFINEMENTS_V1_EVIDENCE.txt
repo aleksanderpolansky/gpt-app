@@ -1,0 +1,12 @@
+CONTRACT=AI_A3_P5C_REVIEW_REFINEMENTS_V1
+BASELINE=010f2bb1ab4eee7b4f4b4eb838c64b96cb689031
+RECORDED_AT=2026-08-14T15:19:08.994Z
+MULTI_VO_SELECTION=staged arbitrary-count leaf selection with explicit confirm
+MANUAL_LINK_MATERIALIZATION=confirmed selections materialize immediately for saved review activity
+INFINITIVE_FUTURE=RU/UK task-like infinitive routes to planned/future
+CLOCK_WITHOUT_DATE=future clock chooses nearest upcoming occurrence
+SOURCE_PRESERVATION=single-row keeps exact original message including explicit time
+UI_LOCALE=separate from message locale; review snapshot does not overwrite shell locale
+REVIEW_EDIT_BUTTON=opens visible change mode and scrolls to review tools
+DB_MIGRATION=none
+OPENAI_CALLS_ADDED=0
