@@ -248,3 +248,17 @@ Restore requires: P5A code baseline plus live writer rowtype hotfix V3 (`supabas
 ## AI-A3 P5B GLOBAL detail hotfix restore point — 2026-08-13
 
 Baseline: P5B commit `1061958ef8a43b375b82f70eb7342acb8afc47e6`. The hotfix changes only source/recovery; no SQL/schema migration. Required invariant: `/value-objects/[id]` may read an object when it is either owned by the active app user/actor OR is `scope_code=global` + `origin_type_code=system_model`. GLOBAL System objects are read-only and use GLOBAL tree/path resolution. Reverting this hotfix restores the P5B 404 for GLOBAL leaf links but does not alter P5A/P5B stored data.
+
+
+## Restore point — AI-A3 P5B Mobile GLOBAL Localization v2
+
+После восстановления commit этого hotfix проверить:
+
+1. `node scripts/validate-ai-a3-p5b-mobile-global-localization-v2.mjs`;
+2. P5B global-detail и mutual-links validators;
+3. `npm run build`;
+4. `/value-objects?locale=pl` и `/value-objects?locale=es` показывают локализованные GLOBAL title/description/path;
+5. GLOBAL leaf открывается, но edit/restructure остаются недоступны;
+6. на мобильной ширине карточки не расширяют viewport.
+
+Следующий шаг после live acceptance: P5C quick capture + review buffer.

@@ -424,3 +424,18 @@ AI-A3-P5A production acceptance is closed 12/12. The canonical writer hotfix V3 
 ## AI_A3_P5B_GLOBAL_SYSTEM_VALUE_OBJECT_DETAIL_HOTFIX_V1 — 2026-08-13
 
 P5B live UI acceptance confirmed mutual links on /activity-facts and /activity-today, but opening the linked GLOBAL leaf `process.movement.walking` returned 404. Root cause: `/value-objects/[id]` still loaded only `owner_user_id + owner_actor_id` rows even though the combined catalog and P5B APIs already expose GLOBAL System objects. The hotfix allows authenticated read-only detail for active/system GLOBAL ontology objects while preserving actor ownership for non-global objects. Global objects remain non-editable/non-restructurable. Their tree/path is read from `scope_code=global`, and ontology node roles drive root/intermediate/leaf rendering so the P5B leaf history panel can render. No DB writes/OpenAI calls are added.
+
+
+## AI-A3 P5B Mobile GLOBAL Catalog Localization Hotfix v2
+
+Дата: 2026-08-13.
+
+- baseline: `d5a474860241aa261220ccaf8e7bd91e8e43da3a`;
+- мобильный `/value-objects` ограничен по ширине и не должен создавать горизонтальный overflow;
+- GLOBAL/System карточки открывают общую read-only detail page;
+- 150 GLOBAL System canonical keys имеют title/description для en/pl/ru/uk/de/es/cs;
+- list/detail/path используют локаль интерфейса;
+- actor-scoped пользовательские ЦО/ОН не переводятся автоматически;
+- GLOBAL edit/restructure права не добавлены;
+- SQL, DB writes и OpenAI вызовы отсутствуют;
+- после live UI acceptance закрыть P5B и перейти к P5C quick capture + review buffer.

@@ -8,6 +8,7 @@ import {
 } from "../../../../lib/actor-context";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
+import { localizeGlobalSystemValueObject } from "@/lib/reality-core/global-system-value-object-localization";
 import { ValueObjectInlineEditor } from "@/components/workspace/value-objects/value-object-inline-editor";
 import { ValueObjectSemanticDefinitionEditor } from "@/components/workspace/value-objects/value-object-semantic-definition-editor";
 import { ValueObjectAliasEditor } from "@/components/workspace/value-objects/value-object-alias-editor";
@@ -79,6 +80,7 @@ type ValueObjectRow = {
 type TreeNodeRow = {
   id: string;
   title: string;
+  canonical_key: string | null;
   node_role_code: string | null;
   object_kind: string | null;
   object_kind_code: string | null;
@@ -1120,15 +1122,19 @@ export default async function ValueObjectDetailPage({
     throw new Error(valueObjectError.message);
   }
 
-  const valueObject = valueObjectData as ValueObjectRow | null;
+  const rawValueObject = valueObjectData as ValueObjectRow | null;
 
-  if (!valueObject) {
+  if (!rawValueObject) {
     notFound();
   }
 
+  let valueObject = rawValueObject;
   const isGlobalSystemObject =
     valueObject.scope_code === "global" &&
     valueObject.origin_type_code === "system_model";
+  if (isGlobalSystemObject) {
+    valueObject = localizeGlobalSystemValueObject(valueObject, locale);
+  }
   const isOwnedByActiveActor =
     valueObject.owner_user_id === actorContext.appUserId &&
     valueObject.owner_actor_id === actorContext.actorId;
@@ -1164,6 +1170,7 @@ export default async function ValueObjectDetailPage({
       `
       id,
       title,
+      canonical_key,
       node_role_code,
       object_kind,
       object_kind_code,
@@ -1210,7 +1217,10 @@ export default async function ValueObjectDetailPage({
     criteriaData = (data ?? []) as CriterionRow[];
   }
 
-  const treeNodes = (treeData ?? []) as TreeNodeRow[];
+  const rawTreeNodes = (treeData ?? []) as TreeNodeRow[];
+  const treeNodes = isGlobalSystemObject
+    ? rawTreeNodes.map((node) => localizeGlobalSystemValueObject(node, locale))
+    : rawTreeNodes;
   const nodesById = new Map(
     treeNodes.map((node) => [node.id, node] as const),
   );

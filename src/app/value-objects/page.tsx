@@ -69,8 +69,8 @@ export default async function ValueObjectsPage({
   const superOfferHref = buildLocaleAwareHref("/offers/new", locale);
 
   return (
-    <main className="min-h-screen bg-[#f5f6fb] px-5 py-5 text-[#1a1d2e]">
-      <div className="mx-auto grid w-full max-w-[1280px] gap-5">
+    <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#f5f6fb] px-3 py-5 text-[#1a1d2e] sm:px-5">
+      <div className="mx-auto grid min-w-0 w-full max-w-[1280px] gap-5">
         <div className="flex flex-wrap justify-end gap-2">
           <Link
             href={createRootHref}

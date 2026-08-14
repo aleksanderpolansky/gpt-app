@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-13T17:32:00+02:00",
+  "generatedAt": "2026-08-14T04:54:22.341Z",
   "copiedCount": 57,
   "generatedEvidenceCount": 2,
-  "indexedCount": 73,
+  "indexedCount": 74,
   "missingPatterns": [],
   "files": [
     {
@@ -505,6 +505,13 @@
       "sourceDownloadsName": null,
       "sha256": "b1aa00447cc04dfdb5c5f932b7b319777c6fba6aadb3936aeba2494430ce053f",
       "origin": "AI_A3_P5B_global_system_value_object_detail_404_hotfix_local_validation"
+    },
+    {
+      "group": "AI_A3",
+      "file": "docs/recovery/evidence/AI_A3/ARCTOR_AI_A3_P5B_MOBILE_GLOBAL_LOCALIZATION_V2_LOCAL_VALIDATION_20260813.txt",
+      "sourceDownloadsName": null,
+      "sha256": "f32610d4f59fced71783797159e2f870878e4366c692bd5b2c3f0eb581a36282",
+      "origin": "AI_A3_P5B_mobile_global_localization_v2_precommit_validation"
     }
   ]
 }

@@ -5,6 +5,7 @@ import {
 } from "../../../../lib/actor-context";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
+import { localizeGlobalSystemValueObject } from "@/lib/reality-core/global-system-value-object-localization";
 import {
   isValueObjectLeafKindV2,
   isValueObjectStructuralKindV2,
@@ -359,7 +360,8 @@ async function verifyOrganizationAccess(
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const locale = normalizeLocale(new URL(request.url).searchParams.get("locale")) ?? "en";
   const { appUser, personActor, errorResponse } =
     await getCurrentUserContext();
 
@@ -437,9 +439,16 @@ export async function GET() {
     },
   );
 
+  const localizedObservationValueObjects = observationValueObjects.map(
+    (valueObject) =>
+      valueObject.scope_code === "global"
+        ? localizeGlobalSystemValueObject(valueObject, locale)
+        : valueObject,
+  );
+
   return NextResponse.json({
     ok: true,
-    valueObjects: observationValueObjects,
+    valueObjects: localizedObservationValueObjects,
     counts: {
       total: observationValueObjects.length,
       global: observationValueObjects.filter(

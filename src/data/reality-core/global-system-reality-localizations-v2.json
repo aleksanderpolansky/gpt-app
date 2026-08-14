@@ -1,0 +1,3015 @@
+{
+  "schemaVersion": 2,
+  "catalogId": "GLOBAL_SYSTEM_REALITY_LOCALIZATION_V2",
+  "locales": [
+    "en",
+    "pl",
+    "ru",
+    "uk",
+    "de",
+    "es",
+    "cs"
+  ],
+  "objects": {
+    "domain.body_physiology": {
+      "title": {
+        "ru": "Тело и физиологическое состояние",
+        "en": "Body and physiological state",
+        "pl": "Ciało i stan fizjologiczny",
+        "uk": "Тіло та фізіологічний стан",
+        "de": "Körper und physiologischer Zustand",
+        "es": "Cuerpo y estado fisiológico",
+        "cs": "Tělo a fyziologický stav"
+      },
+      "description": {
+        "ru": "вес, пульс, давление, боль, усталость, анатомическая локализация",
+        "en": "weight, heart rate, blood pressure, pain, fatigue, anatomical location",
+        "pl": "masa ciała, tętno, ciśnienie krwi, ból, zmęczenie, lokalizacja anatomiczna",
+        "uk": "маса тіла, пульс, артеріальний тиск, біль, втома, анатомічна локалізація",
+        "de": "Gewicht, Herzfrequenz, Blutdruck, Schmerz, Ermüdung, anatomische Lokalisation",
+        "es": "peso, frecuencia cardíaca, presión arterial, dolor, fatiga, localización anatómica",
+        "cs": "hmotnost, srdeční frekvence, krevní tlak, bolest, únava, anatomická lokalizace"
+      }
+    },
+    "domain.environment_context": {
+      "title": {
+        "ru": "Окружающая среда и контекст",
+        "en": "Environment and context",
+        "pl": "Środowisko i kontekst",
+        "uk": "Довкілля та контекст",
+        "de": "Umgebung und Kontext",
+        "es": "Entorno y contexto",
+        "cs": "Prostředí a kontext"
+      },
+      "description": {
+        "ru": "температура воздуха, облачность, осадки, влажность, ветер, шум, освещённость, indoor/outdoor",
+        "en": "air temperature, cloudiness, precipitation, humidity, wind, noise, illumination, indoor/outdoor",
+        "pl": "temperatura powietrza, zachmurzenie, opady, wilgotność, wiatr, hałas, oświetlenie, wewnątrz/na zewnątrz",
+        "uk": "температура повітря, хмарність, опади, вологість, вітер, шум, освітленість, у приміщенні/надворі",
+        "de": "Lufttemperatur, Bewölkung, Niederschlag, Luftfeuchte, Wind, Lärm, Beleuchtung, innen/außen",
+        "es": "temperatura del aire, nubosidad, precipitación, humedad, viento, ruido, iluminación, interior/exterior",
+        "cs": "teplota vzduchu, oblačnost, srážky, vlhkost, vítr, hluk, osvětlení, uvnitř/venku"
+      }
+    },
+    "domain.finance_material_resources": {
+      "title": {
+        "ru": "Финансы и материальные ресурсы",
+        "en": "Finance and material resources",
+        "pl": "Finanse i zasoby materialne",
+        "uk": "Фінанси та матеріальні ресурси",
+        "de": "Finanzen und materielle Ressourcen",
+        "es": "Finanzas y recursos materiales",
+        "cs": "Finance a materiální zdroje"
+      },
+      "description": {
+        "ru": "деньги, покупка, расход, доход, перевод, баланс",
+        "en": "money, purchase, expense, income, transfer, balance",
+        "pl": "pieniądze, zakup, wydatek, dochód, przelew, saldo",
+        "uk": "гроші, купівля, витрати, дохід, переказ, баланс",
+        "de": "Geld, Kauf, Ausgabe, Einkommen, Überweisung, Saldo",
+        "es": "dinero, compra, gasto, ingreso, transferencia, saldo",
+        "cs": "peníze, nákup, výdaj, příjem, převod, zůstatek"
+      }
+    },
+    "domain.home_daily_life": {
+      "title": {
+        "ru": "Дом и повседневная жизнь",
+        "en": "Home and daily life",
+        "pl": "Dom i życie codzienne",
+        "uk": "Дім і повсякденне життя",
+        "de": "Haushalt und Alltag",
+        "es": "Hogar y vida cotidiana",
+        "cs": "Domov a každodenní život"
+      },
+      "description": {
+        "ru": "готовка, уборка, стирка, ремонт, обслуживание вещей, бытовая задача",
+        "en": "cooking, cleaning, laundry, repair, maintenance of things, household task",
+        "pl": "gotowanie, sprzątanie, pranie, naprawa, konserwacja rzeczy, zadanie domowe",
+        "uk": "готування, прибирання, прання, ремонт, обслуговування речей, побутове завдання",
+        "de": "Kochen, Reinigung, Wäsche, Reparatur, Pflege von Dingen, Haushaltsaufgabe",
+        "es": "cocinar, limpiar, lavar ropa, reparar, mantener objetos, tarea doméstica",
+        "cs": "vaření, úklid, praní, opravy, údržba věcí, domácí úkol"
+      }
+    },
+    "domain.learning_knowledge_development": {
+      "title": {
+        "ru": "Обучение, знания и развитие",
+        "en": "Learning, knowledge and development",
+        "pl": "Nauka, wiedza i rozwój",
+        "uk": "Навчання, знання та розвиток",
+        "de": "Lernen, Wissen und Entwicklung",
+        "es": "Aprendizaje, conocimiento y desarrollo",
+        "cs": "Učení, znalosti a rozvoj"
+      },
+      "description": {
+        "ru": "учёба, практика, повторение, языковая практика, тест/экзамен, понимание",
+        "en": "study, practice, repetition, language practice, test/exam, understanding",
+        "pl": "nauka, praktyka, powtarzanie, praktyka językowa, test/egzamin, rozumienie",
+        "uk": "навчання, практика, повторення, мовна практика, тест/іспит, розуміння",
+        "de": "Lernen, Übung, Wiederholung, Sprachpraxis, Test/Prüfung, Verständnis",
+        "es": "estudio, práctica, repetición, práctica lingüística, prueba/examen, comprensión",
+        "cs": "studium, praxe, opakování, jazyková praxe, test/zkouška, porozumění"
+      }
+    },
+    "domain.mental_cognitive_state": {
+      "title": {
+        "ru": "Психическое и когнитивное состояние",
+        "en": "Mental and cognitive state",
+        "pl": "Stan psychiczny i poznawczy",
+        "uk": "Психічний і когнітивний стан",
+        "de": "Psychischer und kognitiver Zustand",
+        "es": "Estado mental y cognitivo",
+        "cs": "Psychický a kognitivní stav"
+      },
+      "description": {
+        "ru": "настроение, стресс, тревога, спокойствие, внимание, концентрация, умственная нагрузка",
+        "en": "mood, stress, anxiety, calmness, attention, concentration, mental workload",
+        "pl": "nastrój, stres, lęk, spokój, uwaga, koncentracja, obciążenie umysłowe",
+        "uk": "настрій, стрес, тривога, спокій, увага, концентрація, розумове навантаження",
+        "de": "Stimmung, Stress, Angst, Ruhe, Aufmerksamkeit, Konzentration, mentale Belastung",
+        "es": "estado de ánimo, estrés, ansiedad, calma, atención, concentración, carga mental",
+        "cs": "nálada, stres, úzkost, klid, pozornost, soustředění, mentální zátěž"
+      }
+    },
+    "domain.movement_physical_activity": {
+      "title": {
+        "ru": "Движение и физическая активность",
+        "en": "Movement and physical activity",
+        "pl": "Ruch i aktywność fizyczna",
+        "uk": "Рух і фізична активність",
+        "de": "Bewegung und körperliche Aktivität",
+        "es": "Movimiento y actividad física",
+        "cs": "Pohyb a fyzická aktivita"
+      },
+      "description": {
+        "ru": "ходьба, бег, тренировка, планка, обратная планка, силовые упражнения, сидение",
+        "en": "walking, running, exercise, plank, reverse plank, strength exercises, sitting",
+        "pl": "chodzenie, bieganie, ćwiczenia, deska, odwrócona deska, ćwiczenia siłowe, siedzenie",
+        "uk": "ходьба, біг, тренування, планка, зворотна планка, силові вправи, сидіння",
+        "de": "Gehen, Laufen, Training, Unterarmstütz, umgekehrter Stütz, Kraftübungen, Sitzen",
+        "es": "caminar, correr, ejercicio, plancha, plancha inversa, ejercicios de fuerza, estar sentado",
+        "cs": "chůze, běh, cvičení, prkno, obrácené prkno, silová cvičení, sezení"
+      }
+    },
+    "domain.nutrition_consumption": {
+      "title": {
+        "ru": "Питание и потребление",
+        "en": "Nutrition and consumption",
+        "pl": "Żywienie i spożycie",
+        "uk": "Харчування і споживання",
+        "de": "Ernährung und Konsum",
+        "es": "Nutrición y consumo",
+        "cs": "Výživa a příjem"
+      },
+      "description": {
+        "ru": "приём пищи, вода, кофеин, алкоголь, голод, сытость, жажда",
+        "en": "meals, water, caffeine, alcohol, hunger, satiety, thirst",
+        "pl": "posiłki, woda, kofeina, alkohol, głód, sytość, pragnienie",
+        "uk": "прийом їжі, вода, кофеїн, алкоголь, голод, ситість, спрага",
+        "de": "Mahlzeiten, Wasser, Koffein, Alkohol, Hunger, Sättigung, Durst",
+        "es": "comidas, agua, cafeína, alcohol, hambre, saciedad, sed",
+        "cs": "jídlo, voda, kofein, alkohol, hlad, sytost, žízeň"
+      }
+    },
+    "domain.relationships_social_life": {
+      "title": {
+        "ru": "Отношения, семья и социальная жизнь",
+        "en": "Relationships, family and social life",
+        "pl": "Relacje, rodzina i życie społeczne",
+        "uk": "Стосунки, сім’я та соціальне життя",
+        "de": "Beziehungen, Familie und Sozialleben",
+        "es": "Relaciones, familia y vida social",
+        "cs": "Vztahy, rodina a společenský život"
+      },
+      "description": {
+        "ru": "разговор, совместное время, конфликт, поддержка, забота, родительская/партнёрская роль",
+        "en": "conversation, shared time, conflict, support, care, parent/partner role",
+        "pl": "rozmowa, wspólny czas, konflikt, wsparcie, opieka, rola rodzica/partnera",
+        "uk": "розмова, спільний час, конфлікт, підтримка, турбота, батьківська/партнерська роль",
+        "de": "Gespräch, gemeinsame Zeit, Konflikt, Unterstützung, Fürsorge, Eltern-/Partnerrolle",
+        "es": "conversación, tiempo compartido, conflicto, apoyo, cuidado, rol de padre/madre o pareja",
+        "cs": "rozhovor, společný čas, konflikt, podpora, péče, rodičovská/partnerská role"
+      }
+    },
+    "domain.rest_creativity_leisure": {
+      "title": {
+        "ru": "Отдых, творчество и досуг",
+        "en": "Rest, creativity and leisure",
+        "pl": "Odpoczynek, twórczość i czas wolny",
+        "uk": "Відпочинок, творчість і дозвілля",
+        "de": "Erholung, Kreativität und Freizeit",
+        "es": "Descanso, creatividad y ocio",
+        "cs": "Odpočinek, tvořivost a volný čas"
+      },
+      "description": {
+        "ru": "игра на инструменте, музыка, творчество, игра, культурный досуг, отдых",
+        "en": "playing an instrument, music, creativity, games, cultural leisure, rest",
+        "pl": "gra na instrumencie, muzyka, twórczość, gry, aktywność kulturalna, odpoczynek",
+        "uk": "гра на інструменті, музика, творчість, ігри, культурне дозвілля, відпочинок",
+        "de": "Instrument spielen, Musik, Kreativität, Spiele, kulturelle Freizeit, Erholung",
+        "es": "tocar un instrumento, música, creatividad, juegos, ocio cultural, descanso",
+        "cs": "hra na nástroj, hudba, tvořivost, hry, kulturní volný čas, odpočinek"
+      }
+    },
+    "domain.sleep_recovery": {
+      "title": {
+        "ru": "Сон и восстановление",
+        "en": "Sleep and recovery",
+        "pl": "Sen i regeneracja",
+        "uk": "Сон і відновлення",
+        "de": "Schlaf und Erholung",
+        "es": "Sueño y recuperación",
+        "cs": "Spánek a regenerace"
+      },
+      "description": {
+        "ru": "ночной сон, дневной сон, отдых, сонливость, восстановленность",
+        "en": "night sleep, daytime sleep, rest, sleepiness, recovered state",
+        "pl": "sen nocny, sen dzienny, odpoczynek, senność, regeneracja",
+        "uk": "нічний сон, денний сон, відпочинок, сонливість, відновленість",
+        "de": "Nachtschlaf, Tagschlaf, Ruhe, Schläfrigkeit, Erholtheit",
+        "es": "sueño nocturno, sueño diurno, descanso, somnolencia, recuperación",
+        "cs": "noční spánek, denní spánek, odpočinek, ospalost, zotavení"
+      }
+    },
+    "domain.work_professional_activity": {
+      "title": {
+        "ru": "Работа и профессиональная деятельность",
+        "en": "Work and professional activity",
+        "pl": "Praca i aktywność zawodowa",
+        "uk": "Робота і професійна діяльність",
+        "de": "Arbeit und berufliche Tätigkeit",
+        "es": "Trabajo y actividad profesional",
+        "cs": "Práce a profesní činnost"
+      },
+      "description": {
+        "ru": "рабочая сессия, встреча, клиентское взаимодействие, административная работа, рабочая нагрузка",
+        "en": "work session, meeting, client interaction, administrative work, workload",
+        "pl": "sesja pracy, spotkanie, kontakt z klientem, praca administracyjna, obciążenie pracą",
+        "uk": "робоча сесія, зустріч, взаємодія з клієнтом, адміністративна робота, робоче навантаження",
+        "de": "Arbeitssitzung, Besprechung, Kundeninteraktion, Verwaltungsarbeit, Arbeitsbelastung",
+        "es": "sesión de trabajo, reunión, interacción con clientes, trabajo administrativo, carga de trabajo",
+        "cs": "pracovní relace, schůzka, interakce s klientem, administrativní práce, pracovní zátěž"
+      }
+    },
+    "entity.body_structure": {
+      "title": {
+        "ru": "Анатомические структуры",
+        "en": "Anatomical structures",
+        "pl": "Struktury anatomiczne",
+        "uk": "Анатомічні структури",
+        "de": "Anatomische Strukturen",
+        "es": "Estructuras anatómicas",
+        "cs": "Anatomické struktury"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "state.physiology": {
+      "title": {
+        "ru": "Физиологические показатели и симптомы",
+        "en": "Physiological indicators and symptoms",
+        "pl": "Wskaźniki fizjologiczne i objawy",
+        "uk": "Фізіологічні показники та симптоми",
+        "de": "Physiologische Messwerte und Symptome",
+        "es": "Indicadores fisiológicos y síntomas",
+        "cs": "Fyziologické ukazatele a příznaky"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "process.physiology": {
+      "title": {
+        "ru": "Физиологические процессы",
+        "en": "Physiological processes",
+        "pl": "Procesy fizjologiczne",
+        "uk": "Фізіологічні процеси",
+        "de": "Physiologische Prozesse",
+        "es": "Procesos fisiológicos",
+        "cs": "Fyziologické procesy"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "context.weather": {
+      "title": {
+        "ru": "Погодные и атмосферные условия",
+        "en": "Weather and atmospheric conditions",
+        "pl": "Warunki pogodowe i atmosferyczne",
+        "uk": "Погодні та атмосферні умови",
+        "de": "Wetter- und atmosphärische Bedingungen",
+        "es": "Condiciones meteorológicas y atmosféricas",
+        "cs": "Počasí a atmosférické podmínky"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "context.environment": {
+      "title": {
+        "ru": "Физический контекст среды",
+        "en": "Physical environmental context",
+        "pl": "Fizyczny kontekst środowiska",
+        "uk": "Фізичний контекст середовища",
+        "de": "Physischer Umgebungskontext",
+        "es": "Contexto físico del entorno",
+        "cs": "Fyzický kontext prostředí"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "context.resources": {
+      "title": {
+        "ru": "Ресурсный контекст",
+        "en": "Resource context",
+        "pl": "Kontekst zasobów",
+        "uk": "Ресурсний контекст",
+        "de": "Ressourcenkontext",
+        "es": "Contexto de recursos",
+        "cs": "Kontext zdrojů"
+      },
+      "description": {
+        "ru": "Facet entry для доступных ресурсов контекста, не являющихся самостоятельными DOMAIN.",
+        "en": "Facet entry for available contextual resources that are not standalone DOMAIN roots.",
+        "pl": "Wejście płaszczyzny dla dostępnych zasobów kontekstowych, które nie są samodzielnymi korzeniami DOMAIN.",
+        "uk": "Вхід до смислової площини для доступних контекстних ресурсів, які не є самостійними коренями DOMAIN.",
+        "de": "Facetten-Einstieg für verfügbare Kontextressourcen, die keine eigenständigen DOMAIN-Wurzeln sind.",
+        "es": "Entrada de faceta para recursos contextuales disponibles que no son raíces DOMAIN independientes.",
+        "cs": "Vstup do fasety pro dostupné kontextové zdroje, které nejsou samostatnými kořeny DOMAIN."
+      }
+    },
+    "process.finance": {
+      "title": {
+        "ru": "Денежные операции",
+        "en": "Financial transactions",
+        "pl": "Operacje pieniężne",
+        "uk": "Грошові операції",
+        "de": "Geldtransaktionen",
+        "es": "Operaciones monetarias",
+        "cs": "Peněžní operace"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "entity.finance": {
+      "title": {
+        "ru": "Денежные и материальные ресурсы",
+        "en": "Financial and material resources",
+        "pl": "Zasoby finansowe i materialne",
+        "uk": "Грошові та матеріальні ресурси",
+        "de": "Finanzielle und materielle Ressourcen",
+        "es": "Recursos financieros y materiales",
+        "cs": "Finanční a materiální zdroje"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "state.finance": {
+      "title": {
+        "ru": "Финансовые состояния",
+        "en": "Financial states",
+        "pl": "Stany finansowe",
+        "uk": "Фінансові стани",
+        "de": "Finanzielle Zustände",
+        "es": "Estados financieros",
+        "cs": "Finanční stavy"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "process.home": {
+      "title": {
+        "ru": "Бытовые процессы",
+        "en": "Household processes",
+        "pl": "Procesy domowe",
+        "uk": "Побутові процеси",
+        "de": "Haushaltsprozesse",
+        "es": "Procesos domésticos",
+        "cs": "Domácí procesy"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "entity.home": {
+      "title": {
+        "ru": "Домашняя среда и вещи",
+        "en": "Home environment and items",
+        "pl": "Środowisko domowe i przedmioty",
+        "uk": "Домашнє середовище та речі",
+        "de": "Wohnumgebung und Gegenstände",
+        "es": "Entorno doméstico y objetos",
+        "cs": "Domácí prostředí a věci"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "process.learning": {
+      "title": {
+        "ru": "Учебные процессы",
+        "en": "Learning processes",
+        "pl": "Procesy uczenia się",
+        "uk": "Навчальні процеси",
+        "de": "Lernprozesse",
+        "es": "Procesos de aprendizaje",
+        "cs": "Procesy učení"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "state.learning": {
+      "title": {
+        "ru": "Состояния освоения",
+        "en": "Learning states",
+        "pl": "Stany opanowania materiału",
+        "uk": "Стани засвоєння",
+        "de": "Lern- und Beherrschungszustände",
+        "es": "Estados de aprendizaje",
+        "cs": "Stavy osvojení"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "knowledge.general": {
+      "title": {
+        "ru": "Общие знания",
+        "en": "General knowledge",
+        "pl": "Wiedza ogólna",
+        "uk": "Загальні знання",
+        "de": "Allgemeines Wissen",
+        "es": "Conocimiento general",
+        "cs": "Obecné znalosti"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "state.emotional": {
+      "title": {
+        "ru": "Эмоциональные состояния",
+        "en": "Emotional states",
+        "pl": "Stany emocjonalne",
+        "uk": "Емоційні стани",
+        "de": "Emotionale Zustände",
+        "es": "Estados emocionales",
+        "cs": "Emoční stavy"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "state.cognitive": {
+      "title": {
+        "ru": "Когнитивные состояния",
+        "en": "Cognitive states",
+        "pl": "Stany poznawcze",
+        "uk": "Когнітивні стани",
+        "de": "Kognitive Zustände",
+        "es": "Estados cognitivos",
+        "cs": "Kognitivní stavy"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "process.cognitive": {
+      "title": {
+        "ru": "Когнитивная работа",
+        "en": "Cognitive work",
+        "pl": "Praca poznawcza",
+        "uk": "Когнітивна робота",
+        "de": "Kognitive Arbeit",
+        "es": "Trabajo cognitivo",
+        "cs": "Kognitivní práce"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "process.movement.locomotion": {
+      "title": {
+        "ru": "Передвижение",
+        "en": "Locomotion",
+        "pl": "Przemieszczanie się",
+        "uk": "Пересування",
+        "de": "Fortbewegung",
+        "es": "Desplazamiento",
+        "cs": "Pohyb z místa na místo"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "process.exercise": {
+      "title": {
+        "ru": "Упражнения",
+        "en": "Exercise",
+        "pl": "Ćwiczenia",
+        "uk": "Вправи",
+        "de": "Übungen",
+        "es": "Ejercicio",
+        "cs": "Cvičení"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "behavior.movement": {
+      "title": {
+        "ru": "Повседневная двигательная экспозиция",
+        "en": "Everyday movement exposure",
+        "pl": "Codzienna ekspozycja ruchowa",
+        "uk": "Повсякденна рухова експозиція",
+        "de": "Alltägliche Bewegungsexposition",
+        "es": "Exposición cotidiana al movimiento",
+        "cs": "Každodenní pohybová expozice"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "process.nutrition": {
+      "title": {
+        "ru": "Приём пищи и напитков",
+        "en": "Food and drink intake",
+        "pl": "Przyjmowanie jedzenia i napojów",
+        "uk": "Прийом їжі та напоїв",
+        "de": "Nahrungs- und Getränkeaufnahme",
+        "es": "Ingesta de alimentos y bebidas",
+        "cs": "Příjem jídla a nápojů"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "entity.nutrition": {
+      "title": {
+        "ru": "Пища и напитки",
+        "en": "Food and beverages",
+        "pl": "Żywność i napoje",
+        "uk": "Їжа та напої",
+        "de": "Lebensmittel und Getränke",
+        "es": "Alimentos y bebidas",
+        "cs": "Potraviny a nápoje"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "state.nutrition": {
+      "title": {
+        "ru": "Аппетит и гидратационные ощущения",
+        "en": "Appetite and hydration sensations",
+        "pl": "Apetyt i odczucia nawodnienia",
+        "uk": "Апетит і відчуття гідратації",
+        "de": "Appetit- und Hydratationsgefühle",
+        "es": "Apetito y sensaciones de hidratación",
+        "cs": "Pocity chuti k jídlu a hydratace"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "relationship.social": {
+      "title": {
+        "ru": "Типы близких и социальных отношений",
+        "en": "Types of close and social relationships",
+        "pl": "Typy bliskich i społecznych relacji",
+        "uk": "Типи близьких і соціальних стосунків",
+        "de": "Arten naher und sozialer Beziehungen",
+        "es": "Tipos de relaciones cercanas y sociales",
+        "cs": "Typy blízkých a sociálních vztahů"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "process.social_interaction": {
+      "title": {
+        "ru": "Социальные взаимодействия",
+        "en": "Social interactions",
+        "pl": "Interakcje społeczne",
+        "uk": "Соціальні взаємодії",
+        "de": "Soziale Interaktionen",
+        "es": "Interacciones sociales",
+        "cs": "Sociální interakce"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "role.social": {
+      "title": {
+        "ru": "Социальные роли",
+        "en": "Social roles",
+        "pl": "Role społeczne",
+        "uk": "Соціальні ролі",
+        "de": "Soziale Rollen",
+        "es": "Roles sociales",
+        "cs": "Sociální role"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "process.creative": {
+      "title": {
+        "ru": "Творческая деятельность",
+        "en": "Creative activity",
+        "pl": "Działalność twórcza",
+        "uk": "Творча діяльність",
+        "de": "Kreative Tätigkeit",
+        "es": "Actividad creativa",
+        "cs": "Tvůrčí činnost"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "process.leisure": {
+      "title": {
+        "ru": "Досуг",
+        "en": "Leisure",
+        "pl": "Czas wolny",
+        "uk": "Дозвілля",
+        "de": "Freizeit",
+        "es": "Ocio",
+        "cs": "Volný čas"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "process.sleep_recovery": {
+      "title": {
+        "ru": "Сон и отдых",
+        "en": "Sleep and rest",
+        "pl": "Sen i odpoczynek",
+        "uk": "Сон і відпочинок",
+        "de": "Schlaf und Ruhe",
+        "es": "Sueño y descanso",
+        "cs": "Spánek a odpočinek"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "state.sleep_recovery": {
+      "title": {
+        "ru": "Состояния сна/восстановления",
+        "en": "Sleep/recovery states",
+        "pl": "Stany snu i regeneracji",
+        "uk": "Стани сну/відновлення",
+        "de": "Schlaf-/Erholungszustände",
+        "es": "Estados de sueño/recuperación",
+        "cs": "Stavy spánku/regenerace"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "process.work": {
+      "title": {
+        "ru": "Рабочие процессы",
+        "en": "Work processes",
+        "pl": "Procesy pracy",
+        "uk": "Робочі процеси",
+        "de": "Arbeitsprozesse",
+        "es": "Procesos de trabajo",
+        "cs": "Pracovní procesy"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "state.work": {
+      "title": {
+        "ru": "Рабочие состояния",
+        "en": "Work states",
+        "pl": "Stany pracy",
+        "uk": "Робочі стани",
+        "de": "Arbeitszustände",
+        "es": "Estados de trabajo",
+        "cs": "Pracovní stavy"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "role.work": {
+      "title": {
+        "ru": "Общие профессиональные роли",
+        "en": "General professional roles",
+        "pl": "Ogólne role zawodowe",
+        "uk": "Загальні професійні ролі",
+        "de": "Allgemeine Berufsrollen",
+        "es": "Roles profesionales generales",
+        "cs": "Obecné profesní role"
+      },
+      "description": {
+        "ru": "Facet entry",
+        "en": "Facet entry",
+        "pl": "Wejście płaszczyzny",
+        "uk": "Вхід до смислової площини",
+        "de": "Facetten-Einstieg",
+        "es": "Entrada de faceta",
+        "cs": "Vstup do fasety"
+      }
+    },
+    "entity.body": {
+      "title": {
+        "ru": "Тело",
+        "en": "Body",
+        "pl": "Ciało",
+        "uk": "Тіло",
+        "de": "Körper",
+        "es": "Cuerpo",
+        "cs": "Tělo"
+      },
+      "description": {
+        "ru": "Семантическая мишень тела как целого; прямые измерения ограничены назначенными параметрами.",
+        "en": "Semantic target for the body as a whole; direct measurements are limited to assigned parameters.",
+        "pl": "Semantyczny cel dla ciała jako całości; bezpośrednie pomiary są ograniczone do przypisanych parametrów.",
+        "uk": "Семантична мішень для тіла як цілого; прямі вимірювання обмежені призначеними параметрами.",
+        "de": "Semantisches Ziel für den Körper als Ganzes; direkte Messungen sind auf zugewiesene Parameter begrenzt.",
+        "es": "Objetivo semántico del cuerpo como un todo; las mediciones directas se limitan a los parámetros asignados.",
+        "cs": "Sémantický cíl pro tělo jako celek; přímá měření jsou omezena na přiřazené parametry."
+      }
+    },
+    "state.physiology.body_weight": {
+      "title": {
+        "ru": "Масса тела",
+        "en": "Body weight",
+        "pl": "Masa ciała",
+        "uk": "Маса тіла",
+        "de": "Körpergewicht",
+        "es": "Peso corporal",
+        "cs": "Tělesná hmotnost"
+      },
+      "description": {
+        "ru": "Повторяемое наблюдение массы тела.",
+        "en": "Repeatable observation of body weight.",
+        "pl": "Powtarzalna obserwacja masy ciała.",
+        "uk": "Повторюване спостереження маси тіла.",
+        "de": "Wiederholbare Beobachtung des Körpergewichts.",
+        "es": "Observación repetible del peso corporal.",
+        "cs": "Opakovatelné pozorování tělesné hmotnosti."
+      }
+    },
+    "state.physiology.heart_rate": {
+      "title": {
+        "ru": "Частота сердечных сокращений",
+        "en": "Heart rate",
+        "pl": "Tętno",
+        "uk": "Частота серцевих скорочень",
+        "de": "Herzfrequenz",
+        "es": "Frecuencia cardíaca",
+        "cs": "Srdeční frekvence"
+      },
+      "description": {
+        "ru": "Измерение пульса/ЧСС в конкретный момент или интервал.",
+        "en": "Measurement of pulse/heart rate at a specific moment or interval.",
+        "pl": "Pomiar pulsu/tętna w konkretnym momencie lub przedziale.",
+        "uk": "Вимірювання пульсу/ЧСС у конкретний момент або інтервал.",
+        "de": "Messung von Puls/Herzfrequenz zu einem bestimmten Zeitpunkt oder Intervall.",
+        "es": "Medición del pulso/frecuencia cardíaca en un momento o intervalo concreto.",
+        "cs": "Měření pulzu/srdeční frekvence v konkrétním okamžiku nebo intervalu."
+      }
+    },
+    "state.physiology.blood_pressure": {
+      "title": {
+        "ru": "Артериальное давление",
+        "en": "Blood pressure",
+        "pl": "Ciśnienie krwi",
+        "uk": "Артеріальний тиск",
+        "de": "Blutdruck",
+        "es": "Presión arterial",
+        "cs": "Krevní tlak"
+      },
+      "description": {
+        "ru": "Систолическое/диастолическое давление при фактическом измерении.",
+        "en": "Systolic/diastolic pressure from an actual measurement.",
+        "pl": "Ciśnienie skurczowe/rozkurczowe z faktycznego pomiaru.",
+        "uk": "Систолічний/діастолічний тиск за фактичним вимірюванням.",
+        "de": "Systolischer/diastolischer Druck aus einer tatsächlichen Messung.",
+        "es": "Presión sistólica/diastólica procedente de una medición real.",
+        "cs": "Systolický/diastolický tlak z reálného měření."
+      }
+    },
+    "state.physiology.pain": {
+      "title": {
+        "ru": "Боль",
+        "en": "Pain",
+        "pl": "Ból",
+        "uk": "Біль",
+        "de": "Schmerz",
+        "es": "Dolor",
+        "cs": "Bolest"
+      },
+      "description": {
+        "ru": "Качественное/числовое состояние боли; location связывается relation с анатомическим leaf.",
+        "en": "Qualitative/numeric pain state; location is linked by relation to an anatomical leaf.",
+        "pl": "Jakościowy/liczbowy stan bólu; lokalizacja jest łączona relacją z anatomicznym liściem.",
+        "uk": "Якісний/числовий стан болю; локалізація пов’язується відношенням з анатомічним листом.",
+        "de": "Qualitativer/numerischer Schmerzzustand; die Lokalisation wird per Relation mit einem anatomischen Blatt verknüpft.",
+        "es": "Estado cualitativo/numérico del dolor; la localización se vincula mediante una relación con una hoja anatómica.",
+        "cs": "Kvalitativní/číselný stav bolesti; lokalizace je relací propojena s anatomickým listem."
+      }
+    },
+    "state.physiology.physical_fatigue": {
+      "title": {
+        "ru": "Физическая усталость",
+        "en": "Physical fatigue",
+        "pl": "Zmęczenie fizyczne",
+        "uk": "Фізична втома",
+        "de": "Körperliche Ermüdung",
+        "es": "Fatiga física",
+        "cs": "Fyzická únava"
+      },
+      "description": {
+        "ru": "Субъективная или измеренная физическая усталость без автоматического score.",
+        "en": "Subjective or measured physical fatigue without an automatically generated score.",
+        "pl": "Subiektywne lub zmierzone zmęczenie fizyczne bez automatycznie generowanej oceny.",
+        "uk": "Суб’єктивна або виміряна фізична втома без автоматично згенерованої оцінки.",
+        "de": "Subjektive oder gemessene körperliche Ermüdung ohne automatisch erzeugten Score.",
+        "es": "Fatiga física subjetiva o medida sin una puntuación generada automáticamente.",
+        "cs": "Subjektivní nebo měřená fyzická únava bez automaticky vytvořeného skóre."
+      }
+    },
+    "state.physiology.general_wellbeing": {
+      "title": {
+        "ru": "Общее физическое самочувствие",
+        "en": "General physical wellbeing",
+        "pl": "Ogólne samopoczucie fizyczne",
+        "uk": "Загальне фізичне самопочуття",
+        "de": "Allgemeines körperliches Befinden",
+        "es": "Bienestar físico general",
+        "cs": "Celková fyzická pohoda"
+      },
+      "description": {
+        "ru": "Качественное физическое самочувствие; explicit scale только если пользователь её дал.",
+        "en": "Qualitative physical wellbeing; an explicit scale is used only if the user provided it.",
+        "pl": "Jakościowe samopoczucie fizyczne; jawna skala jest używana tylko wtedy, gdy podał ją użytkownik.",
+        "uk": "Якісне фізичне самопочуття; явна шкала використовується лише якщо її надав користувач.",
+        "de": "Qualitatives körperliches Befinden; eine explizite Skala wird nur verwendet, wenn der Nutzer sie angegeben hat.",
+        "es": "Bienestar físico cualitativo; solo se usa una escala explícita si el usuario la proporcionó.",
+        "cs": "Kvalitativní fyzická pohoda; explicitní škála se použije pouze tehdy, pokud ji uživatel uvedl."
+      }
+    },
+    "process.physiology.recovery_after_load": {
+      "title": {
+        "ru": "Восстановление после нагрузки",
+        "en": "Recovery after exertion",
+        "pl": "Regeneracja po wysiłku",
+        "uk": "Відновлення після навантаження",
+        "de": "Erholung nach Belastung",
+        "es": "Recuperación tras el esfuerzo",
+        "cs": "Regenerace po zátěži"
+      },
+      "description": {
+        "ru": "Наблюдаемый эпизод восстановления; не приписывает автоматически физиологический эффект.",
+        "en": "Observed recovery episode; it does not automatically attribute a physiological effect.",
+        "pl": "Obserwowany epizod regeneracji; nie przypisuje automatycznie efektu fizjologicznego.",
+        "uk": "Спостережуваний епізод відновлення; не приписує автоматично фізіологічний ефект.",
+        "de": "Beobachtete Erholungsphase; sie schreibt nicht automatisch eine physiologische Wirkung zu.",
+        "es": "Episodio observado de recuperación; no atribuye automáticamente un efecto fisiológico.",
+        "cs": "Pozorovaná epizoda regenerace; automaticky nepřisuzuje fyziologický účinek."
+      }
+    },
+    "context.weather.air_temperature": {
+      "title": {
+        "ru": "Температура окружающего воздуха",
+        "en": "Ambient air temperature",
+        "pl": "Temperatura otaczającego powietrza",
+        "uk": "Температура навколишнього повітря",
+        "de": "Umgebungslufttemperatur",
+        "es": "Temperatura del aire ambiente",
+        "cs": "Teplota okolního vzduchu"
+      },
+      "description": {
+        "ru": "Температура воздуха в текущем внешнем контексте.",
+        "en": "Air temperature in the current external context.",
+        "pl": "Temperatura powietrza w bieżącym kontekście zewnętrznym.",
+        "uk": "Температура повітря в поточному зовнішньому контексті.",
+        "de": "Lufttemperatur im aktuellen Außenkontext.",
+        "es": "Temperatura del aire en el contexto exterior actual.",
+        "cs": "Teplota vzduchu v aktuálním venkovním kontextu."
+      }
+    },
+    "context.weather.cloudiness": {
+      "title": {
+        "ru": "Облачность",
+        "en": "Cloudiness",
+        "pl": "Zachmurzenie",
+        "uk": "Хмарність",
+        "de": "Bewölkung",
+        "es": "Nubosidad",
+        "cs": "Oblačnost"
+      },
+      "description": {
+        "ru": "Категориальная/процентная облачность, если source её дал.",
+        "en": "Categorical/percentage cloudiness if supplied by the source.",
+        "pl": "Kategoryczne/procentowe zachmurzenie, jeśli podało je źródło.",
+        "uk": "Категоріальна/відсоткова хмарність, якщо її надав источник.",
+        "de": "Kategoriale/prozentuale Bewölkung, sofern sie von der Quelle geliefert wurde.",
+        "es": "Nubosidad categórica/porcentual si la proporciona la fuente.",
+        "cs": "Kategoriální/procentní oblačnost, pokud ji poskytl zdroj."
+      }
+    },
+    "context.weather.precipitation": {
+      "title": {
+        "ru": "Осадки",
+        "en": "Precipitation",
+        "pl": "Opady",
+        "uk": "Опади",
+        "de": "Niederschlag",
+        "es": "Precipitación",
+        "cs": "Srážky"
+      },
+      "description": {
+        "ru": "Дождь/снег/осадки; intensity only explicit/source-backed.",
+        "en": "Rain/snow/precipitation; intensity only when explicit or source-backed.",
+        "pl": "Deszcz/śnieg/opady; intensywność tylko jawna lub potwierdzona przez źródło.",
+        "uk": "Дощ/сніг/опади; інтенсивність лише явно вказана або підтверджена джерелом.",
+        "de": "Regen/Schnee/Niederschlag; Intensität nur explizit oder quellenbasiert.",
+        "es": "Lluvia/nieve/precipitación; intensidad solo si es explícita o respaldada por la fuente.",
+        "cs": "Déšť/sníh/srážky; intenzita pouze explicitní nebo podložená zdrojem."
+      }
+    },
+    "context.weather.humidity": {
+      "title": {
+        "ru": "Влажность воздуха",
+        "en": "Air humidity",
+        "pl": "Wilgotność powietrza",
+        "uk": "Вологість повітря",
+        "de": "Luftfeuchtigkeit",
+        "es": "Humedad del aire",
+        "cs": "Vlhkost vzduchu"
+      },
+      "description": {
+        "ru": "Относительная влажность.",
+        "en": "Relative humidity.",
+        "pl": "Wilgotność względna.",
+        "uk": "Відносна вологість.",
+        "de": "Relative Luftfeuchtigkeit.",
+        "es": "Humedad relativa.",
+        "cs": "Relativní vlhkost."
+      }
+    },
+    "context.weather.wind": {
+      "title": {
+        "ru": "Ветер",
+        "en": "Wind",
+        "pl": "Wiatr",
+        "uk": "Вітер",
+        "de": "Wind",
+        "es": "Viento",
+        "cs": "Vítr"
+      },
+      "description": {
+        "ru": "Скорость/характер ветра.",
+        "en": "Wind speed/character.",
+        "pl": "Prędkość/charakter wiatru.",
+        "uk": "Швидкість/характер вітру.",
+        "de": "Windgeschwindigkeit/-charakter.",
+        "es": "Velocidad/características del viento.",
+        "cs": "Rychlost/charakter větru."
+      }
+    },
+    "context.environment.noise": {
+      "title": {
+        "ru": "Шум окружающей среды",
+        "en": "Environmental noise",
+        "pl": "Hałas otoczenia",
+        "uk": "Шум довкілля",
+        "de": "Umgebungslärm",
+        "es": "Ruido ambiental",
+        "cs": "Hluk prostředí"
+      },
+      "description": {
+        "ru": "Уровень/категория шума.",
+        "en": "Noise level/category.",
+        "pl": "Poziom/kategoria hałasu.",
+        "uk": "Рівень/категорія шуму.",
+        "de": "Lärmpegel/-kategorie.",
+        "es": "Nivel/categoría de ruido.",
+        "cs": "Úroveň/kategorie hluku."
+      }
+    },
+    "context.environment.illumination": {
+      "title": {
+        "ru": "Освещённость",
+        "en": "Illumination",
+        "pl": "Oświetlenie",
+        "uk": "Освітленість",
+        "de": "Beleuchtungsstärke",
+        "es": "Iluminación",
+        "cs": "Osvětlení"
+      },
+      "description": {
+        "ru": "Освещённость/яркость при source-backed измерении или качественном описании.",
+        "en": "Illumination/brightness from a source-backed measurement or qualitative description.",
+        "pl": "Oświetlenie/jasność z pomiaru potwierdzonego źródłem lub opisu jakościowego.",
+        "uk": "Освітленість/яскравість за вимірюванням, підтвердженим джерелом, або якісним описом.",
+        "de": "Beleuchtung/Helligkeit aus quellenbasierter Messung oder qualitativer Beschreibung.",
+        "es": "Iluminación/brillo a partir de una medición respaldada por la fuente o una descripción cualitativa.",
+        "cs": "Osvětlení/jas z měření podloženého zdrojem nebo kvalitativního popisu."
+      }
+    },
+    "context.environment.indoor_outdoor": {
+      "title": {
+        "ru": "В помещении/на улице",
+        "en": "Indoors/outdoors",
+        "pl": "W pomieszczeniu/na zewnątrz",
+        "uk": "У приміщенні/надворі",
+        "de": "Innen/außen",
+        "es": "Interior/exterior",
+        "cs": "Uvnitř/venku"
+      },
+      "description": {
+        "ru": "Грубый контекст без точных координат.",
+        "en": "Coarse context without precise coordinates.",
+        "pl": "Ogólny kontekst bez dokładnych współrzędnych.",
+        "uk": "Грубий контекст без точних координат.",
+        "de": "Grober Kontext ohne genaue Koordinaten.",
+        "es": "Contexto general sin coordenadas precisas.",
+        "cs": "Hrubý kontext bez přesných souřadnic."
+      }
+    },
+    "context.resources.available_time": {
+      "title": {
+        "ru": "Доступное время",
+        "en": "Available time",
+        "pl": "Dostępny czas",
+        "uk": "Доступний час",
+        "de": "Verfügbare Zeit",
+        "es": "Tiempo disponible",
+        "cs": "Dostupný čas"
+      },
+      "description": {
+        "ru": "Доступный временной ресурс в заданном окне. Не является дедлайном, временем суток или требуемой длительностью задачи.",
+        "en": "Available time resource within a specified window. It is not a deadline, time of day, or required task duration.",
+        "pl": "Dostępny zasób czasu w określonym oknie. Nie jest terminem, porą dnia ani wymaganą długością zadania.",
+        "uk": "Доступний часовий ресурс у заданому вікні. Це не дедлайн, не час доби й не потрібна тривалість завдання.",
+        "de": "Verfügbare Zeitressource in einem bestimmten Fenster. Sie ist weder Frist noch Tageszeit noch erforderliche Aufgabendauer.",
+        "es": "Recurso de tiempo disponible en una ventana determinada. No es una fecha límite, una hora del día ni la duración requerida de una tarea.",
+        "cs": "Dostupný časový zdroj v daném okně. Není to termín, denní doba ani požadovaná délka úkolu."
+      }
+    },
+    "process.finance.purchase": {
+      "title": {
+        "ru": "Покупка",
+        "en": "Purchase",
+        "pl": "Zakup",
+        "uk": "Купівля",
+        "de": "Kauf",
+        "es": "Compra",
+        "cs": "Nákup"
+      },
+      "description": {
+        "ru": "Покупка товара/услуги; object link при наличии.",
+        "en": "Purchase of a product/service; object link when available.",
+        "pl": "Zakup produktu/usługi; połączenie z obiektem, jeśli jest dostępne.",
+        "uk": "Купівля товару/послуги; зв’язок з об’єктом за наявності.",
+        "de": "Kauf eines Produkts/einer Dienstleistung; Objektverknüpfung, sofern vorhanden.",
+        "es": "Compra de un producto/servicio; enlace al objeto si está disponible.",
+        "cs": "Nákup produktu/služby; odkaz na objekt, pokud je k dispozici."
+      }
+    },
+    "process.finance.expense": {
+      "title": {
+        "ru": "Расход",
+        "en": "Expense",
+        "pl": "Wydatek",
+        "uk": "Витрата",
+        "de": "Ausgabe",
+        "es": "Gasto",
+        "cs": "Výdaj"
+      },
+      "description": {
+        "ru": "Расход денежных средств.",
+        "en": "Spending of money.",
+        "pl": "Wydatek środków pieniężnych.",
+        "uk": "Витрачання коштів.",
+        "de": "Ausgabe von Geldmitteln.",
+        "es": "Gasto de fondos.",
+        "cs": "Výdaj peněžních prostředků."
+      }
+    },
+    "process.finance.income": {
+      "title": {
+        "ru": "Доход",
+        "en": "Income",
+        "pl": "Dochód",
+        "uk": "Дохід",
+        "de": "Einkommen",
+        "es": "Ingreso",
+        "cs": "Příjem"
+      },
+      "description": {
+        "ru": "Получение дохода.",
+        "en": "Receipt of income.",
+        "pl": "Otrzymanie dochodu.",
+        "uk": "Отримання доходу.",
+        "de": "Erhalt von Einkommen.",
+        "es": "Recepción de ingresos.",
+        "cs": "Přijetí příjmu."
+      }
+    },
+    "process.finance.transfer": {
+      "title": {
+        "ru": "Перевод денег",
+        "en": "Money transfer",
+        "pl": "Przelew pieniędzy",
+        "uk": "Переказ грошей",
+        "de": "Geldüberweisung",
+        "es": "Transferencia de dinero",
+        "cs": "Převod peněz"
+      },
+      "description": {
+        "ru": "Перевод/перемещение средств.",
+        "en": "Transfer/movement of funds.",
+        "pl": "Przelew/przemieszczenie środków.",
+        "uk": "Переказ/переміщення коштів.",
+        "de": "Übertragung/Verschiebung von Geldmitteln.",
+        "es": "Transferencia/movimiento de fondos.",
+        "cs": "Převod/přesun prostředků."
+      }
+    },
+    "entity.finance.money": {
+      "title": {
+        "ru": "Денежные средства",
+        "en": "Money",
+        "pl": "Środki pieniężne",
+        "uk": "Грошові кошти",
+        "de": "Geldmittel",
+        "es": "Fondos monetarios",
+        "cs": "Peněžní prostředky"
+      },
+      "description": {
+        "ru": "Деньги как ресурс; конкретные счета/кошельки actor-scoped later.",
+        "en": "Money as a resource; specific accounts/wallets are actor-scoped later.",
+        "pl": "Pieniądze jako zasób; konkretne konta/portfele będą później przypisane do aktora.",
+        "uk": "Гроші як ресурс; конкретні рахунки/гаманці пізніше мають область актора.",
+        "de": "Geld als Ressource; konkrete Konten/Wallets werden später aktorbezogen.",
+        "es": "Dinero como recurso; las cuentas/carteras concretas se asociarán después al actor.",
+        "cs": "Peníze jako zdroj; konkrétní účty/peněženky budou později v rozsahu aktéra."
+      }
+    },
+    "entity.finance.asset": {
+      "title": {
+        "ru": "Материальный актив",
+        "en": "Material asset",
+        "pl": "Aktywo materialne",
+        "uk": "Матеріальний актив",
+        "de": "Materieller Vermögenswert",
+        "es": "Activo material",
+        "cs": "Hmotný majetek"
+      },
+      "description": {
+        "ru": "Общий материальный актив; конкретные активы personal layer.",
+        "en": "General material asset; specific assets belong to the personal layer.",
+        "pl": "Ogólne aktywo materialne; konkretne aktywa należą do warstwy osobistej.",
+        "uk": "Загальний матеріальний актив; конкретні активи належать до персонального шару.",
+        "de": "Allgemeiner materieller Vermögenswert; konkrete Vermögenswerte gehören zur persönlichen Ebene.",
+        "es": "Activo material general; los activos concretos pertenecen a la capa personal.",
+        "cs": "Obecný hmotný majetek; konkrétní aktiva patří do osobní vrstvy."
+      }
+    },
+    "state.finance.balance": {
+      "title": {
+        "ru": "Денежный баланс",
+        "en": "Money balance",
+        "pl": "Saldo środków",
+        "uk": "Грошовий баланс",
+        "de": "Geldsaldo",
+        "es": "Saldo monetario",
+        "cs": "Peněžní zůstatek"
+      },
+      "description": {
+        "ru": "Фактический баланс при explicit/source-backed наблюдении.",
+        "en": "Actual balance from an explicit/source-backed observation.",
+        "pl": "Faktyczne saldo z jawnej obserwacji lub obserwacji potwierdzonej źródłem.",
+        "uk": "Фактичний баланс за явним або підтвердженим джерелом спостереженням.",
+        "de": "Tatsächlicher Saldo aus einer expliziten/quellenbasierten Beobachtung.",
+        "es": "Saldo real procedente de una observación explícita o respaldada por la fuente.",
+        "cs": "Skutečný zůstatek z explicitního nebo zdrojem podloženého pozorování."
+      }
+    },
+    "state.finance.debt": {
+      "title": {
+        "ru": "Долговое обязательство",
+        "en": "Debt obligation",
+        "pl": "Zobowiązanie dłużne",
+        "uk": "Боргове зобов’язання",
+        "de": "Schuldverpflichtung",
+        "es": "Obligación de deuda",
+        "cs": "Dluhový závazek"
+      },
+      "description": {
+        "ru": "Состояние долга/обязательства; amount explicit.",
+        "en": "State of debt/obligation; amount must be explicit.",
+        "pl": "Stan długu/zobowiązania; kwota musi być jawna.",
+        "uk": "Стан боргу/зобов’язання; сума має бути явно вказана.",
+        "de": "Zustand einer Schuld/Verpflichtung; Betrag muss explizit sein.",
+        "es": "Estado de deuda/obligación; el importe debe ser explícito.",
+        "cs": "Stav dluhu/závazku; částka musí být explicitní."
+      }
+    },
+    "process.home.cooking": {
+      "title": {
+        "ru": "Приготовление пищи",
+        "en": "Cooking",
+        "pl": "Przygotowanie jedzenia",
+        "uk": "Приготування їжі",
+        "de": "Kochen",
+        "es": "Preparación de comida",
+        "cs": "Příprava jídla"
+      },
+      "description": {
+        "ru": "Готовка как бытовой процесс; eating — отдельный nutrition event.",
+        "en": "Cooking as a household process; eating is a separate nutrition event.",
+        "pl": "Gotowanie jako proces domowy; jedzenie jest oddzielnym zdarzeniem żywieniowym.",
+        "uk": "Готування як побутовий процес; прийом їжі — окрема подія харчування.",
+        "de": "Kochen als Haushaltsprozess; Essen ist ein separates Ernährungsereignis.",
+        "es": "Cocinar como proceso doméstico; comer es un evento de nutrición separado.",
+        "cs": "Vaření jako domácí proces; jídlo je samostatná nutriční událost."
+      }
+    },
+    "process.home.cleaning": {
+      "title": {
+        "ru": "Уборка",
+        "en": "Cleaning",
+        "pl": "Sprzątanie",
+        "uk": "Прибирання",
+        "de": "Reinigung",
+        "es": "Limpieza",
+        "cs": "Úklid"
+      },
+      "description": {
+        "ru": "Уборка помещения/вещей.",
+        "en": "Cleaning rooms/items.",
+        "pl": "Sprzątanie pomieszczeń/przedmiotów.",
+        "uk": "Прибирання приміщень/речей.",
+        "de": "Reinigung von Räumen/Gegenständen.",
+        "es": "Limpieza de espacios/objetos.",
+        "cs": "Úklid místností/věcí."
+      }
+    },
+    "process.home.laundry": {
+      "title": {
+        "ru": "Стирка/уход за одеждой",
+        "en": "Laundry/clothing care",
+        "pl": "Pranie/pielęgnacja odzieży",
+        "uk": "Прання/догляд за одягом",
+        "de": "Wäsche/Kleiderpflege",
+        "es": "Lavado/cuidado de ropa",
+        "cs": "Praní/péče o oděvy"
+      },
+      "description": {
+        "ru": "Стирка и уход за одеждой.",
+        "en": "Laundry and clothing care.",
+        "pl": "Pranie i pielęgnacja odzieży.",
+        "uk": "Прання та догляд за одягом.",
+        "de": "Wäsche und Pflege von Kleidung.",
+        "es": "Lavado y cuidado de la ropa.",
+        "cs": "Praní a péče o oděvy."
+      }
+    },
+    "process.home.maintenance": {
+      "title": {
+        "ru": "Ремонт/обслуживание",
+        "en": "Repair/maintenance",
+        "pl": "Naprawa/konserwacja",
+        "uk": "Ремонт/обслуговування",
+        "de": "Reparatur/Wartung",
+        "es": "Reparación/mantenimiento",
+        "cs": "Oprava/údržba"
+      },
+      "description": {
+        "ru": "Ремонт или обслуживание вещи/жилья.",
+        "en": "Repair or maintenance of an item/home.",
+        "pl": "Naprawa lub konserwacja rzeczy/mieszkania.",
+        "uk": "Ремонт або обслуговування речі/житла.",
+        "de": "Reparatur oder Wartung eines Gegenstands/der Wohnung.",
+        "es": "Reparación o mantenimiento de un objeto/vivienda.",
+        "cs": "Oprava nebo údržba věci/bydlení."
+      }
+    },
+    "process.home.household_task": {
+      "title": {
+        "ru": "Бытовая задача",
+        "en": "Household task",
+        "pl": "Zadanie domowe",
+        "uk": "Побутове завдання",
+        "de": "Haushaltsaufgabe",
+        "es": "Tarea doméstica",
+        "cs": "Domácí úkol"
+      },
+      "description": {
+        "ru": "Универсальный fallback бытовой задачи, пока нет более точного leaf.",
+        "en": "General household-task fallback until a more precise leaf exists.",
+        "pl": "Uniwersalna kategoria zastępcza zadania domowego, dopóki nie istnieje dokładniejszy liść.",
+        "uk": "Універсальний резервний варіант побутового завдання, доки немає точнішого листа.",
+        "de": "Allgemeiner Fallback für Haushaltsaufgaben, solange kein genaueres Blatt existiert.",
+        "es": "Categoría de respaldo general para una tarea doméstica hasta que exista una hoja más precisa.",
+        "cs": "Obecný fallback pro domácí úkol, dokud neexistuje přesnější list."
+      }
+    },
+    "entity.home.dwelling": {
+      "title": {
+        "ru": "Жилище",
+        "en": "Dwelling",
+        "pl": "Miejsce zamieszkania",
+        "uk": "Житло",
+        "de": "Wohnung/Wohnstätte",
+        "es": "Vivienda",
+        "cs": "Bydlení"
+      },
+      "description": {
+        "ru": "Общий объект жилища; конкретный дом actor-scoped later.",
+        "en": "General dwelling object; a specific home is actor-scoped later.",
+        "pl": "Ogólny obiekt miejsca zamieszkania; konkretny dom będzie później przypisany do aktora.",
+        "uk": "Загальний об’єкт житла; конкретний дім пізніше має область актора.",
+        "de": "Allgemeines Wohnobjekt; ein konkretes Zuhause wird später aktorbezogen.",
+        "es": "Objeto general de vivienda; una vivienda concreta se asociará después al actor.",
+        "cs": "Obecný objekt bydlení; konkrétní domov bude později v rozsahu aktéra."
+      }
+    },
+    "entity.home.item": {
+      "title": {
+        "ru": "Домашняя вещь",
+        "en": "Household item",
+        "pl": "Przedmiot domowy",
+        "uk": "Домашня річ",
+        "de": "Haushaltsgegenstand",
+        "es": "Objeto doméstico",
+        "cs": "Domácí věc"
+      },
+      "description": {
+        "ru": "Общая домашняя вещь; конкретный предмет actor-scoped later.",
+        "en": "General household item; a specific item is actor-scoped later.",
+        "pl": "Ogólny przedmiot domowy; konkretny przedmiot będzie później przypisany do aktora.",
+        "uk": "Загальна домашня річ; конкретний предмет пізніше має область актора.",
+        "de": "Allgemeiner Haushaltsgegenstand; ein konkreter Gegenstand wird später aktorbezogen.",
+        "es": "Objeto doméstico general; un objeto concreto se asociará después al actor.",
+        "cs": "Obecný domácí předmět; konkrétní věc bude později v rozsahu aktéra."
+      }
+    },
+    "process.learning.study_session": {
+      "title": {
+        "ru": "Учебная сессия",
+        "en": "Study session",
+        "pl": "Sesja nauki",
+        "uk": "Навчальна сесія",
+        "de": "Lernsitzung",
+        "es": "Sesión de estudio",
+        "cs": "Studijní relace"
+      },
+      "description": {
+        "ru": "Общий эпизод учёбы.",
+        "en": "General episode of studying.",
+        "pl": "Ogólny epizod nauki.",
+        "uk": "Загальний епізод навчання.",
+        "de": "Allgemeine Lernepisode.",
+        "es": "Episodio general de estudio.",
+        "cs": "Obecná epizoda učení."
+      }
+    },
+    "process.learning.reading_study": {
+      "title": {
+        "ru": "Чтение/изучение материала",
+        "en": "Reading/studying material",
+        "pl": "Czytanie/nauka materiału",
+        "uk": "Читання/вивчення матеріалу",
+        "de": "Lesen/Lernen von Material",
+        "es": "Lectura/estudio de material",
+        "cs": "Čtení/studium materiálu"
+      },
+      "description": {
+        "ru": "Чтение с учебной целью.",
+        "en": "Reading for a learning purpose.",
+        "pl": "Czytanie w celu nauki.",
+        "uk": "Читання з навчальною метою.",
+        "de": "Lesen zu Lernzwecken.",
+        "es": "Lectura con fines de aprendizaje.",
+        "cs": "Čtení za účelem učení."
+      }
+    },
+    "process.learning.practice_repetition": {
+      "title": {
+        "ru": "Практика/повторение",
+        "en": "Practice/repetition",
+        "pl": "Praktyka/powtarzanie",
+        "uk": "Практика/повторення",
+        "de": "Übung/Wiederholung",
+        "es": "Práctica/repetición",
+        "cs": "Praxe/opakování"
+      },
+      "description": {
+        "ru": "Повторение материала/навыка; repetitions/items_count if explicit.",
+        "en": "Repetition of material/skill; repetitions/items_count only if explicit.",
+        "pl": "Powtarzanie materiału/umiejętności; repetitions/items_count tylko jeśli podano jawnie.",
+        "uk": "Повторення матеріалу/навички; repetitions/items_count лише якщо вказано явно.",
+        "de": "Wiederholung von Material/Fertigkeit; repetitions/items_count nur bei expliziter Angabe.",
+        "es": "Repetición de material/habilidad; repetitions/items_count solo si se indica explícitamente.",
+        "cs": "Opakování materiálu/dovednosti; repetitions/items_count pouze pokud je explicitní."
+      }
+    },
+    "process.learning.language_practice": {
+      "title": {
+        "ru": "Языковая практика",
+        "en": "Language practice",
+        "pl": "Praktyka językowa",
+        "uk": "Мовна практика",
+        "de": "Sprachpraxis",
+        "es": "Práctica lingüística",
+        "cs": "Jazyková praxe"
+      },
+      "description": {
+        "ru": "Практика иностранного/родного языка; language_code via relation/context.",
+        "en": "Practice of a foreign/native language; language_code via relation/context.",
+        "pl": "Praktyka języka obcego/ojczystego; language_code przez relację/kontekst.",
+        "uk": "Практика іноземної/рідної мови; language_code через відношення/контекст.",
+        "de": "Praxis einer Fremd-/Muttersprache; language_code über Relation/Kontext.",
+        "es": "Práctica de una lengua extranjera/nativa; language_code mediante relación/contexto.",
+        "cs": "Procvičování cizího/mateřského jazyka; language_code přes relaci/kontext."
+      }
+    },
+    "process.learning.test_exam": {
+      "title": {
+        "ru": "Тест/экзамен",
+        "en": "Test/exam",
+        "pl": "Test/egzamin",
+        "uk": "Тест/іспит",
+        "de": "Test/Prüfung",
+        "es": "Prueba/examen",
+        "cs": "Test/zkouška"
+      },
+      "description": {
+        "ru": "Фактический контроль знаний; score only if explicit.",
+        "en": "Actual knowledge assessment; score only if explicit.",
+        "pl": "Faktyczna kontrola wiedzy; wynik tylko jeśli podano go jawnie.",
+        "uk": "Фактична перевірка знань; score лише якщо вказано явно.",
+        "de": "Tatsächliche Wissensprüfung; Score nur bei expliziter Angabe.",
+        "es": "Evaluación real de conocimientos; puntuación solo si es explícita.",
+        "cs": "Skutečné ověření znalostí; skóre pouze pokud je explicitní."
+      }
+    },
+    "state.learning.understanding": {
+      "title": {
+        "ru": "Понимание материала",
+        "en": "Understanding of material",
+        "pl": "Zrozumienie materiału",
+        "uk": "Розуміння матеріалу",
+        "de": "Materialverständnis",
+        "es": "Comprensión del material",
+        "cs": "Porozumění materiálu"
+      },
+      "description": {
+        "ru": "Качественное/explicit оценённое понимание.",
+        "en": "Qualitative/explicitly rated understanding.",
+        "pl": "Jakościowe lub jawnie ocenione zrozumienie.",
+        "uk": "Якісне або явно оцінене розуміння.",
+        "de": "Qualitatives/explizit bewertetes Verständnis.",
+        "es": "Comprensión cualitativa o valorada explícitamente.",
+        "cs": "Kvalitativní nebo explicitně hodnocené porozumění."
+      }
+    },
+    "state.learning.confidence": {
+      "title": {
+        "ru": "Уверенность в знании/навыке",
+        "en": "Confidence in knowledge/skill",
+        "pl": "Pewność wiedzy/umiejętności",
+        "uk": "Упевненість у знанні/навичці",
+        "de": "Sicherheit in Wissen/Fertigkeit",
+        "es": "Confianza en conocimiento/habilidad",
+        "cs": "Jistota ve znalosti/dovednosti"
+      },
+      "description": {
+        "ru": "Субъективная уверенность; не равна объективной компетенции.",
+        "en": "Subjective confidence; it is not the same as objective competence.",
+        "pl": "Subiektywna pewność; nie jest równoznaczna z obiektywną kompetencją.",
+        "uk": "Суб’єктивна впевненість; не дорівнює об’єктивній компетентності.",
+        "de": "Subjektive Sicherheit; sie ist nicht gleich objektiver Kompetenz.",
+        "es": "Confianza subjetiva; no equivale a competencia objetiva.",
+        "cs": "Subjektivní jistota; není totožná s objektivní kompetencí."
+      }
+    },
+    "knowledge.general.topic": {
+      "title": {
+        "ru": "Знание/понятие",
+        "en": "Knowledge/concept",
+        "pl": "Wiedza/pojęcie",
+        "uk": "Знання/поняття",
+        "de": "Wissen/Begriff",
+        "es": "Conocimiento/concepto",
+        "cs": "Znalost/pojem"
+      },
+      "description": {
+        "ru": "Минимальный placeholder для подтверждённого knowledge target; конкретные области расширяются контролируемо.",
+        "en": "Minimal placeholder for a confirmed knowledge target; specific domains are expanded in a controlled way.",
+        "pl": "Minimalny placeholder dla potwierdzonego celu wiedzy; konkretne dziedziny są rozszerzane w sposób kontrolowany.",
+        "uk": "Мінімальний placeholder для підтвердженої цілі знання; конкретні області розширюються контрольовано.",
+        "de": "Minimaler Platzhalter für ein bestätigtes Wissensziel; konkrete Bereiche werden kontrolliert erweitert.",
+        "es": "Marcador mínimo para un objetivo de conocimiento confirmado; los ámbitos concretos se amplían de forma controlada.",
+        "cs": "Minimální zástupný objekt pro potvrzený znalostní cíl; konkrétní oblasti se rozšiřují řízeně."
+      }
+    },
+    "state.emotional.mood": {
+      "title": {
+        "ru": "Настроение",
+        "en": "Mood",
+        "pl": "Nastrój",
+        "uk": "Настрій",
+        "de": "Stimmung",
+        "es": "Estado de ánimo",
+        "cs": "Nálada"
+      },
+      "description": {
+        "ru": "Общее текущее настроение/его качественное изменение.",
+        "en": "General current mood or its qualitative change.",
+        "pl": "Ogólny bieżący nastrój lub jego jakościowa zmiana.",
+        "uk": "Загальний поточний настрій або його якісна зміна.",
+        "de": "Allgemeine aktuelle Stimmung oder deren qualitative Veränderung.",
+        "es": "Estado de ánimo actual general o su cambio cualitativo.",
+        "cs": "Obecná aktuální nálada nebo její kvalitativní změna."
+      }
+    },
+    "state.emotional.stress": {
+      "title": {
+        "ru": "Психологическое напряжение/стресс",
+        "en": "Psychological tension/stress",
+        "pl": "Napięcie psychiczne/stres",
+        "uk": "Психологічне напруження/стрес",
+        "de": "Psychische Anspannung/Stress",
+        "es": "Tensión psicológica/estrés",
+        "cs": "Psychické napětí/stres"
+      },
+      "description": {
+        "ru": "Субъективное напряжение/стресс без автоматической медицинской интерпретации.",
+        "en": "Subjective tension/stress without automatic medical interpretation.",
+        "pl": "Subiektywne napięcie/stres bez automatycznej interpretacji medycznej.",
+        "uk": "Суб’єктивне напруження/стрес без автоматичної медичної інтерпретації.",
+        "de": "Subjektive Anspannung/Stress ohne automatische medizinische Interpretation.",
+        "es": "Tensión/estrés subjetivo sin interpretación médica automática.",
+        "cs": "Subjektivní napětí/stres bez automatické lékařské interpretace."
+      }
+    },
+    "state.emotional.anxiety": {
+      "title": {
+        "ru": "Тревожность",
+        "en": "Anxiety",
+        "pl": "Lęk",
+        "uk": "Тривожність",
+        "de": "Angst/Ängstlichkeit",
+        "es": "Ansiedad",
+        "cs": "Úzkost"
+      },
+      "description": {
+        "ru": "Качественное или explicit scale состояние тревожности.",
+        "en": "Qualitative or explicitly scaled anxiety state.",
+        "pl": "Jakościowy lub jawnie skalowany stan lęku.",
+        "uk": "Якісний або явно шкалований стан тривожності.",
+        "de": "Qualitativer oder explizit skalierter Angstzustand.",
+        "es": "Estado de ansiedad cualitativo o con escala explícita.",
+        "cs": "Kvalitativní nebo explicitně škálovaný stav úzkosti."
+      }
+    },
+    "state.emotional.calmness": {
+      "title": {
+        "ru": "Спокойствие",
+        "en": "Calmness",
+        "pl": "Spokój",
+        "uk": "Спокій",
+        "de": "Ruhe",
+        "es": "Calma",
+        "cs": "Klid"
+      },
+      "description": {
+        "ru": "Качественное состояние спокойствия.",
+        "en": "Qualitative state of calmness.",
+        "pl": "Jakościowy stan spokoju.",
+        "uk": "Якісний стан спокою.",
+        "de": "Qualitativer Zustand der Ruhe.",
+        "es": "Estado cualitativo de calma.",
+        "cs": "Kvalitativní stav klidu."
+      }
+    },
+    "state.cognitive.concentration": {
+      "title": {
+        "ru": "Концентрация",
+        "en": "Concentration",
+        "pl": "Koncentracja",
+        "uk": "Концентрація",
+        "de": "Konzentration",
+        "es": "Concentración",
+        "cs": "Soustředění"
+      },
+      "description": {
+        "ru": "Субъективное/explicit measure состояние концентрации.",
+        "en": "Subjective/explicitly measured concentration state.",
+        "pl": "Subiektywny lub jawnie zmierzony stan koncentracji.",
+        "uk": "Суб’єктивний або явно виміряний стан концентрації.",
+        "de": "Subjektiver/explizit gemessener Konzentrationszustand.",
+        "es": "Estado de concentración subjetivo o medido explícitamente.",
+        "cs": "Subjektivní nebo explicitně měřený stav soustředění."
+      }
+    },
+    "state.cognitive.attention": {
+      "title": {
+        "ru": "Внимание",
+        "en": "Attention",
+        "pl": "Uwaga",
+        "uk": "Увага",
+        "de": "Aufmerksamkeit",
+        "es": "Atención",
+        "cs": "Pozornost"
+      },
+      "description": {
+        "ru": "Качество/устойчивость внимания.",
+        "en": "Quality/stability of attention.",
+        "pl": "Jakość/stabilność uwagi.",
+        "uk": "Якість/стійкість уваги.",
+        "de": "Qualität/Stabilität der Aufmerksamkeit.",
+        "es": "Calidad/estabilidad de la atención.",
+        "cs": "Kvalita/stabilita pozornosti."
+      }
+    },
+    "state.cognitive.mental_fatigue": {
+      "title": {
+        "ru": "Умственная усталость",
+        "en": "Mental fatigue",
+        "pl": "Zmęczenie umysłowe",
+        "uk": "Розумова втома",
+        "de": "Mentale Ermüdung",
+        "es": "Fatiga mental",
+        "cs": "Mentální únava"
+      },
+      "description": {
+        "ru": "Качественное состояние умственной усталости.",
+        "en": "Qualitative state of mental fatigue.",
+        "pl": "Jakościowy stan zmęczenia umysłowego.",
+        "uk": "Якісний стан розумової втоми.",
+        "de": "Qualitativer Zustand mentaler Ermüdung.",
+        "es": "Estado cualitativo de fatiga mental.",
+        "cs": "Kvalitativní stav mentální únavy."
+      }
+    },
+    "process.cognitive.focused_work": {
+      "title": {
+        "ru": "Сосредоточенная умственная работа",
+        "en": "Focused mental work",
+        "pl": "Skoncentrowana praca umysłowa",
+        "uk": "Зосереджена розумова робота",
+        "de": "Fokussierte geistige Arbeit",
+        "es": "Trabajo mental concentrado",
+        "cs": "Soustředěná duševní práce"
+      },
+      "description": {
+        "ru": "Эпизод целенаправленной когнитивной деятельности, не привязанный к конкретной профессии.",
+        "en": "Episode of goal-directed cognitive activity not tied to a specific profession.",
+        "pl": "Epizod ukierunkowanej aktywności poznawczej niezwiązany z konkretnym zawodem.",
+        "uk": "Епізод цілеспрямованої когнітивної діяльності, не прив’язаний до конкретної професії.",
+        "de": "Episode zielgerichteter kognitiver Tätigkeit ohne Bindung an einen bestimmten Beruf.",
+        "es": "Episodio de actividad cognitiva dirigida a un objetivo, no ligado a una profesión concreta.",
+        "cs": "Epizoda cílené kognitivní činnosti nevázaná na konkrétní profesi."
+      }
+    },
+    "process.movement.walking": {
+      "title": {
+        "ru": "Ходьба",
+        "en": "Walking",
+        "pl": "Chodzenie",
+        "uk": "Ходьба",
+        "de": "Gehen",
+        "es": "Caminar",
+        "cs": "Chůze"
+      },
+      "description": {
+        "ru": "Обычная ходьба/прогулка; purpose/context — relation, не новый leaf.",
+        "en": "Ordinary walking/stroll; purpose/context is a relation, not a new leaf.",
+        "pl": "Zwykłe chodzenie/spacer; cel/kontekst jest relacją, a nie nowym liściem.",
+        "uk": "Звичайна ходьба/прогулянка; мета/контекст — це відношення, а не новий лист.",
+        "de": "Normales Gehen/Spazieren; Zweck/Kontext ist eine Relation, kein neues Blatt.",
+        "es": "Caminata/paseo ordinario; el propósito/contexto es una relación, no una hoja nueva.",
+        "cs": "Běžná chůze/procházka; účel/kontext je relace, nikoli nový list."
+      }
+    },
+    "process.movement.running": {
+      "title": {
+        "ru": "Бег",
+        "en": "Running",
+        "pl": "Bieganie",
+        "uk": "Біг",
+        "de": "Laufen",
+        "es": "Correr",
+        "cs": "Běh"
+      },
+      "description": {
+        "ru": "Беговой эпизод.",
+        "en": "Running episode.",
+        "pl": "Epizod biegu.",
+        "uk": "Епізод бігу.",
+        "de": "Laufepisode.",
+        "es": "Episodio de carrera.",
+        "cs": "Běžecká epizoda."
+      }
+    },
+    "process.movement.cycling": {
+      "title": {
+        "ru": "Езда на велосипеде",
+        "en": "Cycling",
+        "pl": "Jazda na rowerze",
+        "uk": "Їзда на велосипеді",
+        "de": "Radfahren",
+        "es": "Ciclismo",
+        "cs": "Jízda na kole"
+      },
+      "description": {
+        "ru": "Велосипедная активность.",
+        "en": "Cycling activity.",
+        "pl": "Aktywność rowerowa.",
+        "uk": "Велосипедна активність.",
+        "de": "Fahrradaktivität.",
+        "es": "Actividad en bicicleta.",
+        "cs": "Cyklistická aktivita."
+      }
+    },
+    "process.movement.swimming": {
+      "title": {
+        "ru": "Плавание",
+        "en": "Swimming",
+        "pl": "Pływanie",
+        "uk": "Плавання",
+        "de": "Schwimmen",
+        "es": "Natación",
+        "cs": "Plavání"
+      },
+      "description": {
+        "ru": "Плавание как физическая активность.",
+        "en": "Swimming as physical activity.",
+        "pl": "Pływanie jako aktywność fizyczna.",
+        "uk": "Плавання як фізична активність.",
+        "de": "Schwimmen als körperliche Aktivität.",
+        "es": "Natación como actividad física.",
+        "cs": "Plavání jako fyzická aktivita."
+      }
+    },
+    "process.exercise.plank": {
+      "title": {
+        "ru": "Планка",
+        "en": "Plank",
+        "pl": "Deska",
+        "uk": "Планка",
+        "de": "Unterarmstütz",
+        "es": "Plancha",
+        "cs": "Prkno"
+      },
+      "description": {
+        "ru": "Статическое упражнение в положении планки.",
+        "en": "Static exercise in a plank position.",
+        "pl": "Ćwiczenie statyczne w pozycji deski.",
+        "uk": "Статична вправа в положенні планки.",
+        "de": "Statische Übung in Plank-Position.",
+        "es": "Ejercicio estático en posición de plancha.",
+        "cs": "Statické cvičení v pozici prkna."
+      }
+    },
+    "process.exercise.reverse_plank": {
+      "title": {
+        "ru": "Обратная планка",
+        "en": "Reverse plank",
+        "pl": "Odwrócona deska",
+        "uk": "Зворотна планка",
+        "de": "Umgekehrter Stütz",
+        "es": "Plancha inversa",
+        "cs": "Obrácené prkno"
+      },
+      "description": {
+        "ru": "Статическое упражнение в положении обратной планки.",
+        "en": "Static exercise in a reverse-plank position.",
+        "pl": "Ćwiczenie statyczne w pozycji odwróconej deski.",
+        "uk": "Статична вправа в положенні зворотної планки.",
+        "de": "Statische Übung in umgekehrter Plank-Position.",
+        "es": "Ejercicio estático en posición de plancha inversa.",
+        "cs": "Statické cvičení v pozici obráceného prkna."
+      }
+    },
+    "process.exercise.push_up": {
+      "title": {
+        "ru": "Отжимания",
+        "en": "Push-ups",
+        "pl": "Pompki",
+        "uk": "Віджимання",
+        "de": "Liegestütze",
+        "es": "Flexiones",
+        "cs": "Kliky"
+      },
+      "description": {
+        "ru": "Отжимания; repetitions/set_count при explicit данных.",
+        "en": "Push-ups; repetitions/set_count when explicitly provided.",
+        "pl": "Pompki; repetitions/set_count przy jawnie podanych danych.",
+        "uk": "Віджимання; repetitions/set_count за явно вказаних даних.",
+        "de": "Liegestütze; repetitions/set_count bei expliziten Angaben.",
+        "es": "Flexiones; repetitions/set_count cuando se indican explícitamente.",
+        "cs": "Kliky; repetitions/set_count při explicitních údajích."
+      }
+    },
+    "process.exercise.pull_up": {
+      "title": {
+        "ru": "Подтягивания",
+        "en": "Pull-ups",
+        "pl": "Podciąganie",
+        "uk": "Підтягування",
+        "de": "Klimmzüge",
+        "es": "Dominadas",
+        "cs": "Shyby"
+      },
+      "description": {
+        "ru": "Подтягивания; repetitions/set_count при explicit данных.",
+        "en": "Pull-ups; repetitions/set_count when explicitly provided.",
+        "pl": "Podciąganie; repetitions/set_count przy jawnie podanych danych.",
+        "uk": "Підтягування; repetitions/set_count за явно вказаних даних.",
+        "de": "Klimmzüge; repetitions/set_count bei expliziten Angaben.",
+        "es": "Dominadas; repetitions/set_count cuando se indican explícitamente.",
+        "cs": "Shyby; repetitions/set_count při explicitních údajích."
+      }
+    },
+    "process.exercise.squat": {
+      "title": {
+        "ru": "Приседания",
+        "en": "Squats",
+        "pl": "Przysiady",
+        "uk": "Присідання",
+        "de": "Kniebeugen",
+        "es": "Sentadillas",
+        "cs": "Dřepy"
+      },
+      "description": {
+        "ru": "Приседания с/без нагрузки; конкретный variant может стать candidate.",
+        "en": "Squats with/without load; a specific variant may become a candidate.",
+        "pl": "Przysiady z obciążeniem lub bez; konkretny wariant może stać się kandydatem.",
+        "uk": "Присідання з навантаженням або без; конкретний варіант може стати кандидатом.",
+        "de": "Kniebeugen mit/ohne Last; eine konkrete Variante kann zum Kandidaten werden.",
+        "es": "Sentadillas con o sin carga; una variante concreta puede convertirse en candidata.",
+        "cs": "Dřepy se zátěží nebo bez ní; konkrétní varianta se může stát kandidátem."
+      }
+    },
+    "process.exercise.mobility_stretching": {
+      "title": {
+        "ru": "Растяжка/мобилизация",
+        "en": "Stretching/mobility",
+        "pl": "Rozciąganie/mobilizacja",
+        "uk": "Розтягування/мобілізація",
+        "de": "Dehnen/Mobilität",
+        "es": "Estiramiento/movilidad",
+        "cs": "Protahování/mobilita"
+      },
+      "description": {
+        "ru": "Растяжка и mobility-сессия.",
+        "en": "Stretching and mobility session.",
+        "pl": "Sesja rozciągania i mobilizacji.",
+        "uk": "Сесія розтягування та mobility.",
+        "de": "Dehn- und Mobilitätssitzung.",
+        "es": "Sesión de estiramiento y movilidad.",
+        "cs": "Relace protahování a mobility."
+      }
+    },
+    "behavior.movement.prolonged_sitting": {
+      "title": {
+        "ru": "Продолжительное сидение",
+        "en": "Prolonged sitting",
+        "pl": "Długotrwałe siedzenie",
+        "uk": "Тривале сидіння",
+        "de": "Längeres Sitzen",
+        "es": "Sedestación prolongada",
+        "cs": "Dlouhodobé sezení"
+      },
+      "description": {
+        "ru": "Период сидения/низкой подвижности; duration only if explicit/derived from event interval.",
+        "en": "Period of sitting/low mobility; duration only if explicit or derived from the event interval.",
+        "pl": "Okres siedzenia/małej mobilności; czas tylko jeśli jawny lub wyprowadzony z przedziału zdarzenia.",
+        "uk": "Період сидіння/низької рухливості; тривалість лише якщо явно вказана або виведена з інтервалу події.",
+        "de": "Zeitraum des Sitzens/geringer Mobilität; Dauer nur explizit oder aus dem Ereignisintervall abgeleitet.",
+        "es": "Periodo sentado/de baja movilidad; duración solo si es explícita o derivada del intervalo del evento.",
+        "cs": "Období sezení/nízké pohyblivosti; délka pouze pokud je explicitní nebo odvozená z intervalu události."
+      }
+    },
+    "behavior.movement.prolonged_standing": {
+      "title": {
+        "ru": "Продолжительное стояние",
+        "en": "Prolonged standing",
+        "pl": "Długotrwałe stanie",
+        "uk": "Тривале стояння",
+        "de": "Längeres Stehen",
+        "es": "Bipedestación prolongada",
+        "cs": "Dlouhodobé stání"
+      },
+      "description": {
+        "ru": "Период стояния.",
+        "en": "Period of standing.",
+        "pl": "Okres stania.",
+        "uk": "Період стояння.",
+        "de": "Zeitraum des Stehens.",
+        "es": "Periodo de estar de pie.",
+        "cs": "Období stání."
+      }
+    },
+    "process.nutrition.meal": {
+      "title": {
+        "ru": "Приём пищи",
+        "en": "Meal",
+        "pl": "Posiłek",
+        "uk": "Прийом їжі",
+        "de": "Mahlzeit",
+        "es": "Comida",
+        "cs": "Jídlo"
+      },
+      "description": {
+        "ru": "Событие приёма пищи.",
+        "en": "Meal event.",
+        "pl": "Zdarzenie spożycia posiłku.",
+        "uk": "Подія прийому їжі.",
+        "de": "Ereignis einer Mahlzeit.",
+        "es": "Evento de ingesta de comida.",
+        "cs": "Událost příjmu jídla."
+      }
+    },
+    "process.nutrition.water_intake": {
+      "title": {
+        "ru": "Употребление воды",
+        "en": "Water intake",
+        "pl": "Spożycie wody",
+        "uk": "Вживання води",
+        "de": "Wasseraufnahme",
+        "es": "Ingesta de agua",
+        "cs": "Příjem vody"
+      },
+      "description": {
+        "ru": "Событие употребления воды.",
+        "en": "Water-intake event.",
+        "pl": "Zdarzenie spożycia wody.",
+        "uk": "Подія вживання води.",
+        "de": "Ereignis der Wasseraufnahme.",
+        "es": "Evento de ingesta de agua.",
+        "cs": "Událost příjmu vody."
+      }
+    },
+    "process.nutrition.caffeine_intake": {
+      "title": {
+        "ru": "Употребление кофеина",
+        "en": "Caffeine intake",
+        "pl": "Spożycie kofeiny",
+        "uk": "Вживання кофеїну",
+        "de": "Koffeinaufnahme",
+        "es": "Ingesta de cafeína",
+        "cs": "Příjem kofeinu"
+      },
+      "description": {
+        "ru": "Кофе/чай/кофеин как intake event; dose только explicit/source-backed.",
+        "en": "Coffee/tea/caffeine as an intake event; dose only when explicit or source-backed.",
+        "pl": "Kawa/herbata/kofeina jako zdarzenie spożycia; dawka tylko jeśli jawna lub potwierdzona źródłem.",
+        "uk": "Кава/чай/кофеїн як подія споживання; доза лише якщо явно вказана або підтверджена джерелом.",
+        "de": "Kaffee/Tee/Koffein als Aufnahmeereignis; Dosis nur explizit oder quellenbasiert.",
+        "es": "Café/té/cafeína como evento de ingesta; dosis solo si es explícita o respaldada por la fuente.",
+        "cs": "Káva/čaj/kofein jako událost příjmu; dávka pouze explicitní nebo podložená zdrojem."
+      }
+    },
+    "process.nutrition.alcohol_intake": {
+      "title": {
+        "ru": "Употребление алкоголя",
+        "en": "Alcohol intake",
+        "pl": "Spożycie alkoholu",
+        "uk": "Вживання алкоголю",
+        "de": "Alkoholaufnahme",
+        "es": "Ingesta de alcohol",
+        "cs": "Příjem alkoholu"
+      },
+      "description": {
+        "ru": "Событие употребления алкоголя; amount только explicit/source-backed.",
+        "en": "Alcohol-intake event; amount only when explicit or source-backed.",
+        "pl": "Zdarzenie spożycia alkoholu; ilość tylko jeśli jawna lub potwierdzona źródłem.",
+        "uk": "Подія вживання алкоголю; кількість лише якщо явно вказана або підтверджена джерелом.",
+        "de": "Ereignis der Alkoholaufnahme; Menge nur explizit oder quellenbasiert.",
+        "es": "Evento de ingesta de alcohol; cantidad solo si es explícita o respaldada por la fuente.",
+        "cs": "Událost příjmu alkoholu; množství pouze explicitní nebo podložené zdrojem."
+      }
+    },
+    "entity.food.item": {
+      "title": {
+        "ru": "Пищевой продукт/блюдо",
+        "en": "Food item/dish",
+        "pl": "Produkt spożywczy/danie",
+        "uk": "Харчовий продукт/страва",
+        "de": "Lebensmittel/Gericht",
+        "es": "Alimento/plato",
+        "cs": "Potravina/pokrm"
+      },
+      "description": {
+        "ru": "Общий объект потребляемой пищи; детализация продукта может быть candidate/reference later.",
+        "en": "General object for consumed food; product details may later become a candidate/reference.",
+        "pl": "Ogólny obiekt spożywanej żywności; szczegóły produktu mogą później stać się kandydatem/referencją.",
+        "uk": "Загальний об’єкт споживаної їжі; деталізація продукту може пізніше стати кандидатом/референсом.",
+        "de": "Allgemeines Objekt für verzehrte Nahrung; Produktdetails können später Kandidat/Referenz werden.",
+        "es": "Objeto general del alimento consumido; los detalles del producto pueden convertirse después en candidato/referencia.",
+        "cs": "Obecný objekt konzumovaného jídla; detail produktu se později může stát kandidátem/referencí."
+      }
+    },
+    "entity.beverage.item": {
+      "title": {
+        "ru": "Напиток",
+        "en": "Beverage",
+        "pl": "Napój",
+        "uk": "Напій",
+        "de": "Getränk",
+        "es": "Bebida",
+        "cs": "Nápoj"
+      },
+      "description": {
+        "ru": "Общий объект напитка.",
+        "en": "General beverage object.",
+        "pl": "Ogólny obiekt napoju.",
+        "uk": "Загальний об’єкт напою.",
+        "de": "Allgemeines Getränkeobjekt.",
+        "es": "Objeto general de bebida.",
+        "cs": "Obecný objekt nápoje."
+      }
+    },
+    "state.nutrition.hunger": {
+      "title": {
+        "ru": "Голод",
+        "en": "Hunger",
+        "pl": "Głód",
+        "uk": "Голод",
+        "de": "Hunger",
+        "es": "Hambre",
+        "cs": "Hlad"
+      },
+      "description": {
+        "ru": "Качественное/explicit scale состояние голода.",
+        "en": "Qualitative/explicitly scaled hunger state.",
+        "pl": "Jakościowy lub jawnie skalowany stan głodu.",
+        "uk": "Якісний або явно шкалований стан голоду.",
+        "de": "Qualitativer oder explizit skalierter Hungerzustand.",
+        "es": "Estado de hambre cualitativo o con escala explícita.",
+        "cs": "Kvalitativní nebo explicitně škálovaný stav hladu."
+      }
+    },
+    "state.nutrition.satiety": {
+      "title": {
+        "ru": "Сытость",
+        "en": "Satiety",
+        "pl": "Sytość",
+        "uk": "Ситість",
+        "de": "Sättigung",
+        "es": "Saciedad",
+        "cs": "Sytost"
+      },
+      "description": {
+        "ru": "Качественное/explicit scale состояние сытости.",
+        "en": "Qualitative/explicitly scaled satiety state.",
+        "pl": "Jakościowy lub jawnie skalowany stan sytości.",
+        "uk": "Якісний або явно шкалований стан ситості.",
+        "de": "Qualitativer oder explizit skalierter Sättigungszustand.",
+        "es": "Estado de saciedad cualitativo o con escala explícita.",
+        "cs": "Kvalitativní nebo explicitně škálovaný stav sytosti."
+      }
+    },
+    "state.nutrition.thirst": {
+      "title": {
+        "ru": "Жажда",
+        "en": "Thirst",
+        "pl": "Pragnienie",
+        "uk": "Спрага",
+        "de": "Durst",
+        "es": "Sed",
+        "cs": "Žízeň"
+      },
+      "description": {
+        "ru": "Качественное/explicit scale состояние жажды.",
+        "en": "Qualitative/explicitly scaled thirst state.",
+        "pl": "Jakościowy lub jawnie skalowany stan pragnienia.",
+        "uk": "Якісний або явно шкалований стан спраги.",
+        "de": "Qualitativer oder explizit skalierter Durstzustand.",
+        "es": "Estado de sed cualitativo o con escala explícita.",
+        "cs": "Kvalitativní nebo explicitně škálovaný stav žízně."
+      }
+    },
+    "relationship.partner": {
+      "title": {
+        "ru": "Партнёрские отношения",
+        "en": "Partner relationship",
+        "pl": "Relacja partnerska",
+        "uk": "Партнерські стосунки",
+        "de": "Partnerschaft",
+        "es": "Relación de pareja",
+        "cs": "Partnerský vztah"
+      },
+      "description": {
+        "ru": "Глобальный тип отношений; конкретный партнёр создаётся позже actor-scoped.",
+        "en": "Global relationship type; a specific partner is created later as actor-scoped.",
+        "pl": "Globalny typ relacji; konkretny partner zostanie później utworzony w zakresie aktora.",
+        "uk": "Глобальний тип стосунків; конкретний партнер пізніше створюється в області актора.",
+        "de": "Globaler Beziehungstyp; ein konkreter Partner wird später aktorbezogen erstellt.",
+        "es": "Tipo global de relación; una pareja concreta se creará después en el ámbito del actor.",
+        "cs": "Globální typ vztahu; konkrétní partner bude později vytvořen v rozsahu aktéra."
+      }
+    },
+    "relationship.parent_child": {
+      "title": {
+        "ru": "Родительско-детские отношения",
+        "en": "Parent-child relationship",
+        "pl": "Relacja rodzic–dziecko",
+        "uk": "Батьківсько-дитячі стосунки",
+        "de": "Eltern-Kind-Beziehung",
+        "es": "Relación padre/madre-hijo",
+        "cs": "Vztah rodič–dítě"
+      },
+      "description": {
+        "ru": "Глобальный тип отношений.",
+        "en": "Global parent-child relationship type.",
+        "pl": "Globalny typ relacji rodzic–dziecko.",
+        "uk": "Глобальний тип батьківсько-дитячих стосунків.",
+        "de": "Globaler Typ der Eltern-Kind-Beziehung.",
+        "es": "Tipo global de relación padre/madre-hijo.",
+        "cs": "Globální typ vztahu rodič–dítě."
+      }
+    },
+    "relationship.friendship": {
+      "title": {
+        "ru": "Дружеские отношения",
+        "en": "Friendship",
+        "pl": "Relacja przyjacielska",
+        "uk": "Дружні стосунки",
+        "de": "Freundschaft",
+        "es": "Amistad",
+        "cs": "Přátelství"
+      },
+      "description": {
+        "ru": "Глобальный тип дружеских отношений.",
+        "en": "Global friendship relationship type.",
+        "pl": "Globalny typ relacji przyjacielskiej.",
+        "uk": "Глобальний тип дружніх стосунків.",
+        "de": "Globaler Typ freundschaftlicher Beziehung.",
+        "es": "Tipo global de relación de amistad.",
+        "cs": "Globální typ přátelského vztahu."
+      }
+    },
+    "relationship.colleague": {
+      "title": {
+        "ru": "Коллегиальные отношения",
+        "en": "Colleague relationship",
+        "pl": "Relacja koleżeńska",
+        "uk": "Колегіальні стосунки",
+        "de": "Kollegiale Beziehung",
+        "es": "Relación entre colegas",
+        "cs": "Kolegiální vztah"
+      },
+      "description": {
+        "ru": "Глобальный тип отношений с коллегами.",
+        "en": "Global relationship type with colleagues.",
+        "pl": "Globalny typ relacji z kolegami z pracy.",
+        "uk": "Глобальний тип стосунків з колегами.",
+        "de": "Globaler Beziehungstyp zu Kollegen.",
+        "es": "Tipo global de relación con colegas.",
+        "cs": "Globální typ vztahu s kolegy."
+      }
+    },
+    "process.social.conversation": {
+      "title": {
+        "ru": "Разговор",
+        "en": "Conversation",
+        "pl": "Rozmowa",
+        "uk": "Розмова",
+        "de": "Gespräch",
+        "es": "Conversación",
+        "cs": "Rozhovor"
+      },
+      "description": {
+        "ru": "Разговор с участником/участниками.",
+        "en": "Conversation with one or more participants.",
+        "pl": "Rozmowa z jednym lub wieloma uczestnikami.",
+        "uk": "Розмова з одним або кількома учасниками.",
+        "de": "Gespräch mit einem oder mehreren Teilnehmern.",
+        "es": "Conversación con uno o varios participantes.",
+        "cs": "Rozhovor s jedním nebo více účastníky."
+      }
+    },
+    "process.social.shared_time": {
+      "title": {
+        "ru": "Совместное время/досуг",
+        "en": "Shared time/leisure",
+        "pl": "Wspólny czas/wypoczynek",
+        "uk": "Спільний час/дозвілля",
+        "de": "Gemeinsame Zeit/Freizeit",
+        "es": "Tiempo compartido/ocio",
+        "cs": "Společný čas/volný čas"
+      },
+      "description": {
+        "ru": "Совместное время; конкретная activity может дополнительно иметь свой PROCESS leaf.",
+        "en": "Shared time; a specific activity may additionally have its own PROCESS leaf.",
+        "pl": "Wspólny czas; konkretna aktywność może dodatkowo mieć własny liść PROCESS.",
+        "uk": "Спільний час; конкретна активність може додатково мати власний лист PROCESS.",
+        "de": "Gemeinsame Zeit; eine konkrete Aktivität kann zusätzlich ein eigenes PROCESS-Blatt haben.",
+        "es": "Tiempo compartido; una actividad concreta puede tener además su propia hoja PROCESS.",
+        "cs": "Společný čas; konkrétní aktivita může mít navíc vlastní list PROCESS."
+      }
+    },
+    "process.social.conflict_interaction": {
+      "title": {
+        "ru": "Конфликтное взаимодействие",
+        "en": "Conflict interaction",
+        "pl": "Interakcja konfliktowa",
+        "uk": "Конфліктна взаємодія",
+        "de": "Konfliktinteraktion",
+        "es": "Interacción conflictiva",
+        "cs": "Konfliktní interakce"
+      },
+      "description": {
+        "ru": "Эпизод конфликта; stress/mood не вшиваются автоматически.",
+        "en": "Conflict episode; stress/mood are not embedded automatically.",
+        "pl": "Epizod konfliktu; stres/nastrój nie są automatycznie wbudowywane.",
+        "uk": "Епізод конфлікту; стрес/настрій не вбудовуються автоматично.",
+        "de": "Konfliktepisode; Stress/Stimmung werden nicht automatisch eingebettet.",
+        "es": "Episodio de conflicto; estrés/estado de ánimo no se incorporan automáticamente.",
+        "cs": "Epizoda konfliktu; stres/nálada se automaticky nevkládají."
+      }
+    },
+    "process.social.support_exchange": {
+      "title": {
+        "ru": "Помощь/поддержка",
+        "en": "Help/support",
+        "pl": "Pomoc/wsparcie",
+        "uk": "Допомога/підтримка",
+        "de": "Hilfe/Unterstützung",
+        "es": "Ayuda/apoyo",
+        "cs": "Pomoc/podpora"
+      },
+      "description": {
+        "ru": "Оказание/получение практической или эмоциональной поддержки.",
+        "en": "Giving/receiving practical or emotional support.",
+        "pl": "Udzielanie/otrzymywanie praktycznego lub emocjonalnego wsparcia.",
+        "uk": "Надання/отримання практичної або емоційної підтримки.",
+        "de": "Geben/Empfangen praktischer oder emotionaler Unterstützung.",
+        "es": "Dar/recibir apoyo práctico o emocional.",
+        "cs": "Poskytování/přijímání praktické nebo emoční podpory."
+      }
+    },
+    "process.social.caregiving": {
+      "title": {
+        "ru": "Забота/уход за другим",
+        "en": "Caregiving",
+        "pl": "Opieka nad inną osobą",
+        "uk": "Турбота/догляд за іншим",
+        "de": "Fürsorge/Pflege einer anderen Person",
+        "es": "Cuidado de otra persona",
+        "cs": "Péče o druhého"
+      },
+      "description": {
+        "ru": "Эпизод заботы/ухода; participant — relation.",
+        "en": "Episode of care/caregiving; participant is a relation.",
+        "pl": "Epizod opieki; uczestnik jest relacją.",
+        "uk": "Епізод турботи/догляду; учасник — це відношення.",
+        "de": "Episode der Fürsorge/Pflege; der Teilnehmer wird als Relation abgebildet.",
+        "es": "Episodio de cuidado; el participante se representa mediante una relación.",
+        "cs": "Epizoda péče; účastník je vyjádřen relací."
+      }
+    },
+    "role.social.partner": {
+      "title": {
+        "ru": "Партнёр/супруг",
+        "en": "Partner/spouse",
+        "pl": "Partner/małżonek",
+        "uk": "Партнер/чоловік або дружина",
+        "de": "Partner/Ehepartner",
+        "es": "Pareja/cónyuge",
+        "cs": "Partner/manžel či manželka"
+      },
+      "description": {
+        "ru": "Глобальная роль, не конкретный человек.",
+        "en": "Global role, not a specific person.",
+        "pl": "Globalna rola, nie konkretna osoba.",
+        "uk": "Глобальна роль, не конкретна людина.",
+        "de": "Globale Rolle, keine konkrete Person.",
+        "es": "Rol global, no una persona concreta.",
+        "cs": "Globální role, nikoli konkrétní osoba."
+      }
+    },
+    "role.social.parent": {
+      "title": {
+        "ru": "Родитель",
+        "en": "Parent",
+        "pl": "Rodzic",
+        "uk": "Батько/мати",
+        "de": "Elternteil",
+        "es": "Padre/madre",
+        "cs": "Rodič"
+      },
+      "description": {
+        "ru": "Глобальная роль.",
+        "en": "Global role.",
+        "pl": "Globalna rola.",
+        "uk": "Глобальна роль.",
+        "de": "Globale Rolle.",
+        "es": "Rol global.",
+        "cs": "Globální role."
+      }
+    },
+    "role.social.friend": {
+      "title": {
+        "ru": "Друг",
+        "en": "Friend",
+        "pl": "Przyjaciel",
+        "uk": "Друг",
+        "de": "Freund",
+        "es": "Amigo",
+        "cs": "Přítel"
+      },
+      "description": {
+        "ru": "Глобальная роль.",
+        "en": "Global role.",
+        "pl": "Globalna rola.",
+        "uk": "Глобальна роль.",
+        "de": "Globale Rolle.",
+        "es": "Rol global.",
+        "cs": "Globální role."
+      }
+    },
+    "role.social.colleague": {
+      "title": {
+        "ru": "Коллега",
+        "en": "Colleague",
+        "pl": "Kolega z pracy",
+        "uk": "Колега",
+        "de": "Kollege",
+        "es": "Colega",
+        "cs": "Kolega"
+      },
+      "description": {
+        "ru": "Глобальная роль.",
+        "en": "Global role.",
+        "pl": "Globalna rola.",
+        "uk": "Глобальна роль.",
+        "de": "Globale Rolle.",
+        "es": "Rol global.",
+        "cs": "Globální role."
+      }
+    },
+    "process.creative.instrument_playing": {
+      "title": {
+        "ru": "Игра на музыкальном инструменте",
+        "en": "Playing a musical instrument",
+        "pl": "Gra na instrumencie muzycznym",
+        "uk": "Гра на музичному інструменті",
+        "de": "Musikinstrument spielen",
+        "es": "Tocar un instrumento musical",
+        "cs": "Hra na hudební nástroj"
+      },
+      "description": {
+        "ru": "Игра/практика на музыкальном инструменте.",
+        "en": "Playing/practising a musical instrument.",
+        "pl": "Gra/ćwiczenie na instrumencie muzycznym.",
+        "uk": "Гра/практика на музичному інструменті.",
+        "de": "Spielen/Üben auf einem Musikinstrument.",
+        "es": "Tocar/practicar con un instrumento musical.",
+        "cs": "Hra/cvičení na hudební nástroj."
+      }
+    },
+    "process.creative.singing": {
+      "title": {
+        "ru": "Пение",
+        "en": "Singing",
+        "pl": "Śpiew",
+        "uk": "Спів",
+        "de": "Singen",
+        "es": "Canto",
+        "cs": "Zpěv"
+      },
+      "description": {
+        "ru": "Пение как творческий процесс; professional context relation возможен.",
+        "en": "Singing as a creative process; a professional-context relation is possible.",
+        "pl": "Śpiew jako proces twórczy; możliwa jest relacja z kontekstem zawodowym.",
+        "uk": "Спів як творчий процес; можливе відношення до професійного контексту.",
+        "de": "Singen als kreativer Prozess; eine Relation zum beruflichen Kontext ist möglich.",
+        "es": "Canto como proceso creativo; puede existir una relación con el contexto profesional.",
+        "cs": "Zpěv jako tvůrčí proces; je možná relace k profesnímu kontextu."
+      }
+    },
+    "process.creative.creation": {
+      "title": {
+        "ru": "Создание текста/визуального материала",
+        "en": "Creating text/visual material",
+        "pl": "Tworzenie tekstu/materiału wizualnego",
+        "uk": "Створення тексту/візуального матеріалу",
+        "de": "Text/visuelles Material erstellen",
+        "es": "Creación de texto/material visual",
+        "cs": "Tvorba textu/vizuálního materiálu"
+      },
+      "description": {
+        "ru": "Творческое создание контента/произведения.",
+        "en": "Creative creation of content/a work.",
+        "pl": "Twórcze tworzenie treści/dzieła.",
+        "uk": "Творче створення контенту/твору.",
+        "de": "Kreative Erstellung von Inhalten/einem Werk.",
+        "es": "Creación creativa de contenido/una obra.",
+        "cs": "Tvůrčí vytváření obsahu/díla."
+      }
+    },
+    "process.leisure.game": {
+      "title": {
+        "ru": "Игра/видеоигра",
+        "en": "Game/video game",
+        "pl": "Gra/gra wideo",
+        "uk": "Гра/відеогра",
+        "de": "Spiel/Videospiel",
+        "es": "Juego/videojuego",
+        "cs": "Hra/videohra"
+      },
+      "description": {
+        "ru": "Игровой досуг.",
+        "en": "Gaming leisure.",
+        "pl": "Rozrywka w formie gry.",
+        "uk": "Ігрове дозвілля.",
+        "de": "Freizeitbeschäftigung durch Spielen.",
+        "es": "Ocio mediante juegos.",
+        "cs": "Herní volný čas."
+      }
+    },
+    "process.leisure.media_consumption": {
+      "title": {
+        "ru": "Просмотр медиа",
+        "en": "Media viewing",
+        "pl": "Oglądanie mediów",
+        "uk": "Перегляд медіа",
+        "de": "Medienkonsum",
+        "es": "Consumo de medios",
+        "cs": "Sledování médií"
+      },
+      "description": {
+        "ru": "Просмотр видео/телевидения/стриминга.",
+        "en": "Watching video/television/streaming.",
+        "pl": "Oglądanie wideo/telewizji/streamingu.",
+        "uk": "Перегляд відео/телебачення/стримінгу.",
+        "de": "Ansehen von Video/Fernsehen/Streaming.",
+        "es": "Ver vídeo/televisión/streaming.",
+        "cs": "Sledování videa/televize/streamingu."
+      }
+    },
+    "process.leisure.cultural_event": {
+      "title": {
+        "ru": "Культурное мероприятие",
+        "en": "Cultural event",
+        "pl": "Wydarzenie kulturalne",
+        "uk": "Культурний захід",
+        "de": "Kulturveranstaltung",
+        "es": "Evento cultural",
+        "cs": "Kulturní událost"
+      },
+      "description": {
+        "ru": "Посещение/участие в культурном событии как досуг.",
+        "en": "Attendance/participation in a cultural event as leisure.",
+        "pl": "Uczestnictwo w wydarzeniu kulturalnym jako forma czasu wolnego.",
+        "uk": "Відвідування/участь у культурній події як дозвілля.",
+        "de": "Besuch/Teilnahme an einem kulturellen Ereignis als Freizeit.",
+        "es": "Asistencia/participación en un evento cultural como ocio.",
+        "cs": "Návštěva/účast na kulturní události jako volný čas."
+      }
+    },
+    "process.leisure.free_rest": {
+      "title": {
+        "ru": "Свободный отдых",
+        "en": "Free rest",
+        "pl": "Swobodny odpoczynek",
+        "uk": "Вільний відпочинок",
+        "de": "Freie Erholung",
+        "es": "Descanso libre",
+        "cs": "Volný odpočinek"
+      },
+      "description": {
+        "ru": "Свободный отдых, когда нет более точного процесса.",
+        "en": "Free rest when there is no more precise process.",
+        "pl": "Swobodny odpoczynek, gdy nie ma dokładniejszego procesu.",
+        "uk": "Вільний відпочинок, коли немає точнішого процесу.",
+        "de": "Freie Erholung, wenn kein genauerer Prozess vorliegt.",
+        "es": "Descanso libre cuando no existe un proceso más preciso.",
+        "cs": "Volný odpočinek, když neexistuje přesnější proces."
+      }
+    },
+    "process.sleep.night_episode": {
+      "title": {
+        "ru": "Ночной сон",
+        "en": "Night sleep",
+        "pl": "Sen nocny",
+        "uk": "Нічний сон",
+        "de": "Nachtschlaf",
+        "es": "Sueño nocturno",
+        "cs": "Noční spánek"
+      },
+      "description": {
+        "ru": "Основной эпизод сна в ночной период.",
+        "en": "Main sleep episode during the night period.",
+        "pl": "Główny epizod snu w okresie nocnym.",
+        "uk": "Основний епізод сну в нічний період.",
+        "de": "Hauptschlafepisode in der Nacht.",
+        "es": "Episodio principal de sueño durante la noche.",
+        "cs": "Hlavní epizoda spánku v nočním období."
+      }
+    },
+    "process.sleep.day_episode": {
+      "title": {
+        "ru": "Дневной сон",
+        "en": "Daytime sleep",
+        "pl": "Sen dzienny",
+        "uk": "Денний сон",
+        "de": "Tagschlaf",
+        "es": "Sueño diurno",
+        "cs": "Denní spánek"
+      },
+      "description": {
+        "ru": "Дневной эпизод сна/дремоты.",
+        "en": "Daytime sleep/nap episode.",
+        "pl": "Epizod snu/drzemki w ciągu dnia.",
+        "uk": "Денний епізод сну/дрімоти.",
+        "de": "Schlaf-/Nickerchenepisode am Tag.",
+        "es": "Episodio de sueño/siesta durante el día.",
+        "cs": "Denní epizoda spánku/dřímoty."
+      }
+    },
+    "process.recovery.rest_awake": {
+      "title": {
+        "ru": "Отдых без сна",
+        "en": "Rest while awake",
+        "pl": "Odpoczynek bez snu",
+        "uk": "Відпочинок без сну",
+        "de": "Ruhe ohne Schlaf",
+        "es": "Descanso sin dormir",
+        "cs": "Odpočinek bez spánku"
+      },
+      "description": {
+        "ru": "Период отдыха без сна.",
+        "en": "Period of rest without sleep.",
+        "pl": "Okres odpoczynku bez snu.",
+        "uk": "Період відпочинку без сну.",
+        "de": "Ruhephase ohne Schlaf.",
+        "es": "Periodo de descanso sin sueño.",
+        "cs": "Období odpočinku bez spánku."
+      }
+    },
+    "state.sleep.sleepiness": {
+      "title": {
+        "ru": "Сонливость",
+        "en": "Sleepiness",
+        "pl": "Senność",
+        "uk": "Сонливість",
+        "de": "Schläfrigkeit",
+        "es": "Somnolencia",
+        "cs": "Ospalost"
+      },
+      "description": {
+        "ru": "Качественная/explicit scale сонливости.",
+        "en": "Qualitative/explicitly scaled sleepiness.",
+        "pl": "Jakościowa lub jawnie skalowana senność.",
+        "uk": "Якісна або явно шкалована сонливість.",
+        "de": "Qualitative oder explizit skalierte Schläfrigkeit.",
+        "es": "Somnolencia cualitativa o con escala explícita.",
+        "cs": "Kvalitativní nebo explicitně škálovaná ospalost."
+      }
+    },
+    "state.recovery.restedness": {
+      "title": {
+        "ru": "Восстановленность",
+        "en": "Restedness",
+        "pl": "Wypoczęcie",
+        "uk": "Відновленість",
+        "de": "Erholtheit",
+        "es": "Recuperación",
+        "cs": "Zotavení"
+      },
+      "description": {
+        "ru": "Ощущение/измерение восстановленности.",
+        "en": "Feeling/measurement of recovery/restedness.",
+        "pl": "Odczucie/pomiar regeneracji i wypoczęcia.",
+        "uk": "Відчуття/вимірювання відновленості.",
+        "de": "Empfinden/Messung der Erholtheit.",
+        "es": "Sensación/medición de recuperación o descanso.",
+        "cs": "Pocit/měření zotavení a odpočinutí."
+      }
+    },
+    "state.sleep.sleep_onset_difficulty": {
+      "title": {
+        "ru": "Трудность засыпания",
+        "en": "Difficulty falling asleep",
+        "pl": "Trudność zasypiania",
+        "uk": "Труднощі засинання",
+        "de": "Einschlafschwierigkeit",
+        "es": "Dificultad para conciliar el sueño",
+        "cs": "Obtížné usínání"
+      },
+      "description": {
+        "ru": "Качественное состояние или explicit latency.",
+        "en": "Qualitative state or explicit sleep-onset latency.",
+        "pl": "Stan jakościowy lub jawnie podany czas zasypiania.",
+        "uk": "Якісний стан або явно вказана затримка засинання.",
+        "de": "Qualitativer Zustand oder explizite Einschlaflatenz.",
+        "es": "Estado cualitativo o latencia de inicio del sueño explícita.",
+        "cs": "Kvalitativní stav nebo explicitní latence usnutí."
+      }
+    },
+    "process.work.session": {
+      "title": {
+        "ru": "Рабочая сессия",
+        "en": "Work session",
+        "pl": "Sesja pracy",
+        "uk": "Робоча сесія",
+        "de": "Arbeitssitzung",
+        "es": "Sesión de trabajo",
+        "cs": "Pracovní relace"
+      },
+      "description": {
+        "ru": "Общий эпизод работы.",
+        "en": "General episode of work.",
+        "pl": "Ogólny epizod pracy.",
+        "uk": "Загальний епізод роботи.",
+        "de": "Allgemeine Arbeitsepisode.",
+        "es": "Episodio general de trabajo.",
+        "cs": "Obecná pracovní epizoda."
+      }
+    },
+    "process.work.meeting": {
+      "title": {
+        "ru": "Встреча/совещание",
+        "en": "Meeting",
+        "pl": "Spotkanie/narada",
+        "uk": "Зустріч/нарада",
+        "de": "Besprechung",
+        "es": "Reunión",
+        "cs": "Schůzka/porada"
+      },
+      "description": {
+        "ru": "Рабочее совещание/встреча.",
+        "en": "Work meeting/consultation.",
+        "pl": "Spotkanie/narada związana z pracą.",
+        "uk": "Робоча нарада/зустріч.",
+        "de": "Arbeitsbezogene Besprechung/Meeting.",
+        "es": "Reunión de trabajo.",
+        "cs": "Pracovní porada/schůzka."
+      }
+    },
+    "process.work.client_interaction": {
+      "title": {
+        "ru": "Клиентское взаимодействие",
+        "en": "Client interaction",
+        "pl": "Interakcja z klientem",
+        "uk": "Взаємодія з клієнтом",
+        "de": "Kundeninteraktion",
+        "es": "Interacción con clientes",
+        "cs": "Interakce s klientem"
+      },
+      "description": {
+        "ru": "Взаимодействие с клиентом/заказчиком.",
+        "en": "Interaction with a client/customer.",
+        "pl": "Interakcja z klientem/zamawiającym.",
+        "uk": "Взаємодія з клієнтом/замовником.",
+        "de": "Interaktion mit Kunde/Auftraggeber.",
+        "es": "Interacción con un cliente.",
+        "cs": "Interakce s klientem/zákazníkem."
+      }
+    },
+    "process.work.administrative": {
+      "title": {
+        "ru": "Административная работа",
+        "en": "Administrative work",
+        "pl": "Praca administracyjna",
+        "uk": "Адміністративна робота",
+        "de": "Verwaltungsarbeit",
+        "es": "Trabajo administrativo",
+        "cs": "Administrativní práce"
+      },
+      "description": {
+        "ru": "Административные/офисные задачи.",
+        "en": "Administrative/office tasks.",
+        "pl": "Zadania administracyjne/biurowe.",
+        "uk": "Адміністративні/офісні завдання.",
+        "de": "Administrative/Büroaufgaben.",
+        "es": "Tareas administrativas/de oficina.",
+        "cs": "Administrativní/kancelářské úkoly."
+      }
+    },
+    "process.work.performance": {
+      "title": {
+        "ru": "Публичное выступление/исполнение",
+        "en": "Public performance/presentation",
+        "pl": "Publiczny występ/prezentacja",
+        "uk": "Публічний виступ/виконання",
+        "de": "Öffentlicher Auftritt/Vortrag",
+        "es": "Actuación/presentación pública",
+        "cs": "Veřejné vystoupení/provedení"
+      },
+      "description": {
+        "ru": "Профессиональное публичное исполнение/выступление; relation связывает с творческим процессом при необходимости.",
+        "en": "Professional public performance/presentation; a relation links it to a creative process when needed.",
+        "pl": "Profesjonalny publiczny występ/prezentacja; w razie potrzeby relacja łączy go z procesem twórczym.",
+        "uk": "Професійне публічне виконання/виступ; за потреби відношення пов’язує його з творчим процесом.",
+        "de": "Professioneller öffentlicher Auftritt/Vortrag; bei Bedarf verbindet eine Relation ihn mit einem kreativen Prozess.",
+        "es": "Actuación/presentación pública profesional; una relación la vincula con un proceso creativo cuando es necesario.",
+        "cs": "Profesionální veřejné provedení/vystoupení; podle potřeby jej relace propojí s tvůrčím procesem."
+      }
+    },
+    "state.work.workload": {
+      "title": {
+        "ru": "Рабочая нагрузка",
+        "en": "Workload",
+        "pl": "Obciążenie pracą",
+        "uk": "Робоче навантаження",
+        "de": "Arbeitsbelastung",
+        "es": "Carga de trabajo",
+        "cs": "Pracovní zátěž"
+      },
+      "description": {
+        "ru": "Качественная/explicit шкала текущей нагрузки.",
+        "en": "Qualitative/explicit scale of current workload.",
+        "pl": "Jakościowa/jawna skala bieżącego obciążenia pracą.",
+        "uk": "Якісна/явна шкала поточного робочого навантаження.",
+        "de": "Qualitative/explizite Skala der aktuellen Arbeitsbelastung.",
+        "es": "Escala cualitativa/explícita de la carga de trabajo actual.",
+        "cs": "Kvalitativní/explicitní škála aktuální pracovní zátěže."
+      }
+    },
+    "state.work.readiness": {
+      "title": {
+        "ru": "Готовность к работе",
+        "en": "Readiness for work",
+        "pl": "Gotowość do pracy",
+        "uk": "Готовність до роботи",
+        "de": "Arbeitsbereitschaft",
+        "es": "Preparación para trabajar",
+        "cs": "Připravenost k práci"
+      },
+      "description": {
+        "ru": "Текущее ощущение/измерение готовности без универсальной нормы.",
+        "en": "Current feeling/measurement of readiness without a universal norm.",
+        "pl": "Bieżące odczucie/pomiar gotowości bez uniwersalnej normy.",
+        "uk": "Поточне відчуття/вимірювання готовності без універсальної норми.",
+        "de": "Aktuelles Empfinden/Messung der Bereitschaft ohne universelle Norm.",
+        "es": "Sensación/medición actual de preparación sin una norma universal.",
+        "cs": "Aktuální pocit/měření připravenosti bez univerzální normy."
+      }
+    },
+    "role.work.worker": {
+      "title": {
+        "ru": "Работник/исполнитель",
+        "en": "Worker/performer",
+        "pl": "Pracownik/wykonawca",
+        "uk": "Працівник/виконавець",
+        "de": "Arbeitnehmer/Ausführender",
+        "es": "Trabajador/ejecutor",
+        "cs": "Pracovník/vykonavatel"
+      },
+      "description": {
+        "ru": "Общая роль участника профессиональной деятельности; конкретные профессии — позже.",
+        "en": "General role of a participant in professional activity; specific professions come later.",
+        "pl": "Ogólna rola uczestnika działalności zawodowej; konkretne zawody pojawią się później.",
+        "uk": "Загальна роль учасника професійної діяльності; конкретні професії — пізніше.",
+        "de": "Allgemeine Rolle eines Teilnehmers beruflicher Tätigkeit; konkrete Berufe folgen später.",
+        "es": "Rol general de un participante en la actividad profesional; las profesiones concretas vendrán después.",
+        "cs": "Obecná role účastníka profesní činnosti; konkrétní profese přijdou později."
+      }
+    },
+    "entity.body.spine": {
+      "title": {
+        "ru": "Позвоночник",
+        "en": "Spine",
+        "pl": "Kręgosłup",
+        "uk": "Хребет",
+        "de": "Wirbelsäule",
+        "es": "Columna vertebral",
+        "cs": "Páteř"
+      },
+      "description": {
+        "ru": "Опорно-двигательная структура; сырые факты только на более точных leaf.",
+        "en": "Musculoskeletal structure; raw facts only on more precise leaves.",
+        "pl": "Struktura układu ruchu; surowe fakty tylko na dokładniejszych liściach.",
+        "uk": "Опорно-рухова структура; сирі факти лише на точніших листах.",
+        "de": "Muskuloskelettale Struktur; Rohfakten nur auf präziseren Blättern.",
+        "es": "Estructura musculoesquelética; los hechos brutos solo se registran en hojas más precisas.",
+        "cs": "Muskuloskeletální struktura; surová fakta pouze na přesnějších listech."
+      }
+    },
+    "entity.body.spine.lumbar": {
+      "title": {
+        "ru": "Поясничный отдел позвоночника",
+        "en": "Lumbar spine",
+        "pl": "Odcinek lędźwiowy kręgosłupa",
+        "uk": "Поперековий відділ хребта",
+        "de": "Lendenwirbelsäule",
+        "es": "Región lumbar de la columna",
+        "cs": "Bederní páteř"
+      },
+      "description": {
+        "ru": "Терминальная анатомическая мишень для боли/скованности/подвижности.",
+        "en": "Terminal anatomical target for pain/stiffness/mobility.",
+        "pl": "Końcowy cel anatomiczny dla bólu/sztywności/ruchomości.",
+        "uk": "Термінальна анатомічна мішень для болю/скутості/рухливості.",
+        "de": "Terminales anatomisches Ziel für Schmerz/Steifigkeit/Beweglichkeit.",
+        "es": "Objetivo anatómico terminal para dolor/rigidez/movilidad.",
+        "cs": "Terminální anatomický cíl pro bolest/ztuhlost/pohyblivost."
+      }
+    }
+  }
+}

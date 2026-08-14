@@ -574,7 +574,10 @@ export function ActualValueObjectsList() {
       setErrorMessage("");
 
       try {
-        const response = await fetch("/api/value-objects", {
+        const valueObjectsUrl = new URL("/api/value-objects", window.location.origin);
+        valueObjectsUrl.searchParams.set("locale", locale);
+
+        const response = await fetch(valueObjectsUrl.toString(), {
           method: "GET",
           headers: {
             Accept: "application/json",
@@ -614,7 +617,7 @@ export function ActualValueObjectsList() {
     return () => {
       abortController.abort();
     };
-  }, []);
+  }, [locale]);
 
   const objectsById = useMemo(() => {
     const map = new Map<string, ActualValueObjectPayload>();
@@ -930,10 +933,10 @@ export function ActualValueObjectsList() {
               return (
                 <article
                   key={valueObject.id ?? title}
-                  className="rounded-[20px] border border-[#dfe3f1] bg-white p-4 shadow-sm transition hover:border-[#c9d5ff] hover:shadow-md"
+                  className="min-w-0 w-full max-w-full overflow-hidden rounded-[20px] border border-[#dfe3f1] bg-white p-3 shadow-sm transition hover:border-[#c9d5ff] hover:shadow-md sm:p-4"
                 >
-                  <div className="flex gap-4">
-                    <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#dfe4ff] bg-[#eef2ff] text-[#3b6ef8]">
+                  <div className="flex min-w-0 gap-3 sm:gap-4">
+                    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#dfe4ff] bg-[#eef2ff] text-[#3b6ef8] sm:h-24 sm:w-24">
                       {imageUrl ? (
                         <img
                           src={imageUrl}
@@ -971,24 +974,15 @@ export function ActualValueObjectsList() {
                           </span>
                         </div>
 
-                        {valueObject.scope_code === "global" ? (
-                          <span className="shrink-0 rounded-full border border-[#dfe4ff] bg-[#eef2ff] px-2.5 py-1 text-[10px] font-bold text-[#3b6ef8]">
-                            {copy.system}
-                          </span>
-                        ) : (
-                          <Link
-                            href={buildLocaleAwareHref(
-                              getObjectDetailHref(valueObject),
-                              locale,
-                            )}
-                            className="shrink-0 text-[12px] font-bold text-[#3b6ef8] hover:underline"
-                          >
-                            {copy.open}
-                          </Link>
-                        )}
+                        <Link
+                          href={buildLocaleAwareHref(getObjectDetailHref(valueObject), locale)}
+                          className="shrink-0 text-[12px] font-bold text-[#3b6ef8] hover:underline"
+                        >
+                          {copy.open}
+                        </Link>
                       </div>
 
-                      <h2 className="mt-2 truncate text-[16px] font-bold text-[#111827]">
+                      <h2 className="mt-2 break-words text-[16px] font-bold text-[#111827] sm:truncate">
                         {title}
                       </h2>
 
@@ -999,7 +993,7 @@ export function ActualValueObjectsList() {
                       </div>
 
                       {valueObject.canonical_key ? (
-                        <div className="mt-1 truncate font-mono text-[10px] text-[#8b91a7]">
+                        <div className="mt-1 break-all font-mono text-[10px] text-[#8b91a7] sm:truncate">
                           {valueObject.canonical_key}
                         </div>
                       ) : null}
@@ -1014,12 +1008,12 @@ export function ActualValueObjectsList() {
                     <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7c8099]">
                       {copy.path}
                     </div>
-                    <div className="mt-1 truncate text-[12px] font-semibold text-[#334155]">
+                    <div className="mt-1 break-words text-[12px] font-semibold text-[#334155] sm:truncate">
                       {path}
                     </div>
                   </div>
 
-                  <div className="mt-3 grid grid-cols-3 gap-2">
+                  <div className="mt-3 grid min-w-0 grid-cols-3 gap-2">
                     {[
                       [copy.children, directChildren],
                       [copy.descendantLeaves, descendantLeaves],
@@ -1027,9 +1021,9 @@ export function ActualValueObjectsList() {
                     ].map(([label, value]) => (
                       <div
                         key={String(label)}
-                        className="rounded-xl border border-[#edf0f7] bg-[#f8fafc] px-3 py-3 text-center"
+                        className="min-w-0 rounded-xl border border-[#edf0f7] bg-[#f8fafc] px-2 py-3 text-center sm:px-3"
                       >
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#7c8099]">
+                        <div className="break-words text-[9px] font-semibold uppercase tracking-[0.06em] text-[#7c8099] sm:text-[10px] sm:tracking-[0.1em]">
                           {label}
                         </div>
                         <div className="mt-1 text-[14px] font-bold text-[#111827]">

@@ -1,11 +1,11 @@
 {
   "schemaVersion": 6,
-  "generatedAt": "2026-08-13T17:32:00+02:00",
+  "generatedAt": "2026-08-14T04:54:22.341Z",
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
   "branch": "feat/gsr1-global-system-reality-machine-contract-v1-20260811",
-  "originMainAtCheckpoint": "1061958ef8a43b375b82f70eb7342acb8afc47e6",
-  "checkpointMeaning": "AI-A3 P5B mutual read/display links over accepted P5A neutral-measure persistence; source release pending live UI acceptance.",
+  "originMainAtCheckpoint": "d5a474860241aa261220ccaf8e7bd91e8e43da3a",
+  "checkpointMeaning": "AI-A3 P5B mobile/global localization v2: responsive value-object cards, GLOBAL read-only detail link, locale-aware title/description/path for all 150 system objects.",
   "globalReality": {
     "p8Blocked": true,
     "objectsTotal": 150,
@@ -51,7 +51,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Deploy GLOBAL System value-object detail hotfix; repeat P5B live UI acceptance; then P5C quick capture + review buffer.",
+  "nextAction": "Deploy, repeat P5B live UI acceptance on mobile and GLOBAL leaf detail in at least EN/PL/ES; after PASS close P5B and start P5C quick capture + review buffer.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -288,5 +288,23 @@
     "unreviewedFactPolicy": "proposed",
     "semanticProjectionWrite": false,
     "nextAction": "direct-save a fact-bearing activity, read-only DB postcheck, then P5B mutual UI links"
+  },
+  "aiA3P5BMobileGlobalLocalizationV2": {
+    "status": "released_awaiting_live_ui_acceptance",
+    "baselineCommit": "d5a474860241aa261220ccaf8e7bd91e8e43da3a",
+    "objectCount": 150,
+    "locales": [
+      "en",
+      "pl",
+      "ru",
+      "uk",
+      "de",
+      "es",
+      "cs"
+    ],
+    "mode": "read_only_canonical_key_projection",
+    "personalAutoTranslation": false,
+    "dbWrites": false,
+    "openAiCalls": false
   }
 }
