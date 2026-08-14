@@ -439,3 +439,19 @@ P5B live UI acceptance confirmed mutual links on /activity-facts and /activity-t
 - GLOBAL edit/restructure права не добавлены;
 - SQL, DB writes и OpenAI вызовы отсутствуют;
 - после live UI acceptance закрыть P5B и перейти к P5C quick capture + review buffer.
+
+
+## AI-A3 P5B GLOBAL full-card read-scope hotfix v1
+
+Дата: 2026-08-14.
+
+- baseline: `b3147d26f7e89382994c323b0f2a6ecaf8ec6914`;
+- основной GLOBAL detail и локализация уже опубликованы;
+- остаточный дефект находился в клиентском full-card блоке: ontology/aliases/relations GET оставались owner-scoped и после гидратации показывали ACCESS_DENIED;
+- ontology GET теперь имеет отдельный read-only GLOBAL/System путь;
+- aliases GET читает GLOBAL aliases только для текущей locale плюс language-neutral aliases;
+- relations GET для GLOBAL/System возвращает безопасную read-only системную проекцию без actor-private candidates/relations;
+- actor-scoped RPC и write guards сохранены;
+- GLOBAL edit/restructure/alias mutation/relation mutation права не добавлены;
+- SQL, schema writes и OpenAI calls отсутствуют;
+- следующий шаг: live acceptance root + leaf; после PASS P5B CLOSED и P5C quick capture + review buffer.

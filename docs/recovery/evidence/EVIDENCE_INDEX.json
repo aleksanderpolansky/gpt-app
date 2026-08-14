@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-14T04:54:22.341Z",
+  "generatedAt": "2026-08-14T05:51:32.122Z",
   "copiedCount": 57,
   "generatedEvidenceCount": 2,
-  "indexedCount": 74,
+  "indexedCount": 75,
   "missingPatterns": [],
   "files": [
     {
@@ -512,6 +512,13 @@
       "sourceDownloadsName": null,
       "sha256": "f32610d4f59fced71783797159e2f870878e4366c692bd5b2c3f0eb581a36282",
       "origin": "AI_A3_P5B_mobile_global_localization_v2_precommit_validation"
+    },
+    {
+      "group": "AI_A3",
+      "file": "docs/recovery/evidence/AI_A3/ARCTOR_AI_A3_P5B_GLOBAL_FULL_CARD_READ_SCOPE_V1_LOCAL_VALIDATION_20260814.txt",
+      "sourceDownloadsName": null,
+      "sha256": "98a190eb2b3a5b4fe28ea864eaf6ec2abba9d5b98cace1181c856d66f664d91d",
+      "origin": "AI_A3_P5B_global_full_card_read_scope_v1_precommit_validation"
     }
   ]
 }

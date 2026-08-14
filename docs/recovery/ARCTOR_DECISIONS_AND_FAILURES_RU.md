@@ -479,3 +479,12 @@ Failure chain preserved: P5A direct-save created activity_event, but fact materi
 ## AI_A3_P5B_GLOBAL_DETAIL_404_FAILURE_AND_DECISION — 2026-08-13
 
 Live P5B acceptance: Facts page showed `31 minute`, the linked `Ходьба` chip and Activity Journal showed both `Ходьба` + `31 minute`; clicking the GLOBAL leaf produced `/value-objects/<global-id>?locale=en` -> 404. Source cause is the old detail-page owner-only query. Decision: GLOBAL System ontology objects are readable from the authenticated combined catalog but read-only. Non-global objects keep the existing active-user/actor ownership gate. Global System objects must not inherit edit/restructure controls.
+
+
+## 2026-08-14 — GLOBAL full-card hydration ACCESS_DENIED
+
+Наблюдение: серверная часть GLOBAL detail отображалась правильно, но через секунду клиентский full-card показывал ACCESS_DENIED.
+
+Причина: три старых внутренних GET-контракта (ontology, aliases, relations) продолжали трактовать любой ЦО как actor-owned. Основная detail page уже знала scope=global, а hydration-подзапросы — ещё нет.
+
+Решение: разрешать GLOBAL/System только в read-path. Никакие PATCH/POST/lifecycle/restructure права GLOBAL объектам не выдавать. Для GLOBAL relations не смешивать системную онтологию с actor-private relation rows; до отдельного Reference/model relation layer возвращать безопасную read-only системную проекцию. Aliases читать locale-aware, не выдавая русские aliases как польские.

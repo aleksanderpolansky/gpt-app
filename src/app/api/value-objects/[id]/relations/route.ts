@@ -30,6 +30,8 @@ type ValueObjectRow = {
   object_kind: string | null;
   node_role_code: string | null;
   status: string;
+  scope_code?: string | null;
+  origin_type_code?: string | null;
 };
 
 type RelationTypeRow = {
@@ -182,6 +184,19 @@ async function resolveRouteActorContext(): Promise<
   }
 }
 
+async function readGlobalSystemValueObject(valueObjectId: string) {
+  return supabase
+    .from("value_objects")
+    .select(
+      "id,title,branch_type_code,object_kind,node_role_code,status,scope_code,origin_type_code",
+    )
+    .eq("id", valueObjectId)
+    .eq("scope_code", "global")
+    .eq("origin_type_code", "system_model")
+    .eq("status", "active")
+    .maybeSingle();
+}
+
 async function readOwnedValueObject(
   valueObjectId: string,
   actorContext: ResolvedActorContext,
@@ -236,6 +251,39 @@ export async function GET(_request: Request, context: RouteContext) {
 
   if (errorResponse || !actorContext) {
     return errorResponse;
+  }
+
+  const {
+    data: globalSystemValueObject,
+    error: globalSystemValueObjectError,
+  } = await readGlobalSystemValueObject(valueObjectId);
+
+  if (globalSystemValueObjectError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: globalSystemValueObjectError.message,
+        errorCode: "GLOBAL_SYSTEM_RELATION_VALUE_OBJECT_LOOKUP_FAILED",
+      },
+      { status: 500 },
+    );
+  }
+
+  if (globalSystemValueObject) {
+    const response: ValueObjectSemanticRelationListResponse = {
+      ok: true,
+      valueObjectId,
+      relationTypes: [],
+      candidates: [],
+      relations: [],
+    };
+
+    return NextResponse.json(response, {
+      headers: {
+        "Cache-Control": "no-store",
+        "X-ARCTor-Read-Scope": "global-system-read-only",
+      },
+    });
   }
 
   const { data: valueObject, error: valueObjectError } =

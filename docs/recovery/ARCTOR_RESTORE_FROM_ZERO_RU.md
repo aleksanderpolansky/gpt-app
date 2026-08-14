@@ -262,3 +262,20 @@ Baseline: P5B commit `1061958ef8a43b375b82f70eb7342acb8afc47e6`. The hotfix chan
 6. на мобильной ширине карточки не расширяют viewport.
 
 Следующий шаг после live acceptance: P5C quick capture + review buffer.
+
+
+## Restore point — AI-A3 P5B GLOBAL full-card read-scope v1
+
+Baseline: `b3147d26f7e89382994c323b0f2a6ecaf8ec6914`.
+
+После восстановления:
+
+1. `node scripts/validate-ai-a3-p5b-global-full-card-read-scope-v1.mjs`;
+2. старые P5B global-detail + mutual-links validators;
+3. mobile GLOBAL localization validator;
+4. `npm run build`;
+5. открыть GLOBAL root/leaf минимум в PL и EN;
+6. убедиться, что жёлтый ACCESS_DENIED full-card блок исчез;
+7. убедиться, что GLOBAL edit/restructure/PATCH/POST по-прежнему недоступны.
+
+После live PASS закрыть P5B и перейти к P5C quick capture + review buffer.

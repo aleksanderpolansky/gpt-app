@@ -879,16 +879,22 @@ export function ValueObjectFullCardPanel({
         const [ontologyResult, aliasResult, standardsResult, relationResult] =
           await Promise.all([
             readJson(
-              `/api/value-objects/ontology/${encodeURIComponent(valueObjectId)}`,
+              `/api/value-objects/ontology/${encodeURIComponent(
+                valueObjectId,
+              )}?locale=${encodeURIComponent(locale)}`,
             ),
             readJson(
-              `/api/value-objects/${encodeURIComponent(valueObjectId)}/aliases`,
+              `/api/value-objects/${encodeURIComponent(
+                valueObjectId,
+              )}/aliases?locale=${encodeURIComponent(locale)}`,
             ),
             readJson(
               `/api/value-objects/${encodeURIComponent(valueObjectId)}/standards`,
             ),
             readJson(
-              `/api/value-objects/${encodeURIComponent(valueObjectId)}/relations`,
+              `/api/value-objects/${encodeURIComponent(
+                valueObjectId,
+              )}/relations?locale=${encodeURIComponent(locale)}`,
             ),
           ]);
 
@@ -962,7 +968,7 @@ export function ValueObjectFullCardPanel({
     })();
 
     return () => controller.abort();
-  }, [valueObjectId]);
+  }, [valueObjectId, locale]);
 
   const activeAliases = useMemo(
     () => (aliases?.aliases ?? []).filter((alias) => alias.recognitionActive),

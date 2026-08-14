@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 
 import {
+  localizeGlobalSystemValueObject,
+  normalizeGlobalSystemValueObjectLocale,
+} from "@/lib/reality-core/global-system-value-object-localization";
+
+import {
   ActorContextError,
   resolveActiveActorContext,
 } from "../../../../../../lib/actor-context";
@@ -16,6 +21,180 @@ type RouteContext = {
 };
 
 type AliasAction = "add" | "archive" | "restore";
+
+type GlobalAliasValueObjectRow = {
+  id: string;
+  title: string;
+  canonical_key: string | null;
+  status: string;
+  definition_version: number | null;
+  scope_code: string | null;
+  origin_type_code: string | null;
+};
+
+type GlobalAliasRow = {
+  id: string;
+  alias_text: string;
+  alias_normalized: string;
+  locale: string | null;
+  status: string;
+  source_type: string;
+  created_at: string;
+  updated_at: string;
+};
+
+function isGlobalSystemObject(
+  row: GlobalAliasValueObjectRow | null | undefined,
+): row is GlobalAliasValueObjectRow {
+  return Boolean(
+    row &&
+      row.scope_code === "global" &&
+      row.origin_type_code === "system_model" &&
+      row.status === "active",
+  );
+}
+
+async function readGlobalSystemAliasProfile(
+  valueObjectId: string,
+  localeValue: unknown,
+): Promise<
+  | { handled: false }
+  | { handled: true; response: NextResponse }
+> {
+  const { data: valueObjectData, error: valueObjectError } = await supabase
+    .from("value_objects")
+    .select(
+      "id,title,canonical_key,status,definition_version,scope_code,origin_type_code",
+    )
+    .eq("id", valueObjectId)
+    .maybeSingle();
+
+  if (valueObjectError) {
+    return {
+      handled: true,
+      response: NextResponse.json(
+        {
+          ok: false,
+          error: valueObjectError.message,
+          errorCode: "GLOBAL_SYSTEM_ALIAS_VALUE_OBJECT_LOOKUP_FAILED",
+        },
+        { status: 500 },
+      ),
+    };
+  }
+
+  const valueObject = valueObjectData as GlobalAliasValueObjectRow | null;
+
+  if (!isGlobalSystemObject(valueObject)) {
+    return { handled: false };
+  }
+
+  if (!valueObject.canonical_key || !valueObject.definition_version) {
+    return {
+      handled: true,
+      response: NextResponse.json(
+        {
+          ok: false,
+          error: "GLOBAL_SYSTEM_ALIAS_VALUE_OBJECT_NOT_ONTOLOGY_READY",
+          errorCode: "GLOBAL_SYSTEM_ALIAS_VALUE_OBJECT_NOT_ONTOLOGY_READY",
+        },
+        { status: 409 },
+      ),
+    };
+  }
+
+  const locale = normalizeGlobalSystemValueObjectLocale(localeValue);
+  const { data: aliasData, error: aliasError } = await supabase
+    .from("concept_aliases")
+    .select(
+      "id,alias_text,alias_normalized,locale,status,source_type,created_at,updated_at",
+    )
+    .eq("concept_type", "value_object")
+    .eq("concept_id", valueObject.id)
+    .order("updated_at", { ascending: false });
+
+  if (aliasError) {
+    return {
+      handled: true,
+      response: NextResponse.json(
+        {
+          ok: false,
+          error: aliasError.message,
+          errorCode: "GLOBAL_SYSTEM_ALIAS_READ_FAILED",
+        },
+        { status: 500 },
+      ),
+    };
+  }
+
+  const aliasRows = (aliasData ?? []) as GlobalAliasRow[];
+  const aliases = aliasRows
+    .filter((row) => {
+      const aliasLocale = row.locale?.trim().toLowerCase() ?? null;
+      return aliasLocale === null || aliasLocale === locale;
+    })
+    .sort((left, right) => {
+      const leftActive =
+        left.status === "approved" || left.status === "published" ? 0 : 1;
+      const rightActive =
+        right.status === "approved" || right.status === "published" ? 0 : 1;
+      if (leftActive !== rightActive) return leftActive - rightActive;
+      return left.alias_normalized.localeCompare(right.alias_normalized);
+    })
+    .map((row) => ({
+      id: row.id,
+      aliasText: row.alias_text,
+      aliasNormalized: row.alias_normalized,
+      locale: row.locale,
+      status: row.status,
+      sourceType: row.source_type,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      recognitionActive:
+        row.status === "approved" || row.status === "published",
+    }));
+
+  const localizedValueObject = localizeGlobalSystemValueObject(
+    valueObject,
+    locale,
+  );
+  const recognitionActiveAliasCount = aliases.filter(
+    (alias) => alias.recognitionActive,
+  ).length;
+
+  return {
+    handled: true,
+    response: NextResponse.json(
+      {
+        ok: true,
+        contractVersion: "P2D_VALUE_OBJECT_ALIAS_RECOGNITION_V1",
+        valueObject: {
+          id: localizedValueObject.id,
+          title: localizedValueObject.title,
+          canonicalKey: localizedValueObject.canonical_key,
+          statusCode: localizedValueObject.status,
+          definitionVersion: localizedValueObject.definition_version,
+        },
+        aliases,
+        summary: {
+          aliasCount: aliases.length,
+          recognitionActiveAliasCount,
+        },
+        permissions: {
+          actorOwner: false,
+          canManageAliases: false,
+          hardDeleteEnabled: false,
+          primaryTitleManagedBy: "P2C",
+        },
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    ),
+  };
+}
 
 function normalizeId(value: unknown): string | null {
   if (typeof value !== "string") {
@@ -96,7 +275,7 @@ async function resolveContext() {
   }
 }
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const { id: rawId } = await context.params;
   const valueObjectId = normalizeId(rawId);
 
@@ -111,6 +290,16 @@ export async function GET(_request: Request, context: RouteContext) {
 
   if (errorResponse || !actorContext) {
     return errorResponse;
+  }
+
+  const requestedLocale = new URL(request.url).searchParams.get("locale");
+  const globalRead = await readGlobalSystemAliasProfile(
+    valueObjectId,
+    requestedLocale,
+  );
+
+  if (globalRead.handled) {
+    return globalRead.response;
   }
 
   const { data, error } = await supabase.rpc(
