@@ -543,3 +543,10 @@ Live P5B acceptance: Facts page showed `31 minute`, the linked `Ходьба` ch
 - Clock parser уже распознавал 18.00, но future exact требовал одновременно date+clock; clock-only future теперь выбирает ближайшую будущую дату.
 - UI locale и message locale разделены. Message locale остаётся языком анализа, URL locale управляет интерфейсом.
 - Новые детерминированные правила intent/source зарегистрированы в /admin/ai-instructions как read-only system guards с source path и change steps.
+
+## Решение: пользовательский контент многоязычен
+- Отменено прежнее правило «пользовательский контент не переводить автоматически».
+- Новый контракт: оригинал неизменяем; локализованные представления являются производными и никогда не создают копии сущности. Связи всегда хранят ID, а не локализованный title.
+- sourceLocaleHint не считается истиной: переводчик определяет фактический язык текста. Это защищает от случая, когда UI/селектор языка показывает English, а исходное сообщение написано по-русски.
+- Ошибка локализации не откатывает activity_event. В review используется original fallback до появления/исправления перевода.
+- V1 сознательно не создаёт отдельную DB-таблицу и не требует SQL migration: activity adapter хранит versioned envelope в metadata_json. Общий executor спроектирован для следующих entity adapters.

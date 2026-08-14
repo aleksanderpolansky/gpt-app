@@ -2,11 +2,16 @@ import { NextResponse } from "next/server";
 
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
 import { supabase } from "../../../../../lib/supabase";
+import {
+  normalizeContentLocale,
+  readLocalizedContentEnvelope,
+  resolveLocalizedContentFields,
+  type ArctorContentLocale,
+} from "@/lib/localization/contentLocalization";
 
 export const dynamic = "force-dynamic";
 
 const MAX_REVIEW_ROWS = 250;
-
 type Row = Record<string, unknown>;
 
 function asRecord(value: unknown): Row {
@@ -20,33 +25,48 @@ function asString(value: unknown) {
 }
 
 function asNumber(value: unknown) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-
+  if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string") {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : null;
   }
-
   return null;
 }
 
 function isPendingReview(metadata: Row) {
-  return (
-    metadata.quickCaptureReviewRequired === true &&
-    metadata.quickCaptureReviewStatus !== "resolved"
-  );
+  return metadata.quickCaptureReviewRequired === true && metadata.quickCaptureReviewStatus !== "resolved";
 }
 
-function mapReviewRow(row: Row) {
+const FALLBACK_ACTIVITY: Record<ArctorContentLocale, string> = {
+  en: "Activity",
+  pl: "Aktywność",
+  ru: "Активность",
+  uk: "Активність",
+  de: "Aktivität",
+  es: "Actividad",
+  cs: "Aktivita",
+};
+
+function mapReviewRow(row: Row, locale: ArctorContentLocale) {
   const metadata = asRecord(row.metadata_json);
   const reviewSnapshot = asRecord(metadata.quickCaptureReviewSnapshot);
+  const localization = readLocalizedContentEnvelope(metadata);
+  const originalTitle = asString(row.title) ?? asString(row.input_text);
+  const originalInputText = asString(row.input_text);
+  const localized = resolveLocalizedContentFields({
+    metadata,
+    locale,
+    fallback: {
+      title: originalTitle,
+      inputText: originalInputText,
+      description: null,
+    },
+  });
 
   return {
     id: asString(row.id),
-    title: asString(row.title) ?? asString(row.input_text) ?? "Activity",
-    inputText: asString(row.input_text),
+    title: localized.title ?? localized.inputText ?? FALLBACK_ACTIVITY[locale],
+    inputText: localized.inputText,
     activityRoleCode: asString(row.activity_role_code),
     status: asString(row.status),
     processingStatus: asString(row.processing_status),
@@ -63,7 +83,8 @@ function mapReviewRow(row: Row) {
     reviewStatus: asString(metadata.quickCaptureReviewStatus) ?? "pending",
     reviewContract: asString(metadata.quickCaptureContract),
     reviewLocale: asString(metadata.locale),
-    sourceMessageText: asString(metadata.quickCaptureSourceMessageText),
+    contentSourceLocale: localization?.detectedSourceLocale ?? asString(metadata.locale),
+    sourceMessageText: localized.inputText ?? asString(metadata.quickCaptureSourceMessageText),
     sourceSegmentId: asString(metadata.quickCaptureSourceSegmentId),
     reviewSnapshot,
   };
@@ -71,64 +92,40 @@ function mapReviewRow(row: Row) {
 
 export async function GET(request: Request) {
   const { appUser, personActor, errorResponse } = await getActivityUserContext();
-
-  if (errorResponse) {
-    return errorResponse;
-  }
-
+  if (errorResponse) return errorResponse;
   if (!appUser || !personActor) {
-    return NextResponse.json(
-      { ok: false, error: "User context not found" },
-      { status: 500 },
-    );
+    return NextResponse.json({ ok: false, error: "User context not found" }, { status: 500 });
   }
 
   const url = new URL(request.url);
   const activityEventId = asString(url.searchParams.get("activityEventId"));
+  const locale = normalizeContentLocale(url.searchParams.get("locale"));
 
   let query = supabase
     .from("activity_events")
-    .select(
-      "id,title,input_text,activity_role_code,status,processing_status,started_at,ended_at,duration_minutes,schedule_mode_code,scheduled_date,schedule_start_date,schedule_end_date,deadline_at,metadata_json,created_at,updated_at",
-    )
+    .select("id,title,input_text,activity_role_code,status,processing_status,started_at,ended_at,duration_minutes,schedule_mode_code,scheduled_date,schedule_start_date,schedule_end_date,deadline_at,metadata_json,created_at,updated_at")
     .eq("user_id", appUser.id)
     .eq("acting_as_actor_id", personActor.id);
 
-  if (activityEventId) {
-    query = query.eq("id", activityEventId);
-  }
+  if (activityEventId) query = query.eq("id", activityEventId);
 
   const { data, error } = await query
     .order("created_at", { ascending: false })
     .limit(activityEventId ? 1 : MAX_REVIEW_ROWS);
 
-  if (error) {
-    return NextResponse.json(
-      { ok: false, error: error.message },
-      { status: 500 },
-    );
-  }
+  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
 
   const rows = ((data ?? []) as Row[])
     .filter((row) => isPendingReview(asRecord(row.metadata_json)))
-    .map(mapReviewRow)
+    .map((row) => mapReviewRow(row, locale))
     .filter((row) => Boolean(row.id));
 
   if (activityEventId) {
     const activity = rows[0] ?? null;
-
     if (!activity) {
-      return NextResponse.json(
-        { ok: false, error: "Activity requiring review not found" },
-        { status: 404 },
-      );
+      return NextResponse.json({ ok: false, error: "Activity requiring review not found" }, { status: 404 });
     }
-
-    return NextResponse.json({
-      ok: true,
-      activity,
-      reviewSnapshot: activity.reviewSnapshot,
-    });
+    return NextResponse.json({ ok: true, activity, reviewSnapshot: activity.reviewSnapshot });
   }
 
   return NextResponse.json({

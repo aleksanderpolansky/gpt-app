@@ -164,7 +164,7 @@ export default function ActivityReviewQueuePage() {
       setError(null);
 
       try {
-        const response = await fetch("/api/activity/review-queue", {
+        const response = await fetch(`/api/activity/review-queue?locale=${encodeURIComponent(locale)}`, {
           credentials: "include",
           cache: "no-store",
           headers: { Accept: "application/json" },
@@ -205,7 +205,7 @@ export default function ActivityReviewQueuePage() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-[#3b6ef8]">
-                P5C · REVIEW BUFFER
+                P5C
               </p>
               <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em]">{copy.title}</h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-[#68708a]">{copy.subtitle}</p>

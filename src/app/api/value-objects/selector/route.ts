@@ -6,6 +6,8 @@ import {
 } from "../../../../../lib/actor-context";
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
+import { resolveLocalizedContentField } from "@/lib/localization/contentLocalization";
+import { localizeGlobalSystemValueObject, normalizeGlobalSystemValueObjectLocale } from "@/lib/reality-core/global-system-value-object-localization";
 
 export const dynamic = "force-dynamic";
 
@@ -354,6 +356,7 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
+  const locale = normalizeGlobalSystemValueObjectLocale(url.searchParams.get("locale"));
   const query = normalizeSearch(url.searchParams.get("q"));
   const branchTypeCode = normalizeBranchType(
     url.searchParams.get("branchTypeCode"),
@@ -420,7 +423,9 @@ export async function GET(request: Request) {
       );
     }
 
-    globalRowsData = (data ?? []) as ValueObjectRow[];
+    globalRowsData = ((data ?? []) as ValueObjectRow[]).map((row) =>
+      localizeGlobalSystemValueObject(row, locale) as ValueObjectRow,
+    );
   }
 
   const { data: profileData } = await supabase
@@ -430,11 +435,21 @@ export async function GET(request: Request) {
     .eq("actor_id", actorContext.actorId)
     .maybeSingle();
 
+  const localizedOwnedRows = ((ownedRowsData ?? []) as ValueObjectRow[]).map((row) => ({
+    ...row,
+    title: resolveLocalizedContentField({
+      metadata: row.metadata_json,
+      locale,
+      fieldCode: "title",
+      fallback: row.title,
+    }),
+  }));
+
   const mergedRows = new Map<string, ValueObjectRow>();
 
   for (const row of [
     ...globalRowsData,
-    ...((ownedRowsData ?? []) as ValueObjectRow[]),
+    ...localizedOwnedRows,
   ]) {
     mergedRows.set(row.id, row);
   }
@@ -483,6 +498,7 @@ export async function GET(request: Request) {
         level,
         parentOnly,
         includeGlobal,
+        locale,
       },
       valueObjects: filtered.slice(0, resultLimit),
       pinnedValueObjects,

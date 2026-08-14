@@ -12,6 +12,7 @@ import {
 } from "@/lib/activity/aiLabQuickCapture";
 import { executeActivityQuickCaptureProcessingRules } from "@/lib/ai/processingRuleExecutor.server";
 import { buildAiLabQuickCaptureSourceTexts } from "@/lib/activity/quickCaptureSourceText";
+import { ensureActivityEventLocalizations } from "@/lib/localization/contentLocalization.server";
 import type { ActivityTimingLocalePp1 } from "@/lib/activity/pp1/activityTiming";
 
 export const AI_A3_P5C_DURABLE_HANDOFF_CONTRACT =
@@ -404,6 +405,7 @@ export async function processDurableQuickCaptureSignal(input: {
     });
     const activityEventIds: string[] = [];
     const warnings: string[] = [];
+    const localizationInputs: Array<{ activityEventId: string; title: string | null; inputText: string | null }> = [];
 
     for (let index = 0; index < rows.length; index += 1) {
       const row = rows[index];
@@ -472,6 +474,7 @@ export async function processDurableQuickCaptureSignal(input: {
       const activityEventId = text(event.id) || text(summary.id);
       if (!activityEventId) throw new Error(`P5C_DURABLE_EVENT_ID_MISSING:${index + 1}`);
       activityEventIds.push(activityEventId);
+      localizationInputs.push({ activityEventId, title, inputText: sourceFragment });
 
       const candidates = buildAiLabFactMaterializationCandidates(
         [row],
@@ -492,6 +495,22 @@ export async function processDurableQuickCaptureSignal(input: {
               : `FACT_MATERIALIZATION_WARNING:${activityEventId}`,
           );
         }
+      }
+    }
+
+    if (localizationInputs.length > 0) {
+      try {
+        const localization = await ensureActivityEventLocalizations({
+          userId: input.userId,
+          actorId: input.actorId,
+          analysisExecutionId: analysis.preview.analysisExecutionId?.trim() || null,
+          operationId,
+          sourceLocaleHint: locale,
+          activities: localizationInputs,
+        });
+        warnings.push(...localization.warnings.map((warning) => `CONTENT_LOCALIZATION_WARNING:${warning}`));
+      } catch (error) {
+        warnings.push(`CONTENT_LOCALIZATION_WARNING:${error instanceof Error ? error.message : String(error)}`);
       }
     }
 

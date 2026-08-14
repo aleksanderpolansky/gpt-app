@@ -317,3 +317,6 @@ Baseline: `f661ea575d6864092782b2143ddd2f32a2f7d0b0`.
 
 ## P5C review refinements restore
 Проверить наличие quickCaptureIntent.ts, quickCaptureSourceText.ts и aiLabUiCopy.ts. В /admin/ai-instructions должны быть видны guards activity_infinitive_intent_future и activity_source_text_preservation. Live controls: поиск «семья» позволяет staged multi-select до Confirm; «выгулять собаку 18.00» на RU создаёт planned activity в ближайшие 18:00 и сохраняет полный source/title; URL locale=en/es не должен заменяться message locale review snapshot.
+
+## Localized content foundation restore
+Проверить src/lib/localization/contentLocalization.ts и contentLocalization.server.ts, guard user_content_all_locale_versions в /admin/ai-instructions и validator scripts/validate-localized-content-foundation-activity-v1.mjs. Для новой activity после Quick Capture metadata_json.localizedContent должен содержать original и семь variants. /activity-review?locale=pl должен показывать польскую версию, а тот же activityEventId при locale=ru — русскую. /api/value-objects/selector?q=...&locale=pl&includeGlobal=1 должен возвращать те же canonical IDs, но польские system titles.

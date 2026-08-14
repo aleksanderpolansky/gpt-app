@@ -1,11 +1,11 @@
 {
   "schemaVersion": 7,
-  "generatedAt": "2026-08-14T15:19:08.994Z",
+  "generatedAt": "2026-08-14T16:57:09.313Z",
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
-  "branch": "feat/p5c-review-refinements-v1-20260814t151829",
-  "originMainAtCheckpoint": "010f2bb1ab4eee7b4f4b4eb838c64b96cb689031",
-  "checkpointMeaning": "P5C review refinements: confirmed multi-leaf selection, infinitive future intent, source/time preservation, useful edit-mode feedback and UI/message locale separation.",
+  "branch": "feat/localized-content-foundation-activity-v1-20260814t165629",
+  "originMainAtCheckpoint": "9ed7864bfbf9fb244df398e135d75e74f04180a1",
+  "checkpointMeaning": "Platform localized-content foundation: immutable original + seven localized display/search variants; activity adapter and multilingual VO selector/review wired.",
   "globalReality": {
     "p8Blocked": true,
     "objectsTotal": 150,
@@ -51,7 +51,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Live-test multi-select manual links, 'выгулять собаку 18.00' calendar routing/time/title preservation, and en/es Activity AI Lab localization; then define review resolved transition.",
+  "nextAction": "Live-test new activity translations and same VO ID across pl/ru/en; then wire organizations/products/offers/profiles/user-authored VOs to the generic localization executor.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -61,8 +61,8 @@
     "docs/recovery/evidence/EVIDENCE_INDEX.json"
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
-  "previousRecoveryCommit": "010f2bb1ab4eee7b4f4b4eb838c64b96cb689031",
-  "documentedState": "AI_A3_P5C_REVIEW_REFINEMENTS_V1",
+  "previousRecoveryCommit": "9ed7864bfbf9fb244df398e135d75e74f04180a1",
+  "documentedState": "ARCTOR_LOCALIZED_CONTENT_FOUNDATION_ACTIVITY_V1",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -180,7 +180,8 @@
     "providerStore": false,
     "automaticProviderRetries": 0,
     "maxProviderCalls": 2,
-    "nextBlock": "AI_A3_P3_DIRECT_SAVE_PRODUCTION_ACCEPTANCE"
+    "nextBlock": "AI_A3_P3_DIRECT_SAVE_PRODUCTION_ACCEPTANCE",
+    "localizedContentFoundation": "V1_ACTIVITY_ADAPTER_RELEASED_AWAITING_LIVE_ACCEPTANCE"
   },
   "gsr1lImplementation": {
     "status": "AI_A2_P3_CODE_RELEASED_AWAITING_LIVE_RUNTIME",
@@ -269,7 +270,9 @@
     "p5cInfinitiveFutureIntentRuUk": true,
     "p5cSingleRowSourcePreservation": true,
     "p5cFutureClockWithoutDate": true,
-    "p5cUiLocaleSeparatedFromMessageLocale": true
+    "p5cUiLocaleSeparatedFromMessageLocale": true,
+    "p5cLocalizedActivityContent": true,
+    "p5cReviewExplicitSaveResolve": true
   },
   "aiA3P4FactContractResilience": {
     "status": "implemented_pending_production_acceptance",

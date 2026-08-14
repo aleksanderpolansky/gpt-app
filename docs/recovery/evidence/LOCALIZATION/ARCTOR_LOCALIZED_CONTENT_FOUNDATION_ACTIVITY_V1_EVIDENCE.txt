@@ -1,0 +1,13 @@
+CONTRACT=ARCTOR_LOCALIZED_CONTENT_FOUNDATION_ACTIVITY_V1
+BASELINE=9ed7864bfbf9fb244df398e135d75e74f04180a1
+RECORDED_AT=2026-08-14T16:57:09.313Z
+PLATFORM_DECISION=user-authored content preserves immutable original and receives en/pl/ru/uk/de/es/cs display/search variants
+ENTITY_IDENTITY=one entity ID independent of display locale
+ACTIVITY_ADAPTER=quick-capture creates localization variants in background after activity persistence
+TRANSLATION_BUDGET=Nano + preflight_ai_pilot_call_budget_v1 + ai_usage_events
+TRANSLATION_FAILURE=non-fatal; original activity remains saved and visible
+REVIEW_QUEUE=localized title/inputText by requested UI locale
+VO_SELECTOR=global system VO titles localized by canonical_key; owned objects consume localizedContent when present
+REVIEW_SAVE=explicit Save changes resolves review; no automatic resolution
+DB_MIGRATION=none; V1 stores activity envelope inside metadata_json.localizedContent
+NEXT_ADAPTERS=organizations/products/offers/profiles/value-object authoring use the same generic localization envelope/executor

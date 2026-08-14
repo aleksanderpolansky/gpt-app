@@ -51,8 +51,8 @@ check("REVIEW_MULTISELECT_CONFIRM", page.includes("async function confirmPending
 check("REVIEW_MULTISELECT_CONFIRM_COUNT", page.includes("`${copy.confirm} (${pendingItems.length})`"));
 check("REVIEW_MULTISELECT_NO_IMMEDIATE_SEARCH_SAVE", !page.includes('onClick={() => void addManualLink(item)}'));
 check("REVIEW_MULTISELECT_MATERIALIZE_PRESERVED", page.includes('fetch("/api/ai/reality/manual-link-materialize"'));
-check("REVIEW_CHANGE_MODE_STATE", page.includes("const [reviewChangeMode, setReviewChangeMode] = useState(false);"));
-check("REVIEW_CHANGE_MODE_VISIBLE", page.includes("ui.editBanner") && page.includes("setReviewChangeMode(true)"));
+check("REVIEW_EXPLICIT_SAVE_STATE", page.includes("const [reviewSaveStatus, setReviewSaveStatus]") && page.includes("saveReviewChanges"));
+check("REVIEW_SAVE_BUTTON_VISIBLE", page.includes("ui.savingChanges") && page.includes("ui.editActive") && !page.includes("reviewChangeMode"));
 check("UI_LOCALE_SEPARATE_STATE", page.includes("const [uiLocale, setUiLocale] = useState<AiLabUiLocale>(\"en\")"));
 check("UI_LOCALE_URL_SOURCE", page.includes("normalizeAiLabUiLocale(params.get(\"locale\"))"));
 check("MESSAGE_LOCALE_REVIEW_PRESERVED", page.includes("setLocale(normalizedLocale)"));

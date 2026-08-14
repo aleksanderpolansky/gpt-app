@@ -13,6 +13,7 @@ import {
   type AiLabTraceCopy,
   type AiLabUiLocale,
 } from "@/lib/activity/aiLabUiCopy";
+import { buildLocalizedAiLabTrace } from "@/lib/activity/aiLabTraceLocalization";
 import {
   buildAiLabDirectActivityRequest,
   buildAiLabDirectSaveReturnUrl,
@@ -130,6 +131,7 @@ type ReviewQueueDetailResponse = {
     title?: string | null;
     inputText?: string | null;
     reviewLocale?: string | null;
+    contentSourceLocale?: string | null;
   } | null;
   reviewSnapshot?: {
     sourceFragment?: string | null;
@@ -406,7 +408,7 @@ function formatSemanticProjection(projection: SemanticProjection) {
   return `${label}. Статус: ${status}.${target}${evidenceText}${writeBoundary}`;
 }
 
-function buildGlobalTrace(inputText: string, payload: GlobalPreview): TraceLine[] {
+function buildGlobalTraceLegacyRu(inputText: string, payload: GlobalPreview): TraceLine[] {
   const rows = payload.rows ?? [];
   const routing = payload.analysisTrace?.routing ?? [];
   const candidateGroups = payload.analysisTrace?.candidateGroups ?? [];
@@ -663,6 +665,17 @@ function buildGlobalTrace(inputText: string, payload: GlobalPreview): TraceLine[
   });
 
   return trace;
+}
+
+function buildGlobalTrace(
+  inputText: string,
+  payload: GlobalPreview,
+  uiLocale: AiLabUiLocale,
+): TraceLine[] {
+  if (uiLocale === "ru") {
+    return buildGlobalTraceLegacyRu(inputText, payload);
+  }
+  return buildLocalizedAiLabTrace({ inputText, payload, locale: uiLocale }) as TraceLine[];
 }
 
 function buildFallbackTrace(
@@ -923,6 +936,7 @@ function ManualLeafLinkPicker({
   links,
   onLinksChange,
   copy,
+  uiLocale,
   disabled = false,
 }: {
   operationId: string;
@@ -930,6 +944,7 @@ function ManualLeafLinkPicker({
   links: ManualLinkIntent[];
   onLinksChange: (links: ManualLinkIntent[]) => void;
   copy: AiLabManualLinkCopy;
+  uiLocale: AiLabUiLocale;
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -956,6 +971,7 @@ function ManualLeafLinkPicker({
           level: "leaf",
           limit: "24",
           includeGlobal: "1",
+          locale: uiLocale,
         });
         const response = await fetch(`/api/value-objects/selector?${params.toString()}`, {
           credentials: "include",
@@ -985,7 +1001,7 @@ function ManualLeafLinkPicker({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [copy.searchError, open, query]);
+  }, [copy.searchError, open, query, uiLocale]);
 
   function togglePendingItem(item: SelectorItem) {
     if (disabled || confirming || links.some((link) => link.valueObjectId === item.id)) {
@@ -1202,7 +1218,7 @@ export default function ActivityAiLabPage() {
   const [saveCheckpoint, setSaveCheckpoint] = useState<DirectSaveCheckpoint | null>(null);
   const [reviewActivityEventId, setReviewActivityEventId] = useState<string | null>(null);
   const [reviewModeInitialized, setReviewModeInitialized] = useState(false);
-  const [reviewChangeMode, setReviewChangeMode] = useState(false);
+  const [reviewSaveStatus, setReviewSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [quickCaptureStatus, setQuickCaptureStatus] = useState<QuickCaptureStatus>("idle");
   const [quickCaptureMessage, setQuickCaptureMessage] = useState<string | null>(null);
   const saveRequestIds = useRef<Record<AiLabSaveTemporalDirection, string>>({
@@ -1255,7 +1271,7 @@ export default function ActivityAiLabPage() {
       setError(null);
 
       try {
-        const query = new URLSearchParams({ activityEventId: targetActivityEventId });
+        const query = new URLSearchParams({ activityEventId: targetActivityEventId, locale: uiLocale });
         const response = await fetch(`/api/activity/review-queue?${query.toString()}`, {
           credentials: "include",
           cache: "no-store",
@@ -1271,23 +1287,23 @@ export default function ActivityAiLabPage() {
 
         const preview = payload.reviewSnapshot?.globalPreview ?? null;
         const sourceText =
-          payload.reviewSnapshot?.sourceFragment?.trim() ||
           payload.activity?.inputText?.trim() ||
+          payload.reviewSnapshot?.sourceFragment?.trim() ||
           "";
-        const nextLocale = payload.reviewSnapshot?.locale;
+        const nextLocale = payload.activity?.contentSourceLocale ?? payload.reviewSnapshot?.locale;
         const normalizedLocale = LOCALES.some((item) => item.code === nextLocale)
           ? (nextLocale as Locale)
           : "ru";
 
         if (!preview || preview.ok !== true || !sourceText) {
-          throw new Error("Stored P5C review snapshot is incomplete.");
+          throw new Error(ui.reviewSnapshotIncomplete);
         }
 
         if (cancelled) {
           return;
         }
 
-        const nextTrace = buildGlobalTrace(sourceText, preview);
+        const nextTrace = buildGlobalTrace(sourceText, preview, uiLocale);
         setInputText(sourceText);
         setLocale(normalizedLocale);
         setResult({ mode: "global", payload: preview, trace: nextTrace });
@@ -1295,15 +1311,15 @@ export default function ActivityAiLabPage() {
         setAnalyzedText(sourceText);
         setAnalyzedLocale(normalizedLocale);
         setManualLinks([]);
-        setReviewChangeMode(false);
+        setReviewSaveStatus("idle");
         setQuickCaptureStatus("saved");
-        setQuickCaptureMessage("Активность уже сохранена и ожидает проверки.");
+        setQuickCaptureMessage(ui.reviewLoaded);
       } catch (caught) {
         if (!cancelled) {
           setError(
             caught instanceof Error
               ? caught.message
-              : "Не удалось загрузить активность для проверки.",
+              : ui.reviewLoadError,
           );
         }
       } finally {
@@ -1318,7 +1334,39 @@ export default function ActivityAiLabPage() {
     return () => {
       cancelled = true;
     };
-  }, [reviewActivityEventId, reviewModeInitialized]);
+  }, [reviewActivityEventId, reviewModeInitialized, uiLocale, ui.reviewLoadError, ui.reviewLoaded, ui.reviewSnapshotIncomplete]);
+
+  async function saveReviewChanges() {
+    if (!reviewActivityEventId || reviewSaveStatus === "saving" || reviewSaveStatus === "saved") {
+      return;
+    }
+    setReviewSaveStatus("saving");
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/activity/review-queue/${encodeURIComponent(reviewActivityEventId)}/resolve`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        },
+      );
+      const payload = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+      if (!response.ok || payload?.ok !== true) {
+        throw new Error(payload?.error || `HTTP ${response.status}`);
+      }
+      setReviewSaveStatus("saved");
+      setQuickCaptureMessage(ui.reviewSavedRedirect);
+      window.setTimeout(() => {
+        router.push(`/activity-review?locale=${uiLocale}`);
+      }, 700);
+    } catch (caught) {
+      setReviewSaveStatus("error");
+      setError(
+        `${ui.saveChangesError}: ${caught instanceof Error ? caught.message : String(caught)}`,
+      );
+    }
+  }
 
   const factMaterializationCandidates = useMemo(
     () =>
@@ -1534,7 +1582,7 @@ export default function ActivityAiLabPage() {
         throw new Error("Сервер завершил обработку, но durable result неполон.");
       }
 
-      const nextTrace = buildGlobalTrace(text, preview);
+      const nextTrace = buildGlobalTrace(text, preview, uiLocale);
       setResult({ mode: "global", payload: preview, trace: nextTrace });
       setTrace(nextTrace);
       setAnalyzedText(text);
@@ -1905,21 +1953,23 @@ export default function ActivityAiLabPage() {
               {fullAnalysisSucceeded ? (
                 <div className="mt-3 space-y-3">
                   {reviewActivityEventId ? (
-                    <button
-                      aria-pressed={reviewChangeMode}
-                      className="w-full rounded-2xl bg-blue-500 px-4 py-3 text-center text-sm font-semibold text-black hover:bg-blue-400"
-                      onClick={() => {
-                        setReviewChangeMode(true);
-                        window.requestAnimationFrame(() =>
-                          document
-                            .getElementById("activity-review-tools")
-                            ?.scrollIntoView({ behavior: "smooth", block: "start" }),
-                        );
-                      }}
-                      type="button"
-                    >
-                      {reviewChangeMode ? ui.editActive : ui.edit}
-                    </button>
+                    <div className="space-y-2">
+                      <button
+                        className="w-full rounded-2xl bg-blue-500 px-4 py-3 text-center text-sm font-semibold text-black hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={reviewSaveStatus === "saving" || reviewSaveStatus === "saved"}
+                        onClick={() => void saveReviewChanges()}
+                        type="button"
+                      >
+                        {reviewSaveStatus === "saving"
+                          ? ui.savingChanges
+                          : reviewSaveStatus === "saved"
+                            ? ui.editActive
+                            : ui.edit}
+                      </button>
+                      {reviewSaveStatus === "saved" ? (
+                        <p className="text-xs leading-5 text-emerald-300">{ui.reviewSavedRedirect}</p>
+                      ) : null}
+                    </div>
                   ) : (
                     <div className="rounded-2xl border border-emerald-900/70 bg-emerald-950/20 p-4 text-sm leading-6 text-emerald-200">
                       {quickCaptureStatus === "saving"
@@ -2052,12 +2102,6 @@ export default function ActivityAiLabPage() {
           </div>
 
           <div className="space-y-4" id="activity-review-tools">
-            {reviewActivityEventId && reviewChangeMode ? (
-              <div className="rounded-2xl border border-blue-800 bg-blue-950/30 p-4 text-sm leading-6 text-blue-100">
-                <div>{ui.editBanner}</div>
-                <div className="mt-2 text-xs text-blue-300/80">{ui.sourceReadOnly}</div>
-              </div>
-            ) : null}
             <TracePanel
               copy={ui.trace}
               lines={trace}
@@ -2069,6 +2113,7 @@ export default function ActivityAiLabPage() {
               <ManualLeafLinkPicker
                 activityEventId={reviewActivityEventId}
                 copy={ui.manualLink}
+                uiLocale={uiLocale}
                 disabled={Boolean(saveCheckpoint?.activityEventId)}
                 links={manualLinks}
                 onLinksChange={setManualLinks}

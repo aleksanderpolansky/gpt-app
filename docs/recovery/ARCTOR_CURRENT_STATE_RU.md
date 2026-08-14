@@ -520,3 +520,13 @@ P5B live UI acceptance confirmed mutual links on /activity-facts and /activity-t
 - UI locale Activity AI Lab отделён от языка сообщения; review snapshot больше не переключает интерфейс на язык исходного текста.
 - Кнопка «Внести изменения» открывает явный change mode и показывает назначение доступных review-инструментов.
 - Следующее действие: live acceptance multi-select, «выгулять собаку 18.00» -> calendar, locale=en/es shell, затем отдельный resolved-transition contract.
+
+## LOCALIZED_CONTENT_FOUNDATION_ACTIVITY_V1
+- Зафиксировано новое платформенное правило: пользовательский оригинал хранится неизменным, а содержательные тексты получают версии en/pl/ru/uk/de/es/cs для отображения и поиска.
+- Введён общий generic localization envelope/executor; первая production-интеграция — P5C activity_event.
+- Локализация activity выполняется в durable background после физического сохранения activity_event и не может отменить сохранение активности при ошибке перевода.
+- AI-перевод использует Nano, существующий hard budget preflight и ai_usage_events.
+- /activity-review и сохранённый /activity-ai-lab читают локализованные title/inputText по UI locale; исходный текст остаётся в original.
+- selector ЦО/ОН принимает locale: GLOBAL объекты локализуются по canonical_key; actor-owned объекты используют localizedContent при наличии.
+- Убрана промежуточная кнопка «режим изменений открыт»: на review сразу доступны инструменты, а «Сохранить изменения» явно завершает проверку и переводит quickCaptureReviewStatus в resolved.
+- Следующий шаг после live acceptance: адаптеры предприятий, товаров, предложений, профилей и пользовательских ЦО к тому же localization contract.

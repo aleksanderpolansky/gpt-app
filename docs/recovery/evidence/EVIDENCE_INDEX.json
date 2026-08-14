@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-14T15:19:08.994Z",
+  "generatedAt": "2026-08-14T16:57:09.313Z",
   "copiedCount": 57,
-  "generatedEvidenceCount": 8,
-  "indexedCount": 82,
+  "generatedEvidenceCount": 9,
+  "indexedCount": 83,
   "missingPatterns": [],
   "files": [
     {
@@ -568,6 +568,13 @@
       "sourceDownloadsName": null,
       "sha256": "24a42c8fe7066379e21d61519dc1e7cc01603c63c233d90711efe5ab956250f6",
       "origin": "AI_A3_P5C_REVIEW_REFINEMENTS_V1"
+    },
+    {
+      "group": "LOCALIZATION",
+      "file": "docs/recovery/evidence/LOCALIZATION/ARCTOR_LOCALIZED_CONTENT_FOUNDATION_ACTIVITY_V1_EVIDENCE.txt",
+      "sourceDownloadsName": null,
+      "sha256": "605dbfa5c722e140838471faf99c49d57ad11a773c35b7d326f00f38eb5a7c7a",
+      "origin": "ARCTOR_LOCALIZED_CONTENT_FOUNDATION_ACTIVITY_V1"
     }
   ]
 }
