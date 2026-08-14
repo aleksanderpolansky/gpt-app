@@ -114,6 +114,25 @@ function normalizeLocale(value: string | null): Locale {
     : "en";
 }
 
+function formatReviewWhen(value: string | null | undefined, locale: Locale) {
+  if (!value) return "—";
+  const languageTag: Record<Locale, string> = {
+    ru: "ru-RU", pl: "pl-PL", en: "en-GB", uk: "uk-UA", de: "de-DE", es: "es-ES", cs: "cs-CZ",
+  };
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split("-").map(Number);
+    return new Intl.DateTimeFormat(languageTag[locale], { dateStyle: "medium" }).format(
+      new Date(year, month - 1, day, 12, 0, 0, 0),
+    );
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat(languageTag[locale], {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(parsed);
+}
+
 export default function ActivityReviewQueuePage() {
   const [locale, setLocale] = useState<Locale>("en");
   const [activities, setActivities] = useState<ReviewActivity[]>([]);
@@ -219,7 +238,10 @@ export default function ActivityReviewQueuePage() {
           {activities.map((activity) => {
             const isPlanned = activity.activityRoleCode === "planned";
             const destination = isPlanned ? copy.planned : copy.actual;
-            const when = activity.startedAt || activity.scheduledDate || activity.createdAt || "—";
+            const when = formatReviewWhen(
+              activity.startedAt || activity.scheduledDate || activity.createdAt,
+              locale,
+            );
 
             return (
               <article

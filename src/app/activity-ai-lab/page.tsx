@@ -9,19 +9,11 @@ import { PlannedTargetSelectorPp1 } from "@/components/activity/pp1/planned-targ
 import {
   buildAiLabDirectActivityRequest,
   buildAiLabDirectSaveReturnUrl,
-  deriveAiLabActivityTitle,
   type AiLabSaveTemporalDirection,
 } from "@/lib/activity/aiLabDirectSave";
 import {
   buildAiLabFactMaterializationCandidates,
 } from "@/lib/activity/aiLabFactMaterialization";
-import {
-  AI_A3_P5C_QUICK_CAPTURE_REVIEW_CONTRACT,
-  buildAiLabQuickCaptureReviewHref,
-  buildAiLabQuickCaptureReviewSnapshot,
-  buildAiLabQuickCaptureSequentialTimings,
-  deriveAiLabQuickCaptureIdempotencyKey,
-} from "@/lib/activity/aiLabQuickCapture";
 import {
   datetimeLocalToIsoPp1,
   formatActivityTimingDraftPp1,
@@ -106,10 +98,21 @@ type DirectSaveCheckpoint = {
 
 type QuickCaptureStatus = "idle" | "saving" | "saved" | "error";
 
-type QuickCaptureCreatedActivity = {
-  activityEventId: string;
-  temporalDirection: AiLabSaveTemporalDirection;
-  factMaterializationWarning: string | null;
+type DurableQuickCaptureResponse = {
+  ok?: boolean;
+  accepted?: boolean;
+  error?: string;
+  signalId?: string;
+  processingStatus?: string;
+  processingError?: string | null;
+  result?: {
+    sourceText?: string;
+    locale?: string;
+    activityEventIds?: string[];
+    reviewHref?: string;
+    globalPreview?: GlobalPreview;
+    warnings?: string[];
+  } | null;
 };
 
 type ReviewQueueDetailResponse = {
@@ -1258,6 +1261,7 @@ export default function ActivityAiLabPage() {
     past: createOperationId(),
     future: createOperationId(),
   });
+  const durableRequestRef = useRef<{ key: string; requestId: string } | null>(null);
 
   const timeZone =
     typeof Intl !== "undefined"
@@ -1425,188 +1429,79 @@ export default function ActivityAiLabPage() {
     resetSaveState();
   }
 
-  async function persistQuickCapture(
-    payload: GlobalPreview,
-    sourceMessageText: string,
-  ) {
-    const rows = Array.isArray(payload.rows) ? payload.rows : [];
-    const operationId = payload.operationId?.trim() || "";
-
-    if (rows.length === 0) {
-      throw new Error("Полный анализ не вернул ни одной самостоятельной активности/наблюдения.");
+  function durableRequestIdFor(sourceText: string) {
+    const key = JSON.stringify([sourceText, locale, timeZone]);
+    if (durableRequestRef.current?.key === key) {
+      return durableRequestRef.current.requestId;
     }
+    const requestId = createOperationId();
+    durableRequestRef.current = { key, requestId };
+    return requestId;
+  }
 
-    if (!operationId) {
-      throw new Error("Полный анализ не вернул operationId для безопасного сохранения.");
+  async function waitForDurableQuickCapture(signalId: string) {
+    for (let attempt = 0; attempt < 120; attempt += 1) {
+      if (attempt > 0) {
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 1000));
+      }
+      const query = new URLSearchParams({ signalId });
+      const response = await fetch(`/api/activity/quick-capture?${query.toString()}`, {
+        credentials: "include",
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      const payload = (await response.json().catch(() => null)) as DurableQuickCaptureResponse | null;
+      if (!response.ok || payload?.ok !== true) {
+        throw new Error(payload?.error || `Не удалось проверить фоновый разбор: HTTP ${response.status}`);
+      }
+      if (payload.processingStatus === "processed" && payload.result) {
+        return payload;
+      }
+      if (payload.processingStatus === "failed") {
+        throw new Error(payload.processingError || "Фоновый разбор завершился ошибкой.");
+      }
+      setQuickCaptureStatus("saving");
+      setQuickCaptureMessage(
+        "Сообщение уже принято сервером. Можно перейти на другую страницу — обработка продолжится в фоне.",
+      );
     }
-
     setQuickCaptureStatus("saving");
     setQuickCaptureMessage(
-      rows.length === 1
-        ? "Анализ завершён. Сохраняю активность и добавляю её в «Требуют проверки»…"
-        : `Анализ завершён. Сохраняю ${rows.length} самостоятельных активностей и добавляю их в «Требуют проверки»…`,
+      "Сообщение сохранено сервером. Обработка продолжается в фоне; результат появится в «Требуют проверки» после завершения.",
     );
-    const createdActivities: QuickCaptureCreatedActivity[] = [];
-    const sourceFragments = rows.map(
-      (row) => row.sourceFragment?.trim() || sourceMessageText,
-    );
-    const sequentialTimings = buildAiLabQuickCaptureSequentialTimings({
-      rows,
-      sourceTexts: sourceFragments,
-      locale,
-      reportedAt: payload.reportedAt ?? null,
-    });
+    return null;
+  }
 
-    for (let index = 0; index < rows.length; index += 1) {
-      const row = rows[index];
-      const sourceFragment = sourceFragments[index];
-      const timing = sequentialTimings[index];
-      const title = deriveAiLabActivityTitle(sourceFragment, [row]);
-      const baseRequestBody = buildAiLabDirectActivityRequest({
-        idempotencyKey: deriveAiLabQuickCaptureIdempotencyKey({
-          operationId,
-          segmentId: row.segmentId ?? null,
-          index,
-        }),
-        temporalDirection: timing.temporalDirection,
-        rawText: sourceFragment,
-        title,
-        locale,
-        timingLabel: timing.timingLabel,
-        analysisOperationId: operationId,
-        manualFeedbackIds: [],
-        durationMinutes: timing.durationMinutes,
-        observedDate: timing.observedDate,
-        startedAt: timing.startedAt,
-        endedAt: timing.endedAt,
-        scheduleModeCode: timing.draft.scheduleModeCode,
-        scheduledDate: timing.draft.scheduledDate || null,
-        scheduleStartDate: timing.draft.scheduleStartDate || null,
-        scheduleEndDate: timing.draft.scheduleEndDate || null,
-        deadlineAt: timing.deadlineAt,
-        plannedTargetValueObjectIds: [],
-      });
-      const baseMetadata =
-        baseRequestBody.metadata &&
-        typeof baseRequestBody.metadata === "object" &&
-        !Array.isArray(baseRequestBody.metadata)
-          ? (baseRequestBody.metadata as Record<string, unknown>)
-          : {};
-      const requestBody = {
-        ...baseRequestBody,
-        metadata: {
-          ...baseMetadata,
-        quickCaptureContract: AI_A3_P5C_QUICK_CAPTURE_REVIEW_CONTRACT,
-        quickCaptureReviewRequired: true,
-        quickCaptureReviewStatus: "pending",
-        quickCaptureSourceMessageText: sourceMessageText,
-        quickCaptureSourceSegmentId: row.segmentId ?? `segment-${index + 1}`,
-        quickCaptureSourceSegmentOrdinal: index + 1,
-        quickCaptureSourceSegmentCount: rows.length,
-        quickCaptureTemporalSequencePolicy:
-          "independent_events_named_order_no_invented_breaks",
-          quickCaptureReviewSnapshot: buildAiLabQuickCaptureReviewSnapshot({
-            preview: payload,
-            row,
-            sourceMessageText,
-            sourceFragment,
-            locale,
-            temporalDirection: timing.temporalDirection,
-          }),
-        },
-      };
-
-      const response = await fetch("/api/activity/events", {
-        credentials: "include",
+  async function runFallbackPreviewAfterReceiptFailure(text: string, receiptError: string) {
+    const fallbackResponse = await fetch(
+      "/api/activity/semantic-orchestration-preview",
+      {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-        body: JSON.stringify(requestBody),
-      });
-      const eventPayload = (await response.json().catch(() => null)) as
-        | {
-            ok?: boolean;
-            error?: string;
-            event?: { id?: string | null };
-            activityEvent?: { id?: string | null };
-          }
-        | null;
-
-      if (!response.ok || eventPayload?.ok === false) {
-        throw new Error(
-          eventPayload?.error ||
-            `Не удалось автоматически сохранить активность ${index + 1}: HTTP ${response.status}`,
-        );
-      }
-
-      const activityEventId =
-        eventPayload?.activityEvent?.id ?? eventPayload?.event?.id ?? null;
-
-      if (!activityEventId) {
-        throw new Error(`Сервер не вернул id активности ${index + 1}.`);
-      }
-
-      let factMaterializationWarning: string | null = null;
-      const candidates = buildAiLabFactMaterializationCandidates(
-        [row],
-        payload.contractVersion ?? null,
-      );
-
-      if (candidates.length > 0) {
-        const factResponse = await fetch("/api/ai/reality/fact-materialize", {
-          credentials: "include",
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            activityEventId,
-            operationId,
-            candidates,
-          }),
-        });
-        const factPayload = (await factResponse.json().catch(() => null)) as
-          | { ok?: boolean; error?: string }
-          | null;
-
-        if (!factResponse.ok || factPayload?.ok !== true) {
-          factMaterializationWarning =
-            factPayload?.error ||
-            `Явные факты не материализованы: HTTP ${factResponse.status}`;
-        }
-      }
-
-      createdActivities.push({
-        activityEventId,
-        temporalDirection: timing.temporalDirection,
-        factMaterializationWarning,
-      });
-    }
-
-    setQuickCaptureStatus("saved");
-    const warnings = createdActivities
-      .map((item) => item.factMaterializationWarning)
-      .filter((item): item is string => Boolean(item));
-    setQuickCaptureMessage(
-      warnings.length > 0
-        ? `Активности сохранены. ${warnings.length} запись(и) требуют проверки материализации фактов.`
-        : "Активности сохранены и добавлены в «Требуют проверки».",
-    );
-
-    if (createdActivities.length === 1) {
-      router.push(
-        buildAiLabQuickCaptureReviewHref({
-          locale,
-          activityEventId: createdActivities[0].activityEventId,
+        body: JSON.stringify({
+          rawText: text,
+          inputLanguage: locale === "uk" ? "ru" : locale,
+          source: "manual",
+          mode: "preview_only",
         }),
-      );
-      return;
+      },
+    );
+    const fallbackPayload = (await fallbackResponse.json().catch(() => null)) as SemanticPreview | null;
+    if (!fallbackPayload) {
+      throw new Error(`${receiptError}; резервный разбор также не вернул корректный ответ.`);
     }
-
-    router.push(buildAiLabQuickCaptureReviewHref({ locale }));
+    const nextTrace = buildFallbackTrace(text, fallbackPayload, receiptError);
+    setResult({ mode: "fallback", payload: fallbackPayload, trace: nextTrace, globalError: receiptError });
+    setTrace(nextTrace);
+    setAnalyzedText(text);
+    setAnalyzedLocale(locale);
+    setError(
+      `Надёжное серверное принятие не состоялось: ${receiptError}. Показан только резервный preview; активность не записана.`,
+    );
   }
 
   async function analyze() {
@@ -1630,96 +1525,89 @@ export default function ActivityAiLabPage() {
       { kind: "system", text: `Получено сообщение: «${text}»` },
       {
         kind: "system",
-        text:
-          "Запускаю полный анализ: выделение наблюдений → реальные кандидаты ЦО → выбор модели → проверка фактов сервером.",
+        text: "Сначала сохраняю сообщение на сервере. После подтверждения приёма страницу можно закрыть: полный анализ и запись активностей продолжатся в фоне.",
       },
     ]);
 
+    let receiptAccepted = false;
     try {
-      const globalResponse = await fetch(
-        "/api/ai/reality/global-observation-preview",
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            inputText: text,
-            locale,
-            timeZone,
-            operationId: createOperationId(),
-          }),
+      const clientRequestId = durableRequestIdFor(text);
+      const response = await fetch("/api/activity/quick-capture", {
+        method: "POST",
+        credentials: "include",
+        keepalive: true,
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
-      );
-
-      const globalPayload = (await globalResponse
-        .json()
-        .catch(() => null)) as GlobalPreview | null;
-
-      if (globalResponse.ok && globalPayload?.ok === true) {
-        const nextTrace = buildGlobalTrace(text, globalPayload);
-        setResult({ mode: "global", payload: globalPayload, trace: nextTrace });
-        setTrace(nextTrace);
-        setAnalyzedText(text);
-        setAnalyzedLocale(locale);
-        await persistQuickCapture(globalPayload, text);
+        body: JSON.stringify({
+          inputText: text,
+          locale,
+          timeZone,
+          clientRequestId,
+        }),
+      });
+      const receipt = (await response.json().catch(() => null)) as DurableQuickCaptureResponse | null;
+      if (!response.ok || receipt?.ok !== true || !receipt.signalId) {
+        const receiptError = receipt?.error || `HTTP ${response.status}`;
+        await runFallbackPreviewAfterReceiptFailure(text, receiptError);
         return;
       }
 
-      const globalError =
-        globalPayload?.error ||
-        globalPayload?.code ||
-        `HTTP ${globalResponse.status}`;
-
-      const fallbackResponse = await fetch(
-        "/api/activity/semantic-orchestration-preview",
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            rawText: text,
-            inputLanguage: locale === "uk" ? "ru" : locale,
-            source: "manual",
-            mode: "preview_only",
-          }),
-        },
+      receiptAccepted = true;
+      setQuickCaptureStatus("saving");
+      setQuickCaptureMessage(
+        "Сообщение принято сервером. Можно уйти со страницы — анализ, создание активностей и фактов продолжатся в фоне.",
       );
+      setTrace((current) => [
+        ...current,
+        {
+          kind: "system",
+          text: `Сервер подтвердил приём сообщения. Квитанция: ${receipt.signalId}. Фоновая обработка больше не зависит от открытой страницы.`,
+        },
+      ]);
 
-      const fallbackPayload = (await fallbackResponse
-        .json()
-        .catch(() => null)) as SemanticPreview | null;
-
-      if (!fallbackPayload) {
-        throw new Error(
-          `${globalError}; резервный разбор также не вернул корректный ответ.`,
-        );
+      const completed =
+        receipt.processingStatus === "processed" && receipt.result
+          ? receipt
+          : await waitForDurableQuickCapture(receipt.signalId);
+      if (!completed) {
+        return;
+      }
+      const preview = completed.result?.globalPreview ?? null;
+      const reviewHref = completed.result?.reviewHref?.trim() || "";
+      if (!preview || preview.ok !== true || !reviewHref) {
+        throw new Error("Сервер завершил обработку, но durable result неполон.");
       }
 
-      const nextTrace = buildFallbackTrace(text, fallbackPayload, globalError);
-      setResult({
-        mode: "fallback",
-        payload: fallbackPayload,
-        trace: nextTrace,
-        globalError,
-      });
+      const nextTrace = buildGlobalTrace(text, preview);
+      setResult({ mode: "global", payload: preview, trace: nextTrace });
       setTrace(nextTrace);
       setAnalyzedText(text);
       setAnalyzedLocale(locale);
+      setQuickCaptureStatus("saved");
+      const createdCount = completed.result?.activityEventIds?.length ?? 0;
+      const warningCount = completed.result?.warnings?.length ?? 0;
+      setQuickCaptureMessage(
+        warningCount > 0
+          ? `Сохранено активностей: ${createdCount}. Предупреждений материализации фактов: ${warningCount}.`
+          : `Сохранено активностей: ${createdCount}. Они добавлены в «Требуют проверки».`,
+      );
+      router.push(reviewHref);
     } catch (caught) {
-      const message =
-        caught instanceof Error ? caught.message : "Неизвестная ошибка анализа.";
-      setError(message);
-      setQuickCaptureStatus((current) => current === "saving" ? "error" : current);
-      setQuickCaptureMessage((current) => current || message);
+      const message = caught instanceof Error ? caught.message : "Неизвестная ошибка анализа.";
+      if (receiptAccepted) {
+        setError(
+          `Сообщение уже сохранено сервером, но фоновая обработка сейчас завершилась ошибкой: ${message} Повторное нажатие безопасно и использует ту же квитанцию.`,
+        );
+        setQuickCaptureStatus("error");
+        setQuickCaptureMessage(message);
+      } else {
+        setError(message);
+      }
       setTrace((current) => [
         ...current,
-        { kind: "unresolved", text: `Анализ остановлен: ${message}` },
+        { kind: "unresolved", text: `Обработка: ${message}` },
       ]);
     } finally {
       setLoading(false);
@@ -2197,8 +2085,9 @@ export default function ActivityAiLabPage() {
                 </div>
               ) : (
                 <div className="mt-3 rounded-2xl border border-zinc-800 bg-black/40 p-4 text-sm leading-6 text-zinc-500">
-                  Сохранение станет доступно только после успешного полного анализа с
-                  реальным поиском по ЦО. Резервный разбор недостаточен.
+                  {quickCaptureStatus === "saving" || quickCaptureStatus === "error"
+                    ? quickCaptureMessage
+                    : "После нажатия «Разобрать активность» сообщение сначала фиксируется сервером. После подтверждения приёма можно уйти со страницы — обработка продолжится в фоне."}
                 </div>
               )}
             </div>

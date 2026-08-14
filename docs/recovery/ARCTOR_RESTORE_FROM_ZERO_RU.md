@@ -305,3 +305,6 @@ Baseline: `f661ea575d6864092782b2143ddd2f32a2f7d0b0`.
 5. Порядок диагностики конфликта: hard guards -> deterministic processing rules -> AI instructions -> history/examples.
 6. Если нужен новый rule instance и matcher/action уже есть — создай его в админке. Если нужен новый matcher/action — добавь безопасный executor в код, validator/fixtures и выпусти релизом.
 7. Следующий P5C Durable шаг должен подключить universal processing-rule executor к activity_quick_capture; пока каталог показывает это как pending runtime wiring.
+
+## P5C durable rule executor restore
+Проверить наличие src/app/api/activity/quick-capture/route.ts, src/lib/activity/aiLabQuickCaptureDurable.server.ts, src/lib/ai/processingRuleExecutor.ts и processingRuleExecutor.server.ts. В /admin/ai-instructions правила activity_quick_capture должны показываться runtime_wired. Контроль: «завтра в 18:00 тренировка 40 минут» -> одна planned activity; уход со страницы сразу после клика не останавливает обработку.

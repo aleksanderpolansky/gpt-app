@@ -492,3 +492,10 @@ P5B live UI acceptance confirmed mutual links on /activity-facts and /activity-t
 - Правило measurement_without_independent_predicate зарегистрировано как системный default каталога. Оно должно быть подключено к runtime универсальным executor в следующем P5C Durable шаге; до этого интерфейс честно показывает catalog_only_until_executor_wired.
 - Источник, символ, назначение и инструкция по изменению каждого зарегистрированного hard guard видимы на той же странице.
 - P5C Durable Handoff всё ещё не выпущен; последний V2 был остановлен до commit/push старым P5A regression invocation и откатан чисто.
+
+## AI_A3_P5C_DURABLE_RULE_EXECUTOR_V3
+- Quick Capture сначала фиксирует raw_activity_signal, после чего обработка продолжается server-side через Next after().
+- activity_quick_capture теперь читает активные безопасные processing rules из /admin/ai-instructions runtime-каталога.
+- modifier-only measurement/time не создают отдельную activity при соответствующем активном правиле; применённые ruleCode/revision сохраняются в metadata.
+- Плановое локальное время конвертируется с учётом IANA timezone пользователя.
+- Следующее действие: live acceptance ухода со страницы сразу после клика и контроль «завтра 18:00 тренировка 40 минут».

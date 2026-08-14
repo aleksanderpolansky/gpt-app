@@ -1,0 +1,9 @@
+RELEASE=AI_A3_P5C_DURABLE_RULE_EXECUTOR_V3
+BASELINE=cadee264ae67b7aca02190d379dc09f3cafdc176
+SCOPE=Durable server handoff + DB-backed safe processing-rule executor for activity_quick_capture
+USER_FLOW=click analyze -> raw receipt persisted -> after() background analysis -> processing rules -> independent activity_events -> facts -> review queue
+RULE_RUNTIME=runtime_wired for activity_quick_capture
+NO_ACTIVITY_PACKAGE_ENTITY=true
+TIMEZONE=IANA-aware server conversion for local scheduled times
+REVIEW_QUEUE_DATE=localized human-readable
+GENERATED_AT=2026-08-14T12:59:44.565Z

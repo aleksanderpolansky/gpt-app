@@ -1,11 +1,11 @@
 {
   "schemaVersion": 7,
-  "generatedAt": "2026-08-14T11:46:18.347Z",
+  "generatedAt": "2026-08-14T12:59:44.584Z",
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
-  "branch": "feat/ai-admin-control-catalog-v3-20260814",
-  "originMainAtCheckpoint": "fc092159eb0e1772032cbf30158ff913859cf5cc",
-  "checkpointMeaning": "Unified /admin/ai-instructions control catalog: editable AI instructions, versioned safe deterministic processing rules, and fully visible read-only registered system guards with precedence/source/change guidance.",
+  "branch": "feat/p5c-durable-rule-executor-v3-20260814",
+  "originMainAtCheckpoint": "cadee264ae67b7aca02190d379dc09f3cafdc176",
+  "checkpointMeaning": "P5C Durable Handoff with server-persisted receipt, background processing, DB-backed safe processing-rule executor, timezone-safe scheduled timing and review-date cleanup.",
   "globalReality": {
     "p8Blocked": true,
     "objectsTotal": 150,
@@ -51,7 +51,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Wire the safe processing-rule executor into P5C Durable Handoff, then live-test background completion and future activity timing.",
+  "nextAction": "Live-test immediate navigation away after Analyze, verify one planned activity for 'tomorrow 18:00 training 40 minutes', then define review-resolved transition.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -61,8 +61,8 @@
     "docs/recovery/evidence/EVIDENCE_INDEX.json"
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
-  "previousRecoveryCommit": "fc092159eb0e1772032cbf30158ff913859cf5cc",
-  "documentedState": "AI_ADMIN_CONTROL_CATALOG_V1",
+  "previousRecoveryCommit": "cadee264ae67b7aca02190d379dc09f3cafdc176",
+  "documentedState": "AI_A3_P5C_DURABLE_RULE_EXECUTOR_V3",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -168,7 +168,7 @@
     "rawLiveDbExportRequiredForCheckpoint": false
   },
   "aiArchitecture": {
-    "status": "AI_A3_P3_DIRECT_SAVE_CODE_RELEASED_AWAITING_LIVE_RUNTIME",
+    "status": "AI_A3_P5C_DURABLE_RULE_EXECUTOR_CODE_RELEASED_AWAITING_LIVE_RUNTIME",
     "sourceBaseline": "07e5b82d8e9c9ee22c995bfb64297e685fefe918",
     "architectureLock": "docs/reality-core/ARCTOR_AI_ARCHITECTURE_LOCK_V1_RU.md",
     "storageAudit": "docs/recovery/specs/ARCTOR_AI_A0_REUSE_ALTER_CREATE_V1_RU.md",

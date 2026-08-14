@@ -520,3 +520,9 @@ Live P5B acceptance: Facts page showed `31 minute`, the linked `Ходьба` ch
 6. Конфликт для deterministic rules выявляется по пересечению runtime+matcher и различным action; одинаковый priority — warning, разный priority разрешается большим priority.
 7. Нельзя скрывать отсутствие runtime wiring: каталог явно сообщает, подключено ли правило к runtime.
 8. Два предрелизных controller-прогона каталога были безопасно остановлены до commit: V1 на известном устаревшем P5A static checkpoint-check, V2 на двух React Hooks ESLint warnings; оба rollback завершились чистым worktree.
+
+## P5C durable handoff / rule executor decision
+- Клиент не является владельцем длинной цепочки записи после «Разобрать активность»: после серверной квитанции страница может быть закрыта.
+- DB rules не содержат исполняемый JS/TS/SQL/regexp; executor поддерживает только разрешённые matcher/action.
+- При равном priority конфликтующих действий runtime блокируется fail-closed.
+- Анализ и применённые правила checkpoint-ятся до создания activity_event, чтобы retry не повторял AI-вызов и не менял правила посередине операции.

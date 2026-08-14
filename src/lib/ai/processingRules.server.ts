@@ -151,7 +151,9 @@ export async function readProcessingControlCatalog(localeInput: unknown) {
       revision: selectedRow?.current_revision ?? inactiveCustom?.current_revision ?? null,
       updatedAt: selectedRow?.updated_at ?? inactiveCustom?.updated_at ?? null,
       isCodeDefault: Boolean(fallback),
-      runtimeConsumption: "catalog_only_until_executor_wired",
+      runtimeConsumption: draft.runtimeTargets.includes("activity_quick_capture")
+        ? "runtime_wired"
+        : "catalog_only_until_executor_wired",
       history: history.map((revision) => ({
         id: revision.id,
         revision: revision.revision,
@@ -170,7 +172,7 @@ export async function readProcessingControlCatalog(localeInput: unknown) {
     processingRules: detectProcessingRuleConflicts(items),
     systemGuards: SYSTEM_AI_GUARDS,
     runtimeConsumptionNote:
-      "Каталог правил редактируется без релиза. Подключение универсального executor к activity_quick_capture выполняется следующим P5C Durable шагом; до этого runtimeConsumption=catalog_only_until_executor_wired.",
+      "Для activity_quick_capture универсальный executor подключен: активные безопасные правила читаются из этого каталога во время фоновой обработки. Другие runtimeTargets остаются catalog_only_until_executor_wired до отдельного подключения.",
     storageContract: {
       table: "public.ai_processing_instruction_sets",
       revisionTable: "public.ai_processing_instruction_revisions",

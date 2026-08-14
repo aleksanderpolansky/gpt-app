@@ -8,6 +8,11 @@ import {
   type ActivityTimingLocalePp1,
   type ActivityTemporalDirectionPp1,
 } from "@/lib/activity/pp1/activityTiming";
+import {
+  dateKeyInTimeZone,
+  datetimeLocalInTimeZoneToIso,
+  wallClockDateForTimeZone,
+} from "@/lib/activity/quickCaptureTimeZone";
 
 export const AI_A3_P5C_QUICK_CAPTURE_REVIEW_CONTRACT =
   "AI_A3_P5C_QUICK_CAPTURE_REVIEW_V1" as const;
@@ -197,22 +202,31 @@ export function buildAiLabQuickCaptureTiming(input: {
   sourceText: string;
   locale: ActivityTimingLocalePp1;
   reportedAt?: string | null;
+  timeZone?: string;
 }): AiLabQuickCaptureTiming {
-  const reportedAt = parseDate(input.reportedAt) ?? new Date();
+  const reportedAtInstant = parseDate(input.reportedAt) ?? new Date();
+  const timeZone = input.timeZone?.trim() || "";
+  const reportedAtWallClock = timeZone
+    ? wallClockDateForTimeZone(reportedAtInstant, timeZone)
+    : reportedAtInstant;
   const temporalDirection = inferAiLabQuickCaptureTemporalDirection({
     row: input.row,
     sourceText: input.sourceText,
     locale: input.locale,
-    reportedAt: reportedAt.toISOString(),
+    reportedAt: reportedAtInstant.toISOString(),
   });
   const draft = inferActivityTimingDraftPp1(
     input.sourceText,
     temporalDirection,
-    reportedAt,
+    reportedAtWallClock,
   );
   const occurredAtIso = parseDate(input.row.temporal?.occurredAtIso)?.toISOString() ?? null;
-  let startedAt = datetimeLocalToIsoPp1(draft.startedAtLocal);
-  let endedAt = datetimeLocalToIsoPp1(draft.endedAtLocal);
+  const localToIso = (value: string) =>
+    timeZone
+      ? datetimeLocalInTimeZoneToIso(value, timeZone)
+      : datetimeLocalToIsoPp1(value);
+  let startedAt = localToIso(draft.startedAtLocal);
+  let endedAt = localToIso(draft.endedAtLocal);
   let durationMinutes = parsePositiveDurationMinutesPp1(draft.durationMinutes);
 
   const explicitDuration = (input.row.facts ?? []).find(
@@ -250,7 +264,7 @@ export function buildAiLabQuickCaptureTiming(input: {
     observedDate: temporalDirection === "past" ? draft.observedDate || null : null,
     startedAt,
     endedAt,
-    deadlineAt: datetimeLocalToIsoPp1(draft.deadlineLocal),
+    deadlineAt: localToIso(draft.deadlineLocal),
     focusDate: getTimingFocusDatePp1(draft, temporalDirection),
   };
 }
@@ -267,6 +281,7 @@ export function buildAiLabQuickCaptureSequentialTimings(input: {
   sourceTexts: string[];
   locale: ActivityTimingLocalePp1;
   reportedAt?: string | null;
+  timeZone?: string;
 }) {
   if (input.rows.length !== input.sourceTexts.length) {
     throw new Error("QUICK_CAPTURE_SEQUENCE_INPUT_LENGTH_MISMATCH");
@@ -279,6 +294,7 @@ export function buildAiLabQuickCaptureSequentialTimings(input: {
       sourceText: input.sourceTexts[index],
       locale: input.locale,
       reportedAt: reportedAt.toISOString(),
+      timeZone: input.timeZone,
     }),
   );
 
@@ -317,10 +333,13 @@ export function buildAiLabQuickCaptureSequentialTimings(input: {
       const startedAt = new Date(
         endedAt.getTime() - timing.durationMinutes * 60_000,
       );
+      const observedDate = input.timeZone
+        ? dateKeyInTimeZone(startedAt, input.timeZone)
+        : localDateKey(startedAt);
 
       timings[index] = {
         ...timing,
-        observedDate: timing.observedDate ?? localDateKey(startedAt),
+        observedDate: timing.observedDate ?? observedDate,
         startedAt: startedAt.toISOString(),
         endedAt: endedAt.toISOString(),
       };
@@ -330,7 +349,9 @@ export function buildAiLabQuickCaptureSequentialTimings(input: {
 
     timings[index] = {
       ...timing,
-      observedDate: timing.observedDate ?? localDateKey(cursor),
+      observedDate:
+        timing.observedDate ??
+        (input.timeZone ? dateKeyInTimeZone(cursor, input.timeZone) : localDateKey(cursor)),
     };
   }
 

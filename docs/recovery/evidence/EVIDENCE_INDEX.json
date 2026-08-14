@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-14T11:46:18.349Z",
+  "generatedAt": "2026-08-14T12:59:44.585Z",
   "copiedCount": 57,
-  "generatedEvidenceCount": 4,
-  "indexedCount": 78,
+  "generatedEvidenceCount": 5,
+  "indexedCount": 79,
   "missingPatterns": [],
   "files": [
     {
@@ -540,6 +540,13 @@
       "sourceDownloadsName": null,
       "sha256": "3c4a2a6766fd2660c8ffd8fffe5074b1314b72294505e65ea6717171c042eab7",
       "origin": "AI_ADMIN_CONTROL_CATALOG_V1_precommit_verification"
+    },
+    {
+      "group": "AI_A3",
+      "file": "docs/recovery/evidence/AI_A3/ARCTOR_AI_A3_P5C_DURABLE_RULE_EXECUTOR_V3_PRECOMMIT_REPORT.txt",
+      "sourceDownloadsName": null,
+      "sha256": "78c1d5a7cb832479b458cc54025d2f268183dde1965344611a87598ae35d043d",
+      "origin": "P5C_durable_rule_executor_v2_precommit"
     }
   ]
 }
