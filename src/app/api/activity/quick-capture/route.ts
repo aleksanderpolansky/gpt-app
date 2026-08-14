@@ -10,6 +10,7 @@ import {
   summarizeDurableQuickCaptureSignal,
 } from "@/lib/activity/aiLabQuickCaptureDurable.server";
 import type { ActivityTimingLocalePp1 } from "@/lib/activity/pp1/activityTiming";
+import { normalizeQuickCaptureTemporalMode } from "@/lib/activity/quickCaptureTemporalMode";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -34,6 +35,7 @@ type SubmitBody = {
   locale?: unknown;
   timeZone?: unknown;
   clientRequestId?: unknown;
+  temporalDirection?: unknown;
 };
 
 function text(value: unknown) {
@@ -84,11 +86,15 @@ export async function POST(request: Request) {
   const locale = normalizeLocale(body.locale);
   const timeZone = text(body.timeZone) || "UTC";
   const clientRequestId = text(body.clientRequestId);
+  const temporalDirection = normalizeQuickCaptureTemporalMode(body.temporalDirection);
   if (!inputText || inputText.length > MAX_INPUT_CHARS) {
     return NextResponse.json({ ok: false, error: `inputText must contain 1-${MAX_INPUT_CHARS} characters` }, { status: 400 });
   }
   if (!REQUEST_ID_RE.test(clientRequestId)) {
     return NextResponse.json({ ok: false, error: "clientRequestId is invalid" }, { status: 400 });
+  }
+  if (!temporalDirection) {
+    return NextResponse.json({ ok: false, error: "temporalDirection must be past or future" }, { status: 400 });
   }
   if (!isSupportedTimeZone(timeZone)) {
     return NextResponse.json({ ok: false, error: "timeZone is invalid" }, { status: 400 });
@@ -108,6 +114,7 @@ export async function POST(request: Request) {
       inputText,
       locale,
       timeZone,
+      temporalDirection,
       reportedAt: new Date().toISOString(),
     });
     if (!created.signal) {
@@ -152,9 +159,9 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  const { appUser, errorResponse } = await getActivityUserContext();
+  const { appUser, personActor, errorResponse } = await getActivityUserContext();
   if (errorResponse) return errorResponse;
-  if (!appUser) {
+  if (!appUser || !personActor) {
     return NextResponse.json({ ok: false, error: "User context not found" }, { status: 500 });
   }
 
@@ -162,9 +169,20 @@ export async function GET(request: Request) {
   if (!signalId) {
     return NextResponse.json({ ok: false, error: "signalId is required" }, { status: 400 });
   }
-  const signal = await readDurableQuickCaptureSignal({ signalId, userId: appUser.id });
+  let signal = await readDurableQuickCaptureSignal({ signalId, userId: appUser.id });
   if (!signal) {
     return NextResponse.json({ ok: false, error: "Quick capture receipt not found" }, { status: 404 });
+  }
+
+  signal = await requeueDurableSignalIfStale(signal);
+  if (signal.processing_status === "pending" || signal.processing_status === "received") {
+    scheduleProcessing({
+      signalId: signal.id,
+      userId: appUser.id,
+      actorId: personActor.id,
+      cookieHeader: request.headers.get("cookie") ?? "",
+      origin: new URL(request.url).origin,
+    });
   }
 
   return NextResponse.json({

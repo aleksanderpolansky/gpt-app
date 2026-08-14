@@ -15,6 +15,11 @@ import {
 } from "@/lib/activity/aiLabUiCopy";
 import { buildLocalizedAiLabTrace } from "@/lib/activity/aiLabTraceLocalization";
 import {
+  QUICK_CAPTURE_TEMPORAL_MODE_COPY,
+  localizeQuickCaptureTemporalModeError,
+} from "@/lib/activity/quickCaptureTemporalModeCopy";
+import type { QuickCaptureTemporalMode } from "@/lib/activity/quickCaptureTemporalMode";
+import {
   buildAiLabDirectActivityRequest,
   buildAiLabDirectSaveReturnUrl,
   type AiLabSaveTemporalDirection,
@@ -136,6 +141,7 @@ type ReviewQueueDetailResponse = {
   reviewSnapshot?: {
     sourceFragment?: string | null;
     locale?: string | null;
+    temporalDirection?: QuickCaptureTemporalMode | null;
     globalPreview?: GlobalPreview | null;
   } | null;
 };
@@ -1200,6 +1206,7 @@ export default function ActivityAiLabPage() {
   const [inputText, setInputText] = useState("");
   const [locale, setLocale] = useState<Locale>("ru");
   const [uiLocale, setUiLocale] = useState<AiLabUiLocale>("en");
+  const [captureTemporalDirection, setCaptureTemporalDirection] = useState<QuickCaptureTemporalMode>("past");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -1227,6 +1234,7 @@ export default function ActivityAiLabPage() {
   });
   const durableRequestRef = useRef<{ key: string; requestId: string } | null>(null);
   const ui = AI_LAB_UI_COPY[uiLocale];
+  const temporalUi = QUICK_CAPTURE_TEMPORAL_MODE_COPY[uiLocale];
 
   const timeZone =
     typeof Intl !== "undefined"
@@ -1294,6 +1302,8 @@ export default function ActivityAiLabPage() {
         const normalizedLocale = LOCALES.some((item) => item.code === nextLocale)
           ? (nextLocale as Locale)
           : "ru";
+        const reviewTemporalDirection =
+          payload.reviewSnapshot?.temporalDirection === "future" ? "future" : "past";
 
         if (!preview || preview.ok !== true || !sourceText) {
           throw new Error(ui.reviewSnapshotIncomplete);
@@ -1306,6 +1316,7 @@ export default function ActivityAiLabPage() {
         const nextTrace = buildGlobalTrace(sourceText, preview, uiLocale);
         setInputText(sourceText);
         setLocale(normalizedLocale);
+        setCaptureTemporalDirection(reviewTemporalDirection);
         setResult({ mode: "global", payload: preview, trace: nextTrace });
         setTrace(nextTrace);
         setAnalyzedText(sourceText);
@@ -1432,7 +1443,7 @@ export default function ActivityAiLabPage() {
   }
 
   function durableRequestIdFor(sourceText: string) {
-    const key = JSON.stringify([sourceText, locale, timeZone]);
+    const key = JSON.stringify([sourceText, locale, timeZone, captureTemporalDirection]);
     if (durableRequestRef.current?.key === key) {
       return durableRequestRef.current.requestId;
     }
@@ -1460,7 +1471,12 @@ export default function ActivityAiLabPage() {
         return payload;
       }
       if (payload.processingStatus === "failed") {
-        throw new Error(payload.processingError || "Фоновый разбор завершился ошибкой.");
+        throw new Error(
+          localizeQuickCaptureTemporalModeError(
+            payload.processingError || "Фоновый разбор завершился ошибкой.",
+            uiLocale,
+          ),
+        );
       }
       setQuickCaptureStatus("saving");
       setQuickCaptureMessage(
@@ -1527,6 +1543,13 @@ export default function ActivityAiLabPage() {
       { kind: "system", text: `Получено сообщение: «${text}»` },
       {
         kind: "system",
+        text:
+          captureTemporalDirection === "future"
+            ? temporalUi.selectedPlannedTrace
+            : temporalUi.selectedActualTrace,
+      },
+      {
+        kind: "system",
         text: "Сначала сохраняю сообщение на сервере. После подтверждения приёма страницу можно закрыть: полный анализ и запись активностей продолжатся в фоне.",
       },
     ]);
@@ -1546,6 +1569,7 @@ export default function ActivityAiLabPage() {
           inputText: text,
           locale,
           timeZone,
+          temporalDirection: captureTemporalDirection,
           clientRequestId,
         }),
       });
@@ -1599,7 +1623,8 @@ export default function ActivityAiLabPage() {
       reviewUrl.searchParams.set("locale", uiLocale);
       router.push(reviewUrl.pathname + "?" + reviewUrl.searchParams.toString());
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : "Неизвестная ошибка анализа.";
+      const rawMessage = caught instanceof Error ? caught.message : "Неизвестная ошибка анализа.";
+      const message = localizeQuickCaptureTemporalModeError(rawMessage, uiLocale);
       if (receiptAccepted) {
         setError(
           `Сообщение уже сохранено сервером, но фоновая обработка сейчас завершилась ошибкой: ${message} Повторное нажатие безопасно и использует ту же квитанцию.`,
@@ -1846,10 +1871,10 @@ export default function ActivityAiLabPage() {
             {ui.eyebrow}
           </p>
           <h1 className="mt-2 text-2xl font-semibold text-white md:text-3xl">
-            {ui.title}
+            {captureTemporalDirection === "future" ? temporalUi.titlePlanned : ui.title}
           </h1>
           <p className="mt-3 max-w-4xl text-sm leading-6 text-zinc-400">
-            {ui.subtitle}
+            {captureTemporalDirection === "future" ? temporalUi.subtitlePlanned : ui.subtitle}
           </p>
           <div className="mt-4 rounded-2xl border border-amber-900/60 bg-amber-950/20 p-4 text-xs leading-5 text-amber-100">
             {ui.transparency}
@@ -1858,6 +1883,43 @@ export default function ActivityAiLabPage() {
 
         <section className="grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">
           <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-5">
+            {!reviewActivityEventId ? (
+              <fieldset className="mb-5" disabled={loading || Boolean(saveCheckpoint?.activityEventId)}>
+                <legend className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+                  {temporalUi.modeLabel}
+                </legend>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {([
+                    ["past", temporalUi.actual, temporalUi.actualHint],
+                    ["future", temporalUi.planned, temporalUi.plannedHint],
+                  ] as const).map(([mode, label, hint]) => {
+                    const selected = captureTemporalDirection === mode;
+                    return (
+                      <button
+                        aria-pressed={selected}
+                        className={`rounded-2xl border px-4 py-3 text-left transition ${
+                          selected
+                            ? "border-emerald-500 bg-emerald-950/30 text-emerald-100"
+                            : "border-zinc-800 bg-black/40 text-zinc-300 hover:border-zinc-600"
+                        }`}
+                        key={mode}
+                        onClick={() => {
+                          if (captureTemporalDirection !== mode) {
+                            if (analyzedText !== null) invalidateAnalysisArtifacts();
+                            setCaptureTemporalDirection(mode);
+                          }
+                        }}
+                        type="button"
+                      >
+                        <span className="block text-sm font-semibold">{label}</span>
+                        <span className="mt-1 block text-xs leading-5 text-zinc-500">{hint}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            ) : null}
+
             <label
               className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500"
               htmlFor="activity-ai-input"
@@ -1929,7 +1991,11 @@ export default function ActivityAiLabPage() {
                 onClick={() => void analyze()}
                 type="button"
               >
-                {loading ? ui.analyzing : ui.analyze}
+                {loading
+                  ? ui.analyzing
+                  : captureTemporalDirection === "future"
+                    ? temporalUi.analyzePlanned
+                    : temporalUi.analyzeActual}
               </button>
 
               <button

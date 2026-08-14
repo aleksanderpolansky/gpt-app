@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-14T16:57:09.313Z",
+  "generatedAt": "2026-08-14T18:21:19.919Z",
   "copiedCount": 57,
-  "generatedEvidenceCount": 9,
-  "indexedCount": 83,
+  "generatedEvidenceCount": 10,
+  "indexedCount": 84,
   "missingPatterns": [],
   "files": [
     {
@@ -575,6 +575,13 @@
       "sourceDownloadsName": null,
       "sha256": "605dbfa5c722e140838471faf99c49d57ad11a773c35b7d326f00f38eb5a7c7a",
       "origin": "ARCTOR_LOCALIZED_CONTENT_FOUNDATION_ACTIVITY_V1"
+    },
+    {
+      "group": "AI_A3",
+      "file": "docs/recovery/evidence/AI_A3/ARCTOR_AI_A3_P5C_TEMPORAL_INTENT_RECOVERY_V1_EVIDENCE.txt",
+      "sourceDownloadsName": null,
+      "sha256": "0514f9f6982978261b596cc789e5916d4415f39a5ea5dbefc0431db01ead5183",
+      "origin": "ARCTOR_AI_A3_P5C_TEMPORAL_INTENT_RECOVERY_V1"
     }
   ]
 }

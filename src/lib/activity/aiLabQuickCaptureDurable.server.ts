@@ -14,6 +14,7 @@ import { executeActivityQuickCaptureProcessingRules } from "@/lib/ai/processingR
 import { buildAiLabQuickCaptureSourceTexts } from "@/lib/activity/quickCaptureSourceText";
 import { ensureActivityEventLocalizations } from "@/lib/localization/contentLocalization.server";
 import type { ActivityTimingLocalePp1 } from "@/lib/activity/pp1/activityTiming";
+import { normalizeQuickCaptureTemporalMode, type QuickCaptureTemporalMode } from "@/lib/activity/quickCaptureTemporalMode";
 
 export const AI_A3_P5C_DURABLE_HANDOFF_CONTRACT =
   "AI_A3_P5C_DURABLE_HANDOFF_V1" as const;
@@ -41,6 +42,7 @@ export type DurableQuickCaptureResult = {
   signalId: string;
   sourceText: string;
   locale: string;
+  requestedTemporalDirection: QuickCaptureTemporalMode | null;
   operationId: string;
   activityEventIds: string[];
   reviewHref: string;
@@ -147,6 +149,7 @@ export async function createDurableQuickCaptureSignal(input: {
   inputText: string;
   locale: ActivityTimingLocalePp1;
   timeZone: string;
+  temporalDirection: QuickCaptureTemporalMode;
   reportedAt: string;
 }) {
   const idempotencyKey = `activity_ai_lab_quick_capture:${input.clientRequestId}`;
@@ -157,6 +160,8 @@ export async function createDurableQuickCaptureSignal(input: {
     inputText: input.inputText,
     locale: input.locale,
     timeZone: input.timeZone,
+    temporalDirection: input.temporalDirection,
+    temporalIntentSource: "explicit_user_control",
     reportedAt: input.reportedAt,
   };
   const { data, error } = await supabase
@@ -183,6 +188,8 @@ export async function createDurableQuickCaptureSignal(input: {
         actorId: input.actorId,
         locale: input.locale,
         timeZone: input.timeZone,
+        temporalDirection: input.temporalDirection,
+        temporalIntentSource: "explicit_user_control",
         durableContract: AI_A3_P5C_DURABLE_HANDOFF_CONTRACT,
         requiresHumanReview: true,
       },
@@ -197,6 +204,32 @@ export async function createDurableQuickCaptureSignal(input: {
     };
   }
   return { signal: data as DurableSignalRow, error: null, idempotencyKey };
+}
+
+export async function listDurableQuickCaptureSignalsForRecovery(input: {
+  userId: string;
+  limit?: number;
+}) {
+  const limit = Math.max(1, Math.min(10, Math.trunc(input.limit ?? 3)));
+  const { data, error } = await supabase
+    .from("raw_activity_signals")
+    .select("id,user_id,source_type,idempotency_key,raw_payload,normalized_preview_json,processing_status,processing_error,output_event_id,metadata_json,updated_at")
+    .eq("user_id", input.userId)
+    .eq("source_type", "manual_chat")
+    .like("idempotency_key", "activity_ai_lab_quick_capture:%")
+    .in("processing_status", ["pending", "received", "processing"])
+    .order("updated_at", { ascending: true })
+    .limit(limit);
+  if (error) throw new Error(`P5C_DURABLE_RECOVERY_LIST_FAILED:${error.message}`);
+
+  const recoverable: DurableSignalRow[] = [];
+  for (const row of (data ?? []) as DurableSignalRow[]) {
+    const current = await requeueDurableSignalIfStale(row);
+    if (current.processing_status === "pending" || current.processing_status === "received") {
+      recoverable.push(current);
+    }
+  }
+  return recoverable;
 }
 
 export async function requeueDurableSignalIfStale(signal: DurableSignalRow) {
@@ -346,6 +379,7 @@ export async function processDurableQuickCaptureSignal(input: {
     const inputText = text(raw.inputText);
     const locale = normalizeLocale(raw.locale);
     const timeZone = text(raw.timeZone) || "UTC";
+    const requestedTemporalDirection = normalizeQuickCaptureTemporalMode(raw.temporalDirection);
     const operationId = text(raw.operationId) || text(raw.clientRequestId);
     const reportedAt = text(raw.reportedAt) || new Date().toISOString();
     if (!inputText || !operationId) throw new Error("P5C_DURABLE_SIGNAL_PAYLOAD_INVALID");
@@ -402,6 +436,7 @@ export async function processDurableQuickCaptureSignal(input: {
       locale,
       reportedAt,
       timeZone,
+      temporalDirectionOverride: requestedTemporalDirection,
     });
     const activityEventIds: string[] = [];
     const warnings: string[] = [];
@@ -451,6 +486,8 @@ export async function processDurableQuickCaptureSignal(input: {
           quickCaptureSourceSegmentOrdinal: index + 1,
           quickCaptureSourceSegmentCount: rows.length,
           quickCaptureTemporalSequencePolicy: "independent_events_named_order_no_invented_breaks",
+          quickCaptureRequestedTemporalDirection: requestedTemporalDirection,
+          quickCaptureTemporalIntentSource: requestedTemporalDirection ? "explicit_user_control" : "legacy_inference",
           quickCaptureProcessingRuleApplications: analysis.applications,
           quickCaptureReviewSnapshot: buildAiLabQuickCaptureReviewSnapshot({
             preview: analysis.preview,
@@ -519,6 +556,7 @@ export async function processDurableQuickCaptureSignal(input: {
       signalId: signal.id,
       sourceText: inputText,
       locale,
+      requestedTemporalDirection,
       operationId,
       activityEventIds,
       reviewHref:

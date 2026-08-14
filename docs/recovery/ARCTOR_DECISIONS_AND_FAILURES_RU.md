@@ -550,3 +550,9 @@ Live P5B acceptance: Facts page showed `31 minute`, the linked `Ходьба` ch
 - sourceLocaleHint не считается истиной: переводчик определяет фактический язык текста. Это защищает от случая, когда UI/селектор языка показывает English, а исходное сообщение написано по-русски.
 - Ошибка локализации не откатывает activity_event. В review используется original fallback до появления/исправления перевода.
 - V1 сознательно не создаёт отдельную DB-таблицу и не требует SQL migration: activity adapter хранит versioned envelope в metadata_json. Общий executor спроектирован для следующих entity adapters.
+
+## Решение: явный temporal intent выше вывода модели
+- Пользовательский переключатель «Произошло / Запланировать» является источником истины для activity_role_code и physical routing. Это реализует принцип deterministic before LLM.
+- Старое правило RU/UK «инфинитив похож на future intent» сохраняется только как legacy/fallback для старых receipts/внутренних вызовов без explicit mode; оно не может отменять явный выбор.
+- При противоречии explicit mode и явно указанного времени система не угадывает и не меняет режим сама: выдаёт conflict и просит исправить время или переключатель.
+- Recovery stale quick-capture сделан demand-driven через существующий raw_activity_signals + idempotent claim; новая пользовательская queue/entity и обязательный cron не создаются.

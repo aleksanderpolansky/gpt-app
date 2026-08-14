@@ -10,6 +10,11 @@ import {
 } from "@/lib/activity/pp1/activityTiming";
 import { hasInfinitiveFutureIntent } from "@/lib/activity/quickCaptureIntent";
 import {
+  assertQuickCaptureTemporalModeConsistency,
+  hasExplicitQuickCaptureTemporalEvidence,
+  type QuickCaptureTemporalMode,
+} from "@/lib/activity/quickCaptureTemporalMode";
+import {
   dateKeyInTimeZone,
   datetimeLocalInTimeZoneToIso,
   wallClockDateForTimeZone,
@@ -208,24 +213,33 @@ export function buildAiLabQuickCaptureTiming(input: {
   locale: ActivityTimingLocalePp1;
   reportedAt?: string | null;
   timeZone?: string;
+  temporalDirectionOverride?: QuickCaptureTemporalMode | null;
 }): AiLabQuickCaptureTiming {
   const reportedAtInstant = parseDate(input.reportedAt) ?? new Date();
   const timeZone = input.timeZone?.trim() || "";
   const reportedAtWallClock = timeZone
     ? wallClockDateForTimeZone(reportedAtInstant, timeZone)
     : reportedAtInstant;
-  const temporalDirection = inferAiLabQuickCaptureTemporalDirection({
+  const inferredTemporalDirection = inferAiLabQuickCaptureTemporalDirection({
     row: input.row,
     sourceText: input.sourceText,
     locale: input.locale,
     reportedAt: reportedAtInstant.toISOString(),
   });
+  const temporalDirection = input.temporalDirectionOverride ?? inferredTemporalDirection;
   const draft = inferActivityTimingDraftPp1(
     input.sourceText,
     temporalDirection,
     reportedAtWallClock,
   );
-  const occurredAtIso = parseDate(input.row.temporal?.occurredAtIso)?.toISOString() ?? null;
+  const explicitTemporalEvidence = Boolean(
+    input.row.temporal?.occurredAtRaw?.trim() ||
+      hasExplicitQuickCaptureTemporalEvidence(input.sourceText),
+  );
+  const occurredAtIso =
+    !input.temporalDirectionOverride || explicitTemporalEvidence
+      ? parseDate(input.row.temporal?.occurredAtIso)?.toISOString() ?? null
+      : null;
   const localToIso = (value: string) =>
     timeZone
       ? datetimeLocalInTimeZoneToIso(value, timeZone)
@@ -257,6 +271,22 @@ export function buildAiLabQuickCaptureTiming(input: {
     ).toISOString();
   }
 
+  const focusDate = getTimingFocusDatePp1(draft, temporalDirection);
+  const reportedDateKey = timeZone
+    ? dateKeyInTimeZone(reportedAtInstant, timeZone)
+    : localDateKey(reportedAtInstant);
+
+  if (input.temporalDirectionOverride) {
+    assertQuickCaptureTemporalModeConsistency({
+      mode: input.temporalDirectionOverride,
+      explicitTemporalEvidence,
+      reportedAtIso: reportedAtInstant.toISOString(),
+      reportedDateKey,
+      startedAtIso: startedAt,
+      focusDate,
+    });
+  }
+
   return {
     temporalDirection,
     draft,
@@ -270,7 +300,7 @@ export function buildAiLabQuickCaptureTiming(input: {
     startedAt,
     endedAt,
     deadlineAt: localToIso(draft.deadlineLocal),
-    focusDate: getTimingFocusDatePp1(draft, temporalDirection),
+    focusDate,
   };
 }
 
@@ -287,6 +317,7 @@ export function buildAiLabQuickCaptureSequentialTimings(input: {
   locale: ActivityTimingLocalePp1;
   reportedAt?: string | null;
   timeZone?: string;
+  temporalDirectionOverride?: QuickCaptureTemporalMode | null;
 }) {
   if (input.rows.length !== input.sourceTexts.length) {
     throw new Error("QUICK_CAPTURE_SEQUENCE_INPUT_LENGTH_MISMATCH");
@@ -300,6 +331,7 @@ export function buildAiLabQuickCaptureSequentialTimings(input: {
       locale: input.locale,
       reportedAt: reportedAt.toISOString(),
       timeZone: input.timeZone,
+      temporalDirectionOverride: input.temporalDirectionOverride,
     }),
   );
 

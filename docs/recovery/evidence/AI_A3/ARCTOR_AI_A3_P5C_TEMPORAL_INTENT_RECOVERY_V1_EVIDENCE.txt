@@ -1,0 +1,12 @@
+CONTRACT=ARCTOR_AI_A3_P5C_TEMPORAL_INTENT_RECOVERY_V1
+BASELINE=6e9052d82ae6af4c727c0ca56f44c408214fd062
+RECORDED_AT=2026-08-14T18:21:19.919Z
+USER_INTENT=explicit past/future selector is authoritative before AI processing
+PHYSICAL_ROUTING=past->actual/journal; future->planned/calendar
+CONFLICT_GUARD=explicit future date/time cannot be silently stored as actual; explicit past date/time cannot be silently stored as planned
+IDEMPOTENCY=client receipt key includes explicit temporal mode
+DURABLE_RECOVERY=GET polling and activity-review opening recover pending/received/stale-processing receipts
+WATCHDOG_MODE=demand-driven; no Vercel cron dependency
+LEGACY_COMPAT=old receipts without explicit mode continue through legacy inference
+ADMIN_CONTROL=explicit temporal mode + durable recovery exposed as read-only guards
+DB_MIGRATION=none

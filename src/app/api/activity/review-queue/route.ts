@@ -1,7 +1,11 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
 import { supabase } from "../../../../../lib/supabase";
+import {
+  listDurableQuickCaptureSignalsForRecovery,
+  processDurableQuickCaptureSignal,
+} from "@/lib/activity/aiLabQuickCaptureDurable.server";
 import {
   normalizeContentLocale,
   readLocalizedContentEnvelope,
@@ -10,6 +14,7 @@ import {
 } from "@/lib/localization/contentLocalization";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 const MAX_REVIEW_ROWS = 250;
 type Row = Record<string, unknown>;
@@ -96,6 +101,37 @@ export async function GET(request: Request) {
   if (!appUser || !personActor) {
     return NextResponse.json({ ok: false, error: "User context not found" }, { status: 500 });
   }
+
+  const recoveryCookieHeader = request.headers.get("cookie") ?? "";
+  const recoveryOrigin = new URL(request.url).origin;
+  after(async () => {
+    try {
+      const recoverySignals = await listDurableQuickCaptureSignalsForRecovery({
+        userId: appUser.id,
+        limit: 3,
+      });
+      for (const signal of recoverySignals) {
+        try {
+          await processDurableQuickCaptureSignal({
+            signalId: signal.id,
+            userId: appUser.id,
+            actorId: personActor.id,
+            cookieHeader: recoveryCookieHeader,
+            origin: recoveryOrigin,
+          });
+        } catch (error) {
+          console.error("P5C_DURABLE_REVIEW_WATCHDOG_FAILED", {
+            signalId: signal.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    } catch (error) {
+      console.error("P5C_DURABLE_REVIEW_WATCHDOG_LIST_FAILED", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
 
   const url = new URL(request.url);
   const activityEventId = asString(url.searchParams.get("activityEventId"));

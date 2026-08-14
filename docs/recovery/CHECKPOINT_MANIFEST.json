@@ -1,11 +1,11 @@
 {
   "schemaVersion": 7,
-  "generatedAt": "2026-08-14T16:57:09.313Z",
+  "generatedAt": "2026-08-14T18:21:19.919Z",
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
-  "branch": "feat/localized-content-foundation-activity-v1-20260814t165629",
-  "originMainAtCheckpoint": "9ed7864bfbf9fb244df398e135d75e74f04180a1",
-  "checkpointMeaning": "Platform localized-content foundation: immutable original + seven localized display/search variants; activity adapter and multilingual VO selector/review wired.",
+  "branch": "feat/ai-a3-p5c-temporal-intent-recovery-v1-20260814t182031",
+  "originMainAtCheckpoint": "6e9052d82ae6af4c727c0ca56f44c408214fd062",
+  "checkpointMeaning": "P5C quick capture explicit temporal intent + time conflict guard + demand-driven stale receipt recovery.",
   "globalReality": {
     "p8Blocked": true,
     "objectsTotal": 150,
@@ -51,7 +51,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Live-test new activity translations and same VO ID across pl/ru/en; then wire organizations/products/offers/profiles/user-authored VOs to the generic localization executor.",
+  "nextAction": "Live-test Happened vs Plan routing and immediate navigation-away durable recovery; then close P5C and continue Runtime Context Compiler/Data Capital foundation.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -61,8 +61,8 @@
     "docs/recovery/evidence/EVIDENCE_INDEX.json"
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
-  "previousRecoveryCommit": "9ed7864bfbf9fb244df398e135d75e74f04180a1",
-  "documentedState": "ARCTOR_LOCALIZED_CONTENT_FOUNDATION_ACTIVITY_V1",
+  "previousRecoveryCommit": "6e9052d82ae6af4c727c0ca56f44c408214fd062",
+  "documentedState": "ARCTOR_AI_A3_P5C_TEMPORAL_INTENT_RECOVERY_V1",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -272,7 +272,10 @@
     "p5cFutureClockWithoutDate": true,
     "p5cUiLocaleSeparatedFromMessageLocale": true,
     "p5cLocalizedActivityContent": true,
-    "p5cReviewExplicitSaveResolve": true
+    "p5cReviewExplicitSaveResolve": true,
+    "p5cExplicitTemporalIntent": true,
+    "p5cTemporalConflictGuard": true,
+    "p5cDurableRecoveryWatchdog": true
   },
   "aiA3P4FactContractResilience": {
     "status": "implemented_pending_production_acceptance",

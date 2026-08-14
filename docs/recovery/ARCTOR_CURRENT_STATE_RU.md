@@ -530,3 +530,11 @@ P5B live UI acceptance confirmed mutual links on /activity-facts and /activity-t
 - selector ЦО/ОН принимает locale: GLOBAL объекты локализуются по canonical_key; actor-owned объекты используют localizedContent при наличии.
 - Убрана промежуточная кнопка «режим изменений открыт»: на review сразу доступны инструменты, а «Сохранить изменения» явно завершает проверку и переводит quickCaptureReviewStatus в resolved.
 - Следующий шаг после live acceptance: адаптеры предприятий, товаров, предложений, профилей и пользовательских ЦО к тому же localization contract.
+
+## AI_A3_P5C_TEMPORAL_INTENT_RECOVERY_V1
+- Quick Capture получил обязательный видимый двухпозиционный режим «Произошло / Запланировать». По умолчанию выбран «Произошло», чтобы сохранить быстрый ввод; пользователь может одним кликом переключить на план.
+- Выбранный режим записывается в durable receipt до AI-анализа и является authoritative: past -> actual/journal, future -> planned/calendar. LLM/инфинитивная эвристика не могут его переопределить.
+- Добавлен fail-closed time conflict guard: будущая явная дата/время при «Произошло» и прошлая явная дата/время при «Запланировать» не сохраняются молча.
+- Durable handoff дополнен request-driven recovery watchdog: polling конкретной квитанции и открытие «Требуют проверки» подхватывают pending/received и stale processing сообщения идемпотентно.
+- Отдельный Vercel cron не добавлялся: восстановление запускается только когда результат снова нужен пользователю, без фонового расхода ресурсов в отсутствие пользователя.
+- P5C temporal/durability после live acceptance этого релиза можно закрывать и переходить к полному Runtime Context Compiler / Data Capital capture.
