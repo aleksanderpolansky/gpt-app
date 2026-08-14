@@ -311,3 +311,6 @@ Baseline: `f661ea575d6864092782b2143ddd2f32a2f7d0b0`.
 
 ## P5C durable validator portability
 После восстановления на Windows validator scripts/validate-ai-a3-p5c-durable-rule-executor-v1.mjs обязан быть EOL-независимым: read() нормализует CRLF/CR в LF. Контрольный product commit — e4e01adea1be0398e62d2d9c143b819737d9490c, затем validator hotfix commit.
+
+## P5C review controls restore
+После восстановления проверить /activity-review -> Open review. На /activity-ai-lab?reviewActivityEventId=... должны сразу быть видны ✓, ✕, ✎, ?, а ниже «+ Добавить связь с ЦО». TracePanel обязан получать analysisOperationId и в review mode. Для существующей activity_event ручной + должен вызвать /api/ai/reality/manual-link-materialize. Не переводить quickCaptureReviewStatus в resolved этим шагом.

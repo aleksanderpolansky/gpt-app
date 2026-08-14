@@ -1,0 +1,9 @@
+CONTRACT=AI_A3_P5C_REVIEW_CONTROLS_V1
+BASELINE=9fa4e0667b8d2883d7fce0678ea68e2b8b5ec9a2
+RECORDED_AT=2026-08-14T14:05:07.219Z
+SCOPE=review controls restored immediately on saved activity review screen
+TRACE_CONTROLS=confirm,reject,comment,why visible without edit-mode gate
+MANUAL_PLUS=saved activity materializes manual leaf semantic_exposure immediately
+REVIEW_RESOLUTION=unchanged; remains pending until a later explicit resolution contract
+DB_MIGRATION=none
+OPENAI_CALLS_ADDED=0

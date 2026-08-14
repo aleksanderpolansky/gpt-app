@@ -505,3 +505,10 @@ P5B live UI acceptance confirmed mutual links on /activity-facts and /activity-t
 - Windows post-commit validator был исправлен: все читаемые validator-ом исходники нормализуются CRLF/CR -> LF только в памяти.
 - Причина V3 stop: multiline checkpoint invariant зависел от окончания строк после checkout при core.autocrlf=true.
 - Следующее действие: live acceptance Durable Handoff и контроль будущей активности.
+
+## AI_A3_P5C_REVIEW_CONTROLS_V1
+- Live Durable Handoff принят: уход со страницы не останавливает сохранение; будущая «тренировка 40 минут завтра в 18:00» стала одной planned activity.
+- На странице сохранённой активности из «Требуют проверки» восстановлены инструменты ✓ / ✕ / ✎ / ? без скрытого edit-mode gate.
+- «+ Добавить связь с ЦО» доступен сразу; для уже созданной activity_event ручная leaf-связь немедленно материализуется как semantic_exposure.
+- Статус quickCaptureReviewStatus остаётся pending; автоматическое закрытие проверки в этот шаг не добавляется.
+- Следующее действие: live acceptance review controls, затем отдельный контракт завершения проверки.

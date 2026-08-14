@@ -531,3 +531,8 @@ Live P5B acceptance: Facts page showed `31 minute`, the linked `Ходьба` ch
 - До commit и на LF validator проходил; после checkout main на Windows core.autocrlf=true durable source стал CRLF.
 - Проверка P5C_DURABLE_CHECKPOINT_BEFORE_EVENT искала LF-многострочный literal и дала ложный FAIL.
 - Исправление: validator read() нормализует CRLF/CR -> LF до статических сравнений. Продуктовая логика e4e01adea1be0398e62d2d9c143b819737d9490c не меняется.
+
+## P5C review controls hidden after Durable Handoff
+- Причина UI-дефекта: reviewActivityEventId + !reviewEditing принудительно передавали operationId=null в TracePanel и скрывали ManualLeafLinkPicker.
+- Исправление не откатывает Durable Handoff: сохранённый analysis operationId используется для append-only feedback; ручной + для существующей activity_event сразу вызывает manual-link-materialize.
+- ✓ / ✕ / ✎ являются решениями/объяснениями review и остаются append-only Data Capital; этот шаг не объявляет review resolved автоматически.

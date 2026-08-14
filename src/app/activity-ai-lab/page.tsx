@@ -875,7 +875,7 @@ function TracePanel({
           const state = feedback ? feedbackState[feedback.targetKey] : undefined;
           const isEditing = feedback ? editingKey === feedback.targetKey : false;
           const isWhyOpen = feedback ? whyOpen[feedback.targetKey] === true : false;
-          const locked = state?.phase === "saving" || state?.phase === "saved";
+          const locked = state?.phase === "saving";
 
           return (
             <div
@@ -1010,11 +1010,13 @@ function TracePanel({
 
 function ManualLeafLinkPicker({
   operationId,
+  activityEventId = null,
   links,
   onLinksChange,
   disabled = false,
 }: {
   operationId: string;
+  activityEventId?: string | null;
   links: ManualLinkIntent[];
   onLinksChange: (links: ManualLinkIntent[]) => void;
   disabled?: boolean;
@@ -1122,10 +1124,38 @@ function ManualLeafLinkPicker({
         throw new Error(payload?.error || `Manual link save failed: ${response.status}`);
       }
 
+      const feedbackEventId = payload.feedbackEvent.id;
+
+      if (activityEventId) {
+        const materializeResponse = await fetch("/api/ai/reality/manual-link-materialize", {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            activityEventId,
+            operationId,
+            feedbackEventIds: [feedbackEventId],
+          }),
+        });
+        const materializePayload = (await materializeResponse.json().catch(() => null)) as
+          | { ok?: boolean; error?: string }
+          | null;
+
+        if (!materializeResponse.ok || materializePayload?.ok !== true) {
+          throw new Error(
+            materializePayload?.error ||
+              `Manual link materialization failed: ${materializeResponse.status}`,
+          );
+        }
+      }
+
       onLinksChange([
         ...links,
         {
-          feedbackEventId: payload.feedbackEvent.id,
+          feedbackEventId,
           valueObjectId: item.id,
           title: item.title,
           canonicalKey: item.canonicalKey ?? null,
@@ -1173,8 +1203,9 @@ function ManualLeafLinkPicker({
             </div>
           ))}
           <p className="text-xs leading-5 text-zinc-500">
-            Эти ручные связи уже сохранены как намерения Data Capital и будут
-            материализованы как semantic_exposure после создания активности.
+            {activityEventId
+              ? "Связь с ЦО сохранена в Data Capital и сразу материализована для этой активности как semantic_exposure."
+              : "Эти ручные связи уже сохранены как намерения Data Capital и будут материализованы как semantic_exposure после создания активности."}
           </p>
         </div>
       ) : null}
@@ -1254,7 +1285,6 @@ export default function ActivityAiLabPage() {
   const [saveCheckpoint, setSaveCheckpoint] = useState<DirectSaveCheckpoint | null>(null);
   const [reviewActivityEventId, setReviewActivityEventId] = useState<string | null>(null);
   const [reviewModeInitialized, setReviewModeInitialized] = useState(false);
-  const [reviewEditing, setReviewEditing] = useState(false);
   const [quickCaptureStatus, setQuickCaptureStatus] = useState<QuickCaptureStatus>("idle");
   const [quickCaptureMessage, setQuickCaptureMessage] = useState<string | null>(null);
   const saveRequestIds = useRef<Record<AiLabSaveTemporalDirection, string>>({
@@ -1299,7 +1329,6 @@ export default function ActivityAiLabPage() {
     async function loadReviewActivity() {
       setLoading(true);
       setError(null);
-      setReviewEditing(false);
 
       try {
         const query = new URLSearchParams({ activityEventId: targetActivityEventId });
@@ -1955,9 +1984,12 @@ export default function ActivityAiLabPage() {
                 <div className="mt-3 space-y-3">
                   {reviewActivityEventId ? (
                     <button
-                      className="w-full rounded-2xl bg-blue-500 px-4 py-3 text-center text-sm font-semibold text-black hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
-                      disabled={reviewEditing}
-                      onClick={() => setReviewEditing(true)}
+                      className="w-full rounded-2xl bg-blue-500 px-4 py-3 text-center text-sm font-semibold text-black hover:bg-blue-400"
+                      onClick={() =>
+                        document
+                          .getElementById("activity-review-tools")
+                          ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                      }
                       type="button"
                     >
                       Внести изменения
@@ -2093,20 +2125,16 @@ export default function ActivityAiLabPage() {
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4" id="activity-review-tools">
             <TracePanel
               lines={trace}
               loading={loading}
-              operationId={
-                reviewActivityEventId && !reviewEditing
-                  ? null
-                  : analysisOperationId || null
-              }
+              operationId={analysisOperationId || null}
             />
             {fullAnalysisSucceeded &&
-            analysisOperationId &&
-            (!reviewActivityEventId || reviewEditing) ? (
+            analysisOperationId ? (
               <ManualLeafLinkPicker
+                activityEventId={reviewActivityEventId}
                 disabled={Boolean(saveCheckpoint?.activityEventId)}
                 links={manualLinks}
                 onLinksChange={setManualLinks}
