@@ -1,0 +1,7 @@
+RELEASE=AI_A3_P5C_DURABLE_RULE_EXECUTOR_V4
+PRODUCT_COMMIT=e4e01adea1be0398e62d2d9c143b819737d9490c
+PRODUCT_CODE_CHANGED=false
+ROOT_CAUSE=validator multiline LF literal failed after Windows checkout materialized CRLF
+FIX=validator read normalizes CRLF and CR to LF in memory
+CRLF_REGRESSION=required before main push
+GENERATED_AT=2026-08-14T13:11:09.884Z

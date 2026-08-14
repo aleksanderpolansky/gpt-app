@@ -499,3 +499,9 @@ P5B live UI acceptance confirmed mutual links on /activity-facts and /activity-t
 - modifier-only measurement/time не создают отдельную activity при соответствующем активном правиле; применённые ruleCode/revision сохраняются в metadata.
 - Плановое локальное время конвертируется с учётом IANA timezone пользователя.
 - Следующее действие: live acceptance ухода со страницы сразу после клика и контроль «завтра 18:00 тренировка 40 минут».
+
+## AI_A3_P5C_DURABLE_RULE_EXECUTOR_V4_VALIDATOR_EOL_HOTFIX
+- V3 product commit e4e01adea1be0398e62d2d9c143b819737d9490c сохранён без изменений.
+- Windows post-commit validator был исправлен: все читаемые validator-ом исходники нормализуются CRLF/CR -> LF только в памяти.
+- Причина V3 stop: multiline checkpoint invariant зависел от окончания строк после checkout при core.autocrlf=true.
+- Следующее действие: live acceptance Durable Handoff и контроль будущей активности.

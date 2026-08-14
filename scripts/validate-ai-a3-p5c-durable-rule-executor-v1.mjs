@@ -10,7 +10,7 @@ function check(name, passed, detail = "") {
   checks.push({ name, passed: Boolean(passed), detail: String(detail || "") });
 }
 function read(rel) {
-  return fs.readFileSync(path.join(repo, rel), "utf8");
+  return fs.readFileSync(path.join(repo, rel), "utf8").replace(/\r\n?/gu, "\n");
 }
 function exists(rel) {
   return fs.existsSync(path.join(repo, rel));

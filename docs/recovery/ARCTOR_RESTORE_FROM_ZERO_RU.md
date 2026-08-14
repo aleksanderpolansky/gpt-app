@@ -308,3 +308,6 @@ Baseline: `f661ea575d6864092782b2143ddd2f32a2f7d0b0`.
 
 ## P5C durable rule executor restore
 Проверить наличие src/app/api/activity/quick-capture/route.ts, src/lib/activity/aiLabQuickCaptureDurable.server.ts, src/lib/ai/processingRuleExecutor.ts и processingRuleExecutor.server.ts. В /admin/ai-instructions правила activity_quick_capture должны показываться runtime_wired. Контроль: «завтра в 18:00 тренировка 40 минут» -> одна planned activity; уход со страницы сразу после клика не останавливает обработку.
+
+## P5C durable validator portability
+После восстановления на Windows validator scripts/validate-ai-a3-p5c-durable-rule-executor-v1.mjs обязан быть EOL-независимым: read() нормализует CRLF/CR в LF. Контрольный product commit — e4e01adea1be0398e62d2d9c143b819737d9490c, затем validator hotfix commit.

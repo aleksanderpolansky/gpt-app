@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-14T12:59:44.585Z",
+  "generatedAt": "2026-08-14T13:11:09.884Z",
   "copiedCount": 57,
-  "generatedEvidenceCount": 5,
-  "indexedCount": 79,
+  "generatedEvidenceCount": 6,
+  "indexedCount": 80,
   "missingPatterns": [],
   "files": [
     {
@@ -547,6 +547,13 @@
       "sourceDownloadsName": null,
       "sha256": "78c1d5a7cb832479b458cc54025d2f268183dde1965344611a87598ae35d043d",
       "origin": "P5C_durable_rule_executor_v2_precommit"
+    },
+    {
+      "group": "AI_A3",
+      "file": "docs/recovery/evidence/AI_A3/ARCTOR_AI_A3_P5C_DURABLE_RULE_EXECUTOR_V4_VALIDATOR_EOL_REPORT.txt",
+      "sourceDownloadsName": null,
+      "sha256": "1ad49f59519a8ebf6bb5b16cbd85b5c9a086641ca4e7e632fcc1ec5b01632f5b",
+      "origin": "P5C_durable_rule_executor_v4_validator_eol_hotfix"
     }
   ]
 }

@@ -526,3 +526,8 @@ Live P5B acceptance: Facts page showed `31 minute`, the linked `Ходьба` ch
 - DB rules не содержат исполняемый JS/TS/SQL/regexp; executor поддерживает только разрешённые matcher/action.
 - При равном priority конфликтующих действий runtime блокируется fail-closed.
 - Анализ и применённые правила checkpoint-ятся до создания activity_event, чтобы retry не повторял AI-вызов и не менял правила посередине операции.
+
+## P5C V3 post-commit validator EOL failure
+- До commit и на LF validator проходил; после checkout main на Windows core.autocrlf=true durable source стал CRLF.
+- Проверка P5C_DURABLE_CHECKPOINT_BEFORE_EVENT искала LF-многострочный literal и дала ложный FAIL.
+- Исправление: validator read() нормализует CRLF/CR -> LF до статических сравнений. Продуктовая логика e4e01adea1be0398e62d2d9c143b819737d9490c не меняется.
