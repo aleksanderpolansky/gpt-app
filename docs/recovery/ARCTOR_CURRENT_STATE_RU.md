@@ -469,3 +469,16 @@ P5B live UI acceptance confirmed mutual links on /activity-facts and /activity-t
 - ActivityMutualLinksPanel/«Связанная реальность» не изменён;
 - GLOBAL edit/restructure/write права не добавлены; SQL/schema/OpenAI вызовов нет;
 - следующий шаг: один live screenshot GLOBAL leaf «Ходьба»; при PASS P5B CLOSED и P5C quick capture + review buffer.
+
+## 2026-08-14 — AI-A3 P5C QUICK CAPTURE + REVIEW BUFFER V1
+
+- P5A: CLOSED.
+- P5B: CLOSED по live acceptance GLOBAL root + leaf «Ходьба» на main d41a5490f2c153de5e2911837de85beee8ac2008.
+- P5C v1: после успешного полного Global Reality анализа activity_event создаётся автоматически без второго подтверждения.
+- Один segment = одна самостоятельная activity_event. Несколько сегментов одного сообщения не объединяются в package/container.
+- actual автоматически попадает в Журнал активностей + «Требуют проверки»; planned — в Календарь + «Требуют проверки».
+- Для одной созданной активности UI открывает её сохранённый review snapshot в /activity-ai-lab; для нескольких — /activity-review.
+- Review UI переиспользует страницу результата /activity-ai-lab; вместо «Сохранить как прошедшую» / «Запланировать» — одна кнопка «Внести изменения».
+- Очередь проверки — read-model по metadata_json activity_events; новая SQL schema не добавлялась.
+- OpenAI/ontology write boundaries не расширялись; fallback-analysis по-прежнему не выполняет автоматическое сохранение.
+- NEXT: live acceptance P5C на одной actual, одной planned и одном multi-activity сообщении; затем уточнить жизненный цикл закрытия review item.

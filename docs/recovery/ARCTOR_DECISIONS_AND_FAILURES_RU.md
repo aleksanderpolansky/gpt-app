@@ -495,3 +495,16 @@ Live P5B acceptance: Facts page showed `31 minute`, the linked `Ходьба` ch
 Наблюдение: GLOBAL leaf «Ходьба» одновременно имел ontology_node_role_code=leaf и legacy node_role_code=structural. Из-за независимых fallback-проверок UI мог считать его и leaf, и intermediate; заголовок выбирал intermediate раньше leaf. Дополнительно верхний linked-activity counter считал только planned_target, а параметрический GET оставался actor-only/legacy-leaf.
 
 Решение: при наличии ontology_node_role_code он является единственным источником структурной роли. Legacy fallback разрешён только если ontology role отсутствует. Linked activity counter использует те же owner-scoped P5B relation sources, что mutual-links. GLOBAL standards GET не получает actor-private данные: для GLOBAL/System semantic leaf он возвращает read-only empty projection, writeActionsEnabled=false.
+
+## D-P5C-QUICK-CAPTURE-REVIEW-V1 — автоматическое сохранение после разбора
+
+1. Нажатие «Разобрать активность» является единственным первичным пользовательским подтверждением intake.
+2. После успешной полной серверной валидации сохранение activity_event выполняется автоматически.
+3. Неопределённость не блокирует запись: она остаётся в review snapshot/Data Capital; fallback без Global Reality не сохраняет автоматически.
+4. 1..N сегментов создают 1..N независимых activity_event. Отдельная сущность «пакет активностей» запрещена для этого сценария.
+5. Каждая новая P5C activity_event получает quickCaptureReviewRequired=true и quickCaptureReviewStatus=pending.
+6. actual отображается в журнале, planned — в календаре; «Требуют проверки» является дополнительным представлением тех же записей, а не копией.
+7. Для одной активности после intake открывается её review-detail; для нескольких — общий список «Требуют проверки».
+8. Review-detail визуально переиспользует post-analysis /activity-ai-lab и открывает изменения одной кнопкой «Внести изменения».
+9. Исходный source fragment сохраняется как rawText/inputText конкретной activity_event; полный исходный message остаётся в provenance metadata.
+10. P5C не меняет GLOBAL ontology, recognition profiles или write-permissions ЦО/ОН.

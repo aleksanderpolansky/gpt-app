@@ -1,11 +1,11 @@
 {
-  "schemaVersion": 6,
-  "generatedAt": "2026-08-14T07:02:15.901Z",
+  "schemaVersion": 7,
+  "generatedAt": "2026-08-14T09:10:38.082Z",
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
-  "branch": "feat/gsr1-global-system-reality-machine-contract-v1-20260811",
-  "originMainAtCheckpoint": "f661ea575d6864092782b2143ddd2f32a2f7d0b0",
-  "checkpointMeaning": "AI-A3 P5B GLOBAL leaf detail consistency v1: ontology role authoritative, GLOBAL leaf parameter empty read projection, linked activity summary aligned to P5B relation sources.",
+  "branch": "feat/ai-a3-p5c-quick-capture-review-v1-20260814",
+  "originMainAtCheckpoint": "d41a5490f2c153de5e2911837de85beee8ac2008",
+  "checkpointMeaning": "P5B live acceptance CLOSED; AI-A3 P5C v1 quick capture automatically persists independent activity_events and exposes a review queue/detail without activity packages.",
   "globalReality": {
     "p8Blocked": true,
     "objectsTotal": 150,
@@ -51,7 +51,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Deploy and live-check GLOBAL leaf Ходьба; if leaf/header/parameters/linked count/mutual reality all agree, close P5B and start P5C quick capture + review buffer.",
+  "nextAction": "Live-check P5C: one actual -> journal+review detail; one planned -> calendar+review detail; one multi-activity message -> independent rows + review list. Then define review-resolution lifecycle.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -61,8 +61,8 @@
     "docs/recovery/evidence/EVIDENCE_INDEX.json"
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
-  "previousRecoveryCommit": "95676a1ff0a85641a95f77cbadc3aac48784464f",
-  "documentedState": "AI_A3_P5B_GLOBAL_SYSTEM_VALUE_OBJECT_DETAIL_HOTFIX_V1",
+  "previousRecoveryCommit": "d41a5490f2c153de5e2911837de85beee8ac2008",
+  "documentedState": "AI_A3_P5C_QUICK_CAPTURE_REVIEW_V1",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -333,5 +333,25 @@
     "dbWrites": false,
     "openAiCalls": false,
     "next": "P5B final live acceptance then P5C quick capture + review buffer"
+  },
+  "p5cQuickCapture": {
+    "status": "IMPLEMENTED_AWAITING_LIVE_ACCEPTANCE",
+    "baseline": "d41a5490f2c153de5e2911837de85beee8ac2008",
+    "autoPersistAfterFullGlobalAnalysis": true,
+    "fallbackAutoPersist": false,
+    "multiSegmentPolicy": "independent_activity_events_no_package",
+    "actualDestinations": [
+      "activity_journal",
+      "requires_review"
+    ],
+    "plannedDestinations": [
+      "calendar",
+      "requires_review"
+    ],
+    "singleActivityRedirect": "activity_ai_lab_review_detail",
+    "multiActivityRedirect": "activity_review_queue",
+    "reviewDetailUi": "reuse_activity_ai_lab_post_analysis",
+    "reviewPrimaryActionRu": "Внести изменения",
+    "storage": "activity_events.metadata_json read-model; no new SQL table"
   }
 }

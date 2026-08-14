@@ -16,6 +16,13 @@ import {
   buildAiLabFactMaterializationCandidates,
 } from "@/lib/activity/aiLabFactMaterialization";
 import {
+  AI_A3_P5C_QUICK_CAPTURE_REVIEW_CONTRACT,
+  buildAiLabQuickCaptureReviewHref,
+  buildAiLabQuickCaptureReviewSnapshot,
+  buildAiLabQuickCaptureSequentialTimings,
+  deriveAiLabQuickCaptureIdempotencyKey,
+} from "@/lib/activity/aiLabQuickCapture";
+import {
   datetimeLocalToIsoPp1,
   formatActivityTimingDraftPp1,
   getTimingFocusDatePp1,
@@ -95,6 +102,30 @@ type DirectSaveCheckpoint = {
   activityEventId: string;
   calendarEventId: string | null;
   manualFeedbackIds: string[];
+};
+
+type QuickCaptureStatus = "idle" | "saving" | "saved" | "error";
+
+type QuickCaptureCreatedActivity = {
+  activityEventId: string;
+  temporalDirection: AiLabSaveTemporalDirection;
+  factMaterializationWarning: string | null;
+};
+
+type ReviewQueueDetailResponse = {
+  ok?: boolean;
+  error?: string;
+  activity?: {
+    id?: string | null;
+    title?: string | null;
+    inputText?: string | null;
+    reviewLocale?: string | null;
+  } | null;
+  reviewSnapshot?: {
+    sourceFragment?: string | null;
+    locale?: string | null;
+    globalPreview?: GlobalPreview | null;
+  } | null;
 };
 
 
@@ -614,7 +645,7 @@ function buildGlobalTrace(inputText: string, payload: GlobalPreview): TraceLine[
     text:
       payload.dbFactWriteExecuted === true
         ? "ВНИМАНИЕ: ответ сообщает о записи факта."
-        : "Анализ завершён без записи фактов. Сохранение выполняется только отдельным подтверждением.",
+        : "Анализатор сам не пишет факты. В P5C после успешной серверной валидации самостоятельные activity_event сохраняются автоматически, а допустимые явные факты материализуются отдельным guarded-шагом.",
   });
 
   (payload.warnings ?? []).forEach((warning) => {
@@ -994,8 +1025,6 @@ function ManualLeafLinkPicker({
 
   useEffect(() => {
     if (!open || query.trim().length < 2) {
-      setResults([]);
-      setLoading(false);
       return;
     }
 
@@ -1152,7 +1181,15 @@ function ManualLeafLinkPicker({
           <input
             className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={disabled}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              const nextQuery = event.target.value;
+              setQuery(nextQuery);
+              if (nextQuery.trim().length < 2) {
+                setResults([]);
+                setLoading(false);
+                setError(null);
+              }
+            }}
             placeholder="Начни вводить название ЦО…"
             value={query}
           />
@@ -1212,6 +1249,11 @@ export default function ActivityAiLabPage() {
   const [saveStatus, setSaveStatus] = useState<DirectSaveStatus>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveCheckpoint, setSaveCheckpoint] = useState<DirectSaveCheckpoint | null>(null);
+  const [reviewActivityEventId, setReviewActivityEventId] = useState<string | null>(null);
+  const [reviewModeInitialized, setReviewModeInitialized] = useState(false);
+  const [reviewEditing, setReviewEditing] = useState(false);
+  const [quickCaptureStatus, setQuickCaptureStatus] = useState<QuickCaptureStatus>("idle");
+  const [quickCaptureMessage, setQuickCaptureMessage] = useState<string | null>(null);
   const saveRequestIds = useRef<Record<AiLabSaveTemporalDirection, string>>({
     past: createOperationId(),
     future: createOperationId(),
@@ -1224,6 +1266,101 @@ export default function ActivityAiLabPage() {
 
   const analysisOperationId =
     result?.mode === "global" ? result.payload.operationId?.trim() ?? "" : "";
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const activityEventId = params.get("reviewActivityEventId")?.trim() || null;
+    const reviewInitTimer = window.setTimeout(() => {
+      setReviewActivityEventId(activityEventId);
+      setReviewModeInitialized(true);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(reviewInitTimer);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!reviewModeInitialized || !reviewActivityEventId) {
+      return;
+    }
+
+    let cancelled = false;
+    const targetActivityEventId = reviewActivityEventId;
+
+    async function loadReviewActivity() {
+      setLoading(true);
+      setError(null);
+      setReviewEditing(false);
+
+      try {
+        const query = new URLSearchParams({ activityEventId: targetActivityEventId });
+        const response = await fetch(`/api/activity/review-queue?${query.toString()}`, {
+          credentials: "include",
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+        const payload = (await response.json().catch(() => null)) as
+          | ReviewQueueDetailResponse
+          | null;
+
+        if (!response.ok || payload?.ok !== true) {
+          throw new Error(payload?.error || `Review activity request failed: ${response.status}`);
+        }
+
+        const preview = payload.reviewSnapshot?.globalPreview ?? null;
+        const sourceText =
+          payload.reviewSnapshot?.sourceFragment?.trim() ||
+          payload.activity?.inputText?.trim() ||
+          "";
+        const nextLocale = payload.reviewSnapshot?.locale;
+        const normalizedLocale = LOCALES.some((item) => item.code === nextLocale)
+          ? (nextLocale as Locale)
+          : locale;
+
+        if (!preview || preview.ok !== true || !sourceText) {
+          throw new Error("Stored P5C review snapshot is incomplete.");
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        const nextTrace = buildGlobalTrace(sourceText, preview);
+        setInputText(sourceText);
+        setLocale(normalizedLocale);
+        setResult({ mode: "global", payload: preview, trace: nextTrace });
+        setTrace(nextTrace);
+        setAnalyzedText(sourceText);
+        setAnalyzedLocale(normalizedLocale);
+        setManualLinks([]);
+        setQuickCaptureStatus("saved");
+        setQuickCaptureMessage("Активность уже сохранена и ожидает проверки.");
+      } catch (caught) {
+        if (!cancelled) {
+          setError(
+            caught instanceof Error
+              ? caught.message
+              : "Не удалось загрузить активность для проверки.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadReviewActivity();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [locale, reviewActivityEventId, reviewModeInitialized]);
 
   const factMaterializationCandidates = useMemo(
     () =>
@@ -1270,6 +1407,8 @@ export default function ActivityAiLabPage() {
     setSaveStatus("idle");
     setSaveError(null);
     setSaveCheckpoint(null);
+    setQuickCaptureStatus("idle");
+    setQuickCaptureMessage(null);
     saveRequestIds.current = {
       past: createOperationId(),
       future: createOperationId(),
@@ -1286,19 +1425,188 @@ export default function ActivityAiLabPage() {
     resetSaveState();
   }
 
-  function openDirectSave(mode: AiLabSaveTemporalDirection) {
-    if (!fullAnalysisSucceeded || result?.mode !== "global") {
+  async function persistQuickCapture(
+    payload: GlobalPreview,
+    sourceMessageText: string,
+  ) {
+    const rows = Array.isArray(payload.rows) ? payload.rows : [];
+    const operationId = payload.operationId?.trim() || "";
+
+    if (rows.length === 0) {
+      throw new Error("Полный анализ не вернул ни одной самостоятельной активности/наблюдения.");
+    }
+
+    if (!operationId) {
+      throw new Error("Полный анализ не вернул operationId для безопасного сохранения.");
+    }
+
+    setQuickCaptureStatus("saving");
+    setQuickCaptureMessage(
+      rows.length === 1
+        ? "Анализ завершён. Сохраняю активность и добавляю её в «Требуют проверки»…"
+        : `Анализ завершён. Сохраняю ${rows.length} самостоятельных активностей и добавляю их в «Требуют проверки»…`,
+    );
+    const createdActivities: QuickCaptureCreatedActivity[] = [];
+    const sourceFragments = rows.map(
+      (row) => row.sourceFragment?.trim() || sourceMessageText,
+    );
+    const sequentialTimings = buildAiLabQuickCaptureSequentialTimings({
+      rows,
+      sourceTexts: sourceFragments,
+      locale,
+      reportedAt: payload.reportedAt ?? null,
+    });
+
+    for (let index = 0; index < rows.length; index += 1) {
+      const row = rows[index];
+      const sourceFragment = sourceFragments[index];
+      const timing = sequentialTimings[index];
+      const title = deriveAiLabActivityTitle(sourceFragment, [row]);
+      const baseRequestBody = buildAiLabDirectActivityRequest({
+        idempotencyKey: deriveAiLabQuickCaptureIdempotencyKey({
+          operationId,
+          segmentId: row.segmentId ?? null,
+          index,
+        }),
+        temporalDirection: timing.temporalDirection,
+        rawText: sourceFragment,
+        title,
+        locale,
+        timingLabel: timing.timingLabel,
+        analysisOperationId: operationId,
+        manualFeedbackIds: [],
+        durationMinutes: timing.durationMinutes,
+        observedDate: timing.observedDate,
+        startedAt: timing.startedAt,
+        endedAt: timing.endedAt,
+        scheduleModeCode: timing.draft.scheduleModeCode,
+        scheduledDate: timing.draft.scheduledDate || null,
+        scheduleStartDate: timing.draft.scheduleStartDate || null,
+        scheduleEndDate: timing.draft.scheduleEndDate || null,
+        deadlineAt: timing.deadlineAt,
+        plannedTargetValueObjectIds: [],
+      });
+      const baseMetadata =
+        baseRequestBody.metadata &&
+        typeof baseRequestBody.metadata === "object" &&
+        !Array.isArray(baseRequestBody.metadata)
+          ? (baseRequestBody.metadata as Record<string, unknown>)
+          : {};
+      const requestBody = {
+        ...baseRequestBody,
+        metadata: {
+          ...baseMetadata,
+        quickCaptureContract: AI_A3_P5C_QUICK_CAPTURE_REVIEW_CONTRACT,
+        quickCaptureReviewRequired: true,
+        quickCaptureReviewStatus: "pending",
+        quickCaptureSourceMessageText: sourceMessageText,
+        quickCaptureSourceSegmentId: row.segmentId ?? `segment-${index + 1}`,
+        quickCaptureSourceSegmentOrdinal: index + 1,
+        quickCaptureSourceSegmentCount: rows.length,
+        quickCaptureTemporalSequencePolicy:
+          "independent_events_named_order_no_invented_breaks",
+          quickCaptureReviewSnapshot: buildAiLabQuickCaptureReviewSnapshot({
+            preview: payload,
+            row,
+            sourceMessageText,
+            sourceFragment,
+            locale,
+            temporalDirection: timing.temporalDirection,
+          }),
+        },
+      };
+
+      const response = await fetch("/api/activity/events", {
+        credentials: "include",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+      const eventPayload = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            error?: string;
+            event?: { id?: string | null };
+            activityEvent?: { id?: string | null };
+          }
+        | null;
+
+      if (!response.ok || eventPayload?.ok === false) {
+        throw new Error(
+          eventPayload?.error ||
+            `Не удалось автоматически сохранить активность ${index + 1}: HTTP ${response.status}`,
+        );
+      }
+
+      const activityEventId =
+        eventPayload?.activityEvent?.id ?? eventPayload?.event?.id ?? null;
+
+      if (!activityEventId) {
+        throw new Error(`Сервер не вернул id активности ${index + 1}.`);
+      }
+
+      let factMaterializationWarning: string | null = null;
+      const candidates = buildAiLabFactMaterializationCandidates(
+        [row],
+        payload.contractVersion ?? null,
+      );
+
+      if (candidates.length > 0) {
+        const factResponse = await fetch("/api/ai/reality/fact-materialize", {
+          credentials: "include",
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            activityEventId,
+            operationId,
+            candidates,
+          }),
+        });
+        const factPayload = (await factResponse.json().catch(() => null)) as
+          | { ok?: boolean; error?: string }
+          | null;
+
+        if (!factResponse.ok || factPayload?.ok !== true) {
+          factMaterializationWarning =
+            factPayload?.error ||
+            `Явные факты не материализованы: HTTP ${factResponse.status}`;
+        }
+      }
+
+      createdActivities.push({
+        activityEventId,
+        temporalDirection: timing.temporalDirection,
+        factMaterializationWarning,
+      });
+    }
+
+    setQuickCaptureStatus("saved");
+    const warnings = createdActivities
+      .map((item) => item.factMaterializationWarning)
+      .filter((item): item is string => Boolean(item));
+    setQuickCaptureMessage(
+      warnings.length > 0
+        ? `Активности сохранены. ${warnings.length} запись(и) требуют проверки материализации фактов.`
+        : "Активности сохранены и добавлены в «Требуют проверки».",
+    );
+
+    if (createdActivities.length === 1) {
+      router.push(
+        buildAiLabQuickCaptureReviewHref({
+          locale,
+          activityEventId: createdActivities[0].activityEventId,
+        }),
+      );
       return;
     }
 
-    setSaveMode(mode);
-    setTimingDraft(inferActivityTimingDraftPp1(inputText.trim(), mode));
-    setSaveTitle(deriveAiLabActivityTitle(inputText.trim(), result.payload.rows));
-    setPlannedTargetValueObjectIds([]);
-    setSaveStatus("idle");
-    setSaveError(null);
-    setSaveCheckpoint(null);
-    saveRequestIds.current[mode] = createOperationId();
+    router.push(buildAiLabQuickCaptureReviewHref({ locale }));
   }
 
   async function analyze() {
@@ -1316,6 +1624,8 @@ export default function ActivityAiLabPage() {
     setAnalyzedText(null);
     setAnalyzedLocale(null);
     resetSaveState();
+    setQuickCaptureStatus("idle");
+    setQuickCaptureMessage(null);
     setTrace([
       { kind: "system", text: `Получено сообщение: «${text}»` },
       {
@@ -1354,6 +1664,7 @@ export default function ActivityAiLabPage() {
         setTrace(nextTrace);
         setAnalyzedText(text);
         setAnalyzedLocale(locale);
+        await persistQuickCapture(globalPayload, text);
         return;
       }
 
@@ -1404,6 +1715,8 @@ export default function ActivityAiLabPage() {
       const message =
         caught instanceof Error ? caught.message : "Неизвестная ошибка анализа.";
       setError(message);
+      setQuickCaptureStatus((current) => current === "saving" ? "error" : current);
+      setQuickCaptureMessage((current) => current || message);
       setTrace((current) => [
         ...current,
         { kind: "unresolved", text: `Анализ остановлен: ${message}` },
@@ -1667,7 +1980,7 @@ export default function ActivityAiLabPage() {
 
             <textarea
               className="mt-3 min-h-52 w-full rounded-2xl border border-zinc-800 bg-black px-4 py-4 text-base leading-7 text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={Boolean(saveCheckpoint?.activityEventId)}
+              disabled={Boolean(saveCheckpoint?.activityEventId) || Boolean(reviewActivityEventId)}
               id="activity-ai-input"
               onChange={(event) => {
                 const nextValue = event.target.value;
@@ -1689,7 +2002,7 @@ export default function ActivityAiLabPage() {
                 </label>
                 <select
                   className="mt-2 w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={Boolean(saveCheckpoint?.activityEventId)}
+                  disabled={Boolean(saveCheckpoint?.activityEventId) || Boolean(reviewActivityEventId)}
                   id="activity-ai-locale"
                   onChange={(event) => {
                     const nextLocale = event.target.value as Locale;
@@ -1725,16 +2038,16 @@ export default function ActivityAiLabPage() {
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <button
                 className="rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={loading || !inputText.trim() || Boolean(saveCheckpoint?.activityEventId)}
+                disabled={loading || !inputText.trim() || Boolean(saveCheckpoint?.activityEventId) || Boolean(reviewActivityEventId)}
                 onClick={() => void analyze()}
                 type="button"
               >
-                {loading ? "Разбираю…" : "Разобрать сообщение"}
+                {loading ? "Разбираю…" : "Разобрать активность"}
               </button>
 
               <button
                 className="rounded-2xl border border-zinc-700 px-4 py-3 text-sm text-zinc-300 hover:border-zinc-500"
-                disabled={loading || Boolean(saveCheckpoint?.activityEventId)}
+                disabled={loading || Boolean(saveCheckpoint?.activityEventId) || Boolean(reviewActivityEventId)}
                 onClick={() => {
                   setInputText("");
                   invalidateAnalysisArtifacts();
@@ -1752,24 +2065,26 @@ export default function ActivityAiLabPage() {
 
               {fullAnalysisSucceeded ? (
                 <div className="mt-3 space-y-3">
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  {reviewActivityEventId ? (
                     <button
-                      className="rounded-2xl bg-blue-500 px-4 py-3 text-center text-sm font-semibold text-black hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
-                      disabled={saveStatus === "saving" || Boolean(saveCheckpoint?.activityEventId)}
-                      onClick={() => openDirectSave("past")}
+                      className="w-full rounded-2xl bg-blue-500 px-4 py-3 text-center text-sm font-semibold text-black hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={reviewEditing}
+                      onClick={() => setReviewEditing(true)}
                       type="button"
                     >
-                      Сохранить как прошедшую
+                      Внести изменения
                     </button>
-                    <button
-                      className="rounded-2xl border border-violet-700 px-4 py-3 text-center text-sm font-semibold text-violet-200 hover:border-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
-                      disabled={saveStatus === "saving" || Boolean(saveCheckpoint?.activityEventId)}
-                      onClick={() => openDirectSave("future")}
-                      type="button"
-                    >
-                      Запланировать
-                    </button>
-                  </div>
+                  ) : (
+                    <div className="rounded-2xl border border-emerald-900/70 bg-emerald-950/20 p-4 text-sm leading-6 text-emerald-200">
+                      {quickCaptureStatus === "saving"
+                        ? quickCaptureMessage || "Сохраняю активность…"
+                        : quickCaptureStatus === "saved"
+                          ? quickCaptureMessage || "Активность сохранена и добавлена в «Требуют проверки»."
+                          : quickCaptureStatus === "error"
+                            ? quickCaptureMessage || "Автоматическое сохранение не завершено."
+                            : "После успешного полного анализа активность сохраняется автоматически."}
+                    </div>
+                  )}
 
                   {saveMode ? (
                     <div className="rounded-2xl border border-zinc-700 bg-black/40 p-4">
@@ -1893,9 +2208,15 @@ export default function ActivityAiLabPage() {
             <TracePanel
               lines={trace}
               loading={loading}
-              operationId={analysisOperationId || null}
+              operationId={
+                reviewActivityEventId && !reviewEditing
+                  ? null
+                  : analysisOperationId || null
+              }
             />
-            {fullAnalysisSucceeded && analysisOperationId ? (
+            {fullAnalysisSucceeded &&
+            analysisOperationId &&
+            (!reviewActivityEventId || reviewEditing) ? (
               <ManualLeafLinkPicker
                 disabled={Boolean(saveCheckpoint?.activityEventId)}
                 links={manualLinks}

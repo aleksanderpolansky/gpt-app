@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-14T07:02:15.901Z",
+  "generatedAt": "2026-08-14T09:10:38.082Z",
   "copiedCount": 57,
-  "generatedEvidenceCount": 2,
-  "indexedCount": 76,
+  "generatedEvidenceCount": 3,
+  "indexedCount": 77,
   "missingPatterns": [],
   "files": [
     {
@@ -526,6 +526,13 @@
       "sourceDownloadsName": null,
       "sha256": "fe60f950ad58b4ba4de2a8a45d2e66d31d96fc9d6aea771ba318bf83c85d0f34",
       "origin": "AI_A3_P5B_leaf_detail_consistency_v1_precommit_validation"
+    },
+    {
+      "group": "AI_A3_P5C",
+      "file": "docs/recovery/evidence/AI_A3_P5C/ARCTOR_AI_A3_P5C_QUICK_CAPTURE_REVIEW_V1_PRECOMMIT_REPORT.txt",
+      "sourceDownloadsName": null,
+      "sha256": "e9090375cd7ccee32e11de46bca4f59d2169eae6fd8d177bf6724040357fab53",
+      "origin": "generated_precommit_verification"
     }
   ]
 }

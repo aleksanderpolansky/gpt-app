@@ -771,9 +771,12 @@ export function GlobalSidebar({
     isSystemAiInstructionsActive;
   const isCalendarActive = currentPathname.startsWith("/calendar");
   const isObservationObjectsActive = currentPathname.startsWith("/value-objects");
-  const isActivityJournalActive =
+  const isActivityJournalCurrent =
     currentPathname === "/activity-today" ||
     currentPathname === "/activity-log";
+  const isActivityReviewActive = currentPathname === "/activity-review";
+  const isActivityJournalActive =
+    isActivityJournalCurrent || isActivityReviewActive;
   const isFactsActive = currentPathname.startsWith("/activity-facts");
 
   const isPurchasesActive = currentPathname === "/my-purchase-confirmations";
@@ -875,12 +878,21 @@ export function GlobalSidebar({
           active={isObservationObjectsActive}
           href={localeHref("/value-objects")}
         />
-        <SidebarMainItem
+        <ExpandableSidebarLinkItem
           icon={Activity}
           label={t("navigation.activityJournal")}
-          active={isActivityJournalActive}
           href={localeHref("/activity-today")}
-        />
+          active={isActivityJournalActive}
+          current={isActivityJournalCurrent}
+          defaultOpen
+        >
+          <TreeItem
+            label={t("navigation.requiresReview")}
+            depth={1}
+            href={localeHref("/activity-review")}
+            active={isActivityReviewActive}
+          />
+        </ExpandableSidebarLinkItem>
         <SidebarMainItem
           icon={ClipboardList}
           label={t("navigation.facts")}
