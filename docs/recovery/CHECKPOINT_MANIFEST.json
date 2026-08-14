@@ -1,11 +1,11 @@
 {
   "schemaVersion": 7,
-  "generatedAt": "2026-08-14T09:10:38.082Z",
+  "generatedAt": "2026-08-14T11:46:18.347Z",
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
-  "branch": "feat/ai-a3-p5c-quick-capture-review-v1-20260814",
-  "originMainAtCheckpoint": "d41a5490f2c153de5e2911837de85beee8ac2008",
-  "checkpointMeaning": "P5B live acceptance CLOSED; AI-A3 P5C v1 quick capture automatically persists independent activity_events and exposes a review queue/detail without activity packages.",
+  "branch": "feat/ai-admin-control-catalog-v3-20260814",
+  "originMainAtCheckpoint": "fc092159eb0e1772032cbf30158ff913859cf5cc",
+  "checkpointMeaning": "Unified /admin/ai-instructions control catalog: editable AI instructions, versioned safe deterministic processing rules, and fully visible read-only registered system guards with precedence/source/change guidance.",
   "globalReality": {
     "p8Blocked": true,
     "objectsTotal": 150,
@@ -51,7 +51,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Live-check P5C: one actual -> journal+review detail; one planned -> calendar+review detail; one multi-activity message -> independent rows + review list. Then define review-resolution lifecycle.",
+  "nextAction": "Wire the safe processing-rule executor into P5C Durable Handoff, then live-test background completion and future activity timing.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -61,8 +61,8 @@
     "docs/recovery/evidence/EVIDENCE_INDEX.json"
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
-  "previousRecoveryCommit": "d41a5490f2c153de5e2911837de85beee8ac2008",
-  "documentedState": "AI_A3_P5C_QUICK_CAPTURE_REVIEW_V1",
+  "previousRecoveryCommit": "fc092159eb0e1772032cbf30158ff913859cf5cc",
+  "documentedState": "AI_ADMIN_CONTROL_CATALOG_V1",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -353,5 +353,26 @@
     "reviewDetailUi": "reuse_activity_ai_lab_post_analysis",
     "reviewPrimaryActionRu": "Внести изменения",
     "storage": "activity_events.metadata_json read-model; no new SQL table"
+  },
+  "aiAdminControlCatalogV1": {
+    "status": "released_by_containing_commit",
+    "route": "/admin/ai-instructions",
+    "precedence": [
+      "system_guard:300",
+      "processing_rule:200",
+      "ai_instruction:100"
+    ],
+    "processingRuleStorage": "public.ai_processing_instruction_sets::processing_rule__*",
+    "processingRuleRevisionStorage": "public.ai_processing_instruction_revisions",
+    "executableCodeInDatabase": false,
+    "defaultRules": [
+      "measurement_without_independent_predicate",
+      "temporal_without_independent_predicate"
+    ],
+    "hardGuardsVisible": true,
+    "hardGuardsEditableInAdmin": false,
+    "runtimeWiring": "catalog_only_until_p5c_durable_executor",
+    "evidence": "docs/recovery/evidence/AI_ADMIN/ARCTOR_AI_ADMIN_CONTROL_CATALOG_V1_PRECOMMIT_REPORT.txt",
+    "evidenceSha256": "3c4a2a6766fd2660c8ffd8fffe5074b1314b72294505e65ea6717171c042eab7"
   }
 }

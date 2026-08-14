@@ -482,3 +482,13 @@ P5B live UI acceptance confirmed mutual links on /activity-facts and /activity-t
 - Очередь проверки — read-model по metadata_json activity_events; новая SQL schema не добавлялась.
 - OpenAI/ontology write boundaries не расширялись; fallback-analysis по-прежнему не выполняет автоматическое сохранение.
 - NEXT: live acceptance P5C на одной actual, одной planned и одном multi-activity сообщении; затем уточнить жизненный цикл закрытия review item.
+
+<!-- AI_ADMIN_CONTROL_CATALOG_V1 -->
+## 2026-08-14 — Единый административный каталог правил AI
+
+- /admin/ai-instructions показывает три уровня управления: редактируемые инструкции AI, версионируемые детерминированные правила обработки и read-only системные ограничения из кода.
+- Приоритет: system guard (300) > processing rule (200) > AI instruction (100).
+- Детерминированные правила используют конечный безопасный словарь matcher/action; исполняемый JS/SQL/regexp из Supabase запрещён.
+- Правило measurement_without_independent_predicate зарегистрировано как системный default каталога. Оно должно быть подключено к runtime универсальным executor в следующем P5C Durable шаге; до этого интерфейс честно показывает catalog_only_until_executor_wired.
+- Источник, символ, назначение и инструкция по изменению каждого зарегистрированного hard guard видимы на той же странице.
+- P5C Durable Handoff всё ещё не выпущен; последний V2 был остановлен до commit/push старым P5A regression invocation и откатан чисто.

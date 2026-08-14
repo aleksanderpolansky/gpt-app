@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-14T09:10:38.082Z",
+  "generatedAt": "2026-08-14T11:46:18.349Z",
   "copiedCount": 57,
-  "generatedEvidenceCount": 3,
-  "indexedCount": 77,
+  "generatedEvidenceCount": 4,
+  "indexedCount": 78,
   "missingPatterns": [],
   "files": [
     {
@@ -533,6 +533,13 @@
       "sourceDownloadsName": null,
       "sha256": "e9090375cd7ccee32e11de46bca4f59d2169eae6fd8d177bf6724040357fab53",
       "origin": "generated_precommit_verification"
+    },
+    {
+      "group": "AI_ADMIN",
+      "file": "docs/recovery/evidence/AI_ADMIN/ARCTOR_AI_ADMIN_CONTROL_CATALOG_V1_PRECOMMIT_REPORT.txt",
+      "sourceDownloadsName": null,
+      "sha256": "3c4a2a6766fd2660c8ffd8fffe5074b1314b72294505e65ea6717171c042eab7",
+      "origin": "AI_ADMIN_CONTROL_CATALOG_V1_precommit_verification"
     }
   ]
 }

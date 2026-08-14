@@ -294,3 +294,14 @@ Baseline: `f661ea575d6864092782b2143ddd2f32a2f7d0b0`.
 5. проверить: leaf в заголовке и основных данных, параметрический блок не пишет «это не лист», Linked activities соответствует P5B mutual links, «Связанная реальность» содержит активность и 31 minute, GLOBAL edit/restructure недоступны.
 
 После live PASS: P5B CLOSED, следующий блок P5C quick capture + review buffer.
+
+<!-- AI_ADMIN_CONTROL_CATALOG_V1 -->
+## Единый каталог управления AI — восстановление
+
+1. Открой /admin/ai-instructions под platform owner/admin (viewer имеет read-only доступ).
+2. Раздел «Инструкции AI»: код/default definitions находятся в src/lib/ai/processingInstructions.server.ts; DB overrides и история — public.ai_processing_instruction_sets / public.ai_processing_instruction_revisions.
+3. Раздел «Правила обработки»: безопасный контракт matcher/action и code defaults — src/lib/ai/processingRuleContract.ts; чтение/версионирование — src/lib/ai/processingRules.server.ts; DB записи имеют prefix processing_rule__.
+4. Раздел «Системные ограничения»: для каждой карточки указаны sourcePath, sourceSymbol и evidenceNeedle. Эти правила меняются только code release с regression/build.
+5. Порядок диагностики конфликта: hard guards -> deterministic processing rules -> AI instructions -> history/examples.
+6. Если нужен новый rule instance и matcher/action уже есть — создай его в админке. Если нужен новый matcher/action — добавь безопасный executor в код, validator/fixtures и выпусти релизом.
+7. Следующий P5C Durable шаг должен подключить universal processing-rule executor к activity_quick_capture; пока каталог показывает это как pending runtime wiring.

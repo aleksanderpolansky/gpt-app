@@ -508,3 +508,15 @@ Live P5B acceptance: Facts page showed `31 minute`, the linked `Ходьба` ch
 8. Review-detail визуально переиспользует post-analysis /activity-ai-lab и открывает изменения одной кнопкой «Внести изменения».
 9. Исходный source fragment сохраняется как rawText/inputText конкретной activity_event; полный исходный message остаётся в provenance metadata.
 10. P5C не меняет GLOBAL ontology, recognition profiles или write-permissions ЦО/ОН.
+
+<!-- AI_ADMIN_CONTROL_CATALOG_V1 -->
+## 2026-08-14 — Управление правилами AI из одной административной точки
+
+1. Единственная административная точка инвентаризации логики AI — /admin/ai-instructions.
+2. Все зарегистрированные правила обязаны показывать источник, область действия, приоритет, редактируемость и способ изменения.
+3. Системные guards остаются в Git/code release и не редактируются из БД, но полностью видимы в каталоге.
+4. Настраиваемые deterministic rules хранятся как версионируемые данные; БД не исполняет произвольный код. Новый экземпляр уже поддерживаемого matcher/action не требует релиза. Новый класс matcher/action требует code release.
+5. Отключение правила делается status=inactive внутри версионируемого snapshot. Удаление DB override отдельно возвращает fallback из кода; история сохраняется.
+6. Конфликт для deterministic rules выявляется по пересечению runtime+matcher и различным action; одинаковый priority — warning, разный priority разрешается большим priority.
+7. Нельзя скрывать отсутствие runtime wiring: каталог явно сообщает, подключено ли правило к runtime.
+8. Два предрелизных controller-прогона каталога были безопасно остановлены до commit: V1 на известном устаревшем P5A static checkpoint-check, V2 на двух React Hooks ESLint warnings; оба rollback завершились чистым worktree.
