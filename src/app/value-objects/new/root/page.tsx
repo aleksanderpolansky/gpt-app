@@ -2,21 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-
-import {
-  humanizeValueObjectCode,
-  resolveValueObjectBranchPolicyDescription,
-  resolveValueObjectBranchPolicyTitle,
-} from "@/data/value-object-branch-policy-localization";
-import {
-  VALUE_OBJECT_STRUCTURAL_KINDS_V2,
-  type ValueObjectKindV2,
-} from "@/types/reality-core/reality-core-contracts-v2";
-import type {
-  ValueObjectBranchPolicyDto,
-  ValueObjectBranchPolicyListResponse,
-} from "@/types/value-object-branch-policy";
+import { useEffect, useState } from "react";
 
 type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
@@ -25,23 +11,22 @@ type Copy = {
   title: string;
   description: string;
   activeProfile: string;
-  branch: string;
-  kind: string;
   objectTitle: string;
   objectDescription: string;
   titlePlaceholder: string;
   descriptionPlaceholder: string;
-  branchHint: string;
-  kindHint: string;
-  advancedSettings: string;
-  advancedHint: string;
-  branchLoading: string;
-  branchUnavailable: string;
+  fixedRole: string;
+  fixedFacet: string;
+  fixedKind: string;
+  fixedStatus: string;
+  fixedVisibility: string;
+  ontologyNotice: string;
   create: string;
   creating: string;
   back: string;
   errorPrefix: string;
-  draftNotice: string;
+  titleRequired: string;
+  descriptionRequired: string;
 };
 
 const COPY: Record<LocaleCode, Copy> = {
@@ -49,209 +34,178 @@ const COPY: Record<LocaleCode, Copy> = {
     eyebrow: "Root observation object",
     title: "Create a root observation object",
     description:
-      "A root is the top-level subject of observation. It has no parent, starts as a private draft, and belongs to the currently active profile.",
+      "A root is the top-level subject of observation. Its semantic root role is fixed by the ontology; detailed meaning is added in the description and later child objects.",
     activeProfile: "Current active profile",
-    branch: "Branch policy",
-    kind: "Object kind",
     objectTitle: "Name",
     objectDescription: "Description",
     titlePlaceholder: "For example: Physical health",
-    descriptionPlaceholder:
-      "What exactly belongs to this direction and why do you observe it?",
-    branchHint:
-      "The branch defines stable system rules. Child objects will inherit it.",
-    kindHint:
-      "Choose the closest semantic nature of the root. Activity pattern is reserved for leaves.",
-    advancedSettings: "Advanced settings",
-    advancedHint:
-      "Object kind is optional for structural objects. Leave “other” unless a specific kind already has real system behavior.",
-    branchLoading: "Loading branch policies…",
-    branchUnavailable: "No active branch policies are available.",
+    descriptionPlaceholder: "What belongs to this direction and what does it mean?",
+    fixedRole: "Ontology role",
+    fixedFacet: "Facet",
+    fixedKind: "Ontology kind",
+    fixedStatus: "Status",
+    fixedVisibility: "Visibility",
+    ontologyNotice:
+      "Root ontology fields are fixed: DOMAIN / domain_root / root. Branch policies and semantic child kinds are selected only below the root, where they have real meaning.",
     create: "Create root",
     creating: "Creating…",
     back: "Back to observation objects",
     errorPrefix: "Could not create the root:",
-    draftNotice: "The new root will be private and draft by default.",
+    titleRequired: "Enter a name.",
+    descriptionRequired: "Enter a short semantic description.",
   },
   pl: {
     eyebrow: "Korzeniowy obiekt obserwacji",
     title: "Utwórz korzeniowy obiekt obserwacji",
     description:
-      "Korzeń to najwyższy przedmiot obserwacji. Nie ma rodzica, powstaje jako prywatny szkic i należy do aktualnie aktywnego profilu.",
+      "Korzeń jest najwyższym przedmiotem obserwacji. Jego rola semantyczna jest ustalona przez ontologię; dokładne znaczenie opisuje się w definicji i obiektach podrzędnych.",
     activeProfile: "Aktualnie aktywny profil",
-    branch: "Polityka gałęzi",
-    kind: "Rodzaj obiektu",
     objectTitle: "Nazwa",
     objectDescription: "Opis",
     titlePlaceholder: "Na przykład: Zdrowie fizyczne",
-    descriptionPlaceholder:
-      "Co dokładnie należy do tego kierunku i dlaczego to obserwujesz?",
-    branchHint:
-      "Gałąź definiuje stałe reguły systemowe. Obiekty podrzędne ją odziedziczą.",
-    kindHint:
-      "Wybierz najbliższą naturę semantyczną korzenia. Wzorzec aktywności jest zarezerwowany dla liści.",
-    advancedSettings: "Ustawienia zaawansowane",
-    advancedHint:
-      "Rodzaj obiektu jest opcjonalny dla obiektów strukturalnych. Pozostaw „other”, jeśli dany rodzaj nie ma jeszcze rzeczywistego zachowania systemowego.",
-    branchLoading: "Ładowanie polityk gałęzi…",
-    branchUnavailable: "Brak aktywnych polityk gałęzi.",
+    descriptionPlaceholder: "Co należy do tego kierunku i co on oznacza?",
+    fixedRole: "Rola ontologiczna",
+    fixedFacet: "Płaszczyzna",
+    fixedKind: "Rodzaj ontologiczny",
+    fixedStatus: "Status",
+    fixedVisibility: "Widoczność",
+    ontologyNotice:
+      "Pola ontologii korzenia są stałe: DOMAIN / domain_root / root. Polityki i rodzaje semantyczne wybiera się dopiero dla obiektów podrzędnych, gdzie mają rzeczywiste znaczenie.",
     create: "Utwórz korzeń",
     creating: "Tworzenie…",
     back: "Wróć do obiektów obserwacji",
     errorPrefix: "Nie udało się utworzyć korzenia:",
-    draftNotice: "Nowy korzeń będzie domyślnie prywatnym szkicem.",
+    titleRequired: "Wpisz nazwę.",
+    descriptionRequired: "Wpisz krótki opis semantyczny.",
   },
   ru: {
     eyebrow: "Корневой объект наблюдения",
     title: "Создать корневой объект наблюдения",
     description:
-      "Корень — верхний предмет наблюдения. У него нет родителя, он создаётся как приватный черновик и принадлежит текущему активному профилю.",
+      "Корень — верхний предмет наблюдения. Его смысловая роль фиксируется онтологией; конкретный смысл задаётся описанием и последующими дочерними объектами.",
     activeProfile: "Текущий активный профиль",
-    branch: "Политика ветви",
-    kind: "Вид объекта",
     objectTitle: "Название",
     objectDescription: "Описание",
     titlePlaceholder: "Например: Физическое здоровье",
-    descriptionPlaceholder:
-      "Что именно входит в это направление и зачем вы за ним наблюдаете?",
-    branchHint:
-      "Ветвь задаёт стабильные системные правила. Дочерние объекты унаследуют её.",
-    kindHint:
-      "Выберите ближайшую смысловую природу корня. Шаблон активности предназначен только для листьев.",
-    advancedSettings: "Дополнительные настройки",
-    advancedHint:
-      "Вид объекта для структурных объектов необязателен. Оставьте «other», если для конкретного вида ещё нет реального системного поведения.",
-    branchLoading: "Загружаю политики ветвей…",
-    branchUnavailable: "Нет доступных активных политик ветвей.",
+    descriptionPlaceholder: "Что относится к этому направлению и что именно оно означает?",
+    fixedRole: "Роль в онтологии",
+    fixedFacet: "Смысловая плоскость",
+    fixedKind: "Вид в онтологии",
+    fixedStatus: "Статус",
+    fixedVisibility: "Видимость",
+    ontologyNotice:
+      "Поля корня фиксированы онтологией: DOMAIN / domain_root / root. Политику ветви и смысловой вид выбирают уже у дочерних объектов, где эти различия действительно имеют смысл.",
     create: "Создать корень",
     creating: "Создание…",
     back: "Назад к объектам наблюдения",
     errorPrefix: "Не удалось создать корень:",
-    draftNotice: "Новый корень по умолчанию будет приватным черновиком.",
+    titleRequired: "Введите название.",
+    descriptionRequired: "Введите короткое смысловое описание.",
   },
   uk: {
     eyebrow: "Кореневий об’єкт спостереження",
     title: "Створити кореневий об’єкт спостереження",
     description:
-      "Корінь — верхній предмет спостереження. Він не має батьківського об’єкта, створюється як приватна чернетка й належить поточному активному профілю.",
+      "Корінь — верхній предмет спостереження. Його смислова роль фіксується онтологією; конкретний зміст задається описом і дочірніми об’єктами.",
     activeProfile: "Поточний активний профіль",
-    branch: "Політика гілки",
-    kind: "Вид об’єкта",
     objectTitle: "Назва",
     objectDescription: "Опис",
     titlePlaceholder: "Наприклад: Фізичне здоров’я",
-    descriptionPlaceholder:
-      "Що саме входить до цього напряму і навіщо ви за ним спостерігаєте?",
-    branchHint:
-      "Гілка задає сталі системні правила. Дочірні об’єкти успадкують її.",
-    kindHint:
-      "Оберіть найближчу смислову природу кореня. Шаблон активності призначений лише для листків.",
-    advancedSettings: "Додаткові налаштування",
-    advancedHint:
-      "Вид об’єкта для структурних об’єктів необов’язковий. Залиште «other», якщо конкретний вид ще не має реальної системної поведінки.",
-    branchLoading: "Завантажую політики гілок…",
-    branchUnavailable: "Немає доступних активних політик гілок.",
+    descriptionPlaceholder: "Що належить до цього напряму і що саме він означає?",
+    fixedRole: "Роль в онтології",
+    fixedFacet: "Смислова площина",
+    fixedKind: "Вид в онтології",
+    fixedStatus: "Статус",
+    fixedVisibility: "Видимість",
+    ontologyNotice:
+      "Поля кореня фіксуються онтологією: DOMAIN / domain_root / root. Політика гілки та смисловий вид обираються вже для дочірніх об’єктів, де ці відмінності мають реальний зміст.",
     create: "Створити корінь",
     creating: "Створення…",
     back: "Назад до об’єктів спостереження",
     errorPrefix: "Не вдалося створити корінь:",
-    draftNotice: "Новий корінь за замовчуванням буде приватною чернеткою.",
+    titleRequired: "Введіть назву.",
+    descriptionRequired: "Введіть короткий смисловий опис.",
   },
   de: {
     eyebrow: "Wurzel-Beobachtungsobjekt",
     title: "Wurzel-Beobachtungsobjekt erstellen",
     description:
-      "Eine Wurzel ist der oberste Beobachtungsgegenstand. Sie hat kein übergeordnetes Objekt, startet als privater Entwurf und gehört zum aktuell aktiven Profil.",
+      "Die Wurzel ist der oberste Beobachtungsgegenstand. Ihre semantische Rolle ist durch die Ontologie festgelegt; die konkrete Bedeutung wird in Beschreibung und Unterobjekten definiert.",
     activeProfile: "Aktuell aktives Profil",
-    branch: "Zweigregel",
-    kind: "Objektart",
     objectTitle: "Name",
     objectDescription: "Beschreibung",
     titlePlaceholder: "Zum Beispiel: Körperliche Gesundheit",
-    descriptionPlaceholder:
-      "Was gehört genau zu diesem Bereich und warum beobachten Sie ihn?",
-    branchHint:
-      "Der Zweig definiert stabile Systemregeln. Untergeordnete Objekte erben ihn.",
-    kindHint:
-      "Wählen Sie die passende semantische Art der Wurzel. Aktivitätsmuster sind Blättern vorbehalten.",
-    advancedSettings: "Erweiterte Einstellungen",
-    advancedHint:
-      "Die Objektart ist für Strukturobjekte optional. Lassen Sie „other“ stehen, solange eine konkrete Art kein echtes Systemverhalten hat.",
-    branchLoading: "Zweigregeln werden geladen…",
-    branchUnavailable: "Keine aktiven Zweigregeln verfügbar.",
+    descriptionPlaceholder: "Was gehört zu diesem Bereich und was bedeutet er genau?",
+    fixedRole: "Ontologie-Rolle",
+    fixedFacet: "Facette",
+    fixedKind: "Ontologie-Art",
+    fixedStatus: "Status",
+    fixedVisibility: "Sichtbarkeit",
+    ontologyNotice:
+      "Die Ontologie-Felder der Wurzel sind fest: DOMAIN / domain_root / root. Zweigregeln und semantische Arten werden erst bei Unterobjekten gewählt, wo sie tatsächlich Bedeutung haben.",
     create: "Wurzel erstellen",
     creating: "Wird erstellt…",
     back: "Zurück zu Beobachtungsobjekten",
     errorPrefix: "Wurzel konnte nicht erstellt werden:",
-    draftNotice: "Die neue Wurzel ist standardmäßig ein privater Entwurf.",
+    titleRequired: "Geben Sie einen Namen ein.",
+    descriptionRequired: "Geben Sie eine kurze semantische Beschreibung ein.",
   },
   es: {
     eyebrow: "Objeto raíz de observación",
     title: "Crear un objeto raíz de observación",
     description:
-      "Una raíz es el objeto superior de observación. No tiene padre, comienza como borrador privado y pertenece al perfil activo actual.",
+      "La raíz es el objeto superior de observación. Su rol semántico está fijado por la ontología; el significado concreto se define en la descripción y los objetos hijos.",
     activeProfile: "Perfil activo actual",
-    branch: "Política de rama",
-    kind: "Tipo de objeto",
     objectTitle: "Nombre",
     objectDescription: "Descripción",
     titlePlaceholder: "Por ejemplo: Salud física",
-    descriptionPlaceholder:
-      "¿Qué pertenece exactamente a esta dirección y por qué la observas?",
-    branchHint:
-      "La rama define reglas estables del sistema. Los objetos hijos la heredarán.",
-    kindHint:
-      "Elige la naturaleza semántica más cercana de la raíz. El patrón de actividad está reservado para hojas.",
-    advancedSettings: "Configuración avanzada",
-    advancedHint:
-      "El tipo de objeto es opcional para objetos estructurales. Mantén «other» mientras un tipo concreto no tenga comportamiento real del sistema.",
-    branchLoading: "Cargando políticas de rama…",
-    branchUnavailable: "No hay políticas de rama activas disponibles.",
+    descriptionPlaceholder: "¿Qué pertenece a esta dirección y qué significa exactamente?",
+    fixedRole: "Rol ontológico",
+    fixedFacet: "Faceta",
+    fixedKind: "Tipo ontológico",
+    fixedStatus: "Estado",
+    fixedVisibility: "Visibilidad",
+    ontologyNotice:
+      "Los campos ontológicos de la raíz son fijos: DOMAIN / domain_root / root. Las políticas de rama y los tipos semánticos se eligen en los objetos hijos, donde realmente tienen significado.",
     create: "Crear raíz",
     creating: "Creando…",
     back: "Volver a objetos de observación",
     errorPrefix: "No se pudo crear la raíz:",
-    draftNotice: "La nueva raíz será privada y borrador por defecto.",
+    titleRequired: "Introduce un nombre.",
+    descriptionRequired: "Introduce una breve descripción semántica.",
   },
   cs: {
     eyebrow: "Kořenový objekt pozorování",
     title: "Vytvořit kořenový objekt pozorování",
     description:
-      "Kořen je nejvyšší předmět pozorování. Nemá rodiče, vzniká jako soukromý koncept a patří aktuálně aktivnímu profilu.",
+      "Kořen je nejvyšší předmět pozorování. Jeho sémantická role je pevně určena ontologií; konkrétní význam se popisuje definicí a podřízenými objekty.",
     activeProfile: "Aktuálně aktivní profil",
-    branch: "Politika větve",
-    kind: "Druh objektu",
     objectTitle: "Název",
     objectDescription: "Popis",
     titlePlaceholder: "Například: Fyzické zdraví",
-    descriptionPlaceholder:
-      "Co přesně do této oblasti patří a proč ji pozorujete?",
-    branchHint:
-      "Větev určuje stabilní systémová pravidla. Podřízené objekty ji zdědí.",
-    kindHint:
-      "Vyberte nejbližší sémantickou povahu kořene. Vzor aktivity je vyhrazen listům.",
-    advancedSettings: "Pokročilá nastavení",
-    advancedHint:
-      "Druh objektu je u strukturálních objektů volitelný. Ponechte „other“, dokud konkrétní druh nemá skutečné systémové chování.",
-    branchLoading: "Načítání politik větví…",
-    branchUnavailable: "Nejsou dostupné žádné aktivní politiky větví.",
+    descriptionPlaceholder: "Co do této oblasti patří a co přesně znamená?",
+    fixedRole: "Role v ontologii",
+    fixedFacet: "Fazeta",
+    fixedKind: "Druh v ontologii",
+    fixedStatus: "Stav",
+    fixedVisibility: "Viditelnost",
+    ontologyNotice:
+      "Ontologická pole kořene jsou pevná: DOMAIN / domain_root / root. Politika větve a sémantický druh se volí až u podřízených objektů, kde mají skutečný význam.",
     create: "Vytvořit kořen",
     creating: "Vytváření…",
     back: "Zpět k objektům pozorování",
     errorPrefix: "Kořen se nepodařilo vytvořit:",
-    draftNotice: "Nový kořen bude ve výchozím stavu soukromý koncept.",
+    titleRequired: "Zadejte název.",
+    descriptionRequired: "Zadejte krátký sémantický popis.",
   },
 };
 
 type ActorContextResponse = {
   ok?: boolean;
   activeProfile?: {
-    profileId?: string;
-    actorId?: string;
     displayName?: string | null;
     profileKind?: string | null;
   };
-  error?: string;
 };
 
 type RootCreateResponse = {
@@ -259,8 +213,6 @@ type RootCreateResponse = {
   error?: string;
   redirectUrl?: string;
 };
-
-const ROOT_OBJECT_KINDS = VALUE_OBJECT_STRUCTURAL_KINDS_V2;
 
 function normalizeLocale(value: string | null): LocaleCode {
   if (
@@ -277,40 +229,42 @@ function normalizeLocale(value: string | null): LocaleCode {
   return "en";
 }
 
-
 function buildLocaleHref(pathname: string, locale: LocaleCode) {
-  if (locale === "en") {
-    return pathname;
-  }
-
-  return `${pathname}?locale=${encodeURIComponent(locale)}`;
+  return locale === "en"
+    ? pathname
+    : `${pathname}?locale=${encodeURIComponent(locale)}`;
 }
 
-export default function NewRootObservationObjectPage() {
+function newIdempotencyKey() {
+  return `vo-ui-root-${crypto.randomUUID()}`;
+}
+
+export default function ValueObjectRootCreatePage() {
   const router = useRouter();
   const [locale, setLocale] = useState<LocaleCode>("en");
+  const [activeProfileName, setActiveProfileName] = useState("—");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [branchTypeCode, setBranchTypeCode] = useState("");
-  const [branchPolicies, setBranchPolicies] = useState<
-    ValueObjectBranchPolicyDto[]
-  >([]);
-  const [branchPoliciesLoading, setBranchPoliciesLoading] = useState(true);
-  const [branchPoliciesError, setBranchPoliciesError] = useState("");
-  const [objectKind, setObjectKind] = useState<ValueObjectKindV2>("other");
-  const [activeProfileName, setActiveProfileName] = useState("—");
   const [pending, setPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    setLocale(normalizeLocale(searchParams.get("locale")));
+    const nextLocale = normalizeLocale(
+      new URLSearchParams(window.location.search).get("locale"),
+    );
+    const timeoutId = window.setTimeout(() => {
+      setLocale(nextLocale);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, []);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadActorContext() {
+    void (async () => {
       try {
         const response = await fetch("/api/actor-context", {
           cache: "no-store",
@@ -330,68 +284,7 @@ export default function NewRootObservationObjectPage() {
           setActiveProfileName("—");
         }
       }
-    }
-
-    void loadActorContext();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadBranchPolicies() {
-      setBranchPoliciesLoading(true);
-      setBranchPoliciesError("");
-
-      try {
-        const response = await fetch("/api/value-object-branch-policies", {
-          cache: "no-store",
-          headers: { Accept: "application/json" },
-        });
-        const data =
-          (await response.json()) as ValueObjectBranchPolicyListResponse;
-
-        if (!response.ok || !data.ok || !Array.isArray(data.policies)) {
-          throw new Error(data.error || `HTTP ${response.status}`);
-        }
-
-        if (cancelled) {
-          return;
-        }
-
-        setBranchPolicies(data.policies);
-        setBranchTypeCode((current) => {
-          if (data.policies?.some((policy) => policy.branchTypeCode === current)) {
-            return current;
-          }
-
-          return (
-            data.policies?.find(
-              (policy) => policy.branchTypeCode === "resource",
-            )?.branchTypeCode ??
-            data.policies?.[0]?.branchTypeCode ??
-            ""
-          );
-        });
-      } catch (error) {
-        if (!cancelled) {
-          setBranchPolicies([]);
-          setBranchTypeCode("");
-          setBranchPoliciesError(
-            error instanceof Error ? error.message : "Unknown error",
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setBranchPoliciesLoading(false);
-        }
-      }
-    }
-
-    void loadBranchPolicies();
+    })();
 
     return () => {
       cancelled = true;
@@ -400,36 +293,19 @@ export default function NewRootObservationObjectPage() {
 
   const copy = COPY[locale];
 
-  const branchOptions = useMemo(
-    () =>
-      branchPolicies.map((policy) => ({
-        ...policy,
-        label: resolveValueObjectBranchPolicyTitle(policy, locale),
-        description: resolveValueObjectBranchPolicyDescription(policy, locale),
-      })),
-    [branchPolicies, locale],
-  );
-
-  const selectedBranchPolicy = useMemo(
-    () =>
-      branchOptions.find(
-        (policy) => policy.branchTypeCode === branchTypeCode,
-      ) ?? null,
-    [branchOptions, branchTypeCode],
-  );
-
   async function submit() {
     setErrorMessage("");
 
     const normalizedTitle = title.trim();
+    const normalizedDescription = description.trim();
 
     if (!normalizedTitle) {
-      setErrorMessage(`${copy.errorPrefix} ${copy.objectTitle}.`);
+      setErrorMessage(`${copy.errorPrefix} ${copy.titleRequired}`);
       return;
     }
 
-    if (!branchTypeCode) {
-      setErrorMessage(`${copy.errorPrefix} ${copy.branchUnavailable}`);
+    if (!normalizedDescription) {
+      setErrorMessage(`${copy.errorPrefix} ${copy.descriptionRequired}`);
       return;
     }
 
@@ -445,10 +321,9 @@ export default function NewRootObservationObjectPage() {
         body: JSON.stringify({
           creationMode: "root_draft_v3",
           title: normalizedTitle,
-          description: description.trim() || null,
-          branchTypeCode,
-          objectKind,
+          description: normalizedDescription,
           locale,
+          idempotencyKey: newIdempotencyKey(),
         }),
       });
 
@@ -470,6 +345,15 @@ export default function NewRootObservationObjectPage() {
     }
   }
 
+  const fixedCards = [
+    [copy.activeProfile, activeProfileName],
+    [copy.fixedRole, "root"],
+    [copy.fixedFacet, "DOMAIN"],
+    [copy.fixedKind, "domain_root"],
+    [copy.fixedStatus, "draft"],
+    [copy.fixedVisibility, "private"],
+  ] as const;
+
   return (
     <main className="min-h-full bg-[#f0f2f7] px-4 py-8 text-[#1a1d2e]">
       <div className="mx-auto grid w-full max-w-[1180px] gap-5">
@@ -477,9 +361,8 @@ export default function NewRootObservationObjectPage() {
           <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#3b6ef8]">
             {copy.eyebrow}
           </div>
-
           <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-[760px]">
+            <div className="max-w-[800px]">
               <h1 className="text-[30px] font-bold tracking-[-0.03em] text-[#111827]">
                 {copy.title}
               </h1>
@@ -487,7 +370,6 @@ export default function NewRootObservationObjectPage() {
                 {copy.description}
               </p>
             </div>
-
             <Link
               href={buildLocaleHref("/value-objects", locale)}
               className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[13px] font-bold text-[#4a4f6a] transition hover:bg-gray-50"
@@ -497,46 +379,24 @@ export default function NewRootObservationObjectPage() {
           </div>
         </header>
 
-        <section className="grid gap-4 lg:grid-cols-4">
-          <div className="rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-sm">
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
-              {copy.activeProfile}
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+          {fixedCards.map(([label, value]) => (
+            <div
+              key={label}
+              className="rounded-[22px] border border-black/[0.07] bg-white p-4 shadow-sm"
+            >
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#7c8099]">
+                {label}
+              </div>
+              <div className="mt-2 break-words font-mono text-[13px] font-semibold text-[#111827]">
+                {value}
+              </div>
             </div>
-            <div className="mt-2 text-[17px] font-bold text-[#111827]">
-              {activeProfileName}
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-sm">
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
-              node_role_code
-            </div>
-            <div className="mt-2 font-mono text-[14px] font-semibold text-[#3b6ef8]">
-              structural
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-sm">
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
-              status
-            </div>
-            <div className="mt-2 font-mono text-[14px] font-semibold text-[#8b5cf6]">
-              draft
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-sm">
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c8099]">
-              visibility
-            </div>
-            <div className="mt-2 font-mono text-[14px] font-semibold text-[#111827]">
-              private
-            </div>
-          </div>
+          ))}
         </section>
 
         <section className="rounded-[26px] border border-black/[0.07] bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
-          <div className="grid gap-5 lg:grid-cols-2">
+          <div className="grid gap-5">
             <label className="grid gap-2">
               <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#7c8099]">
                 {copy.objectTitle}
@@ -552,40 +412,6 @@ export default function NewRootObservationObjectPage() {
 
             <label className="grid gap-2">
               <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#7c8099]">
-                {copy.branch}
-              </span>
-              <select
-                value={branchTypeCode}
-                disabled={
-                  branchPoliciesLoading || branchOptions.length === 0
-                }
-                onChange={(event) => setBranchTypeCode(event.target.value)}
-                className="min-h-12 rounded-2xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] font-semibold outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
-              >
-                {branchOptions.map((option) => (
-                  <option
-                    key={option.branchTypeCode}
-                    value={option.branchTypeCode}
-                  >
-                    {option.label} · {option.branchTypeCode}
-                  </option>
-                ))}
-              </select>
-              <span className="text-[12px] leading-5 text-[#7c8099]">
-                {branchPoliciesLoading
-                  ? copy.branchLoading
-                  : selectedBranchPolicy
-                    ? `${selectedBranchPolicy.description} ${copy.branchHint}`
-                    : `${copy.branchUnavailable}${
-                        branchPoliciesError
-                          ? ` (${branchPoliciesError})`
-                          : ""
-                      }`}
-              </span>
-            </label>
-
-            <label className="grid gap-2 lg:col-span-2">
-              <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#7c8099]">
                 {copy.objectDescription}
               </span>
               <textarea
@@ -597,47 +423,17 @@ export default function NewRootObservationObjectPage() {
                 className="rounded-2xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] leading-6 outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
               />
             </label>
-
-            <details className="lg:col-span-2 rounded-2xl border border-[#e5e7f0] bg-[#fafbfe] p-4">
-              <summary className="cursor-pointer text-[13px] font-bold text-[#4a4f6a]">
-                {copy.advancedSettings}
-              </summary>
-              <p className="mt-3 text-[12px] leading-5 text-[#7c8099]">
-                {copy.advancedHint}
-              </p>
-              <label className="mt-4 grid gap-2">
-                <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#7c8099]">
-                  {copy.kind}
-                </span>
-                <select
-                  value={objectKind}
-                  onChange={(event) =>
-                    setObjectKind(event.target.value as ValueObjectKindV2)
-                  }
-                  className="min-h-12 rounded-2xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] font-semibold outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
-                >
-                  {ROOT_OBJECT_KINDS.map((kind) => (
-                    <option key={kind} value={kind}>
-                      {humanizeValueObjectCode(kind)} · {kind}
-                    </option>
-                  ))}
-                </select>
-                <span className="text-[12px] leading-5 text-[#7c8099]">
-                  {copy.kindHint}
-                </span>
-              </label>
-            </details>
           </div>
 
-          <div className="mt-6 rounded-2xl border border-[#dfe6ff] bg-[#f7f9ff] p-4 text-[13px] font-semibold text-[#4a4f6a]">
-            {copy.draftNotice}
-          </div>
+          <p className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-[12px] leading-5 text-amber-900">
+            {copy.ontologyNotice}
+          </p>
 
-          {errorMessage && (
-            <div className="mt-4 rounded-2xl border border-[#fecaca] bg-[#fef2f2] p-4 text-[13px] font-semibold text-[#b91c1c]">
+          {errorMessage ? (
+            <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-[13px] font-semibold text-red-800">
               {errorMessage}
-            </div>
-          )}
+            </p>
+          ) : null}
 
           <div className="mt-6 flex flex-wrap justify-end gap-3">
             <Link
@@ -646,12 +442,9 @@ export default function NewRootObservationObjectPage() {
             >
               {copy.back}
             </Link>
-
             <button
               type="button"
-              disabled={
-                pending || branchPoliciesLoading || !branchTypeCode
-              }
+              disabled={pending}
               onClick={() => void submit()}
               className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#3b6ef8] px-6 py-3 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(59,110,248,0.24)] transition hover:bg-[#315fdc] disabled:cursor-not-allowed disabled:opacity-60"
             >

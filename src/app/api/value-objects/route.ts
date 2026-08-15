@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createHash, randomUUID } from "node:crypto";
 import {
   ActorContextError,
   resolveActiveActorContext,
@@ -75,6 +76,7 @@ type ValueObjectRequestBody = {
   branchTypeCode?: unknown;
   objectKind?: unknown;
   locale?: unknown;
+  idempotencyKey?: unknown;
 };
 
 function normalizeRequiredString(value: unknown): string | null {
@@ -461,6 +463,223 @@ export async function GET(request: Request) {
   });
 }
 
+type OntologyFacetCode =
+  | "ENTITY"
+  | "PROCESS"
+  | "STATE"
+  | "RELATIONSHIP"
+  | "ROLE"
+  | "KNOWLEDGE"
+  | "BEHAVIOR"
+  | "CONTEXT";
+
+type OntologyKindSpec = {
+  readonly facetCode: OntologyFacetCode;
+  readonly objectKindCode: string;
+};
+
+type OntologyCreateCard = {
+  readonly valueObject?: {
+    readonly id?: string;
+    readonly title?: string;
+    readonly facetCode?: string;
+    readonly objectKindCode?: string;
+    readonly nodeRoleCode?: string;
+    readonly parentValueObjectId?: string | null;
+    readonly rootValueObjectId?: string | null;
+    readonly statusCode?: string;
+    readonly visibilityCode?: string;
+  };
+};
+
+type OntologyParent = {
+  readonly id: string;
+  readonly title: string;
+  readonly facetCode: string;
+  readonly ontologyNodeRoleCode: "root" | "intermediate";
+  readonly rootValueObjectId: string;
+  readonly branchTypeCode: string;
+};
+
+const GENERIC_KIND_BY_FACET: Readonly<Record<OntologyFacetCode, string>> = {
+  ENTITY: "generic_entity",
+  PROCESS: "generic_process",
+  STATE: "generic_state",
+  RELATIONSHIP: "generic_relationship",
+  ROLE: "generic_role",
+  KNOWLEDGE: "generic_knowledge",
+  BEHAVIOR: "generic_behavior",
+  CONTEXT: "generic_context",
+};
+
+function createOntologyRequestHash(payload: Record<string, unknown>): string {
+  return createHash("sha256")
+    .update(JSON.stringify(payload), "utf8")
+    .digest("hex")
+    .toUpperCase();
+}
+
+function resolveOntologyIdempotencyKey(
+  supplied: unknown,
+  kind: "root" | "intermediate" | "leaf",
+): string {
+  if (typeof supplied === "string") {
+    const normalized = supplied.trim();
+    if (normalized.length >= 8 && normalized.length <= 200) {
+      return normalized;
+    }
+  }
+
+  return `vo-authoring-${kind}-${randomUUID()}`;
+}
+
+function mapOntologyRpcErrorStatus(error: {
+  readonly code?: string | null;
+  readonly message?: string | null;
+}): number {
+  if (error.code === "42501") {
+    return 403;
+  }
+
+  if (error.code === "P0002") {
+    return 404;
+  }
+
+  if (error.code === "23505") {
+    return 409;
+  }
+
+  if (
+    error.code === "22023" ||
+    error.code === "23503" ||
+    error.code === "23514"
+  ) {
+    return 400;
+  }
+
+  return 500;
+}
+
+function mapLegacyStructuralKindToOntology(
+  objectKind: ValueObjectStructuralKindV2,
+): OntologyKindSpec {
+  switch (objectKind) {
+    case "relationship":
+      return { facetCode: "RELATIONSHIP", objectKindCode: "generic_relationship" };
+    case "skill":
+    case "knowledge":
+      return { facetCode: "KNOWLEDGE", objectKindCode: "generic_knowledge" };
+    case "project":
+    case "process":
+      return { facetCode: "PROCESS", objectKindCode: "generic_process" };
+    case "state":
+    case "symptom":
+    case "risk":
+    case "goal":
+    case "reputation":
+      return { facetCode: "STATE", objectKindCode: "generic_state" };
+    case "lifestyle":
+      return { facetCode: "BEHAVIOR", objectKindCode: "generic_behavior" };
+    case "asset":
+    case "person":
+    case "content":
+    case "instance":
+    case "right":
+    case "resource":
+    case "other":
+    default:
+      return { facetCode: "ENTITY", objectKindCode: "generic_entity" };
+  }
+}
+
+function genericOntologyKindForFacet(facetCode: string): OntologyKindSpec | null {
+  if (
+    facetCode === "ENTITY" ||
+    facetCode === "PROCESS" ||
+    facetCode === "STATE" ||
+    facetCode === "RELATIONSHIP" ||
+    facetCode === "ROLE" ||
+    facetCode === "KNOWLEDGE" ||
+    facetCode === "BEHAVIOR" ||
+    facetCode === "CONTEXT"
+  ) {
+    return {
+      facetCode,
+      objectKindCode: GENERIC_KIND_BY_FACET[facetCode],
+    };
+  }
+
+  return null;
+}
+
+function mapLeafKindToOntology(
+  objectKind: ValueObjectLeafKindV2,
+): OntologyKindSpec {
+  if (objectKind === "product_type") {
+    return { facetCode: "ENTITY", objectKindCode: "product_type" };
+  }
+
+  if (objectKind === "service_type") {
+    return { facetCode: "PROCESS", objectKindCode: "service_type" };
+  }
+
+  return { facetCode: "PROCESS", objectKindCode: "activity_pattern" };
+}
+
+async function createOntologyValueObject(params: {
+  readonly appUser: AppUserRow;
+  readonly personActor: ActorRow;
+  readonly payload: Record<string, unknown>;
+  readonly idempotencyKey: string;
+}) {
+  const requestHash = createOntologyRequestHash(params.payload);
+  const { data, error } = await supabase.rpc("create_value_object_ontology_v1", {
+    p_owner_user_id: params.appUser.id,
+    p_owner_actor_id: params.personActor.id,
+    p_created_by_actor_id: params.personActor.id,
+    p_payload: params.payload,
+    p_idempotency_key: params.idempotencyKey,
+    p_request_hash: requestHash,
+  });
+
+  if (error) {
+    return {
+      card: null,
+      valueObjectId: null,
+      errorResponse: NextResponse.json(
+        {
+          error: error.message,
+          errorCode: error.code ?? null,
+        },
+        { status: mapOntologyRpcErrorStatus(error) },
+      ),
+    };
+  }
+
+  const card = data as OntologyCreateCard | null;
+  const valueObjectId = normalizeUuid(card?.valueObject?.id);
+
+  if (!card || !valueObjectId) {
+    return {
+      card: null,
+      valueObjectId: null,
+      errorResponse: NextResponse.json(
+        {
+          error: "Ontology creation returned an invalid card",
+          errorCode: "VO_AUTHORING_ONTOLOGY_CARD_INVALID",
+        },
+        { status: 500 },
+      ),
+    };
+  }
+
+  return {
+    card,
+    valueObjectId,
+    errorResponse: null,
+  };
+}
+
 async function createRootDraftValueObject(
   body: ValueObjectRequestBody,
   appUser: AppUserRow,
@@ -468,8 +687,6 @@ async function createRootDraftValueObject(
 ) {
   const title = normalizeRequiredString(body.title);
   const description = normalizeOptionalString(body.description);
-  const branchTypeCode = normalizeBranchTypeCode(body.branchTypeCode);
-  const objectKind = normalizeStructuralObjectKind(body.objectKind);
   const locale = normalizeLocale(body.locale);
 
   if (!title || title.length > 180) {
@@ -486,118 +703,40 @@ async function createRootDraftValueObject(
     );
   }
 
-  if (!branchTypeCode) {
-    return NextResponse.json(
-      { error: "A valid branchTypeCode is required" },
-      { status: 400 },
-    );
-  }
+  const payload: Record<string, unknown> = {
+    title,
+    description: description ?? title,
+    facetCode: "DOMAIN",
+    objectKindCode: "domain_root",
+    nodeRoleCode: "root",
+    visibilityCode: "private",
+    privacyClassCode: "standard",
+  };
+  const created = await createOntologyValueObject({
+    appUser,
+    personActor,
+    payload,
+    idempotencyKey: resolveOntologyIdempotencyKey(body.idempotencyKey, "root"),
+  });
 
-  if (!objectKind) {
-    return NextResponse.json(
-      {
-        error:
-          "A valid structural objectKind is required; leaf-only kinds are not allowed",
-      },
-      { status: 400 },
-    );
-  }
-
-  const { data: branchType, error: branchTypeError } = await supabase
-    .from("value_object_branch_types")
-    .select("branch_type_code, status")
-    .eq("branch_type_code", branchTypeCode)
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (branchTypeError) {
-    return NextResponse.json(
-      { error: branchTypeError.message },
-      { status: 500 },
-    );
-  }
-
-  if (!branchType) {
-    return NextResponse.json(
-      { error: "Selected branch type is not active" },
-      { status: 400 },
-    );
-  }
-
-  const { data: valueObject, error: valueObjectError } = await supabase
-    .from("value_objects")
-    .insert({
-      owner_actor_id: personActor.id,
-      created_by_actor_id: personActor.id,
-      actor_id: personActor.id,
-      app_user_id: appUser.id,
-      owner_user_id: appUser.id,
-      organization_id: null,
-      usage_scope: "private",
-      value_type: objectKind,
-      object_kind: objectKind,
-      node_role_code: "structural",
-      branch_type_code: branchTypeCode,
-      root_value_object_id: null,
-      parent_value_object_id: null,
-      instance_of_value_object_id: null,
-      title,
-      description,
-      unit_type: null,
-      default_price: null,
-      default_currency: null,
-      default_duration_minutes: null,
-      is_marketplace_sellable: false,
-      is_free_possible: false,
-      commercial_usage: "none",
-      visibility: "private",
-      privacy_level: "private",
-      sensitivity_level: "standard",
-      source: "manual",
-      status: "draft",
-      identity_attributes_json: {},
-      metadata_json: {
-        authoring_contract: "reality-model-v3-p6-root",
-      },
-    })
-    .select(
-      `
-      id,
-      title,
-      description,
-      object_kind,
-      node_role_code,
-      branch_type_code,
-      root_value_object_id,
-      parent_value_object_id,
-      status,
-      visibility,
-      privacy_level,
-      sensitivity_level,
-      created_at,
-      updated_at
-    `,
-    )
-    .single();
-
-  if (valueObjectError) {
-    return NextResponse.json(
-      {
-        error: valueObjectError.message,
-        errorCode: valueObjectError.code ?? null,
-      },
-      { status: 500 },
+  if (created.errorResponse || !created.card || !created.valueObjectId) {
+    return (
+      created.errorResponse ??
+      NextResponse.json(
+        { error: "Ontology root creation failed" },
+        { status: 500 },
+      )
     );
   }
 
   return NextResponse.json({
     ok: true,
     mode: "root_draft_v3",
-    valueObject,
-    redirectUrl: buildValueObjectDetailUrl(valueObject.id, locale),
+    valueObject: created.card.valueObject,
+    ontologyCard: created.card,
+    redirectUrl: buildValueObjectDetailUrl(created.valueObjectId, locale),
   });
 }
-
 
 async function getOwnedStructuralParent(
   parentValueObjectId: string,
@@ -615,7 +754,12 @@ async function getOwnedStructuralParent(
       branch_type_code,
       root_value_object_id,
       parent_value_object_id,
-      status
+      status,
+      canonical_key,
+      facet_code,
+      object_kind_code,
+      ontology_node_role_code,
+      scope_code
     `,
     )
     .eq("id", parentValueObjectId)
@@ -626,8 +770,6 @@ async function getOwnedStructuralParent(
   if (parentError) {
     return {
       parent: null,
-      branchTypeCode: null,
-      rootValueObjectId: null,
       errorResponse: NextResponse.json(
         { error: parentError.message },
         { status: 500 },
@@ -638,8 +780,6 @@ async function getOwnedStructuralParent(
   if (!parentData) {
     return {
       parent: null,
-      branchTypeCode: null,
-      rootValueObjectId: null,
       errorResponse: NextResponse.json(
         { error: "Parent observation object not found or access denied" },
         { status: 404 },
@@ -647,38 +787,46 @@ async function getOwnedStructuralParent(
     };
   }
 
-  const branchTypeCode = normalizeBranchTypeCode(
-    parentData.branch_type_code,
-  );
-  const rootValueObjectId = normalizeUuid(
-    parentData.root_value_object_id,
-  );
+  const rootValueObjectId = normalizeUuid(parentData.root_value_object_id);
+  const branchTypeCode = normalizeBranchTypeCode(parentData.branch_type_code);
+  const facetCode =
+    typeof parentData.facet_code === "string" ? parentData.facet_code : null;
+  const ontologyNodeRoleCode = parentData.ontology_node_role_code;
   const parentIsEligible =
-    parentData.node_role_code === "structural" &&
-    isValueObjectStructuralKindV2(parentData.object_kind) &&
-    branchTypeCode !== null &&
+    parentData.scope_code === "actor" &&
+    typeof parentData.canonical_key === "string" &&
+    parentData.canonical_key.length > 0 &&
+    typeof facetCode === "string" &&
+    (ontologyNodeRoleCode === "root" || ontologyNodeRoleCode === "intermediate") &&
     rootValueObjectId !== null &&
+    branchTypeCode !== null &&
     (parentData.status === "draft" || parentData.status === "active");
 
-  if (!parentIsEligible) {
+  if (!parentIsEligible || !facetCode || !rootValueObjectId || !branchTypeCode) {
     return {
       parent: null,
-      branchTypeCode: null,
-      rootValueObjectId: null,
       errorResponse: NextResponse.json(
         {
           error:
-            "Children can be created only under an owned active or draft structural observation object",
+            "Children can be created only under an ontology-ready owned root or intermediate observation object",
+          errorCode: "VO_AUTHORING_PARENT_NOT_ONTOLOGY_READY",
         },
-        { status: 400 },
+        { status: 409 },
       ),
     };
   }
 
-  return {
-    parent: parentData,
-    branchTypeCode,
+  const parent: OntologyParent = {
+    id: parentData.id,
+    title: parentData.title,
+    facetCode,
+    ontologyNodeRoleCode,
     rootValueObjectId,
+    branchTypeCode,
+  };
+
+  return {
+    parent,
     errorResponse: null,
   };
 }
@@ -717,28 +865,20 @@ async function createIntermediateDraftValueObject(
 
   if (!objectKind) {
     return NextResponse.json(
-      {
-        error:
-          "A valid structural objectKind is required; leaf-only kinds are not allowed",
-      },
+      { error: "A valid structural objectKind is required" },
       { status: 400 },
     );
   }
 
-  const {
-    parent,
-    branchTypeCode,
-    rootValueObjectId,
-    errorResponse,
-  } = await getOwnedStructuralParent(
+  const parentResult = await getOwnedStructuralParent(
     parentValueObjectId,
     appUser,
     personActor,
   );
 
-  if (errorResponse || !parent || !branchTypeCode || !rootValueObjectId) {
+  if (parentResult.errorResponse || !parentResult.parent) {
     return (
-      errorResponse ??
+      parentResult.errorResponse ??
       NextResponse.json(
         { error: "Structural parent resolution failed" },
         { status: 500 },
@@ -746,85 +886,65 @@ async function createIntermediateDraftValueObject(
     );
   }
 
-  const { data: valueObject, error: valueObjectError } = await supabase
-    .from("value_objects")
-    .insert({
-      owner_actor_id: personActor.id,
-      created_by_actor_id: personActor.id,
-      actor_id: personActor.id,
-      app_user_id: appUser.id,
-      owner_user_id: appUser.id,
-      organization_id: null,
-      usage_scope: "private",
-      value_type: objectKind,
-      object_kind: objectKind,
-      node_role_code: "structural",
-      branch_type_code: branchTypeCode,
-      root_value_object_id: rootValueObjectId,
-      parent_value_object_id: parent.id,
-      instance_of_value_object_id: null,
-      title,
-      description,
-      unit_type: null,
-      default_price: null,
-      default_currency: null,
-      default_duration_minutes: null,
-      is_marketplace_sellable: false,
-      is_free_possible: false,
-      commercial_usage: "none",
-      visibility: "private",
-      privacy_level: "private",
-      sensitivity_level: "standard",
-      source: "manual",
-      status: "draft",
-      identity_attributes_json: {},
-      metadata_json: {
-        authoring_contract: "reality-model-v3-p6-intermediate",
-        parent_object_id: parent.id,
-        root_object_id: rootValueObjectId,
-      },
-    })
-    .select(
-      `
-      id,
-      title,
-      description,
-      object_kind,
-      node_role_code,
-      branch_type_code,
-      root_value_object_id,
-      parent_value_object_id,
-      status,
-      visibility,
-      privacy_level,
-      sensitivity_level,
-      created_at,
-      updated_at
-    `,
-    )
-    .single();
+  const parent = parentResult.parent;
+  const semanticKind =
+    parent.ontologyNodeRoleCode === "root"
+      ? mapLegacyStructuralKindToOntology(objectKind)
+      : genericOntologyKindForFacet(parent.facetCode);
 
-  if (valueObjectError) {
+  if (!semanticKind) {
     return NextResponse.json(
       {
-        error: valueObjectError.message,
-        errorCode: valueObjectError.code ?? null,
+        error: "Parent facet cannot accept an intermediate object",
+        errorCode: "VO_AUTHORING_INTERMEDIATE_FACET_UNSUPPORTED",
       },
-      { status: 500 },
+      { status: 409 },
+    );
+  }
+
+  const payload: Record<string, unknown> = {
+    title,
+    description: description ?? title,
+    facetCode: semanticKind.facetCode,
+    objectKindCode: semanticKind.objectKindCode,
+    nodeRoleCode: "intermediate",
+    parentValueObjectId: parent.id,
+    hierarchyRelationCode: "is_a",
+    visibilityCode: "private",
+    privacyClassCode: "standard",
+  };
+  const created = await createOntologyValueObject({
+    appUser,
+    personActor,
+    payload,
+    idempotencyKey: resolveOntologyIdempotencyKey(
+      body.idempotencyKey,
+      "intermediate",
+    ),
+  });
+
+  if (created.errorResponse || !created.card || !created.valueObjectId) {
+    return (
+      created.errorResponse ??
+      NextResponse.json(
+        { error: "Ontology intermediate creation failed" },
+        { status: 500 },
+      )
     );
   }
 
   return NextResponse.json({
     ok: true,
     mode: "intermediate_draft_v3",
-    valueObject,
+    valueObject: created.card.valueObject,
+    ontologyCard: created.card,
     parent: {
       id: parent.id,
       title: parent.title,
-      branchTypeCode,
-      rootValueObjectId,
+      facetCode: parent.facetCode,
+      rootValueObjectId: parent.rootValueObjectId,
     },
-    redirectUrl: buildValueObjectDetailUrl(valueObject.id, locale),
+    redirectUrl: buildValueObjectDetailUrl(created.valueObjectId, locale),
   });
 }
 
@@ -870,20 +990,15 @@ async function createLeafDraftValueObject(
     );
   }
 
-  const {
-    parent,
-    branchTypeCode,
-    rootValueObjectId,
-    errorResponse,
-  } = await getOwnedStructuralParent(
+  const parentResult = await getOwnedStructuralParent(
     parentValueObjectId,
     appUser,
     personActor,
   );
 
-  if (errorResponse || !parent || !branchTypeCode || !rootValueObjectId) {
+  if (parentResult.errorResponse || !parentResult.parent) {
     return (
-      errorResponse ??
+      parentResult.errorResponse ??
       NextResponse.json(
         { error: "Structural parent resolution failed" },
         { status: 500 },
@@ -891,86 +1006,63 @@ async function createLeafDraftValueObject(
     );
   }
 
-  const { data: valueObject, error: valueObjectError } = await supabase
-    .from("value_objects")
-    .insert({
-      owner_actor_id: personActor.id,
-      created_by_actor_id: personActor.id,
-      actor_id: personActor.id,
-      app_user_id: appUser.id,
-      owner_user_id: appUser.id,
-      organization_id: null,
-      usage_scope: "private",
-      value_type: objectKind,
-      object_kind: objectKind,
-      node_role_code: "activity_leaf",
-      branch_type_code: branchTypeCode,
-      root_value_object_id: rootValueObjectId,
-      parent_value_object_id: parent.id,
-      instance_of_value_object_id: null,
-      title,
-      description,
-      unit_type: null,
-      default_price: null,
-      default_currency: null,
-      default_duration_minutes: null,
-      is_marketplace_sellable: false,
-      is_free_possible: false,
-      commercial_usage: "none",
-      visibility: "private",
-      privacy_level: "private",
-      sensitivity_level: "standard",
-      source: "manual",
-      status: "draft",
-      identity_attributes_json: {},
-      metadata_json: {
-        authoring_contract: "pgc2-product-service-leaf-v1",
-        leaf_object_kind: objectKind,
-        parent_object_id: parent.id,
-        root_object_id: rootValueObjectId,
-      },
-    })
-    .select(
-      `
-      id,
-      title,
-      description,
-      object_kind,
-      node_role_code,
-      branch_type_code,
-      root_value_object_id,
-      parent_value_object_id,
-      status,
-      visibility,
-      privacy_level,
-      sensitivity_level,
-      created_at,
-      updated_at
-    `,
-    )
-    .single();
+  const parent = parentResult.parent;
+  const semanticKind = mapLeafKindToOntology(objectKind);
 
-  if (valueObjectError) {
+  if (
+    parent.ontologyNodeRoleCode === "intermediate" &&
+    parent.facetCode !== semanticKind.facetCode
+  ) {
     return NextResponse.json(
       {
-        error: valueObjectError.message,
-        errorCode: valueObjectError.code ?? null,
+        error:
+          "The selected leaf kind belongs to a different semantic facet than its intermediate parent",
+        errorCode: "VO_AUTHORING_LEAF_PARENT_FACET_MISMATCH",
       },
-      { status: 500 },
+      { status: 409 },
+    );
+  }
+
+  const payload: Record<string, unknown> = {
+    title,
+    description: description ?? title,
+    facetCode: semanticKind.facetCode,
+    objectKindCode: semanticKind.objectKindCode,
+    nodeRoleCode: "leaf",
+    parentValueObjectId: parent.id,
+    hierarchyRelationCode: "is_a",
+    visibilityCode: "private",
+    privacyClassCode: "standard",
+  };
+  const created = await createOntologyValueObject({
+    appUser,
+    personActor,
+    payload,
+    idempotencyKey: resolveOntologyIdempotencyKey(body.idempotencyKey, "leaf"),
+  });
+
+  if (created.errorResponse || !created.card || !created.valueObjectId) {
+    return (
+      created.errorResponse ??
+      NextResponse.json(
+        { error: "Ontology leaf creation failed" },
+        { status: 500 },
+      )
     );
   }
 
   return NextResponse.json({
     ok: true,
     mode: "leaf_draft_v3",
-    valueObject,
+    valueObject: created.card.valueObject,
+    ontologyCard: created.card,
     parent: {
       id: parent.id,
       title: parent.title,
-      branchTypeCode,
-      rootValueObjectId,
+      facetCode: parent.facetCode,
+      rootValueObjectId: parent.rootValueObjectId,
     },
-    redirectUrl: buildValueObjectDetailUrl(valueObject.id, locale),
+    redirectUrl: buildValueObjectDetailUrl(created.valueObjectId, locale),
   });
 }
 

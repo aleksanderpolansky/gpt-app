@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-14T18:21:19.919Z",
+  "generatedAt": "2026-08-15T09:11:40.575Z",
   "copiedCount": 57,
-  "generatedEvidenceCount": 10,
-  "indexedCount": 84,
+  "generatedEvidenceCount": 11,
+  "indexedCount": 85,
   "missingPatterns": [],
   "files": [
     {
@@ -582,6 +582,13 @@
       "sourceDownloadsName": null,
       "sha256": "0514f9f6982978261b596cc789e5916d4415f39a5ea5dbefc0431db01ead5183",
       "origin": "ARCTOR_AI_A3_P5C_TEMPORAL_INTENT_RECOVERY_V1"
+    },
+    {
+      "group": "VALUE_OBJECT_AUTHORING",
+      "file": "docs/recovery/evidence/VALUE_OBJECT_AUTHORING/VALUE_OBJECT_AUTHORING_ONTOLOGY_BRIDGE_V1_EVIDENCE.txt",
+      "sourceDownloadsName": null,
+      "sha256": "1d5c6184701bb003fbba933325edeaa15f21c1b55359961896e57aed168cce06",
+      "origin": "generated_precommit_verification"
     }
   ]
 }

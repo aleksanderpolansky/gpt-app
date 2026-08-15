@@ -3,9 +3,9 @@
   "generatedAt": "2026-08-14T18:21:19.919Z",
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
-  "branch": "feat/ai-a3-p5c-temporal-intent-recovery-v1-20260814t182031",
+  "branch": "feat/vo-authoring-ontology-bridge-v1-20260815",
   "originMainAtCheckpoint": "6e9052d82ae6af4c727c0ca56f44c408214fd062",
-  "checkpointMeaning": "P5C quick capture explicit temporal intent + time conflict guard + demand-driven stale receipt recovery.",
+  "checkpointMeaning": "Value Object authoring uses P1C ontology runtime; legacy private pre-ontology test rows cleaned only after guarded preflight.",
   "globalReality": {
     "p8Blocked": true,
     "objectsTotal": 150,
@@ -51,7 +51,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Live-test Happened vs Plan routing and immediate navigation-away durable recovery; then close P5C and continue Runtime Context Compiler/Data Capital foundation.",
+  "nextAction": "Live root -> leaf -> parameter -> target acceptance, then Runtime Context Compiler.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -61,8 +61,8 @@
     "docs/recovery/evidence/EVIDENCE_INDEX.json"
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
-  "previousRecoveryCommit": "6e9052d82ae6af4c727c0ca56f44c408214fd062",
-  "documentedState": "ARCTOR_AI_A3_P5C_TEMPORAL_INTENT_RECOVERY_V1",
+  "previousRecoveryCommit": "67911e88c54c1af9461941c50f61b08e84ea70aa",
+  "documentedState": "VALUE_OBJECT_AUTHORING_ONTOLOGY_BRIDGE_HOTFIX_V1_5",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -388,5 +388,20 @@
     "runtimeWiring": "catalog_only_until_p5c_durable_executor",
     "evidence": "docs/recovery/evidence/AI_ADMIN/ARCTOR_AI_ADMIN_CONTROL_CATALOG_V1_PRECOMMIT_REPORT.txt",
     "evidenceSha256": "3c4a2a6766fd2660c8ffd8fffe5074b1314b72294505e65ea6717171c042eab7"
+  },
+  "updatedAt": "2026-08-15T09:09:55.285Z",
+  "valueObjectAuthoring": {
+    "contract": "P1C_CREATE_VALUE_OBJECT_ONTOLOGY_V1",
+    "root": {
+      "facetCode": "DOMAIN",
+      "objectKindCode": "domain_root",
+      "nodeRoleCode": "root"
+    },
+    "legacyPrivateCleanup": {
+      "anchorValueObjectId": "13d59cef-e45f-49c2-8557-7732b74e2de3",
+      "maxRows": 50,
+      "globalForbidden": true,
+      "commercialForbidden": true
+    }
   }
 }

@@ -323,3 +323,7 @@ Baseline: `f661ea575d6864092782b2143ddd2f32a2f7d0b0`.
 
 ## P5C explicit temporal mode + durable recovery restore
 Проверить src/lib/activity/quickCaptureTemporalMode.ts, quickCaptureTemporalModeCopy.ts, /api/activity/quick-capture, aiLabQuickCaptureDurable.server.ts и validator scripts/validate-ai-a3-p5c-temporal-intent-recovery-v1.mjs. POST /api/activity/quick-capture для новых UI-вызовов обязан содержать temporalDirection=past|future. В metadata activity_event должны присутствовать quickCaptureRequestedTemporalDirection и quickCaptureTemporalIntentSource=explicit_user_control. При открытии /activity-review выполняется demand-driven recovery pending/received/stale-processing raw_activity_signals. Guards activity_explicit_temporal_mode_authoritative и activity_durable_recovery_watchdog видимы на /admin/ai-instructions как read-only.
+
+## Checkpoint: VALUE_OBJECT_AUTHORING_ONTOLOGY_BRIDGE_HOTFIX_V1_5
+
+Если контекст потерян: P5C закрыт предыдущим checkpoint. Затем обнаружен дефект ручного создания ЦО: legacy root_draft_v3 создавал structural row без P1C ontology identity, из-за чего full card показывала P1C/P2D NOT_ONTOLOGY_READY и дочерний authoring исчезал. Исправление этого checkpoint переводит root/intermediate/leaf creation на create_value_object_ontology_v1 и удаляет только подтверждённые несвязанные private/manual/pre-ontology тестовые строки текущего владельца. После live acceptance продолжить с полным Runtime Context Compiler.

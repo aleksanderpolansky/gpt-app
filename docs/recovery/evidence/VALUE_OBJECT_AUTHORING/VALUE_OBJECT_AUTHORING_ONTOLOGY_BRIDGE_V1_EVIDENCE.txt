@@ -1,0 +1,14 @@
+RELEASE=VALUE_OBJECT_AUTHORING_ONTOLOGY_BRIDGE_HOTFIX_V1_5
+BASELINE=67911e88c54c1af9461941c50f61b08e84ea70aa
+UTC=2026-08-15T09:11:40.571Z
+SCOPE=Value Object root/intermediate/leaf authoring -> existing P1C create_value_object_ontology_v1
+LEGACY_CLEANUP=private/manual/pre-ontology/current-anchor-owner only; max 50; external references block deletion
+VALIDATOR=PASS
+TSC=PASS
+TARGETED_ESLINT=PASS
+FULL_ESLINT_DEBT=NOT_INCREASED
+NPM_LS=PASS
+NEXT_BUILD=PASS
+GIT_DIFF_CHECK=PASS
+LIVE_CLEANUP_PREFLIGHT=PASS
+LIVE_ACCEPTANCE_PENDING=root ontology+aliases ready -> leaf -> parameter -> target

@@ -556,3 +556,7 @@ Live P5B acceptance: Facts page showed `31 minute`, the linked `Ходьба` ch
 - Старое правило RU/UK «инфинитив похож на future intent» сохраняется только как legacy/fallback для старых receipts/внутренних вызовов без explicit mode; оно не может отменять явный выбор.
 - При противоречии explicit mode и явно указанного времени система не угадывает и не меняет режим сама: выдаёт conflict и просит исправить время или переключатель.
 - Recovery stale quick-capture сделан demand-driven через существующий raw_activity_signals + idempotent claim; новая пользовательская queue/entity и обязательный cron не создаются.
+
+## 2026-08-15 — Authoring должен использовать P1C как единственный ontology write path
+
+Решение: не достраивать старый прямой INSERT в value_objects новыми колонками. Root/intermediate/leaf authoring обязан вызывать create_value_object_ontology_v1, чтобы definition version, canonical identity, root pointer, facet/kind/node role и guards создавались атомарно одним уже проверенным контрактом. Старые личные ручные тестовые объекты пользователя являются disposable test data; release-cleanup допускается только для private/manual/pre-ontology строк конкретного owner, определённого через известный тестовый объект 13d59cef-e45f-49c2-8557-7732b74e2de3, и только если нет внешних activity/fact/relation/parameter/tree ссылок. GLOBAL и коммерческие объекты исключены.

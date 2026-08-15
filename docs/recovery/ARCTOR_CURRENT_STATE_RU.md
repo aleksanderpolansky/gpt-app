@@ -538,3 +538,11 @@ P5B live UI acceptance confirmed mutual links on /activity-facts and /activity-t
 - Durable handoff дополнен request-driven recovery watchdog: polling конкретной квитанции и открытие «Требуют проверки» подхватывают pending/received и stale processing сообщения идемпотентно.
 - Отдельный Vercel cron не добавлялся: восстановление запускается только когда результат снова нужен пользователю, без фонового расхода ресурсов в отсутствие пользователя.
 - P5C temporal/durability после live acceptance этого релиза можно закрывать и переходить к полному Runtime Context Compiler / Data Capital capture.
+
+## 2026-08-15 — VALUE_OBJECT_AUTHORING_ONTOLOGY_BRIDGE_HOTFIX_V1_5
+
+- Исправлен разрыв между старым ручным authoring и P1C runtime ontology: root/intermediate/leaf теперь создаются через существующий service-role RPC create_value_object_ontology_v1.
+- Новый пользовательский root сразу создаётся как DOMAIN / domain_root / root, actor-scoped, private, privacy=standard, с root pointer на самого себя и definition version 1.
+- Родителем нового intermediate/leaf может быть только ontology-ready actor-owned root/intermediate.
+- Старые личные ручные pre-ontology тестовые ЦО текущего владельца разрешено удалить только отдельным release-cleanup после read-only preflight; GLOBAL, system_model, commercial и связанные объекты не являются кандидатами.
+- Следующий live acceptance: создать новый root, убедиться в отсутствии P1C/P2D NOT_ONTOLOGY_READY, создать leaf и назначить ему параметр/target.
