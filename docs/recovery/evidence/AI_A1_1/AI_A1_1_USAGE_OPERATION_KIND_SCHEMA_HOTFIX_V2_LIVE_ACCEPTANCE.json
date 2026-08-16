@@ -1,0 +1,17 @@
+{
+  "contract": "ARCTOR_AI_A1_1_USAGE_OPERATION_KIND_SCHEMA_HOTFIX_V2_LIVE_ACCEPTANCE",
+  "observedAt": "2026-08-16",
+  "result": {
+    "check": "ARCTOR_AI_A1_1_USAGE_OPERATION_KIND_SCHEMA_HOTFIX_V2",
+    "rlsChanged": false,
+    "constraintName": "ai_usage_events_operation_kind_allowed",
+    "dataRowsModified": 0,
+    "constraintValidated": true,
+    "invalidExistingRows": 0,
+    "preflightComparisonMode": "exact_set_not_array_order",
+    "browserPrivilegesChanged": false,
+    "contentLocalizationInConstraint": true
+  },
+  "rawUserTextIncluded": false,
+  "source": "live Supabase SQL Editor result supplied by project owner"
+}

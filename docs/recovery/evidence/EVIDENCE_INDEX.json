@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-16T09:48:26.074Z",
+  "generatedAt": "2026-08-16T11:13:23.587Z",
   "copiedCount": 57,
-  "generatedEvidenceCount": 13,
-  "indexedCount": 87,
+  "generatedEvidenceCount": 16,
+  "indexedCount": 90,
   "missingPatterns": [],
   "files": [
     {
@@ -603,6 +603,27 @@
       "sourceDownloadsName": null,
       "sha256": "c213fd982dc00fa34cecce1abbff73d403a91f94fe54745b119ceb29c33fba01",
       "origin": "AI_A1_1_EXECUTION_BOUNDARY_V1_4_release_evidence"
+    },
+    {
+      "group": "AI_A1_1",
+      "file": "docs/recovery/evidence/AI_A1_1/AI_A1_1_FAILURE_DIAGNOSTIC_V1_SANITIZED.json",
+      "sourceDownloadsName": null,
+      "sha256": "6b9527bcf5e51973c9f30c3a56fa417c3050fc460baaf835867aa6af178c4c6e",
+      "origin": "AI_A1_1_live_failure_diagnostic_sanitized"
+    },
+    {
+      "group": "AI_A1_1",
+      "file": "docs/recovery/evidence/AI_A1_1/AI_A1_1_USAGE_OPERATION_KIND_SCHEMA_HOTFIX_V2_LIVE_ACCEPTANCE.json",
+      "sourceDownloadsName": null,
+      "sha256": "24a84475e85eb93389a725a7ec8d81ba807ce437dc9159c8ed819bb7f7c1cf99",
+      "origin": "AI_A1_1_schema_hotfix_live_acceptance"
+    },
+    {
+      "group": "AI_A1_1",
+      "file": "docs/recovery/evidence/AI_A1_1/AI_A1_1_EXECUTION_BOUNDARY_FINAL_LIVE_ACCEPTANCE.json",
+      "sourceDownloadsName": null,
+      "sha256": "ace1090b48d6e78a9b5709301f68c138138d1b2a2cd03da13f7066e88145382d",
+      "origin": "AI_A1_1_final_runtime_live_acceptance"
     }
   ]
 }

@@ -1,11 +1,11 @@
 {
   "schemaVersion": 7,
-  "generatedAt": "2026-08-16T09:48:26.073Z",
+  "generatedAt": "2026-08-16T11:13:23.585Z",
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
-  "branch": "feat/ai-a1-1-execution-boundary-v1-4-20260816",
-  "originMainAtCheckpoint": "8cb42946b4813c9649c554e729e547b90280c723",
-  "checkpointMeaning": "AI-A1.1 separates semantic intake and content localization into distinct AI executions with exact Context Manifest and usage provenance.",
+  "branch": "feat/ai-a1-1-closeout-v1-20260816",
+  "originMainAtCheckpoint": "da8d9af06a89ee76c88d60a8215445b50a645ec9",
+  "checkpointMeaning": "AI-A1/A1.1 production closure: deterministic Runtime Context Compiler provenance plus separate localization execution and schema registry support.",
   "globalReality": {
     "p8Blocked": true,
     "objectsTotal": 150,
@@ -35,7 +35,8 @@
     "supabase/manual-applied/20260812_ai_a1_context_manifest_foundation_v1.sql",
     "supabase/manual-applied/20260813_ai_a2_p1_recognition_foundation_v1.sql",
     "supabase/manual-applied/20260813_ai_a3_p1_data_capital_foundation_v2.sql",
-    "supabase/manual-applied/20260813_ai_a3_p5a_global_fact_writer_rowtype_hotfix_v3.sql"
+    "supabase/manual-applied/20260813_ai_a3_p5a_global_fact_writer_rowtype_hotfix_v3.sql",
+    "supabase/manual-applied/20260816_ai_a1_1_usage_operation_kind_schema_hotfix_v2.sql"
   ],
   "goldStatus": {
     "passed": [
@@ -51,7 +52,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Run live AI-A1.1 execution-boundary postcheck; if PASS close AI-A1 and continue AI-A3 Data Capital full contract.",
+  "nextAction": "Begin AI-A3 Data Capital full contract: corrections/preferences/capability requests/outcomes plus minimal rights/provenance boundary.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -61,8 +62,8 @@
     "docs/recovery/evidence/EVIDENCE_INDEX.json"
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
-  "previousRecoveryCommit": "8cb42946b4813c9649c554e729e547b90280c723",
-  "documentedState": "AI_A1_1_EXECUTION_BOUNDARY_CODE_RELEASED_AWAITING_LIVE_ACCEPTANCE",
+  "previousRecoveryCommit": "da8d9af06a89ee76c88d60a8215445b50a645ec9",
+  "documentedState": "AI_A0_A1_A1_1_CLOSED_AI_A3_DATA_CAPITAL_NEXT",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -168,7 +169,7 @@
     "rawLiveDbExportRequiredForCheckpoint": false
   },
   "aiArchitecture": {
-    "status": "AI_A1_1_EXECUTION_BOUNDARY_CODE_RELEASED_AWAITING_LIVE_ACCEPTANCE",
+    "status": "AI_A0_A1_A1_1_CLOSED",
     "sourceBaseline": "07e5b82d8e9c9ee22c995bfb64297e685fefe918",
     "architectureLock": "docs/reality-core/ARCTOR_AI_ARCHITECTURE_LOCK_V1_RU.md",
     "storageAudit": "docs/recovery/specs/ARCTOR_AI_A0_REUSE_ALTER_CREATE_V1_RU.md",
@@ -180,7 +181,7 @@
     "providerStore": false,
     "automaticProviderRetries": 0,
     "maxProviderCalls": 2,
-    "nextBlock": "AI_A1_1_LIVE_ACCEPTANCE_THEN_AI_A3_DATA_CAPITAL_FULL_CONTRACT",
+    "nextBlock": "AI_A3_DATA_CAPITAL_FULL_CONTRACT",
     "localizedContentFoundation": "V1_ACTIVITY_ADAPTER_RELEASED_AWAITING_LIVE_ACCEPTANCE",
     "runtimeContextCompiler": {
       "version": "ARCTOR_RUNTIME_CONTEXT_PACK_V1",
@@ -220,6 +221,33 @@
       "providerUsageFinalizedBeforeDeterministicValidation": true,
       "providerStore": false,
       "automaticProviderRetries": 0
+    },
+    "liveAcceptance": "18/18 PASS",
+    "runtimeContextCompilerStatus": "CLOSED",
+    "contextManifestStatus": "CLOSED",
+    "executionBoundaryStatus": "CLOSED",
+    "semanticExecutionAcceptance": {
+      "manifests": 2,
+      "usageEvents": 2,
+      "validated": true,
+      "completed": true
+    },
+    "localizationExecutionAcceptance": {
+      "manifests": 1,
+      "usageEvents": 1,
+      "validated": true,
+      "completed": true,
+      "actorGuidanceDisabled": true
+    },
+    "maxProviderCallsPerSemanticExecution": 2,
+    "maxProviderCallsPerLocalizationExecution": 1,
+    "maxProviderCallsPerQuickCaptureOperation": 3,
+    "operationKindSchemaHotfix": {
+      "path": "supabase/manual-applied/20260816_ai_a1_1_usage_operation_kind_schema_hotfix_v2.sql",
+      "liveAcceptance": "PASS",
+      "dataRowsModified": 0,
+      "rlsChanged": false,
+      "browserPrivilegesChanged": false
     }
   },
   "gsr1lImplementation": {

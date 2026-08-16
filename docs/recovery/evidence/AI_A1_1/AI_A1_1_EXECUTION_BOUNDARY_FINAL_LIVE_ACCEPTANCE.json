@@ -1,0 +1,49 @@
+{
+  "contract": "ARCTOR_AI_A1_1_EXECUTION_BOUNDARY_FINAL_LIVE_ACCEPTANCE",
+  "observedAt": "2026-08-16",
+  "postcheckContract": "ARCTOR_AI_A1_1_EXECUTION_BOUNDARY_POSTCHECK_V1",
+  "acceptance": {
+    "semanticCompleted": true,
+    "semanticStoreFalse": true,
+    "semanticZeroRetries": true,
+    "localizationCompleted": true,
+    "localizationStoreFalse": true,
+    "semanticUsageCompleted": true,
+    "localizationZeroRetries": true,
+    "semanticHasTwoUsageEvents": true,
+    "localizationUsageCompleted": true,
+    "localizationHasOneUsageEvent": true,
+    "semanticHasExactlyTwoManifests": true,
+    "localizationActorPolicyDisabled": true,
+    "semanticManifestUsageLinksExact": true,
+    "semanticHasTwoValidatedManifests": true,
+    "localizationHasExactlyOneManifest": true,
+    "localizationManifestUsageLinkExact": true,
+    "localizationActorGuidanceNotApplied": true,
+    "localizationHasOneValidatedManifest": true
+  },
+  "semanticExecution": {
+    "status": "completed",
+    "surfaceCode": "global_observation_preview",
+    "operationKind": "activity_semantic_intake",
+    "manifestCount": 2,
+    "usageEventCount": 2,
+    "validatedManifestCount": 2,
+    "manifestLinkedUsageCount": 2
+  },
+  "localizationExecution": {
+    "status": "completed",
+    "surfaceCode": "content_localization",
+    "operationKind": "content_localization",
+    "manifestCount": 1,
+    "usageEventCount": 1,
+    "actorPolicyDisabled": true,
+    "validatedManifestCount": 1,
+    "actorGuidanceNotApplied": true,
+    "manifestLinkedUsageCount": 1,
+    "parentSemanticExecutionRole": "lineage_only"
+  },
+  "allAcceptanceFlagsTrue": true,
+  "rawUserTextIncluded": false,
+  "source": "live read-only production postcheck supplied by project owner"
+}

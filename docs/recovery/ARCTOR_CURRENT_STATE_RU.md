@@ -554,3 +554,28 @@ Runtime Context Compiler V1 добавлен как единая серверн�
 ## AI_A1_1_EXECUTION_BOUNDARY_HOTFIX_V1_3 — 2026-08-16
 
 Live AI-A1 acceptance обнаружил execution-boundary defect: semantic analysis имел 2 validated Context Manifest, но последующая локализация activity ошибочно записывала третий ai_usage_event в уже завершённый semantic execution. Hotfix выделяет content_localization в отдельный ai_analysis_execution с собственными Context Pack, Context Manifest и usage event; semantic execution остаётся 2 manifests / 2 usage. Персональные actor-инструкции для перевода отключены, чтобы пользовательские правила не меняли смысл исходного текста. Код выпущен только после production tsc/eslint/build; следующий шаг — новый live postcheck.
+
+## AI-A1 / AI-A1.1 — CLOSED, 2026-08-16
+
+Финальный production postcheck AI-A1.1 прошёл полностью.
+
+Зафиксировано:
+
+- semantic execution: completed, 2 validated Context Manifest, 2 linked usage events;
+- content_localization: отдельный completed execution, 1 validated Context Manifest, 1 linked usage event;
+- parent semantic execution используется только как lineage;
+- actor-specific guidance для локализации отключено;
+- provider store=false;
+- automatic retries=0;
+- все 18 acceptance-флагов финального read-only postcheck=true.
+
+Live acceptance также обнаружил и закрыл schema gap: ai_usage_events_operation_kind_allowed не содержал content_localization. В production вручную применён additive schema hotfix supabase/manual-applied/20260816_ai_a1_1_usage_operation_kind_schema_hotfix_v2.sql. Он изменил только CHECK registry, не менял data rows, RLS или browser privileges.
+
+Статус:
+
+- AI-A0 Storage Audit — CLOSED.
+- AI-A1 Context Manifest — CLOSED.
+- AI-A1 Runtime Context Compiler — CLOSED.
+- AI-A1.1 Execution Boundary — CLOSED.
+
+Следующий архитектурный блок: AI-A3 Data Capital — полный контракт семантического капитала. Бардак ручного authoring ЦО/ОН остаётся отдельным отложенным UI/ontology debt и не должен расширять AI-A3 scope.

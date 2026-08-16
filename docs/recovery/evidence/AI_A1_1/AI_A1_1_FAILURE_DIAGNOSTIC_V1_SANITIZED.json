@@ -1,0 +1,14 @@
+{
+  "contract": "ARCTOR_AI_A1_1_FAILURE_DIAGNOSTIC_V1_SANITIZED",
+  "observedAt": "2026-08-16",
+  "classification": "DURABLE_WARNING_EXACT",
+  "exactReason": "CONTENT_LOCALIZATION_USAGE_PREFLIGHT_LOG_FAILED:new row for relation \"ai_usage_events\" violates check constraint \"ai_usage_events_operation_kind_allowed\"",
+  "semanticUsageEvents": 2,
+  "localizationUsageEvents": 0,
+  "localizationManifests": 0,
+  "parentOperationBudgetReservations": 3,
+  "rootCause": "legacy ai_usage_events_operation_kind_allowed registry omitted content_localization",
+  "resolution": "20260816_ai_a1_1_usage_operation_kind_schema_hotfix_v2.sql",
+  "rawUserTextIncluded": false,
+  "secretsIncluded": false
+}

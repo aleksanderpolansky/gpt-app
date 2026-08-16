@@ -568,3 +568,25 @@ Live P5B acceptance: Facts page showed `31 minute`, the linked `Ходьба` ch
 ## AI_A1_1_EXECUTION_BOUNDARY_HOTFIX_V1_3 — решение и урок
 
 Нельзя исправлять AI-A1 простым analysis_execution_id=null для локализации и нельзя ослаблять runtime postcheck с «ровно 2 usage» до «не меньше 2». Каждый реальный provider-вызов должен принадлежать собственной логической AI-операции и иметь воспроизводимый Context Manifest. parentSemanticExecutionId хранится только как lineage. Отдельно зафиксировано правило: provider usage/cost финализируется сразу после успешного provider response, до детерминированной проверки результата; ошибка валидации не должна ложно превращать успешный и оплаченный provider call в openai_failed.
+
+## AI-A1.1 — execution boundary, schema registry и уроки live acceptance
+
+### Найденные дефекты
+
+Первый live AI-A1 postcheck показал третий usage event внутри уже завершённого semantic execution. Причина: последующая локализация activity наследовала analysisExecutionId семантического разбора.
+
+Исправление: content_localization получает собственный ai_analysis_execution, собственные Context Pack / Context Manifest / usage event. Semantic execution остаётся 2 manifests / 2 usage. Родительский semantic execution хранится только как lineage.
+
+После этого локализация всё ещё падала до provider call. Read-only diagnostic установил точную причину: legacy CHECK ai_usage_events_operation_kind_allowed не разрешал operation_kind=content_localization.
+
+Схема была расширена только новым машинным значением content_localization. Не использовать other как обход: это разрушило бы provenance.
+
+### Ошибка release SQL V1
+
+Первый SQL preflight ошибочно сравнивал извлечённый массив допустимых значений с ручным массивом по порядку. PostgreSQL pg_get_constraintdef представил тот же CHECK как = ANY (ARRAY[...]), а порядок после обработки отличался.
+
+V2 сравнивает точное множество значений взаимными @> и <@. Любое неизвестное значение остаётся fail-closed.
+
+### Методологический вывод
+
+Live acceptance обязан проверять не только функциональный результат для пользователя, но и provenance каждого provider call. Схемные enum/check registries являются частью AI runtime contract и должны эволюционировать вместе с новыми operation kinds.

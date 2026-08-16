@@ -335,3 +335,34 @@ Baseline: `f661ea575d6864092782b2143ddd2f32a2f7d0b0`.
 ## AI_A1_1_EXECUTION_BOUNDARY_HOTFIX_V1_3 — восстановление
 
 Проверить scripts/validate-ai-a1-1-localization-execution-boundary-v1.mjs и supabase/diagnostics/20260816_ai_a1_1_localization_execution_boundary_postcheck_READONLY.sql. contentLocalization.server.ts должен создавать surface_code=content_localization / operation_kind=content_localization, связывать usage только со своим localizationExecutionId и хранить parentSemanticExecutionId только в metadata/context lineage. После одного нового Quick Capture postcheck обязан показать semantic: exactly 2 manifests + 2 usage; localization: exactly 1 manifest + 1 usage; обе операции completed, store=false, retries=0.
+
+## AI-A1 final restore point — 2026-08-16
+
+AI-A1 и AI-A1.1 закрыты production evidence.
+
+Обязательно присутствуют:
+
+- lib/ai/contextManifest.ts;
+- src/lib/ai/runtimeContextCompiler.server.ts;
+- scripts/validate-ai-a1-context-manifest-v1.mjs;
+- scripts/validate-ai-a1-runtime-context-compiler-v1.mjs;
+- scripts/validate-ai-a1-1-localization-execution-boundary-v1.mjs;
+- supabase/manual-applied/20260812_ai_a1_context_manifest_foundation_v1.sql;
+- supabase/manual-applied/20260816_ai_a1_1_usage_operation_kind_schema_hotfix_v2.sql;
+- supabase/diagnostics/20260816_ai_a1_1_localization_execution_boundary_postcheck_READONLY.sql.
+
+Live schema invariant:
+
+ai_usage_events_operation_kind_allowed разрешает как минимум chat_message, activity_preview, semantic_intake, admin_test, other и content_localization.
+
+Финальный runtime invariant:
+
+- activity_semantic_intake -> 2 validated manifests + 2 linked usage events;
+- content_localization -> отдельный completed execution -> 1 validated manifest + 1 linked usage event;
+- parent semantic execution = lineage only;
+- localization actor guidance disabled;
+- store=false, retries=0.
+
+Не откатывать schema hotfix после появления content_localization usage rows: rollback SQL специально блокируется при наличии таких строк.
+
+После восстановления следующий AI-архитектурный блок — AI-A3 Data Capital full contract.
