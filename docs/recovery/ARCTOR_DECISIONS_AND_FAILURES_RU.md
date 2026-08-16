@@ -560,3 +560,7 @@ Live P5B acceptance: Facts page showed `31 minute`, the linked `Ходьба` ch
 ## 2026-08-15 — Authoring должен использовать P1C как единственный ontology write path
 
 Решение: не достраивать старый прямой INSERT в value_objects новыми колонками. Root/intermediate/leaf authoring обязан вызывать create_value_object_ontology_v1, чтобы definition version, canonical identity, root pointer, facet/kind/node role и guards создавались атомарно одним уже проверенным контрактом. Старые личные ручные тестовые объекты пользователя являются disposable test data; release-cleanup допускается только для private/manual/pre-ontology строк конкретного owner, определённого через известный тестовый объект 13d59cef-e45f-49c2-8557-7732b74e2de3, и только если нет внешних activity/fact/relation/parameter/tree ссылок. GLOBAL и коммерческие объекты исключены.
+
+## AI_A1_RUNTIME_CONTEXT_COMPILER_V1 — решение
+
+Запрещено собирать Context Manifest отдельно от фактического provider context: это создаёт drift между тем, что получила модель, и тем, что ARCTor считает воспроизводимым контекстом. Runtime Context Compiler становится обязательным bottleneck для интегрированных стадий. Персональные инструкции остаются untrusted user guidance и не повышаются до системной роли. До AI-A4 права по умолчанию ограничены purpose=service_delivery; training/research/export=false.

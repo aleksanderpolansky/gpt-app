@@ -1,11 +1,11 @@
 {
   "schemaVersion": 7,
-  "generatedAt": "2026-08-14T18:21:19.919Z",
+  "generatedAt": "2026-08-16T08:09:16.105Z",
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
-  "branch": "feat/vo-authoring-ontology-bridge-v1-20260815",
-  "originMainAtCheckpoint": "6e9052d82ae6af4c727c0ca56f44c408214fd062",
-  "checkpointMeaning": "Value Object authoring uses P1C ontology runtime; legacy private pre-ontology test rows cleaned only after guarded preflight.",
+  "branch": "feat/ai-a1-runtime-context-compiler-v1-retry-v3-20260816",
+  "originMainAtCheckpoint": "f53db5374244722bc5fade4fd561265981759309",
+  "checkpointMeaning": "Runtime Context Compiler V1 compiles exact AI context once and reuses it for budget, manifest and provider call; ARCTor owns reproducible context.",
   "globalReality": {
     "p8Blocked": true,
     "objectsTotal": 150,
@@ -51,7 +51,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Live root -> leaf -> parameter -> target acceptance, then Runtime Context Compiler.",
+  "nextAction": "Live Runtime Context Manifest acceptance, then AI-A3 Data Capital full contract.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -61,8 +61,8 @@
     "docs/recovery/evidence/EVIDENCE_INDEX.json"
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
-  "previousRecoveryCommit": "67911e88c54c1af9461941c50f61b08e84ea70aa",
-  "documentedState": "VALUE_OBJECT_AUTHORING_ONTOLOGY_BRIDGE_HOTFIX_V1_5",
+  "previousRecoveryCommit": "f53db5374244722bc5fade4fd561265981759309",
+  "documentedState": "AI_A1_RUNTIME_CONTEXT_COMPILER_V1",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -168,7 +168,7 @@
     "rawLiveDbExportRequiredForCheckpoint": false
   },
   "aiArchitecture": {
-    "status": "AI_A3_P5C_REVIEW_REFINEMENTS_CODE_RELEASED_AWAITING_LIVE_ACCEPTANCE",
+    "status": "AI_A1_RUNTIME_CONTEXT_COMPILER_V1_CODE_RELEASED_AWAITING_LIVE_ACCEPTANCE",
     "sourceBaseline": "07e5b82d8e9c9ee22c995bfb64297e685fefe918",
     "architectureLock": "docs/reality-core/ARCTOR_AI_ARCHITECTURE_LOCK_V1_RU.md",
     "storageAudit": "docs/recovery/specs/ARCTOR_AI_A0_REUSE_ALTER_CREATE_V1_RU.md",
@@ -180,8 +180,31 @@
     "providerStore": false,
     "automaticProviderRetries": 0,
     "maxProviderCalls": 2,
-    "nextBlock": "AI_A3_P3_DIRECT_SAVE_PRODUCTION_ACCEPTANCE",
-    "localizedContentFoundation": "V1_ACTIVITY_ADAPTER_RELEASED_AWAITING_LIVE_ACCEPTANCE"
+    "nextBlock": "AI_A1_RUNTIME_CONTEXT_COMPILER_LIVE_ACCEPTANCE_THEN_AI_A3_DATA_CAPITAL_FULL_CONTRACT",
+    "localizedContentFoundation": "V1_ACTIVITY_ADAPTER_RELEASED_AWAITING_LIVE_ACCEPTANCE",
+    "runtimeContextCompiler": {
+      "version": "ARCTOR_RUNTIME_CONTEXT_PACK_V1",
+      "storage": "public.ai_context_manifests",
+      "exactContextReuse": [
+        "budget_estimate",
+        "context_manifest",
+        "provider_call"
+      ],
+      "systemInstructionResolution": "db_active_plus_immutable_guard",
+      "actorInstructionTrust": "untrusted_user_guidance",
+      "actorContext": [
+        "app_user_id",
+        "actor_id",
+        "locale",
+        "timezone"
+      ],
+      "boundedCandidateArraysMax": 20,
+      "dataUseDefault": "service_delivery_only_until_ai_a4",
+      "trainingAllowed": false,
+      "researchAllowed": false,
+      "exportAllowed": false,
+      "rawInputDuplicatedInManifest": false
+    }
   },
   "gsr1lImplementation": {
     "status": "AI_A2_P3_CODE_RELEASED_AWAITING_LIVE_RUNTIME",

@@ -546,3 +546,7 @@ P5B live UI acceptance confirmed mutual links on /activity-facts and /activity-t
 - Родителем нового intermediate/leaf может быть только ontology-ready actor-owned root/intermediate.
 - Старые личные ручные pre-ontology тестовые ЦО текущего владельца разрешено удалить только отдельным release-cleanup после read-only preflight; GLOBAL, system_model, commercial и связанные объекты не являются кандидатами.
 - Следующий live acceptance: создать новый root, убедиться в отсутствии P1C/P2D NOT_ONTOLOGY_READY, создать leaf и назначить ему параметр/target.
+
+## AI_A1_RUNTIME_CONTEXT_COMPILER_V1 — 2026-08-15
+
+Runtime Context Compiler V1 добавлен как единая серверная сборка контекста для значимых AI-стадий Global Reality pilot. Компилятор связывает immutable guard, активные системные инструкции, персональную инструкцию как недоверенное пользовательское руководство, actor/locale/timezone, bounded retrieval snapshot, tool permissions, protocol/schema hashes и service-delivery-only data-use snapshot. Тот же скомпилированный system prompt и request payload используются для budget estimate, Context Manifest и provider call. Новая таблица не создаётся: переиспользуется public.ai_context_manifests.

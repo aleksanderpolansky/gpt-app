@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-15T09:11:40.575Z",
+  "generatedAt": "2026-08-16T08:09:16.107Z",
   "copiedCount": 57,
-  "generatedEvidenceCount": 11,
-  "indexedCount": 85,
+  "generatedEvidenceCount": 12,
+  "indexedCount": 86,
   "missingPatterns": [],
   "files": [
     {
@@ -589,6 +589,13 @@
       "sourceDownloadsName": null,
       "sha256": "1d5c6184701bb003fbba933325edeaa15f21c1b55359961896e57aed168cce06",
       "origin": "generated_precommit_verification"
+    },
+    {
+      "group": "AI_A1_RUNTIME_CONTEXT_COMPILER",
+      "file": "docs/recovery/evidence/AI_A1_RUNTIME_CONTEXT_COMPILER/AI_A1_RUNTIME_CONTEXT_COMPILER_V1_EVIDENCE.txt",
+      "sourceDownloadsName": null,
+      "sha256": "911c58d66eca2dc1137e6fd349574b2b12269bd13a3a0081a9ad8b511d4f4a7e",
+      "origin": "AI_A1_RUNTIME_CONTEXT_COMPILER_V1_release_evidence"
     }
   ]
 }

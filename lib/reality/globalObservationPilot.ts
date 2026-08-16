@@ -14,6 +14,7 @@ import {
   markAiContextManifestProviderCompleted,
   markAiContextManifestValidated,
 } from "../ai/contextManifest";
+import { compileRuntimeContextPackV1 } from "../../src/lib/ai/runtimeContextCompiler.server";
 import {
   RECOGNITION_CANDIDATE_CONTRACT_VERSION,
   RECOGNITION_CANDIDATE_LIMIT,
@@ -1540,6 +1541,9 @@ async function markUsageFailed(input: {
 
 async function runBudgetedJsonCall<T>(input: {
   appUserId: string;
+  actorId: string;
+  locale: string;
+  timeZone: string;
   analysisExecutionId: string;
   operationId: string;
   stage: string;
@@ -1557,9 +1561,41 @@ async function runBudgetedJsonCall<T>(input: {
   contextMetadata?: JsonRecord;
   signal: AbortSignal;
 }): Promise<BudgetedCallResult<T>> {
+  const compiledContext = await compileRuntimeContextPackV1({
+    appUserId: input.appUserId,
+    actorId: input.actorId,
+    runtimeCode: "activity_semantic_preview",
+    locale: input.locale,
+    timeZone: input.timeZone,
+    stageCode: input.stage,
+    stageSequence: input.stageSequence,
+    protocolCode: input.protocolCode,
+    protocolVersion: input.protocolVersion,
+    schemaName: input.schemaName,
+    schemaVersion: "v2",
+    schema: input.schema,
+    provider: "openai",
+    modelName: input.model,
+    modelTier: PILOT_MODEL_TIER,
+    storeProviderState: false,
+    maxRetries: 0,
+    maxOutputTokens: input.maxOutputTokens,
+    modelConfig: {
+      reasoningEffort: "none",
+      requestTimeoutMs: PROVIDER_CALL_TIMEOUT_MS,
+      outputTokenCeiling: PILOT_OUTPUT_TOKEN_CEILING,
+    },
+    embeddedSystemPrompt: input.system,
+    requestPayload: input.user,
+    retrievalSnapshot: input.retrievalSnapshot,
+    embeddedInstructionRefs: input.instructionRefs,
+    toolPermissions: [],
+    contextMetadata: input.contextMetadata,
+  });
+
   const estimatedInputTokens = estimateInputTokensUpperBound({
-    system: input.system,
-    user: input.user,
+    system: compiledContext.systemPrompt,
+    user: compiledContext.requestPayload,
     schema: input.schema,
   });
 
@@ -1607,23 +1643,23 @@ async function runBudgetedJsonCall<T>(input: {
       schemaName: input.schemaName,
       schemaVersion: "v2",
       schema: input.schema,
-      systemPrompt: input.system,
-      requestPayload: input.user,
+      systemPrompt: compiledContext.systemPrompt,
+      requestPayload: compiledContext.requestPayload,
       provider: "openai",
       modelName: input.model,
       modelTier: PILOT_MODEL_TIER,
       storeProviderState: false,
       maxRetries: 0,
       maxOutputTokens: input.maxOutputTokens,
-      instructionRefs: input.instructionRefs,
-      retrievalSnapshot: input.retrievalSnapshot,
-      toolPermissions: [],
+      instructionRefs: compiledContext.instructionRefs,
+      retrievalSnapshot: compiledContext.retrievalSnapshot,
+      toolPermissions: compiledContext.toolPermissions,
       modelConfig: {
         reasoningEffort: "none",
         requestTimeoutMs: PROVIDER_CALL_TIMEOUT_MS,
         outputTokenCeiling: PILOT_OUTPUT_TOKEN_CEILING,
       },
-      contextMetadata: input.contextMetadata,
+      contextMetadata: compiledContext.contextMetadata,
     });
   } catch (error) {
     await markUsageFailed({ usageEventId, error });
@@ -1632,8 +1668,8 @@ async function runBudgetedJsonCall<T>(input: {
 
   try {
     const result = await runAiJsonWithUsageMetadata<T>({
-      system: input.system,
-      user: input.user,
+      system: compiledContext.systemPrompt,
+      user: compiledContext.requestPayload,
       model: input.model,
       maxOutputTokens: input.maxOutputTokens,
       outputTokenCeiling: PILOT_OUTPUT_TOKEN_CEILING,
@@ -2137,6 +2173,9 @@ export async function runGlobalObservationPreview(
 
     const routingCall = await runBudgetedJsonCall<RoutingOutput>({
       appUserId: request.appUserId,
+      actorId: request.actorId,
+      locale,
+      timeZone,
       analysisExecutionId,
       operationId: request.operationId,
       stage: "domain_facet_routing",
@@ -2165,7 +2204,7 @@ export async function runGlobalObservationPreview(
         },
       ],
       contextMetadata: {
-        operationalInstructionLayerApplied: false,
+        operationalInstructionLayerApplied: true,
         rawInputPersistedInManifest: false,
       },
       signal: controller.signal,
@@ -2232,6 +2271,9 @@ export async function runGlobalObservationPreview(
 
     const selectionCall = await runBudgetedJsonCall<SelectionOutput>({
       appUserId: request.appUserId,
+      actorId: request.actorId,
+      locale,
+      timeZone,
       analysisExecutionId,
       operationId: request.operationId,
       stage: "leaf_parameter_selection",
@@ -2278,7 +2320,7 @@ export async function runGlobalObservationPreview(
         },
       ],
       contextMetadata: {
-        operationalInstructionLayerApplied: false,
+        operationalInstructionLayerApplied: true,
         rawInputPersistedInManifest: false,
       },
       signal: controller.signal,

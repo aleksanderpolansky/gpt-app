@@ -327,3 +327,7 @@ Baseline: `f661ea575d6864092782b2143ddd2f32a2f7d0b0`.
 ## Checkpoint: VALUE_OBJECT_AUTHORING_ONTOLOGY_BRIDGE_HOTFIX_V1_5
 
 Если контекст потерян: P5C закрыт предыдущим checkpoint. Затем обнаружен дефект ручного создания ЦО: legacy root_draft_v3 создавал structural row без P1C ontology identity, из-за чего full card показывала P1C/P2D NOT_ONTOLOGY_READY и дочерний authoring исчезал. Исправление этого checkpoint переводит root/intermediate/leaf creation на create_value_object_ontology_v1 и удаляет только подтверждённые несвязанные private/manual/pre-ontology тестовые строки текущего владельца. После live acceptance продолжить с полным Runtime Context Compiler.
+
+## AI_A1_RUNTIME_CONTEXT_COMPILER_V1 — восстановление
+
+Проверить наличие src/lib/ai/runtimeContextCompiler.server.ts и scripts/validate-ai-a1-runtime-context-compiler-v1.mjs. Выполнить node scripts/validate-ai-a1-runtime-context-compiler-v1.mjs и node scripts/validate-ai-a1-context-manifest-v1.mjs. В lib/reality/globalObservationPilot.ts budget estimate, createAiContextManifest и runAiJsonWithUsageMetadata должны использовать один compiledContext. Таблица public.ai_context_manifests остаётся исходной AI-A1 таблицей; отдельное хранилище Runtime Context не создавать.
