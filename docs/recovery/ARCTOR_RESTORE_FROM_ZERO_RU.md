@@ -331,3 +331,7 @@ Baseline: `f661ea575d6864092782b2143ddd2f32a2f7d0b0`.
 ## AI_A1_RUNTIME_CONTEXT_COMPILER_V1 — восстановление
 
 Проверить наличие src/lib/ai/runtimeContextCompiler.server.ts и scripts/validate-ai-a1-runtime-context-compiler-v1.mjs. Выполнить node scripts/validate-ai-a1-runtime-context-compiler-v1.mjs и node scripts/validate-ai-a1-context-manifest-v1.mjs. В lib/reality/globalObservationPilot.ts budget estimate, createAiContextManifest и runAiJsonWithUsageMetadata должны использовать один compiledContext. Таблица public.ai_context_manifests остаётся исходной AI-A1 таблицей; отдельное хранилище Runtime Context не создавать.
+
+## AI_A1_1_EXECUTION_BOUNDARY_HOTFIX_V1_3 — восстановление
+
+Проверить scripts/validate-ai-a1-1-localization-execution-boundary-v1.mjs и supabase/diagnostics/20260816_ai_a1_1_localization_execution_boundary_postcheck_READONLY.sql. contentLocalization.server.ts должен создавать surface_code=content_localization / operation_kind=content_localization, связывать usage только со своим localizationExecutionId и хранить parentSemanticExecutionId только в metadata/context lineage. После одного нового Quick Capture postcheck обязан показать semantic: exactly 2 manifests + 2 usage; localization: exactly 1 manifest + 1 usage; обе операции completed, store=false, retries=0.

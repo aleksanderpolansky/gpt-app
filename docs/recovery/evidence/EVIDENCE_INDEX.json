@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-16T08:09:16.107Z",
+  "generatedAt": "2026-08-16T09:48:26.074Z",
   "copiedCount": 57,
-  "generatedEvidenceCount": 12,
-  "indexedCount": 86,
+  "generatedEvidenceCount": 13,
+  "indexedCount": 87,
   "missingPatterns": [],
   "files": [
     {
@@ -596,6 +596,13 @@
       "sourceDownloadsName": null,
       "sha256": "911c58d66eca2dc1137e6fd349574b2b12269bd13a3a0081a9ad8b511d4f4a7e",
       "origin": "AI_A1_RUNTIME_CONTEXT_COMPILER_V1_release_evidence"
+    },
+    {
+      "group": "AI_A1_1_EXECUTION_BOUNDARY",
+      "file": "docs/recovery/evidence/AI_A1_1_EXECUTION_BOUNDARY/AI_A1_1_EXECUTION_BOUNDARY_V1_4_EVIDENCE.txt",
+      "sourceDownloadsName": null,
+      "sha256": "c213fd982dc00fa34cecce1abbff73d403a91f94fe54745b119ceb29c33fba01",
+      "origin": "AI_A1_1_EXECUTION_BOUNDARY_V1_4_release_evidence"
     }
   ]
 }

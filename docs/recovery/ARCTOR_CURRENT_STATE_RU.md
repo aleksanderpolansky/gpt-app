@@ -550,3 +550,7 @@ P5B live UI acceptance confirmed mutual links on /activity-facts and /activity-t
 ## AI_A1_RUNTIME_CONTEXT_COMPILER_V1 — 2026-08-15
 
 Runtime Context Compiler V1 добавлен как единая серверная сборка контекста для значимых AI-стадий Global Reality pilot. Компилятор связывает immutable guard, активные системные инструкции, персональную инструкцию как недоверенное пользовательское руководство, actor/locale/timezone, bounded retrieval snapshot, tool permissions, protocol/schema hashes и service-delivery-only data-use snapshot. Тот же скомпилированный system prompt и request payload используются для budget estimate, Context Manifest и provider call. Новая таблица не создаётся: переиспользуется public.ai_context_manifests.
+
+## AI_A1_1_EXECUTION_BOUNDARY_HOTFIX_V1_3 — 2026-08-16
+
+Live AI-A1 acceptance обнаружил execution-boundary defect: semantic analysis имел 2 validated Context Manifest, но последующая локализация activity ошибочно записывала третий ai_usage_event в уже завершённый semantic execution. Hotfix выделяет content_localization в отдельный ai_analysis_execution с собственными Context Pack, Context Manifest и usage event; semantic execution остаётся 2 manifests / 2 usage. Персональные actor-инструкции для перевода отключены, чтобы пользовательские правила не меняли смысл исходного текста. Код выпущен только после production tsc/eslint/build; следующий шаг — новый live postcheck.

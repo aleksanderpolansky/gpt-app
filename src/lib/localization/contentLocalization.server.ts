@@ -7,6 +7,16 @@ import {
 } from "../../../lib/ai/openaiClient";
 import { supabase } from "../../../lib/supabase";
 import {
+  completeAiAnalysisExecution,
+  createAiAnalysisExecution,
+  createAiContextManifest,
+  failAiAnalysisExecution,
+  markAiContextManifestFailed,
+  markAiContextManifestProviderCompleted,
+  markAiContextManifestValidated,
+} from "../../../lib/ai/contextManifest";
+import { compileRuntimeContextPackV1 } from "../ai/runtimeContextCompiler.server";
+import {
   ARCTOR_CONTENT_LOCALES,
   ARCTOR_LOCALIZED_CONTENT_SCHEMA_VERSION,
   normalizeContentLocale,
@@ -207,7 +217,7 @@ async function reserveBudget(input: {
 
 async function createUsageEvent(input: {
   userId: string;
-  analysisExecutionId: string | null;
+  analysisExecutionId: string;
   operationId: string;
   model: string;
   reservation: BudgetReservation;
@@ -222,7 +232,7 @@ async function createUsageEvent(input: {
       model_name: input.model,
       provider: "openai",
       route_path: ROUTE_PATH,
-      operation_kind: "semantic_intake",
+      operation_kind: "content_localization",
       input_tokens: input.estimatedInputTokens,
       cached_input_tokens: 0,
       output_tokens: 0,
@@ -280,7 +290,7 @@ async function finalizeUsageEvent(input: {
     priceSnapshotId: input.priceSnapshotId,
     usage: input.usage,
   });
-  await supabase
+  const { error } = await supabase
     .from("ai_usage_events")
     .update({
       input_tokens: input.usage.inputTokens,
@@ -297,6 +307,9 @@ async function finalizeUsageEvent(input: {
       completed_at: new Date().toISOString(),
     })
     .eq("id", input.usageEventId);
+  if (error) {
+    throw new Error(`CONTENT_LOCALIZATION_USAGE_FINALIZE_FAILED:${error.message}`);
+  }
 }
 
 async function markUsageFailed(usageEventId: string) {
@@ -304,8 +317,8 @@ async function markUsageFailed(usageEventId: string) {
     .from("ai_usage_events")
     .update({
       status: "openai_failed",
-      error_code: "CONTENT_LOCALIZATION_PROVIDER_FAILED",
-      error_message: "Content localization provider call failed; raw provider output is not stored here.",
+      error_code: "CONTENT_LOCALIZATION_STAGE_FAILED",
+      error_message: "Content localization AI stage failed; raw provider output is not stored here.",
       completed_at: new Date().toISOString(),
     })
     .eq("id", usageEventId);
@@ -352,6 +365,7 @@ function sanitizeTranslatedItem(input: {
 
 export async function generateLocalizedContentBatch(input: {
   userId: string;
+  actorId: string;
   analysisExecutionId?: string | null;
   operationId: string;
   sourceLocaleHint: unknown;
@@ -385,28 +399,135 @@ export async function generateLocalizedContentBatch(input: {
     items,
   };
   const schema = translationSchema();
-  const estimatedInputTokens = estimateInputTokensUpperBound({ system, user, schema });
-  if (estimatedInputTokens > MAX_ESTIMATED_INPUT_TOKENS) {
-    throw new Error(`CONTENT_LOCALIZATION_INPUT_TOKEN_LIMIT:${estimatedInputTokens}`);
-  }
-
   const model = await getNanoModel();
-  const reservation = await reserveBudget({
-    userId: input.userId,
-    operationId: input.operationId,
-    model,
-    estimatedInputTokens,
+  const localizationInputText = JSON.stringify({
+    sourceLocaleHint,
+    items,
+  }) ?? "{}";
+  const localizationExecutionId = await createAiAnalysisExecution({
+    appUserId: input.userId,
+    actorId: input.actorId,
+    surfaceCode: "content_localization",
+    operationKind: "content_localization",
+    localeCode: sourceLocaleHint,
+    timeZone: "UTC",
+    inputText: localizationInputText,
+    metadata: {
+      contract: ARCTOR_CONTENT_LOCALIZATION_RUNTIME,
+      parentSemanticExecutionId: input.analysisExecutionId ?? null,
+      parentOperationId: input.operationId,
+      sourceItemCount: items.length,
+      timeZoneSemanticallyRelevant: false,
+    },
   });
-  const usageEventId = await createUsageEvent({
-    userId: input.userId,
-    analysisExecutionId: input.analysisExecutionId ?? null,
-    operationId: input.operationId,
-    model,
-    reservation,
-    estimatedInputTokens,
-  });
+
+  let usageEventId: string | null = null;
+  let contextManifestId: string | null = null;
+  let usageFinalized = false;
+  let manifestValidated = false;
 
   try {
+    const compiledContext = await compileRuntimeContextPackV1({
+      appUserId: input.userId,
+      actorId: input.actorId,
+      runtimeCode: "content_localization",
+      locale: sourceLocaleHint,
+      timeZone: "UTC",
+      stageCode: "content_localization",
+      stageSequence: 1,
+      protocolCode: "ARCTOR_CONTENT_LOCALIZATION",
+      protocolVersion: "v1",
+      schemaName: "arctor_content_localization_v1",
+      schemaVersion: "v1",
+      schema,
+      provider: "openai",
+      modelName: model,
+      modelTier: MODEL_TIER,
+      storeProviderState: false,
+      maxRetries: 0,
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      modelConfig: {
+        reasoningEffort: "none",
+        requestTimeoutMs: REQUEST_TIMEOUT_MS,
+        outputTokenCeiling: MAX_OUTPUT_TOKENS,
+      },
+      embeddedSystemPrompt: system,
+      requestPayload: user,
+      retrievalSnapshot: {
+        sourceItemKeys: items.map((item) => item.key),
+        fieldCodesByItem: items.map((item) => ({
+          key: item.key,
+          fieldCodes: Object.keys(item.fields),
+        })),
+      },
+      embeddedInstructionRefs: [
+        {
+          kind: "embedded_runtime_instruction",
+          code: "CONTENT_LOCALIZATION_V1",
+          version: "v1",
+        },
+      ],
+      toolPermissions: [],
+      contextMetadata: {
+        parentSemanticExecutionId: input.analysisExecutionId ?? null,
+        parentOperationId: input.operationId,
+        localizationIsIndependentExecution: true,
+        rawInputPersistedInManifest: false,
+      },
+    });
+
+    const estimatedInputTokens = estimateInputTokensUpperBound({
+      system: compiledContext.systemPrompt,
+      user: compiledContext.requestPayload,
+      schema,
+    });
+    if (estimatedInputTokens > MAX_ESTIMATED_INPUT_TOKENS) {
+      throw new Error(`CONTENT_LOCALIZATION_INPUT_TOKEN_LIMIT:${estimatedInputTokens}`);
+    }
+
+    const reservation = await reserveBudget({
+      userId: input.userId,
+      operationId: input.operationId,
+      model,
+      estimatedInputTokens,
+    });
+    usageEventId = await createUsageEvent({
+      userId: input.userId,
+      analysisExecutionId: localizationExecutionId,
+      operationId: input.operationId,
+      model,
+      reservation,
+      estimatedInputTokens,
+    });
+    contextManifestId = await createAiContextManifest({
+      analysisExecutionId: localizationExecutionId,
+      stageCode: "content_localization",
+      stageSequence: 1,
+      aiUsageEventId: usageEventId,
+      protocolCode: "ARCTOR_CONTENT_LOCALIZATION",
+      protocolVersion: "v1",
+      schemaName: "arctor_content_localization_v1",
+      schemaVersion: "v1",
+      schema,
+      systemPrompt: compiledContext.systemPrompt,
+      requestPayload: compiledContext.requestPayload,
+      provider: "openai",
+      modelName: model,
+      modelTier: MODEL_TIER,
+      storeProviderState: false,
+      maxRetries: 0,
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      instructionRefs: compiledContext.instructionRefs,
+      retrievalSnapshot: compiledContext.retrievalSnapshot,
+      toolPermissions: compiledContext.toolPermissions,
+      modelConfig: {
+        reasoningEffort: "none",
+        requestTimeoutMs: REQUEST_TIMEOUT_MS,
+        outputTokenCeiling: MAX_OUTPUT_TOKENS,
+      },
+      contextMetadata: compiledContext.contextMetadata,
+    });
+
     const response = await runAiJsonWithUsageMetadata<TranslationOutput>({
       model,
       reasoningEffort: "none",
@@ -415,14 +536,26 @@ export async function generateLocalizedContentBatch(input: {
       maxOutputTokens: MAX_OUTPUT_TOKENS,
       outputTokenCeiling: MAX_OUTPUT_TOKENS,
       store: false,
-      system,
-      user,
+      system: compiledContext.systemPrompt,
+      user: compiledContext.requestPayload,
       structuredOutput: {
         name: "arctor_content_localization_v1",
         strict: true,
         schema,
       },
     });
+    await markAiContextManifestProviderCompleted(
+      contextManifestId,
+      response.outputText,
+    );
+
+    await finalizeUsageEvent({
+      usageEventId,
+      priceSnapshotId: reservation.priceSnapshotId,
+      usage: response.usage,
+    });
+    usageFinalized = true;
+
     const outputItems = Array.isArray(response.parsed?.items)
       ? (response.parsed.items as TranslationOutputItem[])
       : [];
@@ -461,14 +594,34 @@ export async function generateLocalizedContentBatch(input: {
         },
       });
     }
-    await finalizeUsageEvent({
-      usageEventId,
-      priceSnapshotId: reservation.priceSnapshotId,
-      usage: response.usage,
+
+    await markAiContextManifestValidated(contextManifestId, {
+      passed: true,
+      validator: "sanitizeTranslatedItem",
+      itemCount: items.length,
+      localizedFieldCount: items.reduce(
+        (sum, item) => sum + Object.keys(item.fields).length,
+        0,
+      ),
+      actorGuidanceApplied: false,
     });
-    return { envelopes, usage: response.usage, model };
+    manifestValidated = true;
+    await completeAiAnalysisExecution(localizationExecutionId);
+
+    return {
+      envelopes,
+      usage: response.usage,
+      model,
+      analysisExecutionId: localizationExecutionId,
+    };
   } catch (error) {
-    await markUsageFailed(usageEventId);
+    if (contextManifestId && !manifestValidated) {
+      await markAiContextManifestFailed(contextManifestId, error).catch(() => undefined);
+    }
+    if (usageEventId && !usageFinalized) {
+      await markUsageFailed(usageEventId);
+    }
+    await failAiAnalysisExecution(localizationExecutionId, error);
     throw error;
   }
 }
@@ -522,6 +675,7 @@ export async function ensureActivityEventLocalizations(input: {
 
   const generated = await generateLocalizedContentBatch({
     userId: input.userId,
+    actorId: input.actorId,
     analysisExecutionId: input.analysisExecutionId ?? null,
     operationId: input.operationId,
     sourceLocaleHint,

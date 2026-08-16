@@ -1,6 +1,7 @@
 import {
   AI_PROCESSING_INSTRUCTION_DEFINITIONS,
   immutableGuardForRuntime,
+  isActorGuidanceAllowedForRuntime,
   normalizeAiProcessingLocale,
   readActorProcessingResolution,
   readSystemInstructionResolution,
@@ -263,11 +264,21 @@ export async function compileRuntimeContextPackV1(
       readSystemInstructionResolution(definition.code, localeCode),
     ),
   );
-  const actorInstruction = await readActorProcessingResolution({
-    ownerUserId: appUserId,
-    ownerActorId: actorId,
-    localeCode,
-  });
+  const actorInstruction = isActorGuidanceAllowedForRuntime(input.runtimeCode)
+    ? await readActorProcessingResolution({
+        ownerUserId: appUserId,
+        ownerActorId: actorId,
+        localeCode,
+      })
+    : {
+        requestedLocale: localeCode,
+        text: null,
+        source: "none" as const,
+        sourceLocale: null,
+        preferenceId: null,
+        revision: null,
+        updatedAt: null,
+      };
 
   const immutableGuard = immutableGuardForRuntime(input.runtimeCode);
   const systemPrompt = [
@@ -395,6 +406,9 @@ export async function compileRuntimeContextPackV1(
         systemInstructionCount: systemInstructions.length,
         actorInstructionApplied: Boolean(actorInstruction.text),
         actorInstructionTrust: "untrusted_user_guidance",
+        actorInstructionPolicy: isActorGuidanceAllowedForRuntime(input.runtimeCode)
+          ? "untrusted_user_guidance_allowed"
+          : "disabled_for_runtime",
         dataUse,
       },
     },

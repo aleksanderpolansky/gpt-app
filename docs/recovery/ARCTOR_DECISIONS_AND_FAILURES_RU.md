@@ -564,3 +564,7 @@ Live P5B acceptance: Facts page showed `31 minute`, the linked `Ходьба` ch
 ## AI_A1_RUNTIME_CONTEXT_COMPILER_V1 — решение
 
 Запрещено собирать Context Manifest отдельно от фактического provider context: это создаёт drift между тем, что получила модель, и тем, что ARCTor считает воспроизводимым контекстом. Runtime Context Compiler становится обязательным bottleneck для интегрированных стадий. Персональные инструкции остаются untrusted user guidance и не повышаются до системной роли. До AI-A4 права по умолчанию ограничены purpose=service_delivery; training/research/export=false.
+
+## AI_A1_1_EXECUTION_BOUNDARY_HOTFIX_V1_3 — решение и урок
+
+Нельзя исправлять AI-A1 простым analysis_execution_id=null для локализации и нельзя ослаблять runtime postcheck с «ровно 2 usage» до «не меньше 2». Каждый реальный provider-вызов должен принадлежать собственной логической AI-операции и иметь воспроизводимый Context Manifest. parentSemanticExecutionId хранится только как lineage. Отдельно зафиксировано правило: provider usage/cost финализируется сразу после успешного provider response, до детерминированной проверки результата; ошибка валидации не должна ложно превращать успешный и оплаченный provider call в openai_failed.
