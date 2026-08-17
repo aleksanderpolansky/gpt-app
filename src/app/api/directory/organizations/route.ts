@@ -6,6 +6,7 @@ import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
+// DIRECTORY_QUERY_PERFORMANCE_V2: keep the primary organizations query lean; hydrate list-only relations in parallel.
 
 type DirectoryActionFilter =
   | "all"
@@ -72,6 +73,26 @@ type RelatedStats = {
   offer_clicks_count: number | null;
   certificate_clicks_count: number | null;
   purchase_registration_clicks_count: number | null;
+};
+
+type DirectoryLegacyCategoryRow = {
+  organization_id: string;
+  is_primary: boolean | null;
+  business_categories: RelatedCategory["business_categories"];
+};
+
+type DirectoryLocationRow = RelatedLocation & {
+  organization_id: string;
+};
+
+type DirectorySearchStatsRow = RelatedStats & {
+  organization_id: string;
+};
+
+type DirectoryRelationsByOrganizationId = {
+  categories: Map<string, RelatedCategory[]>;
+  locations: Map<string, RelatedLocation[]>;
+  searchStats: Map<string, RelatedStats[]>;
 };
 
 type DirectoryOrganizationRow = {
@@ -511,6 +532,143 @@ async function getActionStatsByOrganizationId(
   }
 
   return statsByOrganizationId;
+}
+
+function createDirectoryRelationsByOrganizationId(
+  organizationIds: string[]
+): DirectoryRelationsByOrganizationId {
+  const categories = new Map<string, RelatedCategory[]>();
+  const locations = new Map<string, RelatedLocation[]>();
+  const searchStats = new Map<string, RelatedStats[]>();
+
+  for (const organizationId of organizationIds) {
+    categories.set(organizationId, []);
+    locations.set(organizationId, []);
+    searchStats.set(organizationId, []);
+  }
+
+  return { categories, locations, searchStats };
+}
+
+async function getDirectoryRelationsByOrganizationId(
+  organizationIds: string[]
+): Promise<DirectoryRelationsByOrganizationId> {
+  const relations = createDirectoryRelationsByOrganizationId(organizationIds);
+
+  if (organizationIds.length === 0) {
+    return relations;
+  }
+
+  const [categoriesResult, locationsResult, searchStatsResult] = await Promise.all([
+    supabase
+      .from("organization_categories")
+      .select(
+        `
+        organization_id,
+        is_primary,
+        business_categories (
+          id,
+          slug,
+          name,
+          description
+        )
+      `
+      )
+      .in("organization_id", organizationIds),
+    supabase
+      .from("organization_locations")
+      .select(
+        `
+        organization_id,
+        id,
+        location_type,
+        address_visibility,
+        label,
+        country_code,
+        region,
+        city,
+        district,
+        street_address,
+        postal_code,
+        latitude,
+        longitude,
+        is_primary,
+        is_active,
+        geo_areas (
+          id,
+          area_type,
+          name,
+          slug,
+          country_code
+        )
+      `
+      )
+      .in("organization_id", organizationIds)
+      .eq("is_active", true),
+    supabase
+      .from("organization_search_stats")
+      .select(
+        `
+        organization_id,
+        profile_views_count,
+        offer_clicks_count,
+        certificate_clicks_count,
+        purchase_registration_clicks_count
+      `
+      )
+      .in("organization_id", organizationIds),
+  ]);
+
+  const relationError =
+    categoriesResult.error ?? locationsResult.error ?? searchStatsResult.error;
+
+  if (relationError) {
+    throw new Error(`Directory relation hydration failed: ${relationError.message}`);
+  }
+
+  const categoryRows =
+    (categoriesResult.data as unknown as DirectoryLegacyCategoryRow[] | null) ?? [];
+  const locationRows =
+    (locationsResult.data as unknown as DirectoryLocationRow[] | null) ?? [];
+  const searchStatRows =
+    (searchStatsResult.data as unknown as DirectorySearchStatsRow[] | null) ?? [];
+
+  for (const row of categoryRows) {
+    const current = relations.categories.get(row.organization_id) ?? [];
+    current.push({
+      is_primary: row.is_primary,
+      business_categories: row.business_categories,
+    });
+    relations.categories.set(row.organization_id, current);
+  }
+
+  for (const row of locationRows) {
+    const current = relations.locations.get(row.organization_id) ?? [];
+    const { organization_id: _organizationId, ...location } = row;
+    current.push(location);
+    relations.locations.set(row.organization_id, current);
+  }
+
+  for (const row of searchStatRows) {
+    const current = relations.searchStats.get(row.organization_id) ?? [];
+    const { organization_id: _organizationId, ...stats } = row;
+    current.push(stats);
+    relations.searchStats.set(row.organization_id, current);
+  }
+
+  return relations;
+}
+
+function attachDirectoryRelations(
+  rows: DirectoryOrganizationRow[],
+  relations: DirectoryRelationsByOrganizationId
+): DirectoryOrganizationRow[] {
+  return rows.map((row) => ({
+    ...row,
+    organization_categories: relations.categories.get(row.id) ?? [],
+    organization_locations: relations.locations.get(row.id) ?? [],
+    organization_search_stats: relations.searchStats.get(row.id) ?? [],
+  }));
 }
 
 async function getBusinessDirectoryContextId() {
@@ -1047,6 +1205,7 @@ export async function GET(request: NextRequest) {
   const requestStartedAt = Date.now();
   let authDurationMs = 0;
   let organizationsDurationMs = 0;
+  let relationsDurationMs = 0;
   let classificationsDurationMs = 0;
   let actionStatsDurationMs = 0;
 
@@ -1142,45 +1301,7 @@ export async function GET(request: NextRequest) {
       metadata_json,
       directory_published_at,
       created_at,
-      updated_at,
-      organization_categories (
-        is_primary,
-        business_categories (
-          id,
-          slug,
-          name,
-          description
-        )
-      ),
-      organization_locations (
-        id,
-        location_type,
-        address_visibility,
-        label,
-        country_code,
-        region,
-        city,
-        district,
-        street_address,
-        postal_code,
-        latitude,
-        longitude,
-        is_primary,
-        is_active,
-        geo_areas (
-          id,
-          area_type,
-          name,
-          slug,
-          country_code
-        )
-      ),
-      organization_search_stats (
-        profile_views_count,
-        offer_clicks_count,
-        certificate_clicks_count,
-        purchase_registration_clicks_count
-      )
+      updated_at
     `
     )
     .eq("status", "active")
@@ -1212,7 +1333,56 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const rows = (data as unknown as DirectoryOrganizationRow[] | null) ?? [];
+  const baseRows = (data as unknown as DirectoryOrganizationRow[] | null) ?? [];
+  const allOrganizationIds = baseRows.map((row) => row.id);
+
+  let relationsByOrganizationId: DirectoryRelationsByOrganizationId;
+  let classificationsByOrganizationId: Map<
+    string,
+    DirectoryObjectActionClassification[]
+  >;
+  let actionStatsByOrganizationId: Map<string, OrganizationActionStats>;
+
+  try {
+    [relationsByOrganizationId, classificationsByOrganizationId, actionStatsByOrganizationId] =
+      await Promise.all([
+        (async () => {
+          const startedAt = Date.now();
+          const result = await getDirectoryRelationsByOrganizationId(
+            allOrganizationIds,
+          );
+          relationsDurationMs = Date.now() - startedAt;
+          return result;
+        })(),
+        (async () => {
+          const startedAt = Date.now();
+          const result = await getDirectoryClassificationsByOrganizationId(
+            allOrganizationIds,
+          );
+          classificationsDurationMs = Date.now() - startedAt;
+          return result;
+        })(),
+        (async () => {
+          const startedAt = Date.now();
+          const result = await getActionStatsByOrganizationId(allOrganizationIds);
+          actionStatsDurationMs = Date.now() - startedAt;
+          return result;
+        })(),
+      ]);
+  } catch (relationError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          relationError instanceof Error
+            ? relationError.message
+            : "Directory relation hydration failed",
+      },
+      { status: 500 },
+    );
+  }
+
+  const rows = attachDirectoryRelations(baseRows, relationsByOrganizationId);
 
   const contentFilteredRows = q
     ? rows.filter((row) => {
@@ -1236,28 +1406,6 @@ export async function GET(request: NextRequest) {
   const locationFilteredRows = contentFilteredRows.filter((row) =>
     rowMatchesLocationFilters(row, city, district)
   );
-  const candidateOrganizationIds = locationFilteredRows.map((row) => row.id);
-
-  const [classificationsByOrganizationId, actionStatsByOrganizationId] =
-    await Promise.all([
-      (async () => {
-        const startedAt = Date.now();
-        const result = await getDirectoryClassificationsByOrganizationId(
-          candidateOrganizationIds,
-        );
-        classificationsDurationMs = Date.now() - startedAt;
-        return result;
-      })(),
-      (async () => {
-        const startedAt = Date.now();
-        const result = await getActionStatsByOrganizationId(
-          candidateOrganizationIds,
-        );
-        actionStatsDurationMs = Date.now() - startedAt;
-        return result;
-      })(),
-    ]);
-
   const locationAndCategoryFilteredRows = locationFilteredRows.filter((row) => {
     const classifications = classificationsByOrganizationId.get(row.id) ?? [];
     return rowMatchesCategoryFilter(row, categorySlug, classifications);
@@ -1294,6 +1442,7 @@ export async function GET(request: NextRequest) {
   const serverTiming = [
     `auth;dur=${authDurationMs}`,
     `organizations;dur=${organizationsDurationMs}`,
+    `relations;dur=${relationsDurationMs}`,
     `classifications;dur=${classificationsDurationMs}`,
     `actionstats;dur=${actionStatsDurationMs}`,
     `total;dur=${totalDurationMs}`,
