@@ -1044,6 +1044,12 @@ function compareByDistance(firstItem: RowWithDistance, secondItem: RowWithDistan
 }
 
 export async function GET(request: NextRequest) {
+  const requestStartedAt = Date.now();
+  let authDurationMs = 0;
+  let organizationsDurationMs = 0;
+  let classificationsDurationMs = 0;
+  let actionStatsDurationMs = 0;
+
   const searchParams = request.nextUrl.searchParams;
   const requestedLocale =
     searchParams.get("locale") ?? searchParams.get("lang") ?? undefined;
@@ -1060,6 +1066,7 @@ export async function GET(request: NextRequest) {
   let ownerActorId: string | null = null;
 
   if (scope === "mine") {
+    const authStartedAt = Date.now();
     const session = await auth0.getSession();
 
     if (!session?.user?.sub) {
@@ -1087,6 +1094,8 @@ export async function GET(request: NextRequest) {
         { status: 500 },
       );
     }
+
+    authDurationMs = Date.now() - authStartedAt;
   }
 
   const q = normalizeSearchValue(searchParams.get("q"));
@@ -1189,7 +1198,9 @@ export async function GET(request: NextRequest) {
     query = query.eq("country_code", countryCode.toUpperCase());
   }
 
+  const organizationsStartedAt = Date.now();
   const { data, error } = await query;
+  organizationsDurationMs = Date.now() - organizationsStartedAt;
 
   if (error) {
     return NextResponse.json(
@@ -1202,9 +1213,6 @@ export async function GET(request: NextRequest) {
   }
 
   const rows = (data as unknown as DirectoryOrganizationRow[] | null) ?? [];
-
-  const classificationsByOrganizationId =
-    await getDirectoryClassificationsByOrganizationId(rows.map((row) => row.id));
 
   const contentFilteredRows = q
     ? rows.filter((row) => {
@@ -1225,18 +1233,35 @@ export async function GET(request: NextRequest) {
       })
     : rows;
 
-  const locationAndCategoryFilteredRows = contentFilteredRows.filter((row) => {
-    const classifications = classificationsByOrganizationId.get(row.id) ?? [];
-
-    return (
-      rowMatchesCategoryFilter(row, categorySlug, classifications) &&
-      rowMatchesLocationFilters(row, city, district)
-    );
-  });
-
-  const actionStatsByOrganizationId = await getActionStatsByOrganizationId(
-    locationAndCategoryFilteredRows.map((row) => row.id)
+  const locationFilteredRows = contentFilteredRows.filter((row) =>
+    rowMatchesLocationFilters(row, city, district)
   );
+  const candidateOrganizationIds = locationFilteredRows.map((row) => row.id);
+
+  const [classificationsByOrganizationId, actionStatsByOrganizationId] =
+    await Promise.all([
+      (async () => {
+        const startedAt = Date.now();
+        const result = await getDirectoryClassificationsByOrganizationId(
+          candidateOrganizationIds,
+        );
+        classificationsDurationMs = Date.now() - startedAt;
+        return result;
+      })(),
+      (async () => {
+        const startedAt = Date.now();
+        const result = await getActionStatsByOrganizationId(
+          candidateOrganizationIds,
+        );
+        actionStatsDurationMs = Date.now() - startedAt;
+        return result;
+      })(),
+    ]);
+
+  const locationAndCategoryFilteredRows = locationFilteredRows.filter((row) => {
+    const classifications = classificationsByOrganizationId.get(row.id) ?? [];
+    return rowMatchesCategoryFilter(row, categorySlug, classifications);
+  });
 
   const actionFilteredRows = locationAndCategoryFilteredRows.filter((row) => {
     const actionStats =
@@ -1265,6 +1290,15 @@ export async function GET(request: NextRequest) {
 
   const limitedRowsWithDistance = sortedRowsWithDistance.slice(0, limit);
 
+  const totalDurationMs = Date.now() - requestStartedAt;
+  const serverTiming = [
+    `auth;dur=${authDurationMs}`,
+    `organizations;dur=${organizationsDurationMs}`,
+    `classifications;dur=${classificationsDurationMs}`,
+    `actionstats;dur=${actionStatsDurationMs}`,
+    `total;dur=${totalDurationMs}`,
+  ].join(", ");
+
   return NextResponse.json({
     ok: true,
     organizations: limitedRowsWithDistance.map((item) =>
@@ -1292,6 +1326,11 @@ export async function GET(request: NextRequest) {
       limit,
       locale: contentLocale,
       scope,
+    },
+  }, {
+    headers: {
+      "Server-Timing": serverTiming,
+      "X-ARCTor-Directory-Total-Ms": String(totalDurationMs),
     },
   });
 }

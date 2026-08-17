@@ -643,8 +643,38 @@ function DirectionCard({
   );
 }
 
-function EmptyBusinessSlot() {
-  return <div className="h-[140px]" />;
+function DirectoryLoadingSkeleton() {
+  return (
+    <div
+      className="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-2"
+      aria-busy="true"
+      aria-label="Loading businesses"
+    >
+      {[0, 1].map((item) => (
+        <div
+          key={item}
+          className="min-h-[188px] animate-pulse rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="h-4 w-40 rounded bg-[#eef0f6]" />
+            <div className="h-3 w-20 rounded bg-[#eef0f6]" />
+          </div>
+          <div className="mt-5 flex items-center gap-4">
+            <div className="h-[92px] w-[92px] shrink-0 rounded-xl bg-[#eef0f6] sm:h-[110px] sm:w-[110px]" />
+            <div className="min-w-0 flex-1">
+              <div className="h-3 w-4/5 rounded bg-[#eef0f6]" />
+              <div className="mt-4 h-6 w-36 rounded-lg bg-[#eef0f6]" />
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <div className="h-11 rounded-lg bg-[#f3f4f8]" />
+                <div className="h-11 rounded-lg bg-[#f3f4f8]" />
+                <div className="h-11 rounded-lg bg-[#f3f4f8]" />
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function BusinessPreview({
@@ -1003,16 +1033,15 @@ export function DirectoryDashboardContent({
         </section>
       ) : null}
 
-      {filteredOrganizations.length === 0 ? (
-        <div className="mb-5 grid grid-cols-1 gap-3 xl:grid-cols-2">
-          <AnalyticsCard
-            title={getDirectoryListMessage("directoryList.published.noResults", locale)}
-            detailsLabel="\u00a0"
-          >
-            <EmptyBusinessSlot />
-          </AnalyticsCard>
-        </div>
-      ) : (
+      {status === "loading" ? <DirectoryLoadingSkeleton /> : null}
+
+      {status === "ready" && filteredOrganizations.length === 0 ? (
+        <section className="mb-5 rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-5 text-[13px] font-semibold text-[#4a4f6a] shadow-sm">
+          {getDirectoryListMessage("directoryList.published.noResults", locale)}
+        </section>
+      ) : null}
+
+      {status === "ready" && filteredOrganizations.length > 0 ? (
         <div className="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-2">
           {displayedOrganizations.map((organization) => (
             <AnalyticsCard
@@ -1032,7 +1061,7 @@ export function DirectoryDashboardContent({
             </AnalyticsCard>
           ))}
         </div>
-      )}
+      ) : null}
 
       {filteredOrganizations.length > 0 ? (
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
