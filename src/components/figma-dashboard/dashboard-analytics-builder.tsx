@@ -11,6 +11,7 @@ import {
   Hash,
   LineChart as LineChartIcon,
   MapPinned,
+  PieChart as PieChartIcon,
   Plus,
   Target,
   Trash2,
@@ -20,8 +21,11 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   Line,
   LineChart,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -431,12 +435,30 @@ type DataPoint = {
   readonly activityCount: number;
 };
 
+type RootDurationRow = {
+  readonly rootValueObjectId: string;
+  readonly rootTitle: string;
+  readonly valueMinutes: number;
+  readonly valueHours: number;
+  readonly percentage: number;
+  readonly activityCount: number;
+  readonly factProjectionCount: number;
+};
+
 type BlockDataResponse = {
   readonly ok?: boolean;
-  readonly kind?: "activity-duration" | "activity-count" | "certificate-map";
+  readonly kind?:
+    | "activity-duration"
+    | "activity-count"
+    | "certificate-map"
+    | "fact-duration-by-root";
   readonly totalMinutes?: number;
+  readonly totalSemanticMinutes?: number;
+  readonly uniqueActivityMinutes?: number;
+  readonly overlapDetected?: boolean;
   readonly activityCount?: number;
   readonly series?: DataPoint[];
+  readonly rootBreakdown?: RootDurationRow[];
   readonly availableCertificateCount?: number;
   readonly markers?: CertificateMapMarker[];
   readonly error?: string;
@@ -590,6 +612,120 @@ const ACTIVITY_COUNT_COPY: Record<
   },
 };
 
+const ROOT_TIME_COPY: Record<
+  LocaleCode,
+  {
+    description: string;
+    facts: string;
+    factsDescription: string;
+    duration: string;
+    durationDescription: string;
+    byRoot: string;
+    title: string;
+    noData: string;
+    overlapNote: string;
+    factsJournal: string;
+  }
+> = {
+  ru: {
+    description: "Круговая диаграмма показывает, к каким корневым объектам относится подтверждённое время из фактов.",
+    facts: "Факты",
+    factsDescription: "Подтверждённые факты продолжительности текущего профиля.",
+    duration: "Время",
+    durationDescription: "Продолжительность сворачивается от листового объекта к его корневому объекту.",
+    byRoot: "По корневым объектам",
+    title: "Распределение времени по корневым объектам",
+    noData: "За выбранный период нет подтверждённых фактов продолжительности, связанных с корневыми объектами.",
+    overlapNote: "Одна активность может относиться к нескольким корневым объектам. Внутри одного корня она учитывается один раз, но между разными корнями смысловое время может пересекаться.",
+    factsJournal: "Журнал фактов",
+  },
+  pl: {
+    description: "Wykres pierścieniowy pokazuje, do których obiektów głównych należy potwierdzony czas z faktów.",
+    facts: "Fakty",
+    factsDescription: "Potwierdzone fakty czasu trwania bieżącego profilu.",
+    duration: "Czas",
+    durationDescription: "Czas trwania jest zwijany od obiektu liściowego do jego obiektu głównego.",
+    byRoot: "Według obiektów głównych",
+    title: "Rozkład czasu według obiektów głównych",
+    noData: "W wybranym okresie nie ma potwierdzonych faktów czasu powiązanych z obiektami głównymi.",
+    overlapNote: "Jedna aktywność może należeć do kilku obiektów głównych. W obrębie jednego obiektu jest liczona raz, ale między różnymi obiektami czas semantyczny może się nakładać.",
+    factsJournal: "Dziennik faktów",
+  },
+  en: {
+    description: "A donut chart shows which root objects receive confirmed duration from facts.",
+    facts: "Facts",
+    factsDescription: "Confirmed duration facts of the current profile.",
+    duration: "Time",
+    durationDescription: "Duration is rolled up from each leaf object to its root object.",
+    byRoot: "By root object",
+    title: "Time distribution by root object",
+    noData: "No confirmed duration facts linked to root objects in the selected period.",
+    overlapNote: "One activity may belong to several root objects. It is counted once inside each root, while semantic time may overlap across different roots.",
+    factsJournal: "Fact journal",
+  },
+  uk: {
+    description: "Кільцева діаграма показує, до яких кореневих об’єктів належить підтверджений час із фактів.",
+    facts: "Факти",
+    factsDescription: "Підтверджені факти тривалості поточного профілю.",
+    duration: "Час",
+    durationDescription: "Тривалість згортається від листового об’єкта до його кореневого об’єкта.",
+    byRoot: "За кореневими об’єктами",
+    title: "Розподіл часу за кореневими об’єктами",
+    noData: "За вибраний період немає підтверджених фактів тривалості, пов’язаних із кореневими об’єктами.",
+    overlapNote: "Одна активність може належати до кількох кореневих об’єктів. Усередині одного кореня вона рахується один раз, але між різними коренями смисловий час може перетинатися.",
+    factsJournal: "Журнал фактів",
+  },
+  de: {
+    description: "Ein Ringdiagramm zeigt, welchen Wurzelobjekten bestätigte Zeitfakten zugeordnet sind.",
+    facts: "Fakten",
+    factsDescription: "Bestätigte Dauerfakten des aktuellen Profils.",
+    duration: "Zeit",
+    durationDescription: "Die Dauer wird vom Blattobjekt zu seinem Wurzelobjekt aggregiert.",
+    byRoot: "Nach Wurzelobjekt",
+    title: "Zeitverteilung nach Wurzelobjekten",
+    noData: "Im gewählten Zeitraum gibt es keine bestätigten Dauerfakten mit Wurzelobjekt.",
+    overlapNote: "Eine Aktivität kann mehreren Wurzelobjekten angehören. Innerhalb eines Wurzelobjekts wird sie einmal gezählt; zwischen verschiedenen Wurzelobjekten kann sich die semantische Zeit überschneiden.",
+    factsJournal: "Faktenjournal",
+  },
+  es: {
+    description: "Un gráfico de dona muestra a qué objetos raíz corresponde el tiempo confirmado de los hechos.",
+    facts: "Hechos",
+    factsDescription: "Hechos confirmados de duración del perfil actual.",
+    duration: "Tiempo",
+    durationDescription: "La duración se agrega desde el objeto hoja hasta su objeto raíz.",
+    byRoot: "Por objeto raíz",
+    title: "Distribución del tiempo por objetos raíz",
+    noData: "No hay hechos confirmados de duración vinculados a objetos raíz en el período seleccionado.",
+    overlapNote: "Una actividad puede pertenecer a varios objetos raíz. Dentro de un mismo objeto se cuenta una vez, pero el tiempo semántico puede solaparse entre objetos distintos.",
+    factsJournal: "Diario de hechos",
+  },
+  cs: {
+    description: "Prstencový graf ukazuje, ke kterým kořenovým objektům patří potvrzený čas z faktů.",
+    facts: "Fakta",
+    factsDescription: "Potvrzená fakta o délce aktuálního profilu.",
+    duration: "Čas",
+    durationDescription: "Délka se agreguje od listového objektu k jeho kořenovému objektu.",
+    byRoot: "Podle kořenového objektu",
+    title: "Rozdělení času podle kořenových objektů",
+    noData: "Ve zvoleném období nejsou potvrzená fakta o délce spojená s kořenovými objekty.",
+    overlapNote: "Jedna aktivita může patřit k několika kořenovým objektům. Uvnitř jednoho kořene se započítá jednou, ale mezi různými kořeny se může sémantický čas překrývat.",
+    factsJournal: "Deník faktů",
+  },
+};
+
+const DONUT_COLORS = [
+  "#3b6ef8",
+  "#8b5cf6",
+  "#10b981",
+  "#f59e0b",
+  "#ef4444",
+  "#06b6d4",
+  "#ec4899",
+  "#84cc16",
+  "#6366f1",
+  "#14b8a6",
+] as const;
+
 const AVAILABLE_VISUALIZATIONS: readonly {
   readonly type: DashboardAnalyticsVisualizationType;
   readonly enabled: boolean;
@@ -598,7 +734,7 @@ const AVAILABLE_VISUALIZATIONS: readonly {
   { type: "bar", enabled: true },
   { type: "metric", enabled: true },
   { type: "map", enabled: true },
-  { type: "donut", enabled: false },
+  { type: "donut", enabled: true },
   { type: "radar", enabled: false },
   { type: "heatmap", enabled: false },
   { type: "scatter", enabled: false },
@@ -671,6 +807,7 @@ function visualizationDescription(
   if (type === "bar") return ui.barDescription;
   if (type === "metric") return ui.metricDescription;
   if (type === "map") return MAP_BUILDER_COPY[locale].description;
+  if (type === "donut") return ROOT_TIME_COPY[locale].description;
   return ui.later;
 }
 
@@ -679,6 +816,7 @@ function visualizationIcon(type: DashboardAnalyticsVisualizationType) {
   if (type === "bar") return BarChart3;
   if (type === "metric") return Hash;
   if (type === "map") return MapPinned;
+  if (type === "donut") return PieChartIcon;
   if (type === "progress") return Target;
   return Activity;
 }
@@ -720,6 +858,7 @@ function AnalyticsBlockCard({
       const query = new URLSearchParams({
         blockId: block.id,
         timeZone,
+        locale,
       });
 
       const response = await fetch(
@@ -745,10 +884,13 @@ function AnalyticsBlockCard({
       setData(null);
       setStatus("error");
     }
-  }, [block.id, ui.loadError]);
+  }, [block.id, locale, ui.loadError]);
 
   useEffect(() => {
-    void loadData();
+    const timerId = window.setTimeout(() => {
+      void loadData();
+    }, 0);
+    return () => window.clearTimeout(timerId);
   }, [loadData]);
 
   const rows = useMemo(
@@ -762,9 +904,17 @@ function AnalyticsBlockCard({
 
   const isActivityCount = block.metricKey === "activity_count";
   const countCopy = ACTIVITY_COUNT_COPY[locale];
-  const hasRecordedData = isActivityCount
-    ? (data?.activityCount ?? 0) > 0
-    : (data?.totalMinutes ?? 0) > 0;
+  const rootTimeCopy = ROOT_TIME_COPY[locale];
+  const isRootTimeDonut =
+    block.visualizationType === "donut" &&
+    block.sourceType === "facts" &&
+    block.metricKey === "duration_minutes" &&
+    block.groupByKey === "observation_object";
+  const hasRecordedData = isRootTimeDonut
+    ? (data?.rootBreakdown ?? []).length > 0
+    : isActivityCount
+      ? (data?.activityCount ?? 0) > 0
+      : (data?.totalMinutes ?? 0) > 0;
   const chartDataKey = isActivityCount ? "activityCount" : "valueMinutes";
   const chartValueName = isActivityCount
     ? countCopy.recorded
@@ -773,9 +923,11 @@ function AnalyticsBlockCard({
     block.title ||
     (block.visualizationType === "map"
       ? MAP_BUILDER_COPY[locale].title
-      : isActivityCount
-        ? countCopy.title
-        : ui.totalDurationByDay);
+      : isRootTimeDonut
+        ? rootTimeCopy.title
+        : isActivityCount
+          ? countCopy.title
+          : ui.totalDurationByDay);
   const periodLabel =
     block.periodDays === 7
       ? ui.sevenDays
@@ -810,13 +962,17 @@ function AnalyticsBlockCard({
             href={
               block.visualizationType === "map"
                 ? `/certificates?view=participants&locale=${locale}`
-                : `/activity-today?locale=${locale}`
+                : isRootTimeDonut
+                  ? `/activity-facts?locale=${locale}`
+                  : `/activity-today?locale=${locale}`
             }
             className="rounded-lg px-2 py-1 text-[11px] font-medium text-[#3b6ef8] hover:bg-[#eef2ff]"
           >
             {block.visualizationType === "map"
               ? MAP_BUILDER_COPY[locale].openCatalog
-              : ui.journal}
+              : isRootTimeDonut
+                ? rootTimeCopy.factsJournal
+                : ui.journal}
           </Link>
           <button
             type="button"
@@ -852,6 +1008,86 @@ function AnalyticsBlockCard({
           markers={data?.markers ?? []}
           locale={locale}
         />
+
+      ) : isRootTimeDonut ? (
+        (data?.rootBreakdown ?? []).length === 0 ? (
+          <div className="flex h-[210px] items-center justify-center rounded-lg border border-dashed border-[#dfe3f1] bg-[#fbfcff] px-4 text-center text-[12px] font-medium text-[#7c8099]">
+            {rootTimeCopy.noData}
+          </div>
+        ) : (
+          <div>
+            <div className="grid min-h-[210px] grid-cols-1 gap-4 md:grid-cols-[220px_1fr] md:items-center">
+              <div className="h-[210px] min-w-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={data?.rootBreakdown ?? []}
+                      dataKey="valueMinutes"
+                      nameKey="rootTitle"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={46}
+                      outerRadius={78}
+                      paddingAngle={2}
+                      stroke="none"
+                    >
+                      {(data?.rootBreakdown ?? []).map((row, index) => (
+                        <Cell
+                          key={row.rootValueObjectId}
+                          fill={DONUT_COLORS[index % DONUT_COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value) => [
+                        formatDuration(Number(value), ui),
+                        rootTimeCopy.duration,
+                      ]}
+                      contentStyle={{
+                        fontSize: 11,
+                        borderRadius: 8,
+                        border: "1px solid #f0f2f7",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="space-y-2">
+                {(data?.rootBreakdown ?? []).map((row, index) => (
+                  <div
+                    key={row.rootValueObjectId}
+                    className="flex items-center gap-2 rounded-lg border border-[#eef0f6] px-3 py-2"
+                  >
+                    <span
+                      className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                      style={{
+                        backgroundColor:
+                          DONUT_COLORS[index % DONUT_COLORS.length],
+                      }}
+                    />
+                    <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-[#3f4358]">
+                      {row.rootTitle}
+                    </span>
+                    <span className="flex-shrink-0 text-[11px] font-bold text-[#1a1d2e]">
+                      {formatDuration(row.valueMinutes, ui)}
+                    </span>
+                    <span className="w-12 flex-shrink-0 text-right text-[10px] text-[#9ca3b8]">
+                      {row.percentage.toFixed(1)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {data?.overlapDetected ? (
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] leading-4 text-amber-800">
+                {rootTimeCopy.overlapNote}
+              </div>
+            ) : null}
+          </div>
+        )
       ) : block.visualizationType === "metric" ? (
         <div className="flex h-[160px] items-center gap-5">
           <div className="min-w-[145px]">
@@ -1011,6 +1247,8 @@ function AnalyticsBuilderModal({
     setError("");
 
     try {
+      const isRootTimeDonut = visualizationType === "donut";
+
       const response = await fetch("/api/dashboard/analytics-blocks", {
         method: "POST",
         credentials: "include",
@@ -1021,16 +1259,27 @@ function AnalyticsBuilderModal({
         body: JSON.stringify({
           visualizationType,
           sourceType:
-            visualizationType === "map" ? "certificates" : "activities",
+            visualizationType === "map"
+              ? "certificates"
+              : isRootTimeDonut
+                ? "facts"
+                : "activities",
           metricKey:
             visualizationType === "map"
               ? "available_certificates"
-              : activityMetric,
+              : isRootTimeDonut
+                ? "duration_minutes"
+                : activityMetric,
           aggregationKey:
             visualizationType === "map" || activityMetric === "activity_count"
               ? "count"
               : "sum",
-          groupByKey: visualizationType === "map" ? "location" : "day",
+          groupByKey:
+            visualizationType === "map"
+              ? "location"
+              : isRootTimeDonut
+                ? "observation_object"
+                : "day",
           periodDays: visualizationType === "map" ? 30 : periodDays,
         }),
       });
@@ -1181,6 +1430,33 @@ function AnalyticsBuilderModal({
                     </div>
                   </div>
                 </div>
+              ) : visualizationType === "donut" ? (
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-[#3b6ef8] bg-[#eef2ff] p-4">
+                    <div className="flex items-center gap-2">
+                      <PieChartIcon size={16} className="text-[#3b6ef8]" />
+                      <div className="text-[13px] font-bold text-[#1a1d2e]">
+                        {ROOT_TIME_COPY[locale].facts}
+                      </div>
+                      <Check size={15} className="ml-auto text-[#3b6ef8]" />
+                    </div>
+                    <div className="mt-2 text-[11px] leading-5 text-[#7c8099]">
+                      {ROOT_TIME_COPY[locale].factsDescription}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-[#3b6ef8] bg-[#eef2ff] p-4">
+                    <div className="flex items-center gap-2">
+                      <div className="text-[13px] font-bold text-[#1a1d2e]">
+                        {ROOT_TIME_COPY[locale].duration}
+                      </div>
+                      <Check size={15} className="ml-auto text-[#3b6ef8]" />
+                    </div>
+                    <div className="mt-2 text-[11px] leading-5 text-[#7c8099]">
+                      {ROOT_TIME_COPY[locale].durationDescription}
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-3">
                   <div className="rounded-xl border border-[#3b6ef8] bg-[#eef2ff] p-4">
@@ -1271,7 +1547,9 @@ function AnalyticsBuilderModal({
                       {ui.grouping}
                     </div>
                     <div className="inline-flex rounded-xl border border-[#3b6ef8] bg-[#eef2ff] px-4 py-2.5 text-[12px] font-bold text-[#3b6ef8]">
-                      {ui.byDay}
+                      {visualizationType === "donut"
+                        ? ROOT_TIME_COPY[locale].byRoot
+                        : ui.byDay}
                     </div>
                   </div>
 
@@ -1299,16 +1577,28 @@ function AnalyticsBuilderModal({
 
                   <div className="rounded-xl border border-[#e4e8f4] bg-[#fbfcff] p-4">
                     <div className="text-[11px] font-bold uppercase tracking-wide text-[#7c8099]">
-                      {activityMetric === "activity_count"
-                        ? ACTIVITY_COUNT_COPY[locale].title
-                        : ui.totalDurationByDay}
+                      {visualizationType === "donut"
+                        ? ROOT_TIME_COPY[locale].title
+                        : activityMetric === "activity_count"
+                          ? ACTIVITY_COUNT_COPY[locale].title
+                          : ui.totalDurationByDay}
                     </div>
                     <div className="mt-2 text-[12px] leading-5 text-[#5a5f7a]">
-                      {ui.activities} ·{" "}
-                      {activityMetric === "activity_count"
-                        ? ACTIVITY_COUNT_COPY[locale].metric
-                        : ui.totalDuration}{" "}
-                      · {ui.byDay} ·{" "}
+                      {visualizationType === "donut" ? (
+                        <>
+                          {ROOT_TIME_COPY[locale].facts} ·{" "}
+                          {ROOT_TIME_COPY[locale].duration} ·{" "}
+                          {ROOT_TIME_COPY[locale].byRoot} ·{" "}
+                        </>
+                      ) : (
+                        <>
+                          {ui.activities} ·{" "}
+                          {activityMetric === "activity_count"
+                            ? ACTIVITY_COUNT_COPY[locale].metric
+                            : ui.totalDuration}{" "}
+                          · {ui.byDay} ·{" "}
+                        </>
+                      )}
                       {periodOptions.find((item) => item.value === periodDays)?.label}
                     </div>
                   </div>
@@ -1405,7 +1695,10 @@ export function DashboardAnalyticsWorkspace({
   }, [ui.loadError]);
 
   useEffect(() => {
-    void loadBlocks();
+    const timerId = window.setTimeout(() => {
+      void loadBlocks();
+    }, 0);
+    return () => window.clearTimeout(timerId);
   }, [loadBlocks]);
 
   async function removeBlock(blockId: string) {

@@ -4,6 +4,12 @@ import { getActivityUserContext } from "../../../../../lib/activity/activityUser
 import { supabase } from "../../../../../lib/supabase";
 import { listPublicGiftCertificates } from "@/app/certificates/gift-certificate-data";
 import { isDashboardAnalyticsV2Supported } from "@/lib/dashboard/analytics-contract";
+import { resolveLocalizedContentField } from "@/lib/localization/contentLocalization";
+import {
+  localizeGlobalSystemValueObject,
+  normalizeGlobalSystemValueObjectLocale,
+} from "@/lib/reality-core/global-system-value-object-localization";
+import { aggregateRootTime } from "@/lib/dashboard/root-time-aggregation";
 
 export const dynamic = "force-dynamic";
 
@@ -101,6 +107,235 @@ function durationMinutesForRow(row: Row): number {
   return (ended.getTime() - started.getTime()) / 60_000;
 }
 
+
+function factDateKey(row: Row, timeZone: string): string | null {
+  const periodStart = asString(row.period_start);
+  if (periodStart) {
+    const date = new Date(periodStart);
+    if (!Number.isNaN(date.getTime())) return dateKeyInTimeZone(date, timeZone);
+  }
+
+  const createdAt = asString(row.created_at);
+  if (!createdAt) return null;
+  const createdDate = new Date(createdAt);
+  return Number.isNaN(createdDate.getTime())
+    ? null
+    : dateKeyInTimeZone(createdDate, timeZone);
+}
+
+function chunkStrings(values: readonly string[], size = 200): string[][] {
+  const chunks: string[][] = [];
+  for (let index = 0; index < values.length; index += size) {
+    chunks.push(values.slice(index, index + size));
+  }
+  return chunks;
+}
+
+async function buildFactDurationByRootResponse(input: {
+  readonly blockId: string;
+  readonly appUserId: string;
+  readonly actorId: string;
+  readonly periodDays: number;
+  readonly timeZone: string;
+  readonly locale: ReturnType<typeof normalizeGlobalSystemValueObjectLocale>;
+}) {
+  const todayKey = dateKeyInTimeZone(new Date(), input.timeZone);
+  const firstKey = shiftDateKey(todayKey, -(input.periodDays - 1));
+  const queryFromKey = shiftDateKey(firstKey, -1);
+  const queryFromIso = queryFromKey + "T00:00:00.000Z";
+
+  const factRowsRaw: Row[] = [];
+  const factPageSize = 1000;
+  const factHardLimit = 50000;
+
+  for (let offset = 0; offset < factHardLimit; offset += factPageSize) {
+    const { data, error } = await supabase
+      .from("activity_object_facts")
+      .select(
+        "id,activity_event_id,value_object_id,value_numeric,unit,period_start,created_at,fact_status,measure_type",
+      )
+      .eq("user_id", input.appUserId)
+      .eq("acting_as_actor_id", input.actorId)
+      .eq("fact_status", "confirmed")
+      .eq("measure_type", "duration")
+      .not("value_object_id", "is", null)
+      .or("period_start.gte." + queryFromIso + ",created_at.gte." + queryFromIso)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(offset, offset + factPageSize - 1);
+
+    if (error) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    }
+
+    const page = Array.isArray(data) ? (data as Row[]) : [];
+    factRowsRaw.push(...page);
+    if (page.length < factPageSize) break;
+
+    if (factRowsRaw.length >= factHardLimit) {
+      return NextResponse.json(
+        { ok: false, error: "DASHBOARD_ROOT_TIME_FACT_HARD_LIMIT_REACHED" },
+        { status: 409 },
+      );
+    }
+  }
+
+  const eligibleFactRows = factRowsRaw
+    .map((row) => row as Row)
+    .filter((row) => {
+      const date = factDateKey(row, input.timeZone);
+      return Boolean(date && date >= firstKey && date <= todayKey);
+    });
+
+  const leafIds = Array.from(
+    new Set(
+      eligibleFactRows
+        .map((row) => asString(row.value_object_id))
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+  const activityEventIds = Array.from(
+    new Set(
+      eligibleFactRows
+        .map((row) => asString(row.activity_event_id))
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+
+  const leafRows: Row[] = [];
+  for (const ids of chunkStrings(leafIds)) {
+    const { data, error } = await supabase
+      .from("value_objects")
+      .select("id,root_value_object_id")
+      .in("id", ids);
+    if (error) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    }
+    leafRows.push(...(Array.isArray(data) ? (data as Row[]) : []));
+  }
+
+  const leafToRoot = new Map<string, string>();
+  for (const row of leafRows) {
+    const leafId = asString(row.id);
+    const rootId = asString(row.root_value_object_id);
+    if (leafId && rootId) leafToRoot.set(leafId, rootId);
+  }
+
+  const eventDurationMinutes = new Map<string, number>();
+  for (const ids of chunkStrings(activityEventIds)) {
+    const { data, error } = await supabase
+      .from("activity_events")
+      .select("id,started_at,ended_at,duration_minutes")
+      .eq("user_id", input.appUserId)
+      .eq("acting_as_actor_id", input.actorId)
+      .in("id", ids);
+    if (error) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    }
+
+    for (const raw of Array.isArray(data) ? data : []) {
+      const row = raw as Row;
+      const activityEventId = asString(row.id);
+      if (!activityEventId) continue;
+      const minutes = durationMinutesForRow(row);
+      if (Number.isFinite(minutes) && minutes >= 0) {
+        eventDurationMinutes.set(activityEventId, minutes);
+      }
+    }
+  }
+
+  const aggregation = aggregateRootTime({
+    facts: eligibleFactRows.flatMap((row) => {
+      const activityEventId = asString(row.activity_event_id);
+      const valueObjectId = asString(row.value_object_id);
+      const valueNumeric = asNumber(row.value_numeric);
+      const unit = asString(row.unit);
+      return activityEventId && valueObjectId && valueNumeric !== null && unit
+        ? [{ activityEventId, valueObjectId, valueNumeric, unit }]
+        : [];
+    }),
+    leafToRoot,
+    eventDurationMinutes,
+  });
+
+  const rootIds = aggregation.roots.map((row) => row.rootValueObjectId);
+  const rootRows: Row[] = [];
+  for (const ids of chunkStrings(rootIds)) {
+    const { data, error } = await supabase
+      .from("value_objects")
+      .select("id,title,canonical_key,scope_code,metadata_json")
+      .in("id", ids);
+    if (error) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    }
+    rootRows.push(...(Array.isArray(data) ? (data as Row[]) : []));
+  }
+
+  const rootTitles = new Map<string, string>();
+  for (const row of rootRows) {
+    const id = asString(row.id);
+    if (!id) continue;
+
+    const fallbackTitle = asString(row.title) ?? id;
+    const localizedTitle =
+      asString(row.scope_code) === "global"
+        ? asString(
+            localizeGlobalSystemValueObject(
+              {
+                canonical_key: asString(row.canonical_key),
+                title: fallbackTitle,
+              },
+              input.locale,
+            ).title,
+          ) ?? fallbackTitle
+        : resolveLocalizedContentField({
+            metadata: row.metadata_json,
+            locale: input.locale,
+            fieldCode: "title",
+            fallback: fallbackTitle,
+          }) ?? fallbackTitle;
+
+    rootTitles.set(id, localizedTitle);
+  }
+
+  const rootBreakdown = aggregation.roots.map((row) => ({
+    rootValueObjectId: row.rootValueObjectId,
+    rootTitle: rootTitles.get(row.rootValueObjectId) ?? row.rootValueObjectId,
+    valueMinutes: row.valueMinutes,
+    valueHours: Math.round((row.valueMinutes / 60) * 100) / 100,
+    percentage:
+      aggregation.totalSemanticMinutes > 0
+        ? Math.round(
+            (row.valueMinutes / aggregation.totalSemanticMinutes) * 10000,
+          ) / 100
+        : 0,
+    activityCount: row.activityCount,
+    factProjectionCount: row.factProjectionCount,
+  }));
+
+  return NextResponse.json({
+    ok: true,
+    kind: "fact-duration-by-root",
+    blockId: input.blockId,
+    timeZone: input.timeZone,
+    locale: input.locale,
+    sourceType: "facts",
+    metricKey: "duration_minutes",
+    aggregationKey: "sum",
+    groupByKey: "observation_object",
+    periodDays: input.periodDays,
+    unit: "minutes",
+    totalSemanticMinutes: aggregation.totalSemanticMinutes,
+    uniqueActivityMinutes: aggregation.uniqueActivityMinutes,
+    overlapDetected: aggregation.overlapDetected,
+    skippedFactCount: aggregation.skippedFacts,
+    sourceFactCount: eligibleFactRows.length,
+    aggregationPolicy:
+      "confirmed duration facts -> leaf root; once per activity/root; canonical activity duration preferred",
+    rootBreakdown,
+  });
+}
+
 async function buildCertificateMapResponse(blockId: string) {
   try {
     const certificates = await listPublicGiftCertificates();
@@ -168,6 +403,9 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const blockId = url.searchParams.get("blockId")?.trim();
   const timeZone = normalizeTimeZone(url.searchParams.get("timeZone"));
+  const locale = normalizeGlobalSystemValueObjectLocale(
+    url.searchParams.get("locale"),
+  );
 
   if (!blockId) {
     return NextResponse.json(
@@ -194,11 +432,22 @@ export async function GET(request: Request) {
 
   const block = blockRaw as Row;
   const input = {
-    visualizationType: asString(block.visualization_type) as "line" | "bar" | "metric" | "map",
-    sourceType: asString(block.source_type) as "activities" | "certificates",
+    visualizationType: asString(block.visualization_type) as
+      | "line"
+      | "bar"
+      | "metric"
+      | "map"
+      | "donut",
+    sourceType: asString(block.source_type) as
+      | "activities"
+      | "facts"
+      | "certificates",
     metricKey: asString(block.metric_key) ?? "",
     aggregationKey: asString(block.aggregation_key) as "sum" | "count",
-    groupByKey: asString(block.group_by_key) as "day" | "location",
+    groupByKey: asString(block.group_by_key) as
+      | "day"
+      | "observation_object"
+      | "location",
     periodDays: Number(block.period_days),
   };
 
@@ -207,6 +456,23 @@ export async function GET(request: Request) {
       { ok: false, error: "Analytics block configuration is not executable in v2" },
       { status: 422 },
     );
+  }
+
+  if (
+    input.visualizationType === "donut" &&
+    input.sourceType === "facts" &&
+    input.metricKey === "duration_minutes" &&
+    input.aggregationKey === "sum" &&
+    input.groupByKey === "observation_object"
+  ) {
+    return buildFactDurationByRootResponse({
+      blockId,
+      appUserId: appUser.id,
+      actorId: personActor.id,
+      periodDays: input.periodDays,
+      timeZone,
+      locale,
+    });
   }
 
   if (input.visualizationType === "map" && input.sourceType === "certificates") {

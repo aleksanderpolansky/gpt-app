@@ -121,6 +121,17 @@ export function isDashboardAnalyticsV2Supported(
   >,
 ): boolean {
   if (
+    input.visualizationType === "donut" &&
+    input.sourceType === "facts" &&
+    input.metricKey === "duration_minutes" &&
+    input.aggregationKey === "sum" &&
+    input.groupByKey === "observation_object" &&
+    DASHBOARD_ANALYTICS_V1_SUPPORTED_PERIODS.has(input.periodDays)
+  ) {
+    return true;
+  }
+
+  if (
     input.visualizationType === "map" &&
     input.sourceType === "certificates" &&
     input.metricKey === "available_certificates" &&
