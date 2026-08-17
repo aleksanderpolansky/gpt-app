@@ -609,3 +609,5 @@ Live acceptance обязан проверять не только функцио
 Формула v1 — декларативный multiplier rule.
 Missing/no-match/no-rule = 1. Несколько matched rules multiply.
 Произвольный JavaScript/SQL expression запрещён.
+## 2026-08-17 — CONTENT-L10
+Решение: не создавать отдельную таблицу переводов на текущем этапе; расширить уже работающий localizedContent envelope до schemaVersion=2 и хранить его в metadata_json сущности. Публичный read path не имеет fallback на source/original. Авторская ручная версия локали имеет приоритет над AI. AI вызывается только на create/edit, обычный read не вызывает перевод. Legacy schemaVersion=1 читается совместимо и поднимается в памяти до V2.

@@ -1,9 +1,10 @@
 export const ARCTOR_CONTENT_LOCALES = ["en", "pl", "ru", "uk", "de", "es", "cs"] as const;
 export type ArctorContentLocale = (typeof ARCTOR_CONTENT_LOCALES)[number];
 
-export const ARCTOR_LOCALIZED_CONTENT_SCHEMA_VERSION = 1 as const;
+export const ARCTOR_LOCALIZED_CONTENT_SCHEMA_VERSION = 2 as const;
 
 export type LocalizedContentFieldMap = Record<string, string | null>;
+export type LocalizedContentProvider = "openai" | "human";
 
 export type LocalizedContentEnvelope = {
   schemaVersion: typeof ARCTOR_LOCALIZED_CONTENT_SCHEMA_VERSION;
@@ -13,8 +14,10 @@ export type LocalizedContentEnvelope = {
   fieldCodes: string[];
   original: LocalizedContentFieldMap;
   variants: Record<ArctorContentLocale, LocalizedContentFieldMap>;
+  humanLocales: ArctorContentLocale[];
+  lastEditedLocale: ArctorContentLocale | null;
   generatedAt: string;
-  provider: "openai";
+  provider: LocalizedContentProvider;
   model: string | null;
   responseId: string | null;
   usage: {
@@ -46,10 +49,35 @@ function nonNegativeInteger(value: unknown): number {
     : 0;
 }
 
+function normalizeHumanLocales(value: unknown): ArctorContentLocale[] {
+  if (!Array.isArray(value)) return [];
+  return Array.from(
+    new Set(
+      value
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.trim().toLowerCase())
+        .filter((item): item is ArctorContentLocale => localeSet.has(item)),
+    ),
+  );
+}
+
+function buildEmptyVariants(fieldCodes: string[]) {
+  return Object.fromEntries(
+    ARCTOR_CONTENT_LOCALES.map((locale) => [
+      locale,
+      Object.fromEntries(fieldCodes.map((fieldCode) => [fieldCode, null])),
+    ]),
+  ) as Record<ArctorContentLocale, LocalizedContentFieldMap>;
+}
+
 export function normalizeContentLocale(value: unknown): ArctorContentLocale {
   if (typeof value !== "string") return "en";
   const normalized = value.trim().toLowerCase();
   return localeSet.has(normalized) ? (normalized as ArctorContentLocale) : "en";
+}
+
+export function isSupportedContentLocale(value: unknown): value is ArctorContentLocale {
+  return typeof value === "string" && localeSet.has(value.trim().toLowerCase());
 }
 
 export function normalizeLocalizedContentFields(value: unknown): LocalizedContentFieldMap {
@@ -62,18 +90,35 @@ export function normalizeLocalizedContentFields(value: unknown): LocalizedConten
   return out;
 }
 
+export function createEmptyLocalizedContentVariants(fieldCodes: string[]) {
+  const normalizedCodes = Array.from(
+    new Set(fieldCodes.filter((fieldCode) => FIELD_CODE_RE.test(fieldCode))),
+  );
+  return buildEmptyVariants(normalizedCodes);
+}
+
 export function readLocalizedContentEnvelope(metadata: unknown): LocalizedContentEnvelope | null {
   const root = asRecord(metadata);
   const raw = asRecord(root.localizedContent);
-  if (raw.schemaVersion !== ARCTOR_LOCALIZED_CONTENT_SCHEMA_VERSION) return null;
+  const schemaVersion = raw.schemaVersion;
+  if (schemaVersion !== 1 && schemaVersion !== ARCTOR_LOCALIZED_CONTENT_SCHEMA_VERSION) {
+    return null;
+  }
 
   const detectedSourceLocale = normalizeContentLocale(raw.detectedSourceLocale);
   const sourceLocaleHint = normalizeContentLocale(raw.sourceLocaleHint);
   const sourceRevision = cleanText(raw.sourceRevision);
   const generatedAt = cleanText(raw.generatedAt);
-  const provider = raw.provider === "openai" ? "openai" : null;
+  const provider: LocalizedContentProvider | null =
+    raw.provider === "openai" || raw.provider === "human" ? raw.provider : null;
   const fieldCodes = Array.isArray(raw.fieldCodes)
-    ? Array.from(new Set(raw.fieldCodes.filter((item): item is string => typeof item === "string" && FIELD_CODE_RE.test(item))))
+    ? Array.from(
+        new Set(
+          raw.fieldCodes.filter(
+            (item): item is string => typeof item === "string" && FIELD_CODE_RE.test(item),
+          ),
+        ),
+      )
     : [];
   if (!sourceRevision || !generatedAt || !provider || fieldCodes.length === 0) return null;
 
@@ -82,7 +127,7 @@ export function readLocalizedContentEnvelope(metadata: unknown): LocalizedConten
     fieldCodes.map((fieldCode) => [fieldCode, originalRaw[fieldCode] ?? null]),
   );
   const variantsRaw = asRecord(raw.variants);
-  const variants = {} as Record<ArctorContentLocale, LocalizedContentFieldMap>;
+  const variants = buildEmptyVariants(fieldCodes);
   for (const locale of ARCTOR_CONTENT_LOCALES) {
     const fields = normalizeLocalizedContentFields(variantsRaw[locale]);
     variants[locale] = Object.fromEntries(
@@ -91,6 +136,15 @@ export function readLocalizedContentEnvelope(metadata: unknown): LocalizedConten
   }
 
   const usage = asRecord(raw.usage);
+  const humanLocales =
+    schemaVersion === 1
+      ? []
+      : normalizeHumanLocales(raw.humanLocales);
+  const lastEditedLocale =
+    schemaVersion === 1 || raw.lastEditedLocale === null || raw.lastEditedLocale === undefined
+      ? null
+      : normalizeContentLocale(raw.lastEditedLocale);
+
   return {
     schemaVersion: ARCTOR_LOCALIZED_CONTENT_SCHEMA_VERSION,
     detectedSourceLocale,
@@ -99,6 +153,8 @@ export function readLocalizedContentEnvelope(metadata: unknown): LocalizedConten
     fieldCodes,
     original,
     variants,
+    humanLocales,
+    lastEditedLocale,
     generatedAt,
     provider,
     model: cleanText(raw.model),
@@ -140,4 +196,48 @@ export function resolveLocalizedContentFields(input: {
       localized[fieldCode] ?? fallback,
     ]),
   );
+}
+
+export function resolveLocalizedContentFieldStrict(input: {
+  metadata: unknown;
+  locale: unknown;
+  fieldCode: string;
+}): string | null {
+  if (!FIELD_CODE_RE.test(input.fieldCode)) return null;
+  const envelope = readLocalizedContentEnvelope(input.metadata);
+  if (!envelope) return null;
+  const locale = normalizeContentLocale(input.locale);
+  return envelope.variants[locale]?.[input.fieldCode] ?? null;
+}
+
+export function resolveLocalizedContentFieldsStrict(input: {
+  metadata: unknown;
+  locale: unknown;
+  fieldCodes: string[];
+}): LocalizedContentFieldMap {
+  const normalizedCodes = Array.from(
+    new Set(input.fieldCodes.filter((fieldCode) => FIELD_CODE_RE.test(fieldCode))),
+  );
+  const envelope = readLocalizedContentEnvelope(input.metadata);
+  if (!envelope) {
+    return Object.fromEntries(normalizedCodes.map((fieldCode) => [fieldCode, null]));
+  }
+  const locale = normalizeContentLocale(input.locale);
+  const localized = envelope.variants[locale] ?? {};
+  return Object.fromEntries(
+    normalizedCodes.map((fieldCode) => [fieldCode, localized[fieldCode] ?? null]),
+  );
+}
+
+export function hasCompleteLocalizedContent(input: {
+  metadata: unknown;
+  locale: unknown;
+  requiredFieldCodes: string[];
+}) {
+  const fields = resolveLocalizedContentFieldsStrict({
+    metadata: input.metadata,
+    locale: input.locale,
+    fieldCodes: input.requiredFieldCodes,
+  });
+  return input.requiredFieldCodes.every((fieldCode) => Boolean(fields[fieldCode]));
 }

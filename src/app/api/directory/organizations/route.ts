@@ -1,5 +1,6 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createLocalizationRuntimeContext } from "../../../../types/localization";
+import { resolveLocalizedContentFieldsStrict } from "@/lib/localization/contentLocalization";
 import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -90,6 +91,7 @@ type DirectoryOrganizationRow = {
   logo_url: string | null;
   cover_image_url: string | null;
   social_links_json: Record<string, unknown> | null;
+  metadata_json: unknown;
   directory_published_at: string | null;
   created_at: string;
   updated_at: string | null;
@@ -733,20 +735,27 @@ function mapDirectoryOrganization(
   row: DirectoryOrganizationRow,
   actionStats: OrganizationActionStats,
   distanceKm: number | null,
-  classifications: DirectoryObjectActionClassification[]
+  classifications: DirectoryObjectActionClassification[],
+  locale: string,
 ) {
   const primaryCategory = getPrimaryCategory(row, classifications);
   const primaryLocation = getPrimaryLocation(row);
+  const localized = resolveLocalizedContentFieldsStrict({
+    metadata: row.metadata_json,
+    locale,
+    fieldCodes: ["organizationName", "description", "shortDescription"],
+  });
 
   const stats = row.organization_search_stats?.[0] ?? null;
   const canRegisterPurchase = canRegisterPurchaseForOrganization(row);
 
   return {
     id: row.id,
-    name: row.organization_name,
+    name: localized.organizationName ?? "—",
     type: row.organization_type,
-    description: row.description,
-    shortDescription: row.short_description,
+    description: localized.description,
+    shortDescription: localized.shortDescription,
+    contentLocalizationStatus: localized.organizationName ? "ready" : "missing",
     publicSlug: row.public_slug,
     countryCode: row.country_code,
     defaultCurrency: row.default_currency,
@@ -1081,6 +1090,7 @@ export async function GET(request: NextRequest) {
       logo_url,
       cover_image_url,
       social_links_json,
+      metadata_json,
       directory_published_at,
       created_at,
       updated_at,
@@ -1131,12 +1141,6 @@ export async function GET(request: NextRequest) {
     .order("directory_published_at", { ascending: false })
     .limit(500);
 
-  if (q) {
-    query = query.or(
-      `organization_name.ilike.%${q}%,short_description.ilike.%${q}%,description.ilike.%${q}%`
-    );
-  }
-
   if (countryCode) {
     query = query.eq("country_code", countryCode.toUpperCase());
   }
@@ -1158,7 +1162,26 @@ export async function GET(request: NextRequest) {
   const classificationsByOrganizationId =
     await getDirectoryClassificationsByOrganizationId(rows.map((row) => row.id));
 
-  const locationAndCategoryFilteredRows = rows.filter((row) => {
+  const contentFilteredRows = q
+    ? rows.filter((row) => {
+        const localized = resolveLocalizedContentFieldsStrict({
+          metadata: row.metadata_json,
+          locale: contentLocale,
+          fieldCodes: ["organizationName", "description", "shortDescription"],
+        });
+        const haystack = [
+          localized.organizationName,
+          localized.description,
+          localized.shortDescription,
+        ]
+          .filter((value): value is string => Boolean(value))
+          .join(" ")
+          .toLocaleLowerCase();
+        return haystack.includes(q.toLocaleLowerCase());
+      })
+    : rows;
+
+  const locationAndCategoryFilteredRows = contentFilteredRows.filter((row) => {
     const classifications = classificationsByOrganizationId.get(row.id) ?? [];
 
     return (
@@ -1205,7 +1228,8 @@ export async function GET(request: NextRequest) {
         item.row,
         actionStatsByOrganizationId.get(item.row.id) ?? getEmptyActionStats(),
         item.distanceKm,
-        classificationsByOrganizationId.get(item.row.id) ?? []
+        classificationsByOrganizationId.get(item.row.id) ?? [],
+        contentLocale,
       )
     ),
     count: limitedRowsWithDistance.length,

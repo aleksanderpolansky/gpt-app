@@ -582,6 +582,8 @@ export async function generateLocalizedContentBatch(input: {
         fieldCodes: Object.keys(source.fields),
         original: { ...source.fields },
         variants: sanitized.variants,
+        humanLocales: [],
+        lastEditedLocale: null,
         generatedAt: new Date().toISOString(),
         provider: "openai",
         model,
@@ -623,6 +625,238 @@ export async function generateLocalizedContentBatch(input: {
     }
     await failAiAnalysisExecution(localizationExecutionId, error);
     throw error;
+  }
+}
+
+
+type LocalizableEntityTable = "organizations" | "offers" | "activity_events" | "value_objects";
+
+function cloneVariants(
+  fieldCodes: string[],
+  source?: Record<ArctorContentLocale, LocalizedContentFieldMap> | null,
+) {
+  return Object.fromEntries(
+    ARCTOR_CONTENT_LOCALES.map((locale) => [
+      locale,
+      Object.fromEntries(
+        fieldCodes.map((fieldCode) => [fieldCode, source?.[locale]?.[fieldCode] ?? null]),
+      ),
+    ]),
+  ) as Record<ArctorContentLocale, LocalizedContentFieldMap>;
+}
+
+function normalizeEnvelopeFields(
+  fieldCodes: string[],
+  fields: LocalizedContentFieldMap,
+) {
+  return Object.fromEntries(
+    fieldCodes.map((fieldCode) => [fieldCode, fields[fieldCode] ?? null]),
+  ) as LocalizedContentFieldMap;
+}
+
+function createHumanEnvelope(input: {
+  existing: LocalizedContentEnvelope | null;
+  locale: ArctorContentLocale;
+  fields: LocalizedContentFieldMap;
+}) {
+  const fields = normalizeInputFields(input.fields);
+  const fieldCodes = Array.from(
+    new Set([...(input.existing?.fieldCodes ?? []), ...Object.keys(fields)]),
+  );
+  const variants = cloneVariants(fieldCodes, input.existing?.variants ?? null);
+  variants[input.locale] = {
+    ...variants[input.locale],
+    ...fields,
+  };
+  const humanLocales = Array.from(
+    new Set([...(input.existing?.humanLocales ?? []), input.locale]),
+  );
+  const revisionFields = normalizeEnvelopeFields(fieldCodes, variants[input.locale]);
+
+  return {
+    schemaVersion: ARCTOR_LOCALIZED_CONTENT_SCHEMA_VERSION,
+    detectedSourceLocale: input.existing?.detectedSourceLocale ?? input.locale,
+    sourceLocaleHint: input.locale,
+    sourceRevision: sourceRevision(input.locale, revisionFields),
+    fieldCodes,
+    original: {
+      ...(input.existing?.original ?? {}),
+      ...fields,
+    },
+    variants,
+    humanLocales,
+    lastEditedLocale: input.locale,
+    generatedAt: new Date().toISOString(),
+    provider: input.existing?.provider ?? "human",
+    model: input.existing?.model ?? null,
+    responseId: input.existing?.responseId ?? null,
+    usage: input.existing?.usage ?? {
+      inputTokens: 0,
+      cachedInputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+    },
+  } satisfies LocalizedContentEnvelope;
+}
+
+function mergeGeneratedEnvelope(input: {
+  generated: LocalizedContentEnvelope;
+  protectedEnvelope: LocalizedContentEnvelope | null;
+  manualLocale?: ArctorContentLocale | null;
+  manualFields?: LocalizedContentFieldMap | null;
+}) {
+  const fieldCodes = Array.from(
+    new Set([...(input.protectedEnvelope?.fieldCodes ?? []), ...input.generated.fieldCodes]),
+  );
+  const variants = cloneVariants(fieldCodes, input.protectedEnvelope?.variants ?? null);
+  const generatedFields = new Set(input.generated.fieldCodes);
+  const protectedLocales = new Set<ArctorContentLocale>(
+    input.protectedEnvelope?.humanLocales ?? [],
+  );
+
+  if (input.manualLocale) {
+    protectedLocales.add(input.manualLocale);
+  }
+
+  for (const locale of ARCTOR_CONTENT_LOCALES) {
+    if (protectedLocales.has(locale)) continue;
+    for (const fieldCode of generatedFields) {
+      variants[locale][fieldCode] = input.generated.variants[locale]?.[fieldCode] ?? null;
+    }
+  }
+
+  for (const locale of protectedLocales) {
+    const protectedFields = {
+      ...(input.protectedEnvelope?.variants[locale] ?? {}),
+      ...(input.manualLocale === locale && input.manualFields ? input.manualFields : {}),
+    };
+    variants[locale] = normalizeEnvelopeFields(fieldCodes, protectedFields);
+  }
+
+  return {
+    ...input.generated,
+    fieldCodes,
+    original: {
+      ...(input.protectedEnvelope?.original ?? {}),
+      ...input.generated.original,
+    },
+    variants,
+    humanLocales: Array.from(protectedLocales),
+    lastEditedLocale:
+      input.manualLocale ?? input.protectedEnvelope?.lastEditedLocale ?? null,
+  } satisfies LocalizedContentEnvelope;
+}
+
+async function readEntityMetadata(input: {
+  table: LocalizableEntityTable;
+  entityId: string;
+}) {
+  const { data, error } = await supabase
+    .from(input.table)
+    .select("id,metadata_json")
+    .eq("id", input.entityId)
+    .single();
+  if (error || !data) {
+    throw new Error(
+      `CONTENT_LOCALIZATION_ENTITY_READ_FAILED:${input.table}:${error?.message ?? "not_found"}`,
+    );
+  }
+  return asRecord((data as Record<string, unknown>).metadata_json);
+}
+
+async function writeEntityMetadata(input: {
+  table: LocalizableEntityTable;
+  entityId: string;
+  metadata: JsonRecord;
+}) {
+  const { error } = await supabase
+    .from(input.table)
+    .update({ metadata_json: input.metadata })
+    .eq("id", input.entityId);
+  if (error) {
+    throw new Error(
+      `CONTENT_LOCALIZATION_ENTITY_UPDATE_FAILED:${input.table}:${error.message}`,
+    );
+  }
+}
+
+export async function localizeEntityContent(input: {
+  userId: string;
+  actorId: string;
+  analysisExecutionId?: string | null;
+  operationId?: string | null;
+  table: LocalizableEntityTable;
+  entityId: string;
+  sourceLocaleHint: unknown;
+  fields: LocalizedContentFieldMap;
+}) {
+  const locale = normalizeContentLocale(input.sourceLocaleHint);
+  const fields = normalizeInputFields(input.fields);
+  const metadata = await readEntityMetadata({
+    table: input.table,
+    entityId: input.entityId,
+  });
+  const existing = readLocalizedContentEnvelope(metadata);
+  const humanEnvelope = createHumanEnvelope({
+    existing,
+    locale,
+    fields,
+  });
+
+  await writeEntityMetadata({
+    table: input.table,
+    entityId: input.entityId,
+    metadata: {
+      ...metadata,
+      localizedContent: humanEnvelope,
+      contentLocalizationRuntime: ARCTOR_CONTENT_LOCALIZATION_RUNTIME,
+    },
+  });
+
+  try {
+    const generated = await generateLocalizedContentBatch({
+      userId: input.userId,
+      actorId: input.actorId,
+      analysisExecutionId: input.analysisExecutionId ?? null,
+      operationId: input.operationId?.trim() || crypto.randomUUID(),
+      sourceLocaleHint: locale,
+      items: [{ key: input.entityId, fields }],
+    });
+    const generatedEnvelope = generated.envelopes.get(input.entityId);
+    if (!generatedEnvelope) {
+      throw new Error("CONTENT_LOCALIZATION_ENTITY_RESULT_MISSING");
+    }
+    const merged = mergeGeneratedEnvelope({
+      generated: generatedEnvelope,
+      protectedEnvelope: humanEnvelope,
+      manualLocale: locale,
+      manualFields: fields,
+    });
+    await writeEntityMetadata({
+      table: input.table,
+      entityId: input.entityId,
+      metadata: {
+        ...metadata,
+        localizedContent: merged,
+        contentLocalizationRuntime: ARCTOR_CONTENT_LOCALIZATION_RUNTIME,
+      },
+    });
+    return {
+      ok: true as const,
+      manualPersisted: true as const,
+      aiLocalized: true as const,
+      locale,
+      warning: null,
+    };
+  } catch (error) {
+    return {
+      ok: true as const,
+      manualPersisted: true as const,
+      aiLocalized: false as const,
+      locale,
+      warning:
+        error instanceof Error ? error.message : "CONTENT_LOCALIZATION_AI_FAILED",
+    };
   }
 }
 
@@ -692,12 +926,19 @@ export async function ensureActivityEventLocalizations(input: {
       continue;
     }
     const metadata = asRecord(row.metadata_json);
+    const existing = readLocalizedContentEnvelope(row.metadata_json);
+    const mergedEnvelope = mergeGeneratedEnvelope({
+      generated: envelope,
+      protectedEnvelope: existing,
+      manualLocale: envelope.detectedSourceLocale,
+      manualFields: source.fields,
+    });
     const { error: updateError } = await supabase
       .from("activity_events")
       .update({
         metadata_json: {
           ...metadata,
-          localizedContent: envelope,
+          localizedContent: mergedEnvelope,
           contentLocalizationRuntime: ARCTOR_CONTENT_LOCALIZATION_RUNTIME,
         },
         updated_at: new Date().toISOString(),

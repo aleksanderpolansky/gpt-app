@@ -16,6 +16,7 @@ import {
 } from "../../../../../../lib/actor-context";
 import { auth0 } from "../../../../../../lib/auth0";
 import { supabase } from "../../../../../../lib/supabase";
+import { localizeEntityContent } from "@/lib/localization/contentLocalization.server";
 
 export const dynamic = "force-dynamic";
 
@@ -558,6 +559,19 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     }
   }
 
+  const contentLocalization = await localizeEntityContent({
+    userId: actorContext.appUserId,
+    actorId: actorContext.actorId,
+    table: "organizations",
+    entityId: organizationId,
+    sourceLocaleHint: body.locale,
+    fields: {
+      organizationName: updatedOrganization.organization_name,
+      description: updatedOrganization.description,
+      shortDescription: updatedOrganization.short_description,
+    },
+  });
+
   revalidatePath(`/organizations/${organizationId}/edit`);
 
   if (organization.public_slug) {
@@ -568,6 +582,7 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     ok: true,
     organization: updatedOrganization,
     primaryLocation: updatedLocation,
+    contentLocalization,
     actingAs: {
       actorId: actorContext.actorId,
       actorType: actorContext.actorType,

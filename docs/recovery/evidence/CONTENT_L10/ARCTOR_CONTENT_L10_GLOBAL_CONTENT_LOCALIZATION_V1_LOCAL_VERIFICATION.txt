@@ -1,0 +1,15 @@
+ARCTor CONTENT-L10 GLOBAL CONTENT LOCALIZATION V1 - LOCAL VERIFICATION
+STATUS=PASS_LOCAL
+BASELINE_HEAD=e12b4f294c16af7ded94c2172f44209759fad1b0
+INTAKE_STATUS=PASS
+INTAKE_POWERSHELL=5.1.26100.9168
+SUPPORTED_LOCALES=en,pl,ru,uk,de,es,cs
+VALIDATOR=33/33 PASS
+TYPESCRIPT_TRANSPILE=21/21 PASS (TypeScript 5.8.3)
+RUNTIME_CORE_TEST=PASS (v1 envelope upgrade + strict missing-locale no-fallback)
+SYNTHETIC_GIT_DIFF_CHECK=PASS
+ENCODING=UTF-8_NO_BOM
+PAYLOAD_EOL=CRLF
+SQL_STATIC_CHECK=PASS (transactional additive metadata_json columns + rollback)
+NOT_RUN_LOCALLY=Windows PowerShell 5.1 parser for release runner; full npm/Next build without repo node_modules; live Supabase DDL/runtime; real Git push.
+RELEASE_RUNNER=performs PowerShell self-parse, clean/main/exact-baseline check, payload hash verification, validator, npm build, git diff --check, commit and push on user machine.

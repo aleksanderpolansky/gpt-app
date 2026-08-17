@@ -1,11 +1,11 @@
 {
   "schemaVersion": 7,
-  "generatedAt": "2026-08-17T08:46:49.398Z",
+  "generatedAt": "2026-08-17T15:30:00.000Z",
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
-  "branch": "feat/ai-a3-1-review-first-semantic-facts-v1-20260817",
-  "originMainAtCheckpoint": "d91549773dae71206e46f3182bfd433f9c30316d",
-  "checkpointMeaning": "AI-A3.1 review-first activity lifecycle: immediate activity capture, creative leaf review, transactional measurement x leaf fact fanout, multiplier context rules.",
+  "branch": "main",
+  "originMainAtCheckpoint": "e12b4f294c16af7ded94c2172f44209759fad1b0",
+  "checkpointMeaning": "CONTENT-L10 Global Content Localization V1: persistent 7-locale user content, strict public locale reads, human override protection.",
   "globalReality": {
     "p8Blocked": true,
     "objectsTotal": 150,
@@ -37,7 +37,8 @@
     "supabase/manual-applied/20260813_ai_a3_p1_data_capital_foundation_v2.sql",
     "supabase/manual-applied/20260813_ai_a3_p5a_global_fact_writer_rowtype_hotfix_v3.sql",
     "supabase/manual-applied/20260816_ai_a1_1_usage_operation_kind_schema_hotfix_v2.sql",
-    "supabase/manual-applied/20260817_ai_a3_1_review_first_semantic_fact_pipeline_v2.sql"
+    "supabase/manual-applied/20260817_ai_a3_1_review_first_semantic_fact_pipeline_v2.sql",
+    "supabase/migrations/20260817173000_content_l10_global_content_localization_v1.sql"
   ],
   "goldStatus": {
     "passed": [
@@ -53,7 +54,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Live acceptance: capture one activity -> verify immediate review queue/no facts -> open review -> verify >=8 diverse leaf proposals -> edit selections -> save -> verify process_count and duration fanout; then verify one coefficient rule.",
+  "nextAction": "Apply 20260817173000_content_l10_global_content_localization_v1.sql, run release validator/build, push main, then live-create one organization/service/certificate and verify locale switching.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -64,7 +65,7 @@
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
   "previousRecoveryCommit": "d91549773dae71206e46f3182bfd433f9c30316d",
-  "documentedState": "AI_A3_1_REVIEW_FIRST_SEMANTIC_FACT_PIPELINE_RELEASED_AWAITING_LIVE_ACCEPTANCE",
+  "documentedState": "CONTENT_L10_GLOBAL_CONTENT_LOCALIZATION_V1_CODED_AWAITING_LIVE_ACCEPTANCE",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",

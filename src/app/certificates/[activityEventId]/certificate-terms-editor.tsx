@@ -95,7 +95,7 @@ export function CertificateTermsEditor({
             "Content-Type": "application/json",
             Accept: "application/json",
           },
-          body: JSON.stringify({ termsText: value }),
+          body: JSON.stringify({ termsText: value, locale }),
         },
       );
 

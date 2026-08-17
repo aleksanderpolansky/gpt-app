@@ -243,6 +243,7 @@ export function ValueObjectInlineEditor({
     setErrorMessage("");
 
     const body: Record<string, unknown> = {
+      locale,
       title: title.trim(),
       description: description.trim() || null,
     };

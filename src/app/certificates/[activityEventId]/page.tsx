@@ -362,7 +362,7 @@ export async function generateMetadata({
   const { activityEventId } = await params;
   const resolvedSearchParams = await searchParams;
   const locale = normalizeGiftCertificateLocale(resolvedSearchParams?.locale);
-  const certificate = await getGiftCertificateCatalogItem(activityEventId);
+  const certificate = await getGiftCertificateCatalogItem(activityEventId, locale);
 
   if (
     !certificate ||
@@ -555,7 +555,7 @@ export default async function CertificateCatalogDetailPage({
     : resolvedSearchParams?.mode;
   const requestedEditMode = requestedMode === "edit";
   const [certificate, viewer] = await Promise.all([
-    getGiftCertificateCatalogItem(activityEventId),
+    getGiftCertificateCatalogItem(activityEventId, locale),
     resolveOptionalViewer(),
   ]);
 

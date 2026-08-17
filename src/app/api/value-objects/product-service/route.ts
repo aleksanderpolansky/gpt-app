@@ -7,6 +7,7 @@ import {
 } from "../../../../../lib/actor-context";
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
+import { localizeEntityContent } from "@/lib/localization/contentLocalization.server";
 
 export const dynamic = "force-dynamic";
 
@@ -335,6 +336,18 @@ export async function POST(request: Request) {
     );
   }
 
+  const contentLocalization = await localizeEntityContent({
+    userId: actorContext.appUserId,
+    actorId: actorContext.actorId,
+    table: "value_objects",
+    entityId: creation.value_object_id,
+    sourceLocaleHint: locale,
+    fields: {
+      title,
+      description,
+    },
+  });
+
   return NextResponse.json({
     ok: true,
     valueObjectId: creation.value_object_id,
@@ -344,6 +357,7 @@ export async function POST(request: Request) {
     organizationId: creation.organization_id,
     defaultCurrency: creation.default_currency,
     createdRoot: creation.created_root,
+    contentLocalization,
     redirectUrl: buildValueObjectDetailUrl(
       creation.value_object_id,
       locale,

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { resolveActiveActorContext } from "../../../../../lib/actor-context";
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
+import { resolveLocalizedContentFieldsStrict } from "@/lib/localization/contentLocalization";
 import OrganizationPublicProfileEditClient, {
   type OrganizationPublicProfileEditInitialData,
 } from "./OrganizationPublicProfileEditClient";
@@ -38,6 +39,7 @@ type OrganizationRow = {
   logo_url: string | null;
   cover_image_url: string | null;
   social_links_json: Record<string, unknown> | null;
+  metadata_json: unknown;
   directory_published_at: string | null;
   created_at: string | null;
   updated_at: string | null;
@@ -200,6 +202,7 @@ export default async function OrganizationEditPage({
       logo_url,
       cover_image_url,
       social_links_json,
+      metadata_json,
       directory_published_at,
       created_at,
       updated_at
@@ -268,15 +271,20 @@ export default async function OrganizationEditPage({
   const publicProfileHref = organization.public_slug
     ? `/directory/${organization.public_slug}?locale=${encodeURIComponent(locale)}`
     : null;
+  const localizedOrganization = resolveLocalizedContentFieldsStrict({
+    metadata: organization.metadata_json,
+    locale,
+    fieldCodes: ["organizationName", "description", "shortDescription"],
+  });
 
   const initialData: OrganizationPublicProfileEditInitialData = {
     locale,
     organization: {
       id: organization.id,
-      name: organization.organization_name,
+      name: localizedOrganization.organizationName ?? "",
       type: organization.organization_type,
-      description: organization.description,
-      shortDescription: organization.short_description,
+      description: localizedOrganization.description ?? null,
+      shortDescription: localizedOrganization.shortDescription ?? null,
       publicSlug: organization.public_slug,
       publicEmail: organization.public_email,
       publicPhone: organization.public_phone,

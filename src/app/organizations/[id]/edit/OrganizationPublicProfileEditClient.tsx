@@ -943,6 +943,7 @@ export default function OrganizationPublicProfileEditClient({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            locale: initialData.locale,
             logoUrl: values.logoUrl,
             organizationName: values.organizationName,
             organizationType: values.organizationType,

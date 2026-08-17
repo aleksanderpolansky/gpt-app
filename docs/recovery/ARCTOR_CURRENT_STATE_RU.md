@@ -599,3 +599,5 @@ Live acceptance также обнаружил и закрыл schema gap: ai_usa
 - несколько сработавших коэффициентов перемножаются;
 - raw/calculated fact split не вводится;
 - primary correction может сохранять actor-scoped wording example, без auto-mutation Global profile.
+## CONTENT-L10 Global Content Localization V1 — 2026-08-17
+Реализован единый persistent localization envelope V2 для пользовательского контента на 7 локалей: en/pl/ru/uk/de/es/cs. Организации, legacy offers, product/service value_objects и gift-certificate activity_events локализуются при создании/редактировании. Публичные directory/offers/certificates используют strict locale resolver без fallback на исходный язык. Ручная локаль фиксируется в humanLocales и не перезаписывается последующей AI-локализацией. Для organizations/offers добавляется metadata_json; activity_events/value_objects используют существующий metadata_json.

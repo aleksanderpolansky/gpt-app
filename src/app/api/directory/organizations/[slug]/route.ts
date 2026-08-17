@@ -1,5 +1,6 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createLocalizationRuntimeContext } from "../../../../../types/localization";
+import { resolveLocalizedContentFieldsStrict } from "@/lib/localization/contentLocalization";
 import { supabase } from "../../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -86,6 +87,7 @@ type DirectoryOrganizationRow = {
   logo_url: string | null;
   cover_image_url: string | null;
   social_links_json: Record<string, unknown> | null;
+  metadata_json: unknown;
   directory_published_at: string | null;
   created_at: string;
   updated_at: string | null;
@@ -401,9 +403,15 @@ async function getDirectoryClassificationsByOrganizationId(
 
 function mapDirectoryOrganization(
   row: DirectoryOrganizationRow,
-  classifications: DirectoryObjectActionClassification[]
+  classifications: DirectoryObjectActionClassification[],
+  locale: string,
 ) {
   const primaryCategory = getPrimaryCategory(row, classifications);
+  const localized = resolveLocalizedContentFieldsStrict({
+    metadata: row.metadata_json,
+    locale,
+    fieldCodes: ["organizationName", "description", "shortDescription"],
+  });
 
   const primaryLocation =
     row.organization_locations?.find(
@@ -417,10 +425,11 @@ function mapDirectoryOrganization(
 
   return {
     id: row.id,
-    name: row.organization_name,
+    name: localized.organizationName ?? "—",
     type: row.organization_type,
-    description: row.description,
-    shortDescription: row.short_description,
+    description: localized.description,
+    shortDescription: localized.shortDescription,
+    contentLocalizationStatus: localized.organizationName ? "ready" : "missing",
     publicSlug: row.public_slug,
     countryCode: row.country_code,
     defaultCurrency: row.default_currency,
@@ -497,6 +506,7 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
       logo_url,
       cover_image_url,
       social_links_json,
+      metadata_json,
       directory_published_at,
       created_at,
       updated_at,
@@ -565,6 +575,6 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
   return NextResponse.json({
     ok: true,
     locale: contentLocale,
-    organization: mapDirectoryOrganization(organizationRow, classifications),
+    organization: mapDirectoryOrganization(organizationRow, classifications, contentLocale),
   });
 }

@@ -1,6 +1,7 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabase } from "../../../../lib/supabase";
+import { resolveLocalizedContentFieldsStrict } from "@/lib/localization/contentLocalization";
 
 import {
   getOffersMessages,
@@ -94,6 +95,7 @@ type OfferRow = {
   max_certificates_total: number | null;
   created_at: string;
   updated_at: string | null;
+  metadata_json: unknown;
 };
 
 type OrganizationRow = {
@@ -108,6 +110,7 @@ type OrganizationRow = {
   status: string | null;
   country_code: string | null;
   default_currency: string | null;
+  metadata_json: unknown;
 };
 
 type PublicOffer = {
@@ -163,13 +166,18 @@ type OfferPageData = {
   errorMessage: string | null;
 };
 
-function mapPublicOffer(row: OfferRow): PublicOffer {
+function mapPublicOffer(row: OfferRow, locale: string): PublicOffer {
+  const localized = resolveLocalizedContentFieldsStrict({
+    metadata: row.metadata_json,
+    locale,
+    fieldCodes: ["title", "description", "discountLegalNote", "certificateTerms"],
+  });
   return {
     id: row.id,
     organizationId: row.organization_id,
     offerType: row.offer_type,
-    title: row.title,
-    description: row.description,
+    title: localized.title ?? "—",
+    description: localized.description,
     price: row.price,
     currency: row.currency,
     isPaid: row.is_paid,
@@ -192,14 +200,14 @@ function mapPublicOffer(row: OfferRow): PublicOffer {
     discountEndsAt: row.discount_ends_at,
     lowestPrice30Days: row.lowest_price_30_days,
     lowestPrice30DaysCurrency: row.lowest_price_30_days_currency,
-    discountLegalNote: row.discount_legal_note,
+    discountLegalNote: localized.discountLegalNote,
     certificate: {
       available: row.certificate_available,
       paymentMode: row.certificate_payment_mode,
       pointsPrice: row.certificate_points_price,
       moneyPrice: row.certificate_money_price,
       currency: row.certificate_currency,
-      terms: row.certificate_terms,
+      terms: localized.certificateTerms,
       validityDays: row.certificate_validity_days,
       requiresSellerConfirmation: row.requires_seller_confirmation,
       isTransferable: row.is_transferable,
@@ -212,7 +220,7 @@ function mapPublicOffer(row: OfferRow): PublicOffer {
   };
 }
 
-async function getOfferPageData(offerId: string): Promise<OfferPageData> {
+async function getOfferPageData(offerId: string, locale: string): Promise<OfferPageData> {
   const nowIso = new Date().toISOString();
 
   const { data: offerData, error: offerError } = await supabase
@@ -259,7 +267,8 @@ async function getOfferPageData(offerId: string): Promise<OfferPageData> {
       points_refund_policy,
       max_certificates_total,
       created_at,
-      updated_at
+      updated_at,
+      metadata_json
     `
     )
     .eq("id", offerId)
@@ -284,7 +293,7 @@ async function getOfferPageData(offerId: string): Promise<OfferPageData> {
     };
   }
 
-  const offer = mapPublicOffer(offerData as unknown as OfferRow);
+  const offer = mapPublicOffer(offerData as unknown as OfferRow, locale);
 
   if (!offer.organizationId) {
     return {
@@ -308,7 +317,8 @@ async function getOfferPageData(offerId: string): Promise<OfferPageData> {
       is_listed_in_directory,
       status,
       country_code,
-      default_currency
+      default_currency,
+      metadata_json
     `
     )
     .eq("id", offer.organizationId)
@@ -323,9 +333,19 @@ async function getOfferPageData(offerId: string): Promise<OfferPageData> {
     };
   }
 
+  const organizationRow = organizationData as OrganizationRow;
+  const localizedOrganization = resolveLocalizedContentFieldsStrict({
+    metadata: organizationRow.metadata_json,
+    locale,
+    fieldCodes: ["organizationName"],
+  });
+
   return {
     offer,
-    organization: organizationData as OrganizationRow,
+    organization: {
+      ...organizationRow,
+      organization_name: localizedOrganization.organizationName ?? "—",
+    },
     errorMessage: null,
   };
 }
@@ -498,7 +518,7 @@ export default async function OfferDetailPage({
   const systemLabels = getSystemLabelsMessages(selectedLocale);
   const offerId = resolvedParams.id;
 
-  const { offer, organization, errorMessage } = await getOfferPageData(offerId);
+  const { offer, organization, errorMessage } = await getOfferPageData(offerId, selectedLocale);
 
   if (!offer && !errorMessage) {
     notFound();

@@ -15,6 +15,7 @@ import {
 import { auth0 } from "../../../../lib/auth0";
 import { runOrganizationSemanticIntake } from "../../../../lib/organizations/organizationSemanticIntake";
 import { supabase } from "../../../../lib/supabase";
+import { localizeEntityContent } from "@/lib/localization/contentLocalization.server";
 
 type GeoAreaRow = {
   id: string;
@@ -734,6 +735,7 @@ export async function GET(request: Request) {
       logo_url,
       cover_image_url,
       social_links_json,
+      metadata_json,
       directory_published_at,
       created_at,
       updated_at
@@ -1125,6 +1127,19 @@ export async function POST(request: Request) {
       role.function_type === "seller"
   );
 
+  const contentLocalization = await localizeEntityContent({
+    userId: actorContext.appUserId,
+    actorId: actorContext.actorId,
+    table: "organizations",
+    entityId: organization.id,
+    sourceLocaleHint: body.locale,
+    fields: {
+      organizationName: organization.organization_name,
+      description: organization.description,
+      shortDescription: organization.short_description,
+    },
+  });
+
   let semanticIntake = null;
 
   try {
@@ -1182,6 +1197,7 @@ export async function POST(request: Request) {
         publishedAt: organization.directory_published_at,
       },
       semanticIntake,
+      contentLocalization,
       addressPersistenceWarning,
     },
     { status: 201 }

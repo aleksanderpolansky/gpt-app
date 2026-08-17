@@ -276,6 +276,7 @@ export default function NewOrganizationPage() {
       organizationName: organizationName.trim(),
       organizationType,
       description: description.trim() || null,
+      locale,
     };
 
     payload.countryCode = normalizeCountryCode(countryCode);

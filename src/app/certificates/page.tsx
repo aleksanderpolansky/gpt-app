@@ -198,7 +198,7 @@ export default async function CertificatesPage({
   );
 
   if (view === "participants") {
-    const certificates = await listPublicGiftCertificates();
+    const certificates = await listPublicGiftCertificates(locale);
     return (
       <CertificatesDashboardContent
         initialLocale={locale}
@@ -225,13 +225,13 @@ export default async function CertificatesPage({
     let certificates: GiftCertificateCatalogItem[];
 
     if (view === "received") {
-      certificates = await listBuyerGiftCertificates(actorContext.appUserId);
+      certificates = await listBuyerGiftCertificates(actorContext.appUserId, locale);
     } else if (view === "provided") {
-      certificates = await listProviderGiftCertificates(actorContext.appUserId);
+      certificates = await listProviderGiftCertificates(actorContext.appUserId, locale);
     } else {
       const [received, provided] = await Promise.all([
-        listBuyerGiftCertificates(actorContext.appUserId),
-        listProviderGiftCertificates(actorContext.appUserId),
+        listBuyerGiftCertificates(actorContext.appUserId, locale),
+        listProviderGiftCertificates(actorContext.appUserId, locale),
       ]);
       const combined = deduplicateCertificates([...received, ...provided]);
       certificates =

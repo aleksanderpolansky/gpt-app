@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createLocalizationRuntimeContext } from "../../../../../../types/localization";
+import { resolveLocalizedContentFieldsStrict } from "@/lib/localization/contentLocalization";
 import { supabase } from "../../../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -52,6 +53,7 @@ type PublicOfferRow = {
   max_certificates_total: number | null;
   created_at: string;
   updated_at: string | null;
+  metadata_json: unknown;
 };
 
 type DirectoryOrganizationLookupRow = {
@@ -62,15 +64,21 @@ type DirectoryOrganizationLookupRow = {
   directory_status: string;
   is_public_profile_enabled: boolean;
   is_listed_in_directory: boolean;
+  metadata_json: unknown;
 };
 
-function mapPublicOffer(row: PublicOfferRow) {
+function mapPublicOffer(row: PublicOfferRow, locale: string) {
+  const localized = resolveLocalizedContentFieldsStrict({
+    metadata: row.metadata_json,
+    locale,
+    fieldCodes: ["title", "description", "discountLegalNote", "certificateTerms"],
+  });
   return {
     id: row.id,
     organizationId: row.organization_id,
     offerType: row.offer_type,
-    title: row.title,
-    description: row.description,
+    title: localized.title ?? "—",
+    description: localized.description,
     price: row.price,
     currency: row.currency,
     isPaid: row.is_paid,
@@ -93,14 +101,14 @@ function mapPublicOffer(row: PublicOfferRow) {
     discountEndsAt: row.discount_ends_at,
     lowestPrice30Days: row.lowest_price_30_days,
     lowestPrice30DaysCurrency: row.lowest_price_30_days_currency,
-    discountLegalNote: row.discount_legal_note,
+    discountLegalNote: localized.discountLegalNote,
     certificate: {
       available: row.certificate_available,
       paymentMode: row.certificate_payment_mode,
       pointsPrice: row.certificate_points_price,
       moneyPrice: row.certificate_money_price,
       currency: row.certificate_currency,
-      terms: row.certificate_terms,
+      terms: localized.certificateTerms,
       validityDays: row.certificate_validity_days,
       requiresSellerConfirmation: row.requires_seller_confirmation,
       isTransferable: row.is_transferable,
@@ -163,7 +171,8 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
       status,
       directory_status,
       is_public_profile_enabled,
-      is_listed_in_directory
+      is_listed_in_directory,
+      metadata_json
     `
     )
     .eq("public_slug", slug)
@@ -232,7 +241,8 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
       points_refund_policy,
       max_certificates_total,
       created_at,
-      updated_at
+      updated_at,
+      metadata_json
     `
     )
     .eq("organization_id", organizationRow.id)
@@ -260,15 +270,22 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
 
   const offerRows = (offers as unknown as PublicOfferRow[] | null) ?? [];
 
+  const localizedOrganization = resolveLocalizedContentFieldsStrict({
+    metadata: organizationRow.metadata_json,
+    locale: contentLocale,
+    fieldCodes: ["organizationName"],
+  });
+
   return NextResponse.json({
     ok: true,
     locale: contentLocale,
     organization: {
       id: organizationRow.id,
-      name: organizationRow.organization_name,
+      name: localizedOrganization.organizationName ?? "—",
       publicSlug: organizationRow.public_slug,
+      contentLocalizationStatus: localizedOrganization.organizationName ? "ready" : "missing",
     },
-    offers: offerRows.map(mapPublicOffer),
+    offers: offerRows.map((row) => mapPublicOffer(row, contentLocale)),
     count: offerRows.length,
     filters: {
       certificateOnly,

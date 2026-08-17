@@ -5,6 +5,7 @@ import {
 } from "../../../../../lib/actor-context";
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
+import { localizeEntityContent } from "@/lib/localization/contentLocalization.server";
 
 export const dynamic = "force-dynamic";
 
@@ -1007,10 +1008,33 @@ export async function PATCH(request: Request, context: ValueObjectRouteContext) 
     );
   }
 
+  let contentLocalization = null;
+  if (isRecord(body)) {
+    const localizedFields: Record<string, string | null> = {};
+    if (Object.prototype.hasOwnProperty.call(body, "title")) {
+      localizedFields.title = updatedValueObject.title ?? null;
+    }
+    if (Object.prototype.hasOwnProperty.call(body, "description")) {
+      localizedFields.description = updatedValueObject.description ?? null;
+    }
+
+    if (Object.keys(localizedFields).length > 0) {
+      contentLocalization = await localizeEntityContent({
+        userId: appUser.id,
+        actorId: personActor.id,
+        table: "value_objects",
+        entityId: updatedValueObject.id,
+        sourceLocaleHint: body.locale,
+        fields: localizedFields,
+      });
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     mode: "draft_patch",
     valueObject: updatedValueObject,
+    contentLocalization,
     editContract: buildEditContract(),
   });
 }

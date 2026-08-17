@@ -1,5 +1,9 @@
 import { supabase } from "../../../lib/supabase";
 import {
+  normalizeContentLocale,
+  resolveLocalizedContentFieldsStrict,
+} from "@/lib/localization/contentLocalization";
+import {
   readGiftCertificateProductImageSnapshot,
   readValueObjectPublicImageUrl,
 } from "@/lib/value-object-public-image";
@@ -91,6 +95,7 @@ type OrganizationRow = {
   directory_status: string;
   is_public_profile_enabled: boolean;
   is_listed_in_directory: boolean;
+  metadata_json: unknown;
 };
 
 type OrganizationLocationRow = {
@@ -372,7 +377,9 @@ function resolveFlowState(
 
 async function hydrateTerms(
   termsRows: TermsRow[],
+  localeInput: unknown = "en",
 ): Promise<GiftCertificateCatalogItem[]> {
+  const locale = normalizeContentLocale(localeInput);
   if (termsRows.length === 0) {
     return [];
   }
@@ -450,7 +457,7 @@ async function hydrateTerms(
     organizationIds.length > 0
       ? supabase
           .from("organizations")
-          .select("id,organization_name,public_slug,logo_url,country_code,status,directory_status,is_public_profile_enabled,is_listed_in_directory")
+          .select("id,organization_name,public_slug,logo_url,country_code,status,directory_status,is_public_profile_enabled,is_listed_in_directory,metadata_json")
           .in("id", organizationIds)
       : Promise.resolve({ data: [], error: null }),
     organizationIds.length > 0
@@ -587,14 +594,20 @@ async function hydrateTerms(
     const checkin = checkinsByActivityId.get(terms.activity_event_id) ?? null;
     const confirmation =
       confirmationsByActivityId.get(terms.activity_event_id) ?? null;
-    const title =
-      readSnapshotText(terms.public_snapshot_json, "publicTitle") ??
-      valueObject.title ??
-      activity.title;
-    const description =
-      readSnapshotText(terms.public_snapshot_json, "publicDescription") ??
-      valueObject.description ??
-      activity.description;
+    const localizedActivity = resolveLocalizedContentFieldsStrict({
+      metadata: activity.metadata_json,
+      locale,
+      fieldCodes: ["title", "description", "termsText"],
+    });
+    const localizedOrganization = organization
+      ? resolveLocalizedContentFieldsStrict({
+          metadata: organization.metadata_json,
+          locale,
+          fieldCodes: ["organizationName"],
+        })
+      : null;
+    const title = localizedActivity.title ?? "—";
+    const description = localizedActivity.description;
     const sourceProductImageUrl = readValueObjectPublicImageUrl(
       valueObject.metadata_json,
     );
@@ -623,10 +636,11 @@ async function hydrateTerms(
         providerOrganizationId: terms.provider_organization_id,
         providerType: terms.provider_type,
         providerDisplayName:
-          organization?.organization_name ??
-          (providerPublicProfile?.is_public
-            ? providerPublicProfile.display_name
-            : providerActor.display_name),
+          organization
+            ? localizedOrganization?.organizationName ?? "—"
+            : providerPublicProfile?.is_public
+              ? providerPublicProfile.display_name
+              : providerActor.display_name,
         providerPublicHref:
           organization?.public_slug &&
           organization.status === "active" &&
@@ -682,7 +696,7 @@ async function hydrateTerms(
           terms.reference_exchange_rate_source_url,
         referenceExchangeRateIsFallback:
           terms.reference_exchange_rate_is_fallback,
-        termsText: terms.terms_text,
+        termsText: localizedActivity.termsText,
         publicCode: terms.public_code,
         qrTokenHash: terms.qr_token_hash,
         qrTokenVersion: terms.qr_token_version,
@@ -722,9 +736,9 @@ function sortByNewest(
   );
 }
 
-export async function listPublicGiftCertificates(): Promise<
-  GiftCertificateCatalogItem[]
-> {
+export async function listPublicGiftCertificates(
+  locale: unknown = "en",
+): Promise<GiftCertificateCatalogItem[]> {
   const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from("activity_gift_certificate_terms")
@@ -739,7 +753,7 @@ export async function listPublicGiftCertificates(): Promise<
     throw new Error(error.message);
   }
 
-  const items = await hydrateTerms((data ?? []) as TermsRow[]);
+  const items = await hydrateTerms((data ?? []) as TermsRow[], locale);
   const publicItems = items.filter((item) => {
     if (item.activity.status !== "planned") {
       return false;
@@ -786,6 +800,7 @@ export async function listPublicGiftCertificates(): Promise<
 
 export async function listBuyerGiftCertificates(
   recipientUserId: string,
+  locale: unknown = "en",
 ): Promise<GiftCertificateCatalogItem[]> {
   const { data, error } = await supabase
     .from("activity_gift_certificate_terms")
@@ -799,11 +814,12 @@ export async function listBuyerGiftCertificates(
     throw new Error(error.message);
   }
 
-  return sortByNewest(await hydrateTerms((data ?? []) as TermsRow[]));
+  return sortByNewest(await hydrateTerms((data ?? []) as TermsRow[], locale));
 }
 
 export async function listProviderGiftCertificates(
   providerOwnerUserId: string,
+  locale: unknown = "en",
 ): Promise<GiftCertificateCatalogItem[]> {
   const { data, error } = await supabase
     .from("activity_gift_certificate_terms")
@@ -816,11 +832,12 @@ export async function listProviderGiftCertificates(
     throw new Error(error.message);
   }
 
-  return sortByNewest(await hydrateTerms((data ?? []) as TermsRow[]));
+  return sortByNewest(await hydrateTerms((data ?? []) as TermsRow[], locale));
 }
 
 export async function getGiftCertificateCatalogItem(
   activityEventId: string,
+  locale: unknown = "en",
 ): Promise<GiftCertificateCatalogItem | null> {
   const { data, error } = await supabase
     .from("activity_gift_certificate_terms")
@@ -836,6 +853,6 @@ export async function getGiftCertificateCatalogItem(
     return null;
   }
 
-  const items = await hydrateTerms([data as TermsRow]);
+  const items = await hydrateTerms([data as TermsRow], locale);
   return items[0] ?? null;
 }

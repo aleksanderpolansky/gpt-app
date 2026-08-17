@@ -6,6 +6,7 @@ import {
 } from "../../../../../../lib/actor-context";
 import { auth0 } from "../../../../../../lib/auth0";
 import { supabase } from "../../../../../../lib/supabase";
+import { localizeEntityContent } from "@/lib/localization/contentLocalization.server";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ type RouteContext = {
 
 type RequestBody = {
   readonly termsText?: unknown;
+  readonly locale?: unknown;
 };
 
 type TermsRow = {
@@ -167,5 +169,14 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
-  return NextResponse.json({ ok: true, termsText });
+  const contentLocalization = await localizeEntityContent({
+    userId: actorContext.appUserId,
+    actorId: actorContext.actorId,
+    table: "activity_events",
+    entityId: activityEventId,
+    sourceLocaleHint: body.locale,
+    fields: { termsText },
+  });
+
+  return NextResponse.json({ ok: true, termsText, contentLocalization });
 }

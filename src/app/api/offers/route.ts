@@ -5,6 +5,7 @@ import {
 } from "../../../../lib/actor-context";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
+import { localizeEntityContent } from "@/lib/localization/contentLocalization.server";
 
 type OfferItemInput = {
   valueObjectId?: string | null;
@@ -494,6 +495,7 @@ export async function POST(request: Request) {
 
   const body = await request.json();
 
+  const sourceLocale = parseOptionalText(body.locale) ?? "en";
   const organizationId = parseOptionalText(body.organizationId);
   const valueObjectId = parseOptionalText(body.valueObjectId);
   const offerType = parseOptionalText(body.offerType);
@@ -787,8 +789,23 @@ export async function POST(request: Request) {
     offerItems = insertedOfferItems ?? [];
   }
 
+  const contentLocalization = await localizeEntityContent({
+    userId: appUser.id,
+    actorId: personActor.id,
+    table: "offers",
+    entityId: offer.id,
+    sourceLocaleHint: sourceLocale,
+    fields: {
+      title,
+      description,
+      discountLegalNote,
+      certificateTerms,
+    },
+  });
+
   return NextResponse.json({
     ok: true,
+    contentLocalization,
     offer: {
       ...offer,
       offer_items: offerItems,

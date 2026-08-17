@@ -8,6 +8,7 @@ import { auth0 } from "../../../../../../../lib/auth0";
 import { resolveOfficialEurReferenceRate } from "../../../../../../../lib/exchange-rates/official-eur-reference-rate";
 import { supabase } from "../../../../../../../lib/supabase";
 import { getOrganizationCurrency } from "@/lib/commercial/currency";
+import { localizeEntityContent } from "@/lib/localization/contentLocalization.server";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,8 @@ type RequestBody = {
 
 type ValueObjectRow = {
   id: string;
+  title: string;
+  description: string | null;
   object_kind: ProductServiceKind;
   node_role_code: string | null;
   default_price: number | null;
@@ -342,6 +345,8 @@ export async function POST(
     .select(
       `
       id,
+      title,
+      description,
       object_kind,
       node_role_code,
       default_price,
@@ -594,10 +599,24 @@ export async function POST(
     );
   }
 
+  const contentLocalization = await localizeEntityContent({
+    userId: actorContext.appUserId,
+    actorId: actorContext.actorId,
+    table: "activity_events",
+    entityId: activityEventId,
+    sourceLocaleHint: locale,
+    fields: {
+      title: valueObject.title,
+      description: valueObject.description,
+      termsText,
+    },
+  });
+
   return NextResponse.json({
     ok: true,
     disposition: payload?.disposition ?? null,
     activityEventId,
+    contentLocalization,
     redirectUrl: buildGiftCertificateReviewUrl(
       activityEventId,
       locale,
