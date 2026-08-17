@@ -46,6 +46,7 @@ type SidebarOrganizationLocation = {
 type SidebarOrganization = {
   id: string;
   organization_name: string;
+  public_slug?: string | null;
   primaryLocation?: SidebarOrganizationLocation | null;
   location?: SidebarOrganizationLocation | null;
   locations?: SidebarOrganizationLocation[];
@@ -574,10 +575,12 @@ function BusinessOrganizationTreeItem({
   readonly locale: LocaleCode;
 }) {
   const locationLabel = getOrganizationLocationLabel(organization);
-  const href = buildLocaleAwareHref(
-    `/organizations/${encodeURIComponent(organization.id)}`,
-    locale,
-  );
+  const href = organization.public_slug
+    ? buildLocaleAwareHref(
+        `/directory/${encodeURIComponent(organization.public_slug)}`,
+        locale,
+      )
+    : buildLocaleAwareHref("/directory?scope=mine", locale);
 
   return (
     <a
@@ -789,8 +792,12 @@ export function GlobalSidebar({
     isSalesActive ||
     isProvidedCertificatesActive;
 
-  const isBusinessCatalogActive = currentPathname === "/directory";
-  const isMyBusinessesActive = currentPathname.startsWith("/organizations");
+  const directoryScope = certificateSearch.get("scope");
+  const isBusinessCatalogActive =
+    currentPathname.startsWith("/directory") && directoryScope !== "mine";
+  const isMyBusinessesActive =
+    (currentPathname.startsWith("/directory") && directoryScope === "mine") ||
+    currentPathname.startsWith("/organizations");
   const isBusinessesActive = isBusinessCatalogActive || isMyBusinessesActive;
 
   const isAllOffersActive =
@@ -945,7 +952,7 @@ export function GlobalSidebar({
           <TreeItem
             label={t("navigation.myBusinesses")}
             depth={1}
-            href={localeHref("/organizations")}
+            href={localeHref("/directory?scope=mine")}
             active={isMyBusinessesActive}
           />
         </ExpandableSidebarLinkItem>

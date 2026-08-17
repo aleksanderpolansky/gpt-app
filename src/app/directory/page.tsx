@@ -19,6 +19,8 @@ export default async function DirectoryPage({ searchParams }: DirectoryPageProps
 
   const locale = getFirstSearchParam(resolvedSearchParams?.locale);
   const lang = getFirstSearchParam(resolvedSearchParams?.lang);
+  const scope =
+    getFirstSearchParam(resolvedSearchParams?.scope) === "mine" ? "mine" : "all";
 
   if (locale) {
     localeSearchParams.set("locale", locale);
@@ -31,6 +33,7 @@ export default async function DirectoryPage({ searchParams }: DirectoryPageProps
   return (
     <DirectoryDashboardContent
       initialLocale={getLocaleSearchParam(localeSearchParams)}
+      initialScope={scope}
     />
   );
 }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createLocalizationRuntimeContext } from "../../../../types/localization";
 import { resolveLocalizedContentFieldsStrict } from "@/lib/localization/contentLocalization";
+import { resolveActiveActorContext } from "../../../../../lib/actor-context";
+import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +14,7 @@ type DirectoryActionFilter =
   | "canRegisterPurchase";
 
 type DirectorySortMode = "newest" | "distance";
+type DirectoryScope = "all" | "mine";
 
 type RelatedCategory = {
   is_primary: boolean | null;
@@ -288,6 +291,10 @@ function normalizeSortMode(value: string | null): DirectorySortMode {
   }
 
   return "newest";
+}
+
+function normalizeDirectoryScope(value: string | null): DirectoryScope {
+  return normalizeSearchValue(value) === "mine" ? "mine" : "all";
 }
 
 function parseCoordinate(
@@ -1048,6 +1055,39 @@ export async function GET(request: NextRequest) {
     },
   });
   const contentLocale = localizationRuntimeContext.locale.contentLocale;
+  const scope = normalizeDirectoryScope(searchParams.get("scope"));
+
+  let ownerActorId: string | null = null;
+
+  if (scope === "mine") {
+    const session = await auth0.getSession();
+
+    if (!session?.user?.sub) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Not authenticated",
+        },
+        { status: 401 },
+      );
+    }
+
+    try {
+      const actorContext = await resolveActiveActorContext(session.user.sub);
+      ownerActorId = actorContext.actorId;
+    } catch (error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Could not resolve active actor context",
+        },
+        { status: 500 },
+      );
+    }
+  }
 
   const q = normalizeSearchValue(searchParams.get("q"));
   const categorySlug = normalizeSearchValue(searchParams.get("category"));
@@ -1140,6 +1180,10 @@ export async function GET(request: NextRequest) {
     .eq("is_listed_in_directory", true)
     .order("directory_published_at", { ascending: false })
     .limit(500);
+
+  if (scope === "mine" && ownerActorId) {
+    query = query.eq("owner_actor_id", ownerActorId);
+  }
 
   if (countryCode) {
     query = query.eq("country_code", countryCode.toUpperCase());
@@ -1247,6 +1291,7 @@ export async function GET(request: NextRequest) {
       distanceSortingAvailable: canSortByDistance,
       limit,
       locale: contentLocale,
+      scope,
     },
   });
 }

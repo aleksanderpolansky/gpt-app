@@ -18,7 +18,11 @@ import {
   Zap,
 } from "lucide-react";
 
-import { type LocaleCode } from "@/i18n";
+import {
+  getNavigationMessage,
+  getOrganizationsMessage,
+  type LocaleCode,
+} from "@/i18n";
 import { getDirectoryListMessage } from "@/i18n/messages/directory-list";
 
 export const UI_FIX_GREEN_ADD_BUSINESS_BUTTON_FAST_DRAFT =
@@ -114,6 +118,8 @@ type OrganizationDraftCreateResponse = {
   };
   error?: string;
 };
+
+type DirectoryScope = "all" | "mine";
 
 type DirectoryFilterKey =
   | "all"
@@ -302,11 +308,16 @@ function getDirectoryFindProviderLabel(locale: LocaleCode) {
 function buildDirectoryProfileHref(
   organization: DirectoryOrganization | null | undefined,
   locale: LocaleCode,
+  scope: DirectoryScope = "all",
 ) {
   const searchParams = new URLSearchParams();
 
   if (locale) {
     searchParams.set("locale", locale);
+  }
+
+  if (scope === "mine") {
+    searchParams.set("scope", "mine");
   }
 
   const queryString = searchParams.toString();
@@ -705,11 +716,18 @@ function BusinessPreview({
   );
 }
 
-async function loadDirectoryOrganizations(locale: LocaleCode) {
+async function loadDirectoryOrganizations(
+  locale: LocaleCode,
+  scope: DirectoryScope,
+) {
   const searchParams = new URLSearchParams();
 
   if (locale) {
     searchParams.set("locale", locale);
+  }
+
+  if (scope === "mine") {
+    searchParams.set("scope", "mine");
   }
 
   searchParams.set("limit", "100");
@@ -732,10 +750,13 @@ async function loadDirectoryOrganizations(locale: LocaleCode) {
 
 export function DirectoryDashboardContent({
   initialLocale,
+  initialScope = "all",
 }: {
   readonly initialLocale: LocaleCode;
+  readonly initialScope?: DirectoryScope;
 }) {
   const locale = initialLocale;
+  const scope = initialScope;
   const [activeFilter, setActiveFilter] = useState<DirectoryFilterKey>("all");
   const [visibleCount, setVisibleCount] = useState(4);
   const [organizations, setOrganizations] = useState<DirectoryOrganization[]>([]);
@@ -751,7 +772,10 @@ export function DirectoryDashboardContent({
         setStatus("loading");
         setErrorMessage("");
 
-        const loadedOrganizations = await loadDirectoryOrganizations(locale);
+        const loadedOrganizations = await loadDirectoryOrganizations(
+          locale,
+          scope,
+        );
 
         if (!isMounted) {
           return;
@@ -777,7 +801,7 @@ export function DirectoryDashboardContent({
     return () => {
       isMounted = false;
     };
-  }, [locale]);
+  }, [locale, scope]);
 
   async function createBusinessDraftAndOpenEditor() {
     if (isCreatingBusiness) {
@@ -888,11 +912,15 @@ export function DirectoryDashboardContent({
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-[20px] font-bold leading-tight text-[#1a1d2e]">
-          {getDirectoryListMessage("directoryList.header.title", locale)}
-        </h1>
+            {scope === "mine"
+              ? getNavigationMessage("navigation.myBusinesses", locale)
+              : getDirectoryListMessage("directoryList.header.title", locale)}
+          </h1>
           <p className="mt-0.5 text-[13px] text-[#7c8099]">
-          {getDirectoryListMessage("directoryList.header.subtitle", locale)}
-        </p>
+            {scope === "mine"
+              ? getOrganizationsMessage("organizations.list.description", locale)
+              : getDirectoryListMessage("directoryList.header.subtitle", locale)}
+          </p>
         </div>
 
         <button
@@ -994,7 +1022,11 @@ export function DirectoryDashboardContent({
                 "directoryList.card.openCard",
                 locale,
               )}
-              detailsHref={buildDirectoryProfileHref(organization, locale)}
+              detailsHref={buildDirectoryProfileHref(
+                organization,
+                locale,
+                scope,
+              )}
             >
               <BusinessPreview organization={organization} locale={locale} />
             </AnalyticsCard>

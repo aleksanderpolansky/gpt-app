@@ -315,6 +315,7 @@ type DirectoryOrganizationPageProps = {
   searchParams?: Promise<{
     locale?: string | string[];
     lang?: string | string[];
+    scope?: string | string[];
   }>;
 };
 
@@ -1874,6 +1875,10 @@ export default async function DirectoryOrganizationPage({
   const selectedLocale =
     normalizeLocaleParam(resolvedSearchParams?.locale) ||
     normalizeLocaleParam(resolvedSearchParams?.lang);
+  const selectedScope =
+    normalizeLocaleParam(resolvedSearchParams?.scope) === "mine"
+      ? "mine"
+      : "all";
   const slug = resolvedParams.slug;
   const t = getDirectoryDetailMessages(selectedLocale);
   const systemLabels = getSystemLabelsMessages(selectedLocale);
@@ -2010,6 +2015,10 @@ export default async function DirectoryOrganizationPage({
     organization?.ownerActorId &&
       currentActorContext?.actorId === organization.ownerActorId,
   );
+  const directoryBackHref = appendLocaleToHref(
+    selectedScope === "mine" ? "/directory?scope=mine" : "/directory",
+    selectedLocale,
+  );
   const editProfileHref = organization
     ? appendLocaleToHref(`/organizations/${organization.id}/edit`, selectedLocale)
     : null;
@@ -2025,7 +2034,7 @@ export default async function DirectoryOrganizationPage({
       <div className="p-5">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Link
-            href={appendLocaleToHref("/directory", selectedLocale)}
+            href={directoryBackHref}
             className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] transition hover:bg-gray-50"
           >
             {t.navigation.backToDirectoryWithArrow}
