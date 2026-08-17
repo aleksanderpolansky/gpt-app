@@ -1,0 +1,14 @@
+{
+  "contract": "ARCTOR_AI_A3_1_REVIEW_FIRST_SCHEMA_PREFLIGHT_LIVE_V1",
+  "checkedAt": "2026-08-17T08:46:49.391Z",
+  "sourceBaselineCommit": "d91549773dae71206e46f3182bfd433f9c30316d",
+  "ready": true,
+  "schemaPreflightRpc": "public.ai_a3_1_review_first_schema_preflight_v1()",
+  "factsWrittenAtCapture": 0,
+  "aiCallsAtCapture": 0,
+  "parameterCompatibilityCheckRequired": false,
+  "processCountAlways": true,
+  "missingContextMultiplier": 1,
+  "coefficientCombinationMode": "multiply",
+  "source": "controlled release fail-closed schema preflight before Git mutation"
+}

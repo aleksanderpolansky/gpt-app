@@ -1,0 +1,980 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+
+type Locale = "ru" | "en" | "pl" | "uk" | "de" | "es" | "cs";
+
+type Measurement = {
+  parameterCode: string;
+  measureType: string;
+  unit: string;
+  valueType: "numeric" | "text" | "boolean";
+  valueNumeric: number | null;
+  valueText: string | null;
+  valueBoolean: boolean | null;
+  rawFragment: string;
+};
+
+type Proposal = {
+  valueObjectId: string;
+  canonicalKey: string | null;
+  title: string;
+  pathText: string;
+  isPrimary: boolean;
+  lensCode: string;
+  relationMode: "direct" | "higher_level" | "contextual" | "future_use";
+  rationale: string;
+  interpretationText: string;
+  accepted?: boolean;
+  originalValueObjectId?: string | null;
+  manual?: boolean;
+};
+
+type ReviewPayload = {
+  ok?: boolean;
+  error?: string;
+  activity?: {
+    id?: string;
+    title?: string | null;
+    inputText?: string | null;
+    role?: string | null;
+    startedAt?: string | null;
+    endedAt?: string | null;
+    durationMinutes?: number | null;
+  };
+  draft?: {
+    id?: string;
+    status?: string;
+    measurements?: Measurement[];
+    proposals?: Proposal[];
+    analysisExecutionId?: string | null;
+    modelTier?: string | null;
+    modelName?: string | null;
+  };
+  cached?: boolean;
+  providerCalls?: number;
+};
+
+type SelectorItem = {
+  id: string;
+  title: string;
+  canonicalKey?: string | null;
+  scopeCode?: string | null;
+  level?: string;
+  pathText?: string;
+};
+
+type SelectorResponse = {
+  ok?: boolean;
+  valueObjects?: SelectorItem[];
+  error?: string;
+};
+
+const COPY: Record<
+  Locale,
+  {
+    title: string;
+    subtitle: string;
+    measurements: string;
+    semantic: string;
+    primary: string;
+    additional: string;
+    direct: string;
+    higher: string;
+    contextual: string;
+    futureUse: string;
+    accept: string;
+    reject: string;
+    replace: string;
+    add: string;
+    search: string;
+    save: string;
+    saving: string;
+    loading: string;
+    noFactsYet: string;
+    selected: string;
+    cancel: string;
+    factsRule: string;
+    futureWarning: string;
+    saved: string;
+  }
+> = {
+  ru: {
+    title: "Разбор активности",
+    subtitle:
+      "Сначала ИИ ищет измерения и разные смысловые перспективы. Факты появятся только после кнопки «Сохранить разбор».",
+    measurements: "Что можно измерить из сообщения",
+    semantic: "Какие листовые объекты могут относиться к активности",
+    primary: "Основной",
+    additional: "Дополнительный",
+    direct: "прямое значение",
+    higher: "более общий смысл",
+    contextual: "контекст / последствие",
+    futureUse: "возможность использования",
+    accept: "Подтвердить",
+    reject: "Отклонить",
+    replace: "Заменить",
+    add: "+ Добавить листовой объект",
+    search: "Найти листовой объект…",
+    save: "Сохранить разбор и создать факты",
+    saving: "Сохраняю факты…",
+    loading: "ИИ выполняет один широкий смысловой разбор…",
+    noFactsYet: "До сохранения разбора фактов в журнале не создаётся.",
+    selected: "Оставлено объектов",
+    cancel: "Отмена",
+    factsRule:
+      "Для каждого оставленного листа будет создан отдельный факт для каждого показателя. process_count=1 создаётся всегда; продолжительность — всегда, если она известна.",
+    futureWarning:
+      "Такой вариант означает полезную смысловую возможность. Он не утверждает, что событие уже произошло. Если оставить галочку, показатели активности всё равно будут записаны с этим тегом.",
+    saved: "Разбор сохранён. Факты созданы.",
+  },
+  en: {
+    title: "Activity review",
+    subtitle:
+      "AI first finds measurements and diverse semantic perspectives. Facts are created only after Save review.",
+    measurements: "Measurements supported by the message",
+    semantic: "Leaf objects that may relate to the activity",
+    primary: "Primary",
+    additional: "Additional",
+    direct: "direct meaning",
+    higher: "higher-level meaning",
+    contextual: "context / consequence",
+    futureUse: "future-use possibility",
+    accept: "Accept",
+    reject: "Reject",
+    replace: "Replace",
+    add: "+ Add leaf object",
+    search: "Find a leaf object…",
+    save: "Save review and create facts",
+    saving: "Creating facts…",
+    loading: "AI is running one broad semantic review…",
+    noFactsYet: "No journal facts are created before the review is saved.",
+    selected: "Selected objects",
+    cancel: "Cancel",
+    factsRule:
+      "For every selected leaf, a separate fact is created for every measurement. process_count=1 is always created; duration is always created when known.",
+    futureWarning:
+      "This is a useful possible use, not a claim that the event occurred. If kept, activity measurements will still be saved with this leaf tag.",
+    saved: "Review saved. Facts created.",
+  },
+  pl: {
+    title: "Analiza aktywności",
+    subtitle:
+      "AI najpierw znajduje pomiary i różne perspektywy znaczeniowe. Fakty powstają dopiero po zapisaniu analizy.",
+    measurements: "Pomiary wynikające z wiadomości",
+    semantic: "Liście, które mogą dotyczyć aktywności",
+    primary: "Główny",
+    additional: "Dodatkowy",
+    direct: "znaczenie bezpośrednie",
+    higher: "znaczenie ogólniejsze",
+    contextual: "kontekst / skutek",
+    futureUse: "możliwe przyszłe użycie",
+    accept: "Zatwierdź",
+    reject: "Odrzuć",
+    replace: "Zamień",
+    add: "+ Dodaj liść",
+    search: "Znajdź liść…",
+    save: "Zapisz analizę i utwórz fakty",
+    saving: "Tworzę fakty…",
+    loading: "AI wykonuje jedną szeroką analizę semantyczną…",
+    noFactsYet: "Przed zapisaniem analizy fakty nie są tworzone.",
+    selected: "Wybrane obiekty",
+    cancel: "Anuluj",
+    factsRule:
+      "Dla każdego wybranego liścia powstaje osobny fakt dla każdego pomiaru. process_count=1 zawsze; czas trwania zawsze, gdy jest znany.",
+    futureWarning:
+      "To możliwe użycie, a nie twierdzenie, że wydarzenie zaszło. Pozostawienie go zapisze pomiary aktywności z tym tagiem.",
+    saved: "Analiza zapisana. Fakty utworzone.",
+  },
+  uk: {
+    title: "Розбір активності",
+    subtitle:
+      "ШІ спочатку знаходить вимірювання та різні смислові перспективи. Факти створюються лише після збереження розбору.",
+    measurements: "Що можна виміряти з повідомлення",
+    semantic: "Листові об’єкти, що можуть стосуватися активності",
+    primary: "Основний",
+    additional: "Додатковий",
+    direct: "пряме значення",
+    higher: "загальніший сенс",
+    contextual: "контекст / наслідок",
+    futureUse: "можливість використання",
+    accept: "Підтвердити",
+    reject: "Відхилити",
+    replace: "Замінити",
+    add: "+ Додати листовий об’єкт",
+    search: "Знайти листовий об’єкт…",
+    save: "Зберегти розбір і створити факти",
+    saving: "Створюю факти…",
+    loading: "ШІ виконує один широкий смисловий розбір…",
+    noFactsYet: "До збереження розбору факти не створюються.",
+    selected: "Залишено об’єктів",
+    cancel: "Скасувати",
+    factsRule:
+      "Для кожного вибраного листа створюється окремий факт для кожного показника. process_count=1 завжди; тривалість — якщо відома.",
+    futureWarning:
+      "Це корислива можливість, а не твердження, що подія вже сталася. Якщо залишити, показники буде записано з цим тегом.",
+    saved: "Розбір збережено. Факти створено.",
+  },
+  de: {
+    title: "Aktivitätsanalyse",
+    subtitle:
+      "Die KI findet zuerst Messwerte und verschiedene Bedeutungs-Perspektiven. Fakten entstehen erst nach dem Speichern.",
+    measurements: "Messwerte aus der Nachricht",
+    semantic: "Mögliche Blattobjekte",
+    primary: "Primär",
+    additional: "Zusätzlich",
+    direct: "direkte Bedeutung",
+    higher: "übergeordnete Bedeutung",
+    contextual: "Kontext / Folge",
+    futureUse: "zukünftige Nutzungsmöglichkeit",
+    accept: "Bestätigen",
+    reject: "Ablehnen",
+    replace: "Ersetzen",
+    add: "+ Blatt hinzufügen",
+    search: "Blatt suchen…",
+    save: "Analyse speichern und Fakten erzeugen",
+    saving: "Fakten werden erzeugt…",
+    loading: "Die KI führt eine breite semantische Analyse aus…",
+    noFactsYet: "Vor dem Speichern werden keine Fakten erzeugt.",
+    selected: "Ausgewählte Objekte",
+    cancel: "Abbrechen",
+    factsRule:
+      "Für jedes ausgewählte Blatt entsteht pro Messwert ein eigener Fakt. process_count=1 immer; Dauer immer, wenn bekannt.",
+    futureWarning:
+      "Dies ist eine mögliche Nutzung, keine Behauptung, dass sie stattgefunden hat. Bei Bestätigung werden Messwerte dennoch mit diesem Tag gespeichert.",
+    saved: "Analyse gespeichert. Fakten erzeugt.",
+  },
+  es: {
+    title: "Análisis de actividad",
+    subtitle:
+      "La IA primero encuentra mediciones y perspectivas semánticas diversas. Los hechos se crean solo al guardar.",
+    measurements: "Mediciones de la descripción",
+    semantic: "Objetos hoja posiblemente relacionados",
+    primary: "Principal",
+    additional: "Adicional",
+    direct: "significado directo",
+    higher: "significado más general",
+    contextual: "contexto / consecuencia",
+    futureUse: "posible uso futuro",
+    accept: "Aceptar",
+    reject: "Rechazar",
+    replace: "Sustituir",
+    add: "+ Añadir hoja",
+    search: "Buscar hoja…",
+    save: "Guardar análisis y crear hechos",
+    saving: "Creando hechos…",
+    loading: "La IA realiza un análisis semántico amplio…",
+    noFactsYet: "No se crean hechos antes de guardar el análisis.",
+    selected: "Objetos seleccionados",
+    cancel: "Cancelar",
+    factsRule:
+      "Para cada hoja seleccionada se crea un hecho separado por cada medición. process_count=1 siempre; duración cuando se conoce.",
+    futureWarning:
+      "Es una posibilidad útil, no una afirmación de que ocurrió. Si se mantiene, las mediciones se guardarán con esta etiqueta.",
+    saved: "Análisis guardado. Hechos creados.",
+  },
+  cs: {
+    title: "Rozbor aktivity",
+    subtitle:
+      "AI nejprve hledá měření a různé významové perspektivy. Fakta vzniknou až po uložení rozboru.",
+    measurements: "Měření z popisu",
+    semantic: "Listové objekty související s aktivitou",
+    primary: "Hlavní",
+    additional: "Doplňkový",
+    direct: "přímý význam",
+    higher: "obecnější význam",
+    contextual: "kontext / důsledek",
+    futureUse: "možné budoucí využití",
+    accept: "Potvrdit",
+    reject: "Odmítnout",
+    replace: "Nahradit",
+    add: "+ Přidat list",
+    search: "Najít list…",
+    save: "Uložit rozbor a vytvořit fakta",
+    saving: "Vytvářím fakta…",
+    loading: "AI provádí jeden široký sémantický rozbor…",
+    noFactsYet: "Před uložením rozboru se fakta nevytvářejí.",
+    selected: "Vybrané objekty",
+    cancel: "Zrušit",
+    factsRule:
+      "Pro každý vybraný list vznikne samostatný fakt pro každý ukazatel. process_count=1 vždy; trvání vždy, pokud je známé.",
+    futureWarning:
+      "Jde o možnost využití, nikoli tvrzení, že se událost stala. Pokud zůstane vybraná, měření se uloží s tímto tagem.",
+    saved: "Rozbor uložen. Fakta vytvořena.",
+  },
+};
+
+function uuid() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  throw new Error("Secure UUID generation is unavailable.");
+}
+
+function valueText(measurement: Measurement) {
+  if (measurement.valueType === "numeric") {
+    return `${measurement.valueNumeric ?? "—"} ${measurement.unit}`;
+  }
+  if (measurement.valueType === "boolean") {
+    return `${String(measurement.valueBoolean)} ${measurement.unit}`;
+  }
+  return `${measurement.valueText ?? "—"} ${measurement.unit}`;
+}
+
+function relationLabel(
+  relationMode: Proposal["relationMode"],
+  copy: (typeof COPY)[Locale],
+) {
+  if (relationMode === "direct") return copy.direct;
+  if (relationMode === "higher_level") return copy.higher;
+  if (relationMode === "future_use") return copy.futureUse;
+  return copy.contextual;
+}
+
+function LeafSearch({
+  locale,
+  excludeIds,
+  onChoose,
+  onCancel,
+}: {
+  readonly locale: Locale;
+  readonly excludeIds: Set<string>;
+  readonly onChoose: (item: SelectorItem) => void;
+  readonly onCancel: () => void;
+}) {
+  const copy = COPY[locale];
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<SelectorItem[]>([]);
+  const [resultsQuery, setResultsQuery] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const normalizedQuery = query.trim();
+
+    if (normalizedQuery.length < 2) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const params = new URLSearchParams({
+          q: normalizedQuery,
+          level: "leaf",
+          limit: "40",
+          includeGlobal: "1",
+          locale,
+        });
+
+        const response = await fetch(
+          `/api/value-objects/selector?${params.toString()}`,
+          {
+            credentials: "include",
+            cache: "no-store",
+            headers: { Accept: "application/json" },
+            signal: controller.signal,
+          },
+        );
+
+        const payload =
+          (await response.json().catch(() => null)) as SelectorResponse | null;
+
+        if (!response.ok || payload?.ok !== true) {
+          throw new Error(
+            payload?.error || `Leaf search failed: ${response.status}`,
+          );
+        }
+
+        setResults(
+          (payload.valueObjects ?? []).filter(
+            (item) =>
+              item.level === "leaf" && !excludeIds.has(item.id),
+          ),
+        );
+        setResultsQuery(normalizedQuery);
+      } catch (caught) {
+        if (!controller.signal.aborted) {
+          setError(
+            caught instanceof Error ? caught.message : "Leaf search failed.",
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [excludeIds, locale, query]);
+
+  const visibleResults =
+    resultsQuery === query.trim() && query.trim().length >= 2
+      ? results
+      : [];
+
+  return (
+    <div className="mt-3 rounded-2xl border border-blue-900 bg-blue-950/20 p-3">
+      <input
+        autoFocus
+        className="w-full rounded-xl border border-zinc-700 bg-black px-3 py-2 text-sm text-zinc-100 outline-none focus:border-blue-500"
+        placeholder={copy.search}
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+      />
+
+      {loading ? (
+        <p className="mt-2 text-xs text-zinc-500">…</p>
+      ) : null}
+
+      {error ? (
+        <p className="mt-2 text-xs text-red-400">{error}</p>
+      ) : null}
+
+      {visibleResults.length > 0 ? (
+        <div className="mt-2 max-h-64 space-y-1 overflow-auto">
+          {visibleResults.map((item) => (
+            <button
+              type="button"
+              key={item.id}
+              className="block w-full rounded-xl border border-zinc-800 bg-black px-3 py-2 text-left hover:border-blue-700"
+              onClick={() => onChoose(item)}
+            >
+              <span className="block text-sm font-semibold text-zinc-100">
+                {item.title}
+              </span>
+              <span className="block text-xs text-zinc-500">
+                {item.pathText || item.canonicalKey || item.id}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      <button
+        type="button"
+        className="mt-3 text-xs text-zinc-500 hover:text-zinc-300"
+        onClick={onCancel}
+      >
+        {copy.cancel}
+      </button>
+    </div>
+  );
+}
+
+export function ActivitySemanticReviewA31({
+  activityEventId,
+  locale,
+}: {
+  readonly activityEventId: string;
+  readonly locale: Locale;
+}) {
+  const router = useRouter();
+  const copy = COPY[locale];
+  const timeZone =
+    typeof Intl !== "undefined"
+      ? Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
+      : "UTC";
+
+  const [payload, setPayload] = useState<ReviewPayload | null>(null);
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [replaceIndex, setReplaceIndex] = useState<number | null>(null);
+  const [adding, setAdding] = useState(false);
+  const idempotencyRef = useRef(uuid());
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/activity/review-analysis", {
+          method: "POST",
+          credentials: "include",
+          cache: "no-store",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            activityEventId,
+            locale,
+            timeZone,
+          }),
+        });
+
+        const next =
+          (await response.json().catch(() => null)) as ReviewPayload | null;
+
+        if (!response.ok || next?.ok !== true || !next.draft?.id) {
+          throw new Error(
+            next?.error || `Semantic review failed: ${response.status}`,
+          );
+        }
+
+        if (cancelled) return;
+
+        const nextProposals = (next.draft.proposals ?? []).map(
+          (proposal) => ({
+            ...proposal,
+            accepted: true,
+            originalValueObjectId: proposal.valueObjectId,
+          }),
+        );
+
+        setPayload(next);
+        setProposals(nextProposals);
+      } catch (caught) {
+        if (!cancelled) {
+          setError(
+            caught instanceof Error ? caught.message : "Semantic review failed.",
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activityEventId, locale, timeZone]);
+
+  const selectedLeafIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          proposals
+            .filter((proposal) => proposal.accepted !== false)
+            .map((proposal) => proposal.valueObjectId),
+        ),
+      ),
+    [proposals],
+  );
+
+  const acceptedPrimary = useMemo(
+    () =>
+      proposals.find(
+        (proposal) =>
+          proposal.isPrimary && proposal.accepted !== false,
+      ) ?? null,
+    [proposals],
+  );
+
+  const excludedIds = useMemo(
+    () => new Set(proposals.map((proposal) => proposal.valueObjectId)),
+    [proposals],
+  );
+
+  function replaceProposal(index: number, item: SelectorItem) {
+    setProposals((current) =>
+      current.map((proposal, proposalIndex) =>
+        proposalIndex === index
+          ? {
+              ...proposal,
+              valueObjectId: item.id,
+              title: item.title,
+              canonicalKey: item.canonicalKey ?? null,
+              pathText: item.pathText ?? item.title,
+              accepted: true,
+            }
+          : proposal,
+      ),
+    );
+    setReplaceIndex(null);
+  }
+
+  function addProposal(item: SelectorItem) {
+    setProposals((current) => [
+      ...current,
+      {
+        valueObjectId: item.id,
+        title: item.title,
+        canonicalKey: item.canonicalKey ?? null,
+        pathText: item.pathText ?? item.title,
+        isPrimary: false,
+        lensCode: "manual_add",
+        relationMode: "direct",
+        rationale: "Added by the user during semantic review.",
+        interpretationText: item.title,
+        accepted: true,
+        originalValueObjectId: null,
+        manual: true,
+      },
+    ]);
+    setAdding(false);
+  }
+
+  async function save() {
+    const draftId = payload?.draft?.id;
+
+    if (
+      !draftId ||
+      selectedLeafIds.length < 1 ||
+      !acceptedPrimary ||
+      saving
+    ) {
+      if (selectedLeafIds.length < 1) {
+        setError("Select at least one leaf object.");
+      } else if (!acceptedPrimary) {
+        setError(
+          "The primary leaf must remain selected or be replaced before saving.",
+        );
+      }
+      return;
+    }
+
+    const primary = acceptedPrimary;
+    const primaryCorrection =
+      primary &&
+      primary.originalValueObjectId &&
+      primary.originalValueObjectId !== primary.valueObjectId
+        ? {
+            originalValueObjectId: primary.originalValueObjectId,
+            correctedValueObjectId: primary.valueObjectId,
+          }
+        : {};
+
+    setSaving(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const response = await fetch("/api/activity/review-commit", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          activityEventId,
+          reviewDraftId: draftId,
+          idempotencyKey: idempotencyRef.current,
+          selectedLeafIds,
+          primaryCorrection,
+        }),
+      });
+
+      const result = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            error?: string;
+            factCount?: number;
+            selectedLeafCount?: number;
+          }
+        | null;
+
+      if (!response.ok || result?.ok !== true) {
+        throw new Error(
+          result?.error || `Review commit failed: ${response.status}`,
+        );
+      }
+
+      setMessage(
+        `${copy.saved} ${result.factCount ?? 0} facts / ${
+          result.selectedLeafCount ?? selectedLeafIds.length
+        } leafs.`,
+      );
+
+      window.setTimeout(() => {
+        router.push(`/activity-review?locale=${locale}`);
+      }, 900);
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "Review commit failed.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-zinc-950 px-4 py-6 text-zinc-100 md:px-8">
+        <div className="mx-auto max-w-7xl rounded-3xl border border-emerald-900 bg-zinc-900/70 p-6">
+          <p className="text-sm text-emerald-300">{copy.loading}</p>
+          <p className="mt-2 text-xs text-zinc-500">{copy.noFactsYet}</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (error && !payload) {
+    return (
+      <main className="min-h-screen bg-zinc-950 px-4 py-6 text-zinc-100 md:px-8">
+        <div className="mx-auto max-w-7xl rounded-3xl border border-red-900 bg-zinc-900/70 p-6">
+          <h1 className="text-xl font-bold">{copy.title}</h1>
+          <p className="mt-3 text-sm text-red-400">{error}</p>
+        </div>
+      </main>
+    );
+  }
+
+  const measurements = payload?.draft?.measurements ?? [];
+
+  return (
+    <main className="min-h-screen bg-zinc-950 px-4 py-6 text-zinc-100 md:px-8">
+      <div className="mx-auto flex max-w-7xl flex-col gap-6">
+        <header className="rounded-3xl border border-zinc-800 bg-zinc-900/70 p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-400">
+            ARCTor · AI-A3.1
+          </p>
+          <h1 className="mt-2 text-3xl font-bold">{copy.title}</h1>
+          <p className="mt-2 max-w-4xl text-sm leading-6 text-zinc-400">
+            {copy.subtitle}
+          </p>
+          <div className="mt-4 rounded-2xl border border-zinc-800 bg-black/50 p-4 text-base">
+            {payload?.activity?.inputText || payload?.activity?.title || "—"}
+          </div>
+          <p className="mt-3 text-xs text-amber-300">{copy.noFactsYet}</p>
+        </header>
+
+        <section className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-5">
+          <h2 className="text-lg font-bold">{copy.measurements}</h2>
+
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-xl border border-zinc-700 bg-black px-3 py-2">
+              <div className="text-xs uppercase tracking-wide text-zinc-500">
+                started_at
+              </div>
+              <div className="mt-1 text-sm font-semibold text-white">
+                {payload?.activity?.startedAt ?? "—"}
+              </div>
+            </div>
+            <div className="rounded-xl border border-zinc-700 bg-black px-3 py-2">
+              <div className="text-xs uppercase tracking-wide text-zinc-500">
+                ended_at
+              </div>
+              <div className="mt-1 text-sm font-semibold text-white">
+                {payload?.activity?.endedAt ?? "—"}
+              </div>
+            </div>
+            <div className="rounded-xl border border-zinc-700 bg-black px-3 py-2">
+              <div className="text-xs uppercase tracking-wide text-zinc-500">
+                duration
+              </div>
+              <div className="mt-1 text-sm font-semibold text-white">
+                {payload?.activity?.durationMinutes ?? "—"} minute
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {measurements.map((measurement, index) => (
+              <div
+                key={`${measurement.parameterCode}-${index}`}
+                className="rounded-xl border border-zinc-700 bg-black px-3 py-2"
+              >
+                <div className="text-xs uppercase tracking-wide text-zinc-500">
+                  {measurement.parameterCode}
+                </div>
+                <div className="mt-1 text-sm font-semibold text-white">
+                  {valueText(measurement)}
+                </div>
+                <div className="mt-1 text-[11px] text-zinc-600">
+                  {measurement.rawFragment}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-emerald-900 bg-zinc-900/60 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold">{copy.semantic}</h2>
+              <p className="mt-1 text-xs text-zinc-500">
+                {copy.selected}: {selectedLeafIds.length} / {proposals.length}
+              </p>
+            </div>
+            <div className="rounded-full border border-emerald-800 px-3 py-1 text-xs text-emerald-300">
+              {payload?.draft?.modelTier ?? "AI"} ·{" "}
+              {payload?.draft?.modelName ?? ""}
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {proposals.map((proposal, index) => {
+              const accepted = proposal.accepted !== false;
+
+              return (
+                <article
+                  key={`${proposal.valueObjectId}-${index}`}
+                  className={`rounded-2xl border p-4 ${
+                    accepted
+                      ? "border-emerald-800 bg-emerald-950/10"
+                      : "border-zinc-800 bg-black/30 opacity-60"
+                  }`}
+                >
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${
+                            proposal.isPrimary
+                              ? "bg-blue-500 text-black"
+                              : "border border-zinc-700 text-zinc-400"
+                          }`}
+                        >
+                          {proposal.isPrimary
+                            ? copy.primary
+                            : copy.additional}
+                        </span>
+                        <span className="rounded-full border border-violet-800 px-2 py-1 text-[10px] text-violet-300">
+                          {relationLabel(proposal.relationMode, copy)}
+                        </span>
+                        <span className="text-[10px] uppercase tracking-wide text-zinc-600">
+                          {proposal.lensCode}
+                        </span>
+                      </div>
+
+                      <h3 className="mt-2 text-base font-bold text-zinc-100">
+                        {proposal.title}
+                      </h3>
+                      <p className="mt-1 text-xs text-zinc-500">
+                        {proposal.pathText}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-zinc-300">
+                        {proposal.interpretationText}
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-zinc-500">
+                        {proposal.rationale}
+                      </p>
+
+                      {proposal.relationMode === "future_use" ? (
+                        <p className="mt-2 rounded-xl border border-amber-900 bg-amber-950/20 p-2 text-xs leading-5 text-amber-300">
+                          {copy.futureWarning}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                      <button
+                        type="button"
+                        title={copy.accept}
+                        className={`h-9 w-9 rounded-full border text-sm ${
+                          accepted
+                            ? "border-emerald-500 text-emerald-300"
+                            : "border-zinc-700 text-zinc-600"
+                        }`}
+                        onClick={() =>
+                          setProposals((current) =>
+                            current.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? { ...item, accepted: true }
+                                : item,
+                            ),
+                          )
+                        }
+                      >
+                        ✓
+                      </button>
+                      <button
+                        type="button"
+                        title={copy.reject}
+                        className="h-9 w-9 rounded-full border border-red-900 text-red-400"
+                        onClick={() =>
+                          setProposals((current) =>
+                            current.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? { ...item, accepted: false }
+                                : item,
+                            ),
+                          )
+                        }
+                      >
+                        ×
+                      </button>
+                      <button
+                        type="button"
+                        title={copy.replace}
+                        className="h-9 w-9 rounded-full border border-blue-900 text-blue-300"
+                        onClick={() => {
+                          setReplaceIndex(index);
+                          setAdding(false);
+                        }}
+                      >
+                        ✎
+                      </button>
+                    </div>
+                  </div>
+
+                  {replaceIndex === index ? (
+                    <LeafSearch
+                      locale={locale}
+                      excludeIds={excludedIds}
+                      onChoose={(item) => replaceProposal(index, item)}
+                      onCancel={() => setReplaceIndex(null)}
+                    />
+                  ) : null}
+                </article>
+              );
+            })}
+          </div>
+
+          <div className="mt-4">
+            <button
+              type="button"
+              className="rounded-xl border border-blue-800 bg-blue-950/20 px-4 py-2 text-sm font-semibold text-blue-300"
+              onClick={() => {
+                setAdding((current) => !current);
+                setReplaceIndex(null);
+              }}
+            >
+              {copy.add}
+            </button>
+
+            {adding ? (
+              <LeafSearch
+                locale={locale}
+                excludeIds={excludedIds}
+                onChoose={addProposal}
+                onCancel={() => setAdding(false)}
+              />
+            ) : null}
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-blue-900 bg-blue-950/10 p-5">
+          <p className="text-sm leading-6 text-blue-200">{copy.factsRule}</p>
+
+          {error ? (
+            <p className="mt-3 text-sm text-red-400">{error}</p>
+          ) : null}
+
+          {message ? (
+            <p className="mt-3 text-sm text-emerald-300">{message}</p>
+          ) : null}
+
+          <button
+            type="button"
+            disabled={
+              saving ||
+              selectedLeafIds.length < 1 ||
+              !acceptedPrimary
+            }
+            className="mt-4 w-full rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-bold text-black hover:bg-emerald-400 disabled:opacity-50"
+            onClick={() => void save()}
+          >
+            {saving ? copy.saving : copy.save}
+          </button>
+        </section>
+      </div>
+    </main>
+  );
+}

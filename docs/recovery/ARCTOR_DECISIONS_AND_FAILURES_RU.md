@@ -590,3 +590,22 @@ V2 сравнивает точное множество значений вза�
 ### Методологический вывод
 
 Live acceptance обязан проверять не только функциональный результат для пользователя, но и provenance каждого provider call. Схемные enum/check registries являются частью AI runtime contract и должны эволюционировать вместе с новыми operation kinds.
+
+## AI-A3.1 — отказ от parameter-to-leaf compatibility
+
+Решение пользователя:
+фактический parameter не обязан быть заранее перечислен на карточке leaf.
+
+Карточка leaf хранит плановые настройки и коэффициенты/формулы.
+Реальные observed values живут только в Fact Journal.
+
+После подтверждения leaf:
+- каждый выявленный measurement получает отдельный fact с этим leaf tag;
+- process_count=1 всегда;
+- duration всегда, если она известна;
+- один activity_event может породить много facts по числу measurements × selected leafs;
+- многократный аналитический учёт одного времени по разным leaf-проекциям в этой версии допустим и не дедублицируется.
+
+Формула v1 — декларативный multiplier rule.
+Missing/no-match/no-rule = 1. Несколько matched rules multiply.
+Произвольный JavaScript/SQL expression запрещён.

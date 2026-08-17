@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ActivityTimingEditorPp1 } from "@/components/activity/pp1/activity-timing-editor";
 import { PlannedTargetSelectorPp1 } from "@/components/activity/pp1/planned-target-selector";
+import { ActivitySemanticReviewA31 } from "@/components/activity/activity-semantic-review-a31";
 import {
   AI_LAB_UI_COPY,
   normalizeAiLabUiLocale,
@@ -119,12 +120,15 @@ type DurableQuickCaptureResponse = {
   processingStatus?: string;
   processingError?: string | null;
   result?: {
+    contractVersion?: string;
     sourceText?: string;
     locale?: string;
     activityEventIds?: string[];
     reviewHref?: string;
     globalPreview?: GlobalPreview;
     warnings?: string[];
+    factsWritten?: number;
+    aiCalls?: number;
   } | null;
 };
 
@@ -137,6 +141,7 @@ type ReviewQueueDetailResponse = {
     inputText?: string | null;
     reviewLocale?: string | null;
     contentSourceLocale?: string | null;
+    reviewFirst?: boolean;
   } | null;
   reviewSnapshot?: {
     sourceFragment?: string | null;
@@ -1225,6 +1230,7 @@ export default function ActivityAiLabPage() {
   const [saveCheckpoint, setSaveCheckpoint] = useState<DirectSaveCheckpoint | null>(null);
   const [reviewActivityEventId, setReviewActivityEventId] = useState<string | null>(null);
   const [reviewModeInitialized, setReviewModeInitialized] = useState(false);
+  const [reviewFirstReviewMode, setReviewFirstReviewMode] = useState<boolean | null>(null);
   const [reviewSaveStatus, setReviewSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [quickCaptureStatus, setQuickCaptureStatus] = useState<QuickCaptureStatus>("idle");
   const [quickCaptureMessage, setQuickCaptureMessage] = useState<string | null>(null);
@@ -1277,6 +1283,7 @@ export default function ActivityAiLabPage() {
     async function loadReviewActivity() {
       setLoading(true);
       setError(null);
+      setReviewFirstReviewMode(null);
 
       try {
         const query = new URLSearchParams({ activityEventId: targetActivityEventId, locale: uiLocale });
@@ -1293,7 +1300,6 @@ export default function ActivityAiLabPage() {
           throw new Error(payload?.error || `Review activity request failed: ${response.status}`);
         }
 
-        const preview = payload.reviewSnapshot?.globalPreview ?? null;
         const sourceText =
           payload.activity?.inputText?.trim() ||
           payload.reviewSnapshot?.sourceFragment?.trim() ||
@@ -1302,6 +1308,29 @@ export default function ActivityAiLabPage() {
         const normalizedLocale = LOCALES.some((item) => item.code === nextLocale)
           ? (nextLocale as Locale)
           : "ru";
+
+        if (payload.activity?.reviewFirst === true) {
+          if (!sourceText) {
+            throw new Error(ui.reviewSnapshotIncomplete);
+          }
+
+          if (cancelled) {
+            return;
+          }
+
+          setInputText(sourceText);
+          setLocale(normalizedLocale);
+          setReviewFirstReviewMode(true);
+          setQuickCaptureStatus("saved");
+          setQuickCaptureMessage(
+            "Активность сохранена. Фактов пока нет; запускается review-first разбор.",
+          );
+          return;
+        }
+
+        setReviewFirstReviewMode(false);
+
+        const preview = payload.reviewSnapshot?.globalPreview ?? null;
         const reviewTemporalDirection =
           payload.reviewSnapshot?.temporalDirection === "future" ? "future" : "past";
 
@@ -1600,8 +1629,40 @@ export default function ActivityAiLabPage() {
       if (!completed) {
         return;
       }
-      const preview = completed.result?.globalPreview ?? null;
       const reviewHref = completed.result?.reviewHref?.trim() || "";
+      const reviewFirst =
+        completed.result?.contractVersion ===
+        "ARCTOR_AI_A3_1_REVIEW_FIRST_CAPTURE_V1";
+
+      if (reviewFirst) {
+        if (!reviewHref) {
+          throw new Error(
+            "Активность сохранена, но сервер не вернул адрес списка проверки.",
+          );
+        }
+
+        setQuickCaptureStatus("saved");
+        setQuickCaptureMessage(
+          "Активность сохранена сразу. Факты ещё не создавались. Глубокий разбор начнётся только после открытия записи в «Требуют проверки».",
+        );
+        setTrace((current) => [
+          ...current,
+          {
+            kind: "system",
+            text:
+              "Активность записана в журнал без AI-разбора и без фактов. Она добавлена в список «Требуют проверки».",
+          },
+        ]);
+
+        const reviewUrl = new URL(reviewHref, window.location.origin);
+        reviewUrl.searchParams.set("locale", uiLocale);
+        router.push(
+          reviewUrl.pathname + "?" + reviewUrl.searchParams.toString(),
+        );
+        return;
+      }
+
+      const preview = completed.result?.globalPreview ?? null;
       if (!preview || preview.ok !== true || !reviewHref) {
         throw new Error("Сервер завершил обработку, но durable result неполон.");
       }
@@ -1859,6 +1920,19 @@ export default function ActivityAiLabPage() {
         caught instanceof Error ? caught.message : "Не удалось сохранить активность.",
       );
     }
+  }
+
+  if (
+    reviewModeInitialized &&
+    reviewActivityEventId &&
+    reviewFirstReviewMode === true
+  ) {
+    return (
+      <ActivitySemanticReviewA31
+        activityEventId={reviewActivityEventId}
+        locale={uiLocale as Locale}
+      />
+    );
   }
 
   const rawPayload = result?.payload ?? null;

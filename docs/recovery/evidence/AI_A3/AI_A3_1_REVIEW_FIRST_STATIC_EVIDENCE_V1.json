@@ -1,0 +1,30 @@
+{
+  "contract": "ARCTOR_AI_A3_1_REVIEW_FIRST_STATIC_EVIDENCE_V1",
+  "baselineCommit": "d91549773dae71206e46f3182bfd433f9c30316d",
+  "decisions": {
+    "activitySavedBeforeDeepAi": true,
+    "factsWrittenAtCapture": 0,
+    "aiCallsAtCapture": 0,
+    "semanticAnalysisStartsOnReviewOpen": true,
+    "semanticProviderCallsPerFreshDraft": 1,
+    "minimumAiProposals": 8,
+    "primaryLeafCount": 1,
+    "additionalLeafMinimum": 7,
+    "leafOnlySemanticSelection": true,
+    "parameterCompatibilityWithLeafRequired": false,
+    "processCountAlwaysPerSelectedLeaf": true,
+    "durationAlwaysPerSelectedLeafWhenKnown": true,
+    "everyMeasurementTimesEverySelectedLeafCreatesSeparateFact": true,
+    "rawCalculatedFactSplit": false,
+    "missingRuleMultiplier": 1,
+    "missingContextMultiplier": 1,
+    "conditionNotMatchedMultiplier": 1,
+    "multipleMatchedRules": "multiply",
+    "uniquePhysicalTimeDeduplication": false,
+    "primaryCorrectionActorScopedLearning": true,
+    "globalRecognitionProfileAutoMutation": false,
+    "trainingConsentInferred": false,
+    "semanticModelTier": "standard_required",
+    "nanoFallback": false
+  }
+}

@@ -366,3 +366,31 @@ ai_usage_events_operation_kind_allowed разрешает как минимум 
 Не откатывать schema hotfix после появления content_localization usage rows: rollback SQL специально блокируется при наличии таких строк.
 
 После восстановления следующий AI-архитектурный блок — AI-A3 Data Capital full contract.
+
+## AI-A3.1 review-first semantic fact restore point
+
+Required manual schema:
+supabase/manual-applied/20260817_ai_a3_1_review_first_semantic_fact_pipeline_v2.sql
+
+Quick capture:
+src/app/api/activity/quick-capture/route.ts
+
+Review:
+src/lib/ai/activitySemanticReviewA31.server.ts
+src/app/api/activity/review-analysis/route.ts
+src/app/api/activity/review-commit/route.ts
+src/components/activity/activity-semantic-review-a31.tsx
+
+Coefficient rules:
+src/app/api/activity-fact-coefficient-rules/route.ts
+src/components/workspace/value-objects/activity-fact-coefficient-rule-manager.tsx
+
+Safety:
+- no deep AI/facts at capture;
+- one AI call per fresh semantic draft;
+- exact existing leaf IDs only for AI proposals;
+- minimum eight proposals, exactly one primary;
+- no parameter compatibility whitelist;
+- fact commit transactional and idempotent;
+- primary wording learning actor-scoped only;
+- Global recognition profile auto mutation=false.

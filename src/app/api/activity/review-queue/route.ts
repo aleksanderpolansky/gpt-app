@@ -1,11 +1,7 @@
-import { after, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
 import { supabase } from "../../../../../lib/supabase";
-import {
-  listDurableQuickCaptureSignalsForRecovery,
-  processDurableQuickCaptureSignal,
-} from "@/lib/activity/aiLabQuickCaptureDurable.server";
 import {
   normalizeContentLocale,
   readLocalizedContentEnvelope,
@@ -14,9 +10,9 @@ import {
 } from "@/lib/localization/contentLocalization";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300;
 
 const MAX_REVIEW_ROWS = 250;
+
 type Row = Record<string, unknown>;
 
 function asRecord(value: unknown): Row {
@@ -39,7 +35,10 @@ function asNumber(value: unknown) {
 }
 
 function isPendingReview(metadata: Row) {
-  return metadata.quickCaptureReviewRequired === true && metadata.quickCaptureReviewStatus !== "resolved";
+  return (
+    metadata.quickCaptureReviewRequired === true &&
+    metadata.quickCaptureReviewStatus !== "resolved"
+  );
 }
 
 const FALLBACK_ACTIVITY: Record<ArctorContentLocale, string> = {
@@ -58,6 +57,7 @@ function mapReviewRow(row: Row, locale: ArctorContentLocale) {
   const localization = readLocalizedContentEnvelope(metadata);
   const originalTitle = asString(row.title) ?? asString(row.input_text);
   const originalInputText = asString(row.input_text);
+
   const localized = resolveLocalizedContentFields({
     metadata,
     locale,
@@ -70,7 +70,8 @@ function mapReviewRow(row: Row, locale: ArctorContentLocale) {
 
   return {
     id: asString(row.id),
-    title: localized.title ?? localized.inputText ?? FALLBACK_ACTIVITY[locale],
+    title:
+      localized.title ?? localized.inputText ?? FALLBACK_ACTIVITY[locale],
     inputText: localized.inputText,
     activityRoleCode: asString(row.activity_role_code),
     status: asString(row.status),
@@ -88,68 +89,61 @@ function mapReviewRow(row: Row, locale: ArctorContentLocale) {
     reviewStatus: asString(metadata.quickCaptureReviewStatus) ?? "pending",
     reviewContract: asString(metadata.quickCaptureContract),
     reviewLocale: asString(metadata.locale),
-    contentSourceLocale: localization?.detectedSourceLocale ?? asString(metadata.locale),
-    sourceMessageText: localized.inputText ?? asString(metadata.quickCaptureSourceMessageText),
+    contentSourceLocale:
+      localization?.detectedSourceLocale ?? asString(metadata.locale),
+    sourceMessageText:
+      localized.inputText ??
+      asString(metadata.quickCaptureSourceMessageText) ??
+      originalInputText,
     sourceSegmentId: asString(metadata.quickCaptureSourceSegmentId),
     reviewSnapshot,
+    reviewFirst:
+      asString(metadata.quickCaptureContract) ===
+      "ARCTOR_AI_A3_1_REVIEW_FIRST_CAPTURE_V1",
   };
 }
 
 export async function GET(request: Request) {
-  const { appUser, personActor, errorResponse } = await getActivityUserContext();
+  const { appUser, personActor, errorResponse } =
+    await getActivityUserContext();
+
   if (errorResponse) return errorResponse;
+
   if (!appUser || !personActor) {
-    return NextResponse.json({ ok: false, error: "User context not found" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "User context not found" },
+      { status: 500 },
+    );
   }
 
-  const recoveryCookieHeader = request.headers.get("cookie") ?? "";
-  const recoveryOrigin = new URL(request.url).origin;
-  after(async () => {
-    try {
-      const recoverySignals = await listDurableQuickCaptureSignalsForRecovery({
-        userId: appUser.id,
-        limit: 3,
-      });
-      for (const signal of recoverySignals) {
-        try {
-          await processDurableQuickCaptureSignal({
-            signalId: signal.id,
-            userId: appUser.id,
-            actorId: personActor.id,
-            cookieHeader: recoveryCookieHeader,
-            origin: recoveryOrigin,
-          });
-        } catch (error) {
-          console.error("P5C_DURABLE_REVIEW_WATCHDOG_FAILED", {
-            signalId: signal.id,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
-      }
-    } catch (error) {
-      console.error("P5C_DURABLE_REVIEW_WATCHDOG_LIST_FAILED", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  });
-
   const url = new URL(request.url);
-  const activityEventId = asString(url.searchParams.get("activityEventId"));
+  const activityEventId = asString(
+    url.searchParams.get("activityEventId"),
+  );
   const locale = normalizeContentLocale(url.searchParams.get("locale"));
 
   let query = supabase
     .from("activity_events")
-    .select("id,title,input_text,activity_role_code,status,processing_status,started_at,ended_at,duration_minutes,schedule_mode_code,scheduled_date,schedule_start_date,schedule_end_date,deadline_at,metadata_json,created_at,updated_at")
+    .select(
+      "id,title,input_text,activity_role_code,status,processing_status,started_at,ended_at,duration_minutes,schedule_mode_code,scheduled_date,schedule_start_date,schedule_end_date,deadline_at,metadata_json,created_at,updated_at",
+    )
     .eq("user_id", appUser.id)
     .eq("acting_as_actor_id", personActor.id);
 
-  if (activityEventId) query = query.eq("id", activityEventId);
+  if (activityEventId) {
+    query = query.eq("id", activityEventId);
+  }
 
   const { data, error } = await query
     .order("created_at", { ascending: false })
     .limit(activityEventId ? 1 : MAX_REVIEW_ROWS);
 
-  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  if (error) {
+    return NextResponse.json(
+      { ok: false, error: error.message },
+      { status: 500 },
+    );
+  }
 
   const rows = ((data ?? []) as Row[])
     .filter((row) => isPendingReview(asRecord(row.metadata_json)))
@@ -158,10 +152,20 @@ export async function GET(request: Request) {
 
   if (activityEventId) {
     const activity = rows[0] ?? null;
+
     if (!activity) {
-      return NextResponse.json({ ok: false, error: "Activity requiring review not found" }, { status: 404 });
+      return NextResponse.json(
+        { ok: false, error: "Activity requiring review not found" },
+        { status: 404 },
+      );
     }
-    return NextResponse.json({ ok: true, activity, reviewSnapshot: activity.reviewSnapshot });
+
+    return NextResponse.json({
+      ok: true,
+      activity,
+      reviewSnapshot: activity.reviewSnapshot,
+      reviewFirst: activity.reviewFirst,
+    });
   }
 
   return NextResponse.json({

@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-16T11:13:23.587Z",
+  "generatedAt": "2026-08-17T08:46:49.403Z",
   "copiedCount": 57,
-  "generatedEvidenceCount": 16,
-  "indexedCount": 90,
+  "generatedEvidenceCount": 18,
+  "indexedCount": 92,
   "missingPatterns": [],
   "files": [
     {
@@ -624,6 +624,20 @@
       "sourceDownloadsName": null,
       "sha256": "ace1090b48d6e78a9b5709301f68c138138d1b2a2cd03da13f7066e88145382d",
       "origin": "AI_A1_1_final_runtime_live_acceptance"
+    },
+    {
+      "group": "AI_A3",
+      "file": "docs/recovery/evidence/AI_A3/AI_A3_1_REVIEW_FIRST_STATIC_EVIDENCE_V1.json",
+      "sourceDownloadsName": null,
+      "sha256": "1945bd4c6662657d62a768e895c140f07f10b568a0d9368c7e373ee1326ccc9b",
+      "origin": "AI_A3_1_review_first_static_contract"
+    },
+    {
+      "group": "AI_A3",
+      "file": "docs/recovery/evidence/AI_A3/AI_A3_1_REVIEW_FIRST_SCHEMA_PREFLIGHT_LIVE_V1.json",
+      "sourceDownloadsName": null,
+      "sha256": "53d02e9b672d55e587cd34f66af362129acac80ec9439b98cb1494cbc3c1bd41",
+      "origin": "AI_A3_1_live_schema_preflight_before_source_release"
     }
   ]
 }

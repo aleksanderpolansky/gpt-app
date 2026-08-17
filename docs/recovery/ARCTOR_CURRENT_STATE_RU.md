@@ -579,3 +579,23 @@ Live acceptance также обнаружил и закрыл schema gap: ai_usa
 - AI-A1.1 Execution Boundary — CLOSED.
 
 Следующий архитектурный блок: AI-A3 Data Capital — полный контракт семантического капитала. Бардак ручного authoring ЦО/ОН остаётся отдельным отложенным UI/ontology debt и не должен расширять AI-A3 scope.
+
+## AI-A3.1 review-first semantic facts — 2026-08-17
+
+Зафиксирован новый жизненный цикл активности:
+- quick capture сначала создаёт activity_event и review marker;
+- на capture AI calls=0 и facts written=0;
+- глубокий анализ запускается только при открытии review item;
+- semantic review делает один широкий provider call;
+- модель получает каталог существующих GLOBAL leaf и возвращает 1 primary + минимум 7 дополнительных разных перспектив;
+- human review может accept/reject/replace/add leaf;
+- факты создаются только после Save review;
+- для каждого выбранного leaf process_count=1 создаётся всегда;
+- duration создаётся для каждого выбранного leaf, если duration известна;
+- каждый другой measurement также создаётся отдельно для каждого выбранного leaf;
+- проверка «parameter compatible with leaf» удалена из нового writer;
+- leaf coefficient rules используют контекстный факт другого leaf и multiplier;
+- no rule / no context / condition false => x1;
+- несколько сработавших коэффициентов перемножаются;
+- raw/calculated fact split не вводится;
+- primary correction может сохранять actor-scoped wording example, без auto-mutation Global profile.

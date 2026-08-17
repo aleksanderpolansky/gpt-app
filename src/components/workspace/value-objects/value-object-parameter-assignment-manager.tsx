@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+
+import { ActivityFactCoefficientRuleManager } from "./activity-fact-coefficient-rule-manager";
 
 import type {
   P72B2CatalogParameter,
@@ -165,12 +167,6 @@ export function ValueObjectParameterAssignmentManager({
       setIsLoading(false);
     }
   }, [valueObjectId]);
-
-  useEffect(() => {
-    if (isOpen) {
-      void loadCatalog();
-    }
-  }, [isOpen, loadCatalog]);
 
   const activeParameters = useMemo(() => {
     if (!catalog || !isCatalogSuccess(catalog)) {
@@ -340,25 +336,36 @@ export function ValueObjectParameterAssignmentManager({
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-indigo-700">
-            P7.2B2 · parameter assignment
+            P7.2B2 · planned leaf settings
           </p>
           <h3 className="mt-1 text-lg font-bold text-slate-950">
-            Manage leaf parameters
+            Planned leaf parameters
           </h3>
           <p className="mt-1 text-sm leading-6 text-slate-600">
-            Choose an existing measurement or create your own. Planned target
-            values remain disabled until P7.2B3.
+            This card configures planning parameters only. Actual observed
+            values live in the Fact Journal and may be tagged by this leaf
+            regardless of this list.
           </p>
         </div>
 
         <button
           type="button"
-          onClick={() => setIsOpen((current) => !current)}
+          onClick={() => {
+            if (isOpen) {
+              setIsOpen(false);
+              return;
+            }
+
+            setIsOpen(true);
+            void loadCatalog();
+          }}
           className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-indigo-700"
         >
           {isOpen ? "Close manager" : "Add or manage parameter"}
         </button>
       </div>
+
+      <ActivityFactCoefficientRuleManager valueObjectId={valueObjectId} />
 
       {isOpen ? (
         <div className="mt-5 grid gap-5">

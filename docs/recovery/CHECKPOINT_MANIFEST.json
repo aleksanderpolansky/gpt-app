@@ -1,11 +1,11 @@
 {
   "schemaVersion": 7,
-  "generatedAt": "2026-08-16T11:13:23.585Z",
+  "generatedAt": "2026-08-17T08:46:49.398Z",
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
-  "branch": "feat/ai-a1-1-closeout-v1-20260816",
-  "originMainAtCheckpoint": "da8d9af06a89ee76c88d60a8215445b50a645ec9",
-  "checkpointMeaning": "AI-A1/A1.1 production closure: deterministic Runtime Context Compiler provenance plus separate localization execution and schema registry support.",
+  "branch": "feat/ai-a3-1-review-first-semantic-facts-v1-20260817",
+  "originMainAtCheckpoint": "d91549773dae71206e46f3182bfd433f9c30316d",
+  "checkpointMeaning": "AI-A3.1 review-first activity lifecycle: immediate activity capture, creative leaf review, transactional measurement x leaf fact fanout, multiplier context rules.",
   "globalReality": {
     "p8Blocked": true,
     "objectsTotal": 150,
@@ -36,7 +36,8 @@
     "supabase/manual-applied/20260813_ai_a2_p1_recognition_foundation_v1.sql",
     "supabase/manual-applied/20260813_ai_a3_p1_data_capital_foundation_v2.sql",
     "supabase/manual-applied/20260813_ai_a3_p5a_global_fact_writer_rowtype_hotfix_v3.sql",
-    "supabase/manual-applied/20260816_ai_a1_1_usage_operation_kind_schema_hotfix_v2.sql"
+    "supabase/manual-applied/20260816_ai_a1_1_usage_operation_kind_schema_hotfix_v2.sql",
+    "supabase/manual-applied/20260817_ai_a3_1_review_first_semantic_fact_pipeline_v2.sql"
   ],
   "goldStatus": {
     "passed": [
@@ -52,7 +53,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Begin AI-A3 Data Capital full contract: corrections/preferences/capability requests/outcomes plus minimal rights/provenance boundary.",
+  "nextAction": "Live acceptance: capture one activity -> verify immediate review queue/no facts -> open review -> verify >=8 diverse leaf proposals -> edit selections -> save -> verify process_count and duration fanout; then verify one coefficient rule.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -62,8 +63,8 @@
     "docs/recovery/evidence/EVIDENCE_INDEX.json"
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
-  "previousRecoveryCommit": "da8d9af06a89ee76c88d60a8215445b50a645ec9",
-  "documentedState": "AI_A0_A1_A1_1_CLOSED_AI_A3_DATA_CAPITAL_NEXT",
+  "previousRecoveryCommit": "d91549773dae71206e46f3182bfd433f9c30316d",
+  "documentedState": "AI_A3_1_REVIEW_FIRST_SEMANTIC_FACT_PIPELINE_RELEASED_AWAITING_LIVE_ACCEPTANCE",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -342,7 +343,26 @@
     "p5cReviewExplicitSaveResolve": true,
     "p5cExplicitTemporalIntent": true,
     "p5cTemporalConflictGuard": true,
-    "p5cDurableRecoveryWatchdog": true
+    "p5cDurableRecoveryWatchdog": true,
+    "reviewFirstSemanticFacts": {
+      "version": "ARCTOR_AI_A3_1_REVIEW_FIRST_SEMANTIC_FACT_PIPELINE_V1",
+      "status": "RELEASED_AWAITING_LIVE_ACCEPTANCE",
+      "captureAiCalls": 0,
+      "captureFactWrites": 0,
+      "semanticAnalysisStartsOnReviewOpen": true,
+      "freshReviewProviderCalls": 1,
+      "minimumAiProposals": 8,
+      "primaryProposalCount": 1,
+      "parameterCompatibilityCheckRequired": false,
+      "processCountAlways": true,
+      "durationAlwaysWhenKnown": true,
+      "factFanout": "measurement_x_selected_leaf",
+      "coefficientMissingContextMultiplier": 1,
+      "coefficientNoMatchMultiplier": 1,
+      "coefficientCombinationMode": "multiply",
+      "rawCalculatedFactSplit": false,
+      "globalRecognitionProfileAutoMutation": false
+    }
   },
   "aiA3P4FactContractResilience": {
     "status": "implemented_pending_production_acceptance",
