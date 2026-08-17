@@ -151,7 +151,7 @@ type ModelMeasurement = {
 };
 
 type ModelProposal = {
-  valueObjectId?: unknown;
+  valueObjectIndex?: unknown;
   isPrimary?: unknown;
   lensCode?: unknown;
   relationMode?: unknown;
@@ -236,13 +236,42 @@ function sourceHash(value: string) {
   return crypto.createHash("sha256").update(value, "utf8").digest("hex");
 }
 
-function estimateInputTokensUpperBound(input: {
+function serializeProviderInput(input: {
   system: string;
   user: unknown;
   schema: Record<string, unknown>;
 }) {
-  const serialized =
-    input.system + JSON.stringify(input.user) + JSON.stringify(input.schema);
+  return input.system + JSON.stringify(input.user) + JSON.stringify(input.schema);
+}
+
+function estimateInputTokensForContextGuard(input: {
+  system: string;
+  user: unknown;
+  schema: Record<string, unknown>;
+}) {
+  const serialized = serializeProviderInput(input);
+  const utf8Bytes = Buffer.byteLength(serialized, "utf8");
+  const unicodeCodePoints = Array.from(serialized).length;
+
+  // No model tokenizer is bundled in this service. Use a conservative
+  // tokenizer-free estimate for the context guard instead of treating every
+  // UTF-8 byte as one token. ASCII stays at one code-point unit, while
+  // multibyte text keeps a 0.80-token-per-byte floor.
+  return Math.max(
+    unicodeCodePoints,
+    Math.ceil(utf8Bytes * 0.80),
+  ) + 1_024;
+}
+
+function estimateInputTokensForBudgetUpperBound(input: {
+  system: string;
+  user: unknown;
+  schema: Record<string, unknown>;
+}) {
+  const serialized = serializeProviderInput(input);
+
+  // Budget reservation intentionally remains more conservative than the
+  // context guard so the existing monetary hard cap is never relaxed here.
   return Buffer.byteLength(serialized, "utf8") + 1_024;
 }
 
@@ -584,7 +613,7 @@ async function markUsageFailed(usageEventId: string) {
     .eq("id", usageEventId);
 }
 
-function semanticReviewSchema(leafIds: string[]) {
+function semanticReviewSchema(leafCount: number) {
   return {
     type: "object",
     additionalProperties: false,
@@ -639,7 +668,7 @@ function semanticReviewSchema(leafIds: string[]) {
           type: "object",
           additionalProperties: false,
           required: [
-            "valueObjectId",
+            "valueObjectIndex",
             "isPrimary",
             "lensCode",
             "relationMode",
@@ -647,9 +676,12 @@ function semanticReviewSchema(leafIds: string[]) {
             "interpretationText",
           ],
           properties: {
-            valueObjectId: {
-              type: "string",
-              enum: leafIds,
+            valueObjectIndex: {
+              type: "integer",
+              enum: Array.from(
+                { length: leafCount },
+                (_, index) => index,
+              ),
             },
             isPrimary: { type: "boolean" },
             lensCode: {
@@ -834,14 +866,20 @@ function validateModelProposals(input: {
     );
   }
 
-  const byId = new Map(input.catalog.map((leaf) => [leaf.id, leaf]));
   const seenIds = new Set<string>();
   const proposals: NormalizedProposal[] = [];
   let primaryCount = 0;
 
   for (const row of input.raw as ModelProposal[]) {
-    const valueObjectId = asText(row.valueObjectId);
-    const leaf = byId.get(valueObjectId);
+    const valueObjectIndex = asFiniteNumber(row.valueObjectIndex);
+    const leaf =
+      valueObjectIndex !== null &&
+      Number.isInteger(valueObjectIndex) &&
+      valueObjectIndex >= 0 &&
+      valueObjectIndex < input.catalog.length
+        ? input.catalog[valueObjectIndex]
+        : undefined;
+    const valueObjectId = leaf?.id ?? "";
     const lensCode = asText(row.lensCode);
     const relationMode = asText(row.relationMode);
     const rationale = asText(row.rationale);
@@ -1054,8 +1092,30 @@ export async function analyzeActivityForSemanticReviewA31(input: {
     resolveModel(),
   ]);
 
-  const leafIds = catalog.map((leaf) => leaf.id);
-  const schema = semanticReviewSchema(leafIds);
+  const schema = semanticReviewSchema(catalog.length);
+  const providerLeafCatalog = catalog.map((leaf, index) => [
+    index,
+    leaf.title,
+    leaf.pathText,
+  ] as const);
+  const providerLeafIndexById = new Map(
+    catalog.map((leaf, index) => [leaf.id, index]),
+  );
+  const providerActorExamples: Array<
+    readonly [number, string, string]
+  > = [];
+
+  for (const example of actorExamples) {
+    const valueObjectIndex = providerLeafIndexById.get(
+      example.valueObjectId,
+    );
+    if (valueObjectIndex === undefined) continue;
+    providerActorExamples.push([
+      valueObjectIndex,
+      example.exampleText,
+      example.normalizedText,
+    ] as const);
+  }
 
   const system = `
 You analyze one already-saved ARCTor activity for HUMAN semantic review.
@@ -1068,41 +1128,43 @@ Hard rules:
 1. Measurements must contain ONLY quantities/states explicitly supported by the user's
    text or the supplied server timing. Never invent a measured value.
 2. Do NOT output process_count. The server always adds process_count=1.
-3. Choose only leaf IDs from accessibleLeafCatalog. The catalog may contain
-   both GLOBAL system leaves and leaf objects owned by the current actor.
-4. Return exactly one primary leaf and at least seven additional DISTINCT leaves.
-5. Additional leaves must be genuinely different analytical perspectives, not synonyms.
-6. Deliberately examine these lenses:
+3. Choose only valueObjectIndex values from accessibleLeafCatalog. Every catalog row
+   is [valueObjectIndex, title, pathText]. The index is the exact model-facing reference
+   for that leaf and must be copied into proposals; never invent an index.
+4. actorRecognitionExamples rows are [valueObjectIndex, exampleText, normalizedText].
+5. Return exactly one primary leaf and at least seven additional DISTINCT leaves.
+6. Additional leaves must be genuinely different analytical perspectives, not synonyms.
+7. Deliberately examine these lenses:
    direct action; broader process; state; entity; relationship; role; knowledge;
    behavioral pattern; context; resource spent; resource created; material result;
    information result; work result; learning result; physical result; emotional result;
    social result; relational result; reputational result; economic result;
    new obligation; fulfilled obligation; new opportunity; new limitation;
    opportunity cost; short/medium/long-term consequence; future-use possibility.
-7. A creative proposal may be abstract and non-obvious if it is useful. Example:
+8. A creative proposal may be abstract and non-obvious if it is useful. Example:
    walking a dog may relate to obligatory routines, physical activity, social-contact
    opportunities or walking meditation.
-8. Never claim that an unstated event actually happened. If the connection is only a
+9. Never claim that an unstated event actually happened. If the connection is only a
    possible future use, set relationMode="future_use" and phrase interpretationText as
    a possibility, not as a completed event.
-9. The save stage is intentionally simple: if the human keeps a leaf, every extracted
+10. The save stage is intentionally simple: if the human keeps a leaf, every extracted
    measurement will later be written as a separate fact tagged by that leaf.
    Therefore your job here is to propose useful semantic perspectives for the HUMAN
    to accept/reject/replace. Do not perform a "parameter compatible with leaf" check.
-10. One selected leaf is the primary direct/broad meaning. Other leafs may express
+11. One selected leaf is the primary direct/broad meaning. Other leafs may express
     consequences, roles, contexts, resources or possibilities.
-11. Prefer semantic diversity over superficial lexical similarity.
-12. Measurement parameterCode must be a stable, primitive, reusable English
+12. Prefer semantic diversity over superficial lexical similarity.
+13. Measurement parameterCode must be a stable, primitive, reusable English
     snake_case concept, not a sentence and not a leaf-specific interpretation.
     Prefer universal codes such as duration, distance, mass, money,
     repetition_count, temperature, process_count (but process_count itself is
     server-added), etc.
-13. Normalize units to stable English singular snake_case codes. Prefer
+14. Normalize units to stable English singular snake_case codes. Prefer
     minute, hour, meter, kilometer, count, repetition, set, milliliter, liter,
     milligram, gram, kilogram, kcal, pln, eur, usd, score_0_10, boolean, text,
     tag, role, km_per_hour and similarly stable SI/domain unit slugs. Do not
     output localized unit words or abbreviations such as "мин", "km", "kg".
-14. Return only the required JSON.
+15. Return only the required JSON.
 `.trim();
 
   const user = {
@@ -1117,8 +1179,18 @@ Hard rules:
       endedAt: activity.ended_at,
       durationMinutes: activity.duration_minutes,
     },
-    actorRecognitionExamples: actorExamples,
-    accessibleLeafCatalog: catalog,
+    actorRecognitionExamplesFormat: [
+      "valueObjectIndex",
+      "exampleText",
+      "normalizedText",
+    ],
+    actorRecognitionExamples: providerActorExamples,
+    accessibleLeafCatalogFormat: [
+      "valueObjectIndex",
+      "title",
+      "pathText",
+    ],
+    accessibleLeafCatalog: providerLeafCatalog,
   };
 
   const operationId = crypto.randomUUID();
@@ -1184,24 +1256,32 @@ Hard rules:
       },
     });
 
-    const estimatedInputTokens = estimateInputTokensUpperBound({
-      system: compiled.systemPrompt,
-      user: compiled.requestPayload,
-      schema,
-    });
+    const contextGuardInputTokenEstimate =
+      estimateInputTokensForContextGuard({
+        system: compiled.systemPrompt,
+        user: compiled.requestPayload,
+        schema,
+      });
 
-    if (estimatedInputTokens > INPUT_TOKEN_CEILING) {
+    if (contextGuardInputTokenEstimate > INPUT_TOKEN_CEILING) {
       throw new Error(
-        `AI_A3_1_SEMANTIC_REVIEW_INPUT_TOO_LARGE:${estimatedInputTokens}`,
+        `AI_A3_1_SEMANTIC_REVIEW_INPUT_TOO_LARGE:${contextGuardInputTokenEstimate}`,
       );
     }
+
+    const budgetInputTokenUpperBound =
+      estimateInputTokensForBudgetUpperBound({
+        system: compiled.systemPrompt,
+        user: compiled.requestPayload,
+        schema,
+      });
 
     const reservation = await reserveBudget({
       userId: input.appUserId,
       operationId,
       tierCode: model.tierCode,
       modelName: model.modelName,
-      estimatedInputTokens,
+      estimatedInputTokens: budgetInputTokenUpperBound,
     });
 
     usageEventId = await createUsageEvent({
@@ -1211,7 +1291,7 @@ Hard rules:
       tierCode: model.tierCode,
       modelName: model.modelName,
       reservation,
-      estimatedInputTokens,
+      estimatedInputTokens: budgetInputTokenUpperBound,
     });
 
     manifestId = await createAiContextManifest({
@@ -1289,7 +1369,7 @@ Hard rules:
       proposalCount: proposals.length,
       primaryCount: proposals.filter((row) => row.isPrimary).length,
       allProposalsAreExistingLeaves: true,
-      minimumFiveAdditionalLeaves: proposals.length >= 6,
+      minimumSevenAdditionalLeaves: proposals.length >= 8,
       factsWritten: false,
     });
 
