@@ -15,14 +15,10 @@ import {
   markAiContextManifestValidated,
 } from "../../../lib/ai/contextManifest";
 import { supabase } from "../../../lib/supabase";
-import {
-  localizeGlobalSystemValueObject,
-  normalizeGlobalSystemValueObjectLocale,
-} from "../reality-core/global-system-value-object-localization";
 import { compileRuntimeContextPackV1 } from "./runtimeContextCompiler.server";
 
 export const AI_A3_1_SEMANTIC_REVIEW_CONTRACT =
-  "ARCTOR_AI_A3_1_SEMANTIC_REVIEW_V1" as const;
+  "ARCTOR_AI_A3_1_FREE_SEMANTIC_PROPOSALS_V2" as const;
 
 const ROUTE_PATH = "/api/activity/review-analysis";
 const MIN_PROPOSALS = 8;
@@ -99,6 +95,18 @@ const LENS_CODES = [
   "future_use_possibility",
 ] as const;
 
+const FACET_HINTS = [
+  "PROCESS",
+  "STATE",
+  "ENTITY",
+  "RELATIONSHIP",
+  "ROLE",
+  "KNOWLEDGE",
+  "BEHAVIOR",
+  "CONTEXT",
+  "UNKNOWN",
+] as const;
+
 type JsonRecord = Record<string, unknown>;
 
 type ActivityRow = {
@@ -114,30 +122,6 @@ type ActivityRow = {
   metadata_json: unknown;
 };
 
-type ValueObjectRow = {
-  id: string;
-  title: string | null;
-  description: string | null;
-  canonical_key: string | null;
-  parent_value_object_id: string | null;
-  root_value_object_id: string | null;
-  ontology_node_role_code: string | null;
-  object_kind: string | null;
-  facet_code: string | null;
-  status: string | null;
-  scope_code: string | null;
-  metadata_json: unknown;
-  identity_attributes_json: unknown;
-};
-
-type CatalogLeaf = {
-  id: string;
-  title: string;
-  canonicalKey: string | null;
-  pathText: string;
-  objectKind: string | null;
-  facetCode: string | null;
-};
 
 type ModelMeasurement = {
   parameterCode?: unknown;
@@ -151,7 +135,9 @@ type ModelMeasurement = {
 };
 
 type ModelProposal = {
-  valueObjectIndex?: unknown;
+  title?: unknown;
+  searchTerms?: unknown;
+  facetHint?: unknown;
   isPrimary?: unknown;
   lensCode?: unknown;
   relationMode?: unknown;
@@ -176,10 +162,13 @@ type NormalizedMeasurement = {
 };
 
 type NormalizedProposal = {
-  valueObjectId: string;
-  canonicalKey: string | null;
+  proposalKind: "semantic_proposal";
+  valueObjectId: null;
+  canonicalKey: null;
   title: string;
-  pathText: string;
+  pathText: "";
+  searchTerms: string[];
+  facetHint: (typeof FACET_HINTS)[number];
   isPrimary: boolean;
   lensCode: string;
   relationMode:
@@ -197,11 +186,6 @@ type BudgetReservation = {
   requestedCallMaxCostUsd: number | null;
 };
 
-type ActorRecognitionExampleRow = {
-  value_object_id: string;
-  example_text: string;
-  normalized_text: string;
-};
 
 function asRecord(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -273,125 +257,6 @@ function estimateInputTokensForBudgetUpperBound(input: {
   // Budget reservation intentionally remains more conservative than the
   // context guard so the existing monetary hard cap is never relaxed here.
   return Buffer.byteLength(serialized, "utf8") + 1_024;
-}
-
-function buildPath(
-  leaf: ValueObjectRow,
-  byId: Map<string, ValueObjectRow>,
-) {
-  const path: string[] = [];
-  const visited = new Set<string>();
-  let current: ValueObjectRow | undefined = leaf;
-
-  for (let depth = 0; current && depth < 200; depth += 1) {
-    if (visited.has(current.id)) break;
-    visited.add(current.id);
-
-    const title = asText(current.title);
-    if (title) path.push(title);
-
-    current = current.parent_value_object_id
-      ? byId.get(current.parent_value_object_id)
-      : undefined;
-  }
-
-  return path.reverse().join(" › ");
-}
-
-async function loadAccessibleLeafCatalog(input: {
-  appUserId: string;
-  actorId: string;
-  locale: string;
-}): Promise<CatalogLeaf[]> {
-  const globalLocale = normalizeGlobalSystemValueObjectLocale(input.locale);
-  const { data, error } = await supabase
-    .from("value_objects")
-    .select(
-      "id,title,description,canonical_key,parent_value_object_id,root_value_object_id,ontology_node_role_code,object_kind,facet_code,status,scope_code,owner_user_id,owner_actor_id,metadata_json,identity_attributes_json",
-    )
-    .in("status", ["active", "draft"])
-    .order("canonical_key");
-
-  if (error) {
-    throw new Error(
-      `AI_A3_1_SEMANTIC_REVIEW_LEAF_CATALOG_READ_FAILED:${error.message}`,
-    );
-  }
-
-  const accessibleRows = ((data ?? []) as Array<
-    ValueObjectRow & {
-      owner_user_id?: string | null;
-      owner_actor_id?: string | null;
-    }
-  >).filter(
-    (row) =>
-      (row.scope_code === "global" && row.status === "active") ||
-      (
-        row.owner_user_id === input.appUserId &&
-        row.owner_actor_id === input.actorId &&
-        (row.status === "active" || row.status === "draft")
-      ),
-  );
-
-  const rows = accessibleRows.map((row) =>
-    row.scope_code === "global"
-      ? (localizeGlobalSystemValueObject(
-          row,
-          globalLocale,
-        ) as ValueObjectRow)
-      : (row as ValueObjectRow),
-  );
-
-  const byId = new Map(rows.map((row) => [row.id, row]));
-
-  const leaves = rows
-    .filter((row) => row.ontology_node_role_code === "leaf")
-    .map((row) => ({
-      id: row.id,
-      title: asText(row.title),
-      canonicalKey: asNullableText(row.canonical_key),
-      pathText: buildPath(row, byId),
-      objectKind: asNullableText(row.object_kind),
-      facetCode: asNullableText(row.facet_code),
-    }))
-    .filter((row) => row.title && row.pathText);
-
-  if (leaves.length < MIN_PROPOSALS) {
-    throw new Error(
-      `AI_A3_1_SEMANTIC_REVIEW_ACCESSIBLE_LEAF_CATALOG_TOO_SMALL:${leaves.length}`,
-    );
-  }
-
-  return leaves;
-}
-
-async function loadActorRecognitionExamples(input: {
-  appUserId: string;
-  actorId: string;
-  locale: string;
-}) {
-  const { data, error } = await supabase
-    .from("actor_value_object_recognition_examples_a31")
-    .select(
-      "value_object_id,example_text,normalized_text,created_at",
-    )
-    .eq("app_user_id", input.appUserId)
-    .eq("actor_id", input.actorId)
-    .eq("locale_code", input.locale)
-    .order("created_at", { ascending: false })
-    .limit(40);
-
-  if (error) {
-    throw new Error(
-      `AI_A3_1_SEMANTIC_REVIEW_ACTOR_EXAMPLES_READ_FAILED:${error.message}`,
-    );
-  }
-
-  return ((data ?? []) as ActorRecognitionExampleRow[]).map((row) => ({
-    valueObjectId: String(row.value_object_id),
-    exampleText: String(row.example_text),
-    normalizedText: String(row.normalized_text),
-  }));
 }
 
 async function resolveModel() {
@@ -613,7 +478,7 @@ async function markUsageFailed(usageEventId: string) {
     .eq("id", usageEventId);
 }
 
-function semanticReviewSchema(leafCount: number) {
+function semanticReviewSchema() {
   return {
     type: "object",
     additionalProperties: false,
@@ -668,7 +533,9 @@ function semanticReviewSchema(leafCount: number) {
           type: "object",
           additionalProperties: false,
           required: [
-            "valueObjectIndex",
+            "title",
+            "searchTerms",
+            "facetHint",
             "isPrimary",
             "lensCode",
             "relationMode",
@@ -676,37 +543,22 @@ function semanticReviewSchema(leafCount: number) {
             "interpretationText",
           ],
           properties: {
-            valueObjectIndex: {
-              type: "integer",
-              enum: Array.from(
-                { length: leafCount },
-                (_, index) => index,
-              ),
+            title: { type: "string", minLength: 2, maxLength: 120 },
+            searchTerms: {
+              type: "array",
+              minItems: 2,
+              maxItems: 8,
+              items: { type: "string", minLength: 2, maxLength: 80 },
             },
+            facetHint: { type: "string", enum: [...FACET_HINTS] },
             isPrimary: { type: "boolean" },
-            lensCode: {
-              type: "string",
-              enum: [...LENS_CODES],
-            },
+            lensCode: { type: "string", enum: [...LENS_CODES] },
             relationMode: {
               type: "string",
-              enum: [
-                "direct",
-                "higher_level",
-                "contextual",
-                "future_use",
-              ],
+              enum: ["direct", "higher_level", "contextual", "future_use"],
             },
-            rationale: {
-              type: "string",
-              minLength: 1,
-              maxLength: 600,
-            },
-            interpretationText: {
-              type: "string",
-              minLength: 1,
-              maxLength: 360,
-            },
+            rationale: { type: "string", minLength: 1, maxLength: 600 },
+            interpretationText: { type: "string", minLength: 1, maxLength: 360 },
           },
         },
       },
@@ -852,68 +704,72 @@ function ensureUniversalMeasurements(input: {
   return output;
 }
 
-function validateModelProposals(input: {
-  raw: unknown;
-  catalog: CatalogLeaf[];
-}): NormalizedProposal[] {
+function normalizeProposalIdentity(value: string) {
+  return value.normalize("NFKC").toLocaleLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function validateModelProposals(raw: unknown): NormalizedProposal[] {
   if (
-    !Array.isArray(input.raw) ||
-    input.raw.length < MIN_PROPOSALS ||
-    input.raw.length > MAX_PROPOSALS
+    !Array.isArray(raw) ||
+    raw.length < MIN_PROPOSALS ||
+    raw.length > MAX_PROPOSALS
   ) {
-    throw new Error(
-      "AI_A3_1_SEMANTIC_REVIEW_PROPOSAL_COUNT_INVALID",
-    );
+    throw new Error("AI_A3_1_SEMANTIC_REVIEW_PROPOSAL_COUNT_INVALID");
   }
 
-  const seenIds = new Set<string>();
+  const seenTitles = new Set<string>();
   const proposals: NormalizedProposal[] = [];
   let primaryCount = 0;
 
-  for (const row of input.raw as ModelProposal[]) {
-    const valueObjectIndex = asFiniteNumber(row.valueObjectIndex);
-    const leaf =
-      valueObjectIndex !== null &&
-      Number.isInteger(valueObjectIndex) &&
-      valueObjectIndex >= 0 &&
-      valueObjectIndex < input.catalog.length
-        ? input.catalog[valueObjectIndex]
-        : undefined;
-    const valueObjectId = leaf?.id ?? "";
+  for (const row of raw as ModelProposal[]) {
+    const title = asText(row.title);
+    const titleIdentity = normalizeProposalIdentity(title);
     const lensCode = asText(row.lensCode);
     const relationMode = asText(row.relationMode);
+    const facetHint = asText(row.facetHint).toUpperCase();
     const rationale = asText(row.rationale);
     const interpretationText = asText(row.interpretationText);
     const isPrimary = row.isPrimary === true;
 
+    const rawSearchTerms = Array.isArray(row.searchTerms)
+      ? row.searchTerms.map(asText).filter(Boolean)
+      : [];
+    const searchTerms = Array.from(
+      new Map(
+        rawSearchTerms.map((term) => [normalizeProposalIdentity(term), term]),
+      ).values(),
+    );
+
     if (
-      !leaf ||
-      seenIds.has(valueObjectId) ||
-      !LENS_CODES.includes(
-        lensCode as (typeof LENS_CODES)[number],
+      title.length < 2 ||
+      title.length > 120 ||
+      !titleIdentity ||
+      seenTitles.has(titleIdentity) ||
+      searchTerms.length < 2 ||
+      searchTerms.length > 8 ||
+      searchTerms.some((term) => term.length < 2 || term.length > 80) ||
+      !FACET_HINTS.includes(facetHint as (typeof FACET_HINTS)[number]) ||
+      !LENS_CODES.includes(lensCode as (typeof LENS_CODES)[number]) ||
+      !["direct", "higher_level", "contextual", "future_use"].includes(
+        relationMode,
       ) ||
-      ![
-        "direct",
-        "higher_level",
-        "contextual",
-        "future_use",
-      ].includes(relationMode) ||
       !rationale ||
       !interpretationText
     ) {
-      throw new Error(
-        "AI_A3_1_SEMANTIC_REVIEW_PROPOSAL_CONTRACT_INVALID",
-      );
+      throw new Error("AI_A3_1_SEMANTIC_REVIEW_PROPOSAL_CONTRACT_INVALID");
     }
 
     if (isPrimary) primaryCount += 1;
-    seenIds.add(valueObjectId);
+    seenTitles.add(titleIdentity);
 
     proposals.push({
-      valueObjectId,
-      canonicalKey: leaf.canonicalKey,
-      title: leaf.title,
-      pathText: leaf.pathText,
+      proposalKind: "semantic_proposal",
+      valueObjectId: null,
+      canonicalKey: null,
+      title,
+      pathText: "",
+      searchTerms,
+      facetHint: facetHint as (typeof FACET_HINTS)[number],
       isPrimary,
       lensCode,
       relationMode: relationMode as NormalizedProposal["relationMode"],
@@ -1078,62 +934,31 @@ export async function analyzeActivityForSemanticReviewA31(input: {
     return formatDraft(asRecord(existing), activity);
   }
 
-  const [catalog, actorExamples, model] = await Promise.all([
-    loadAccessibleLeafCatalog({
-      appUserId: input.appUserId,
-      actorId: input.actorId,
-      locale,
-    }),
-    loadActorRecognitionExamples({
-      appUserId: input.appUserId,
-      actorId: input.actorId,
-      locale,
-    }),
-    resolveModel(),
-  ]);
+  const model = await resolveModel();
 
-  const schema = semanticReviewSchema(catalog.length);
-  const providerLeafCatalog = catalog.map((leaf, index) => [
-    index,
-    leaf.title,
-    leaf.pathText,
-  ] as const);
-  const providerLeafIndexById = new Map(
-    catalog.map((leaf, index) => [leaf.id, index]),
-  );
-  const providerActorExamples: Array<
-    readonly [number, string, string]
-  > = [];
-
-  for (const example of actorExamples) {
-    const valueObjectIndex = providerLeafIndexById.get(
-      example.valueObjectId,
-    );
-    if (valueObjectIndex === undefined) continue;
-    providerActorExamples.push([
-      valueObjectIndex,
-      example.exampleText,
-      example.normalizedText,
-    ] as const);
-  }
+  const schema = semanticReviewSchema();
 
   const system = `
 You analyze one already-saved ARCTor activity for HUMAN semantic review.
 
-The user needs help seeing meaning that is not obvious at first glance.
-Do not merely paraphrase the action. Think from the particular event toward broader
-processes, states, relationships, roles, resources, consequences and useful possibilities.
+You are deliberately NOT given the ARCTor Value Object catalog. Do not guess or invent
+valueObjectId, canonical_key, database identifiers, or claim that a matching ARCTor object exists.
+Your job is to propose human-readable semantic meanings. Do not merely paraphrase the action.
+ARCTor will perform a separate server-only search over existing GLOBAL and actor-owned leaf objects after your response,
+and the human will choose which actual leaf, if any, should be linked.
 
 Hard rules:
 1. Measurements must contain ONLY quantities/states explicitly supported by the user's
-   text or the supplied server timing. Never invent a measured value.
+   text or supplied server timing. Never invent a measured value.
 2. Do NOT output process_count. The server always adds process_count=1.
-3. Choose only valueObjectIndex values from accessibleLeafCatalog. Every catalog row
-   is [valueObjectIndex, title, pathText]. The index is the exact model-facing reference
-   for that leaf and must be copied into proposals; never invent an index.
-4. actorRecognitionExamples rows are [valueObjectIndex, exampleText, normalizedText].
-5. Return exactly one primary leaf and at least seven additional DISTINCT leaves.
-6. Additional leaves must be genuinely different analytical perspectives, not synonyms.
+3. Return exactly one primary semantic proposal and at least seven additional DISTINCT
+   semantic proposals. These are ideas/meanings, not database objects.
+4. Each proposal title must be concise and understandable in the user's locale.
+5. Each proposal must contain 2-8 searchTerms for later deterministic server search.
+   The FIRST search term must be the shortest concrete/common phrase most likely to occur
+   in an existing title or alias. Other terms may be close synonyms. Do not use UUIDs or
+   canonical database keys as search terms.
+6. Additional proposals must be genuinely different analytical perspectives, not synonyms.
 7. Deliberately examine these lenses:
    direct action; broader process; state; entity; relationship; role; knowledge;
    behavioral pattern; context; resource spent; resource created; material result;
@@ -1141,30 +966,22 @@ Hard rules:
    social result; relational result; reputational result; economic result;
    new obligation; fulfilled obligation; new opportunity; new limitation;
    opportunity cost; short/medium/long-term consequence; future-use possibility.
-8. A creative proposal may be abstract and non-obvious if it is useful. Example:
-   walking a dog may relate to obligatory routines, physical activity, social-contact
-   opportunities or walking meditation.
-9. Never claim that an unstated event actually happened. If the connection is only a
+8. A creative proposal may be abstract and non-obvious if useful. For example, walking
+   a dog can suggest obligatory routine, physical activity, animal care, a social-contact
+   opportunity, or space for reflection.
+9. Never claim that an unstated event actually happened. If a connection is only a
    possible future use, set relationMode="future_use" and phrase interpretationText as
    a possibility, not as a completed event.
-10. The save stage is intentionally simple: if the human keeps a leaf, every extracted
-   measurement will later be written as a separate fact tagged by that leaf.
-   Therefore your job here is to propose useful semantic perspectives for the HUMAN
-   to accept/reject/replace. Do not perform a "parameter compatible with leaf" check.
-11. One selected leaf is the primary direct/broad meaning. Other leafs may express
-    consequences, roles, contexts, resources or possibilities.
-12. Prefer semantic diversity over superficial lexical similarity.
-13. Measurement parameterCode must be a stable, primitive, reusable English
-    snake_case concept, not a sentence and not a leaf-specific interpretation.
-    Prefer universal codes such as duration, distance, mass, money,
-    repetition_count, temperature, process_count (but process_count itself is
-    server-added), etc.
-14. Normalize units to stable English singular snake_case codes. Prefer
-    minute, hour, meter, kilometer, count, repetition, set, milliliter, liter,
-    milligram, gram, kilogram, kcal, pln, eur, usd, score_0_10, boolean, text,
-    tag, role, km_per_hour and similarly stable SI/domain unit slugs. Do not
-    output localized unit words or abbreviations such as "мин", "km", "kg".
-15. Return only the required JSON.
+10. facetHint is only a coarse search hint (PROCESS/STATE/ENTITY/RELATIONSHIP/ROLE/
+    KNOWLEDGE/BEHAVIOR/CONTEXT/UNKNOWN). It is NOT a database decision.
+11. After the model response, no AI is used to resolve these proposals to existing leaves.
+    The human explicitly chooses a server-search result. Facts are created only after Save.
+12. Measurement parameterCode must be a stable, primitive, reusable English snake_case
+    concept, not a sentence or proposal-specific interpretation.
+13. Normalize units to stable English singular snake_case codes: minute, hour, meter,
+    kilometer, count, repetition, set, milliliter, liter, milligram, gram, kilogram,
+    kcal, pln, eur, usd, score_0_10, boolean, text, tag, role, km_per_hour, etc.
+14. Return only the required JSON.
 `.trim();
 
   const user = {
@@ -1179,18 +996,6 @@ Hard rules:
       endedAt: activity.ended_at,
       durationMinutes: activity.duration_minutes,
     },
-    actorRecognitionExamplesFormat: [
-      "valueObjectIndex",
-      "exampleText",
-      "normalizedText",
-    ],
-    actorRecognitionExamples: providerActorExamples,
-    accessibleLeafCatalogFormat: [
-      "valueObjectIndex",
-      "title",
-      "pathText",
-    ],
-    accessibleLeafCatalog: providerLeafCatalog,
   };
 
   const operationId = crypto.randomUUID();
@@ -1210,6 +1015,9 @@ Hard rules:
       modelTierPolicy: "standard_required_no_nano_fallback",
       providerCallCountExpected: 1,
       creativeReview: true,
+      freeSemanticProposalMode: true,
+      providerCatalogSent: false,
+      serverLeafResolutionRequired: true,
       factsWritten: false,
     },
   });
@@ -1244,15 +1052,18 @@ Hard rules:
       embeddedSystemPrompt: system,
       requestPayload: user,
       retrievalSnapshot: {
-        accessibleLeafCatalogCount: catalog.length,
-        accessibleLeafCatalogHash: sourceHash(JSON.stringify(catalog)),
-        actorRecognitionExampleCount: actorExamples.length,
+        freeSemanticProposalMode: true,
+        catalogSentToProvider: false,
+        actorRecognitionExamplesSentToProvider: false,
+        serverLeafResolutionAfterProvider: true,
       },
       toolPermissions: [],
       contextMetadata: {
         activityEventId: activity.id,
         reviewBeforeFactCommit: true,
         minimumProposalCount: MIN_PROPOSALS,
+        providerCatalogSent: false,
+        serverLeafResolutionRequired: true,
       },
     });
 
@@ -1357,10 +1168,9 @@ Hard rules:
       activity,
     });
 
-    const proposals = validateModelProposals({
-      raw: response.parsed.proposals,
-      catalog,
-    });
+    const proposals = validateModelProposals(
+      response.parsed.proposals,
+    );
 
     await markAiContextManifestValidated(manifestId, {
       passed: true,
@@ -1368,8 +1178,11 @@ Hard rules:
       measurementCount: measurements.length,
       proposalCount: proposals.length,
       primaryCount: proposals.filter((row) => row.isPrimary).length,
-      allProposalsAreExistingLeaves: true,
-      minimumSevenAdditionalLeaves: proposals.length >= 8,
+      proposalKind: "semantic_proposal",
+      allProposalsAreExistingLeaves: false,
+      providerCatalogSent: false,
+      serverLeafResolutionRequired: true,
+      minimumSevenAdditionalProposals: proposals.length >= 8,
       factsWritten: false,
     });
 

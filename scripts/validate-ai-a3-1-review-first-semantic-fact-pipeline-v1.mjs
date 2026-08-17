@@ -32,6 +32,7 @@ const service = read("src/lib/ai/activitySemanticReviewA31.server.ts");
 const analysisRoute = read("src/app/api/activity/review-analysis/route.ts");
 const commitRoute = read("src/app/api/activity/review-commit/route.ts");
 const reviewUi = read("src/components/activity/activity-semantic-review-a31.tsx");
+const selectorRoute = read("src/app/api/value-objects/selector/route.ts");
 const ruleRoute = read("src/app/api/activity-fact-coefficient-rules/route.ts");
 const ruleUi = read(
   "src/components/workspace/value-objects/activity-fact-coefficient-rule-manager.tsx",
@@ -128,7 +129,7 @@ has(
 
 has(
   service,
-  "ARCTOR_AI_A3_1_SEMANTIC_REVIEW_V1",
+  "ARCTOR_AI_A3_1_FREE_SEMANTIC_PROPOSALS_V2",
   "SEMANTIC_REVIEW_CONTRACT",
 );
 has(
@@ -171,15 +172,50 @@ has(
   "Never claim that an unstated event actually happened",
   "SEMANTIC_NO_FALSE_EVENT_ASSERTION",
 );
-has(
+lacks(
   service,
-  "Do not perform a \"parameter compatible with leaf\" check",
+  "parameter compatible with leaf",
   "SEMANTIC_NO_PARAMETER_COMPATIBILITY",
+);
+lacks(
+  service,
+  "accessibleLeafCatalog",
+  "SEMANTIC_PROVIDER_CATALOG_NOT_SENT",
+);
+lacks(
+  service,
+  "loadAccessibleLeafCatalog",
+  "SEMANTIC_NO_CATALOG_LOAD_FOR_PROVIDER",
+);
+lacks(
+  service,
+  "loadActorRecognitionExamples",
+  "SEMANTIC_NO_ACTOR_EXAMPLES_SENT_TO_PROVIDER",
 );
 has(
   service,
-  "accessibleLeafCatalog",
-  "SEMANTIC_GLOBAL_AND_ACTOR_ACCESSIBLE_LEAF_CATALOG",
+  'proposalKind: "semantic_proposal"',
+  "SEMANTIC_FREE_PROPOSAL_KIND",
+);
+has(
+  service,
+  'valueObjectId: null',
+  "SEMANTIC_PROPOSALS_HAVE_NO_DB_ID",
+);
+has(
+  service,
+  'searchTerms',
+  "SEMANTIC_SEARCH_TERMS_PRESENT",
+);
+has(
+  service,
+  'facetHint',
+  "SEMANTIC_FACET_HINT_PRESENT",
+);
+has(
+  service,
+  "serverLeafResolutionAfterProvider: true",
+  "SEMANTIC_SERVER_RESOLUTION_AFTER_PROVIDER",
 );
 has(
   service,
@@ -258,6 +294,26 @@ has(
 );
 has(
   commitRoute,
+  "primaryLeafId",
+  "COMMIT_ROUTE_PRIMARY_LEAF_SELECTION",
+);
+has(
+  commitRoute,
+  'primaryProposal.proposalKind === "semantic_proposal"',
+  "COMMIT_ROUTE_FREE_PROPOSAL_MODE",
+);
+has(
+  commitRoute,
+  'proposals_json: nextProposals',
+  "COMMIT_ROUTE_PRIMARY_BRIDGE_TO_EXISTING_RPC",
+);
+has(
+  commitRoute,
+  'freeSemanticMode ? {} : primaryCorrection',
+  "COMMIT_ROUTE_LEGACY_CORRECTION_COMPATIBILITY",
+);
+has(
+  commitRoute,
   'from "../../../../../lib/activity/activityUserContext"',
   "COMMIT_ROUTE_ACTIVITY_CONTEXT_IMPORT_DEPTH",
 );
@@ -302,6 +358,26 @@ has(
   "+ Добавить листовой объект",
   "REVIEW_UI_MANUAL_ADD",
 );
+has(
+  reviewUi,
+  'proposal.linkedValueObjectId ? "✎" : "+"',
+  "REVIEW_UI_PROPOSAL_PLUS_BUTTON",
+);
+has(
+  reviewUi,
+  "initialQuery={",
+  "REVIEW_UI_SERVER_SEARCH_INITIAL_QUERY",
+);
+has(
+  reviewUi,
+  "catalogServerSearch",
+  "REVIEW_UI_CATALOG_NOT_SENT_EXPLAINED",
+);
+has(
+  reviewUi,
+  "primaryLeafId",
+  "REVIEW_UI_PRIMARY_LEAF_SENT_TO_COMMIT",
+);
 
 has(
   reviewUi,
@@ -312,6 +388,27 @@ lacks(
   reviewUi,
   "if (query.trim().length < 2) {\n      setResults([]);",
   "REVIEW_UI_NO_SYNC_SETSTATE_IN_SEARCH_EFFECT",
+);
+
+has(
+  selectorRoute,
+  'level === "all" ? true : item.level === level',
+  "SELECTOR_LEVEL_FILTER",
+);
+has(
+  selectorRoute,
+  "matchesSearch(item, query)",
+  "SELECTOR_SERVER_SEARCH",
+);
+has(
+  selectorRoute,
+  'includeGlobal',
+  "SELECTOR_GLOBAL_AND_ACTOR_SCOPE",
+);
+lacks(
+  selectorRoute,
+  "runAiJson",
+  "SELECTOR_NO_AI_CALL",
 );
 
 has(
@@ -530,7 +627,7 @@ console.log(
   JSON.stringify(
     {
       check:
-        "ARCTOR_AI_A3_1_REVIEW_FIRST_SEMANTIC_FACT_PIPELINE_VALIDATOR_V1",
+        "ARCTOR_AI_A3_1_REVIEW_FIRST_SEMANTIC_FACT_PIPELINE_VALIDATOR_V2_FREE_PROPOSALS",
       passed: failed.length === 0,
       total: checks.length,
       failed,

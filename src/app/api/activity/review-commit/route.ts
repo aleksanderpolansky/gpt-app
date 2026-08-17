@@ -15,6 +15,7 @@ type Body = {
   reviewDraftId?: unknown;
   idempotencyKey?: unknown;
   selectedLeafIds?: unknown;
+  primaryLeafId?: unknown;
   primaryCorrection?: unknown;
 };
 
@@ -122,14 +123,92 @@ export async function POST(request: Request) {
     );
   }
 
+  const primaryLeafId = text(body.primaryLeafId);
+  if (!validUuid(primaryLeafId) || !selectedLeafIds.includes(primaryLeafId)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "primaryLeafId must be a selected leaf UUID",
+      },
+      { status: 400 },
+    );
+  }
+
   const primaryCorrection = asRecord(body.primaryCorrection);
+
+  const { data: draftData, error: draftReadError } = await supabase
+    .from("activity_semantic_review_drafts_a31")
+    .select("id,activity_event_id,app_user_id,actor_id,status,proposals_json")
+    .eq("id", reviewDraftId)
+    .eq("activity_event_id", activityEventId)
+    .eq("app_user_id", appUser.id)
+    .eq("actor_id", personActor.id)
+    .eq("status", "draft")
+    .maybeSingle();
+
+  if (draftReadError) {
+    return NextResponse.json(
+      { ok: false, error: draftReadError.message },
+      { status: 500 },
+    );
+  }
+
+  if (!draftData) {
+    return NextResponse.json(
+      { ok: false, error: "Review draft not found" },
+      { status: 404 },
+    );
+  }
+
+  const proposals = Array.isArray(draftData.proposals_json)
+    ? (draftData.proposals_json as unknown[])
+    : [];
+  const primaryIndex = proposals.findIndex(
+    (item) => asRecord(item).isPrimary === true,
+  );
+
+  if (primaryIndex < 0) {
+    return NextResponse.json(
+      { ok: false, error: "Review draft primary proposal is missing" },
+      { status: 409 },
+    );
+  }
+
+  const primaryProposal = asRecord(proposals[primaryIndex]);
+  const freeSemanticMode =
+    primaryProposal.proposalKind === "semantic_proposal";
+
+  if (freeSemanticMode) {
+    const nextProposals = proposals.map((item, index) =>
+      index === primaryIndex
+        ? { ...asRecord(item), valueObjectId: primaryLeafId }
+        : item,
+    );
+
+    const { error: draftUpdateError } = await supabase
+      .from("activity_semantic_review_drafts_a31")
+      .update({
+        proposals_json: nextProposals,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", reviewDraftId)
+      .eq("status", "draft");
+
+    if (draftUpdateError) {
+      return NextResponse.json(
+        { ok: false, error: draftUpdateError.message },
+        { status: 409 },
+      );
+    }
+  }
 
   const requestContract = {
     contract: "ARCTOR_AI_A3_1_REVIEW_FACT_COMMIT_V1",
     activityEventId,
     reviewDraftId,
     selectedLeafIds: [...selectedLeafIds].sort(),
-    primaryCorrection,
+    primaryLeafId,
+    primaryCorrection: freeSemanticMode ? {} : primaryCorrection,
   };
 
   const { data, error } = await supabase.rpc(
@@ -142,7 +221,7 @@ export async function POST(request: Request) {
       p_idempotency_key: idempotencyKey,
       p_request_hash: requestHash(requestContract),
       p_selected_leaf_ids: selectedLeafIds,
-      p_primary_correction: primaryCorrection,
+      p_primary_correction: freeSemanticMode ? {} : primaryCorrection,
     },
   );
 

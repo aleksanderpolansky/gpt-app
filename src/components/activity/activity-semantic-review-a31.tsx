@@ -17,10 +17,13 @@ type Measurement = {
 };
 
 type Proposal = {
-  valueObjectId: string;
-  canonicalKey: string | null;
+  proposalKind?: "semantic_proposal" | "manual_leaf";
+  valueObjectId?: string | null;
+  canonicalKey?: string | null;
   title: string;
-  pathText: string;
+  pathText?: string;
+  searchTerms?: string[];
+  facetHint?: string | null;
   isPrimary: boolean;
   lensCode: string;
   relationMode: "direct" | "higher_level" | "contextual" | "future_use";
@@ -28,6 +31,10 @@ type Proposal = {
   interpretationText: string;
   accepted?: boolean;
   originalValueObjectId?: string | null;
+  linkedValueObjectId?: string | null;
+  linkedTitle?: string | null;
+  linkedCanonicalKey?: string | null;
+  linkedPathText?: string | null;
   manual?: boolean;
 };
 
@@ -78,6 +85,9 @@ const COPY: Record<
     subtitle: string;
     measurements: string;
     semantic: string;
+    catalogServerSearch: string;
+    unresolvedProposal: string;
+    linkedLeaf: string;
     primary: string;
     additional: string;
     direct: string;
@@ -103,9 +113,12 @@ const COPY: Record<
   ru: {
     title: "Разбор активности",
     subtitle:
-      "Сначала ИИ ищет измерения и разные смысловые перспективы. Факты появятся только после кнопки «Сохранить разбор».",
+      "ИИ предлагает смысловые претенденты без доступа к каталогу ЦО/ОН. Нажмите + возле нужного претендента и выберите существующий лист серверным поиском. Факты появятся только после сохранения.",
     measurements: "Что можно измерить из сообщения",
-    semantic: "Какие листовые объекты могут относиться к активности",
+    semantic: "Смысловые претенденты ИИ — выберите для них существующие листовые объекты",
+    catalogServerSearch: "Каталог ЦО/ОН не отправлялся модели. Подбор после «+» выполняется серверным поиском без ИИ.",
+    unresolvedProposal: "Объект ещё не выбран. Нажмите + и выберите его серверным поиском.",
+    linkedLeaf: "Связано с существующим листом",
     primary: "Основной",
     additional: "Дополнительный",
     direct: "прямое значение",
@@ -135,6 +148,9 @@ const COPY: Record<
       "AI first finds measurements and diverse semantic perspectives. Facts are created only after Save review.",
     measurements: "Measurements supported by the message",
     semantic: "Leaf objects that may relate to the activity",
+    catalogServerSearch: "The Value Object catalog was not sent to the model. After +, matching uses server search without AI.",
+    unresolvedProposal: "No object selected yet. Press + and choose one using server search.",
+    linkedLeaf: "Linked to existing leaf",
     primary: "Primary",
     additional: "Additional",
     direct: "direct meaning",
@@ -164,6 +180,9 @@ const COPY: Record<
       "AI najpierw znajduje pomiary i różne perspektywy znaczeniowe. Fakty powstają dopiero po zapisaniu analizy.",
     measurements: "Pomiary wynikające z wiadomości",
     semantic: "Liście, które mogą dotyczyć aktywności",
+    catalogServerSearch: "Katalog obiektów wartości nie został wysłany do modelu. Po naciśnięciu + dopasowanie wykonuje wyszukiwanie serwerowe bez AI.",
+    unresolvedProposal: "Nie wybrano jeszcze obiektu. Naciśnij + i wybierz go przez wyszukiwanie serwerowe.",
+    linkedLeaf: "Powiązano z istniejącym liściem",
     primary: "Główny",
     additional: "Dodatkowy",
     direct: "znaczenie bezpośrednie",
@@ -193,6 +212,9 @@ const COPY: Record<
       "ШІ спочатку знаходить вимірювання та різні смислові перспективи. Факти створюються лише після збереження розбору.",
     measurements: "Що можна виміряти з повідомлення",
     semantic: "Листові об’єкти, що можуть стосуватися активності",
+    catalogServerSearch: "Каталог ЦО/ОН не надсилався моделі. Після «+» підбір виконується серверним пошуком без ШІ.",
+    unresolvedProposal: "Об’єкт ще не вибрано. Натисніть + і виберіть його серверним пошуком.",
+    linkedLeaf: "Пов’язано з наявним листом",
     primary: "Основний",
     additional: "Додатковий",
     direct: "пряме значення",
@@ -222,6 +244,9 @@ const COPY: Record<
       "Die KI findet zuerst Messwerte und verschiedene Bedeutungs-Perspektiven. Fakten entstehen erst nach dem Speichern.",
     measurements: "Messwerte aus der Nachricht",
     semantic: "Mögliche Blattobjekte",
+    catalogServerSearch: "Der Wertobjekt-Katalog wurde nicht an das Modell gesendet. Nach + erfolgt die Zuordnung per Serversuche ohne KI.",
+    unresolvedProposal: "Noch kein Objekt ausgewählt. Drücke + und wähle es über die Serversuche.",
+    linkedLeaf: "Mit vorhandenem Blatt verknüpft",
     primary: "Primär",
     additional: "Zusätzlich",
     direct: "direkte Bedeutung",
@@ -251,6 +276,9 @@ const COPY: Record<
       "La IA primero encuentra mediciones y perspectivas semánticas diversas. Los hechos se crean solo al guardar.",
     measurements: "Mediciones de la descripción",
     semantic: "Objetos hoja posiblemente relacionados",
+    catalogServerSearch: "El catálogo de objetos de valor no se envió al modelo. Tras +, la selección usa búsqueda del servidor sin IA.",
+    unresolvedProposal: "Aún no se ha elegido un objeto. Pulsa + y selecciónalo mediante la búsqueda del servidor.",
+    linkedLeaf: "Vinculado a una hoja existente",
     primary: "Principal",
     additional: "Adicional",
     direct: "significado directo",
@@ -280,6 +308,9 @@ const COPY: Record<
       "AI nejprve hledá měření a různé významové perspektivy. Fakta vzniknou až po uložení rozboru.",
     measurements: "Měření z popisu",
     semantic: "Listové objekty související s aktivitou",
+    catalogServerSearch: "Katalog hodnotových objektů nebyl odeslán modelu. Po + probíhá výběr serverovým hledáním bez AI.",
+    unresolvedProposal: "Objekt zatím není vybrán. Stiskněte + a vyberte jej serverovým hledáním.",
+    linkedLeaf: "Propojeno s existujícím listem",
     primary: "Hlavní",
     additional: "Doplňkový",
     direct: "přímý význam",
@@ -334,17 +365,19 @@ function relationLabel(
 
 function LeafSearch({
   locale,
+  initialQuery,
   excludeIds,
   onChoose,
   onCancel,
 }: {
   readonly locale: Locale;
+  readonly initialQuery: string;
   readonly excludeIds: Set<string>;
   readonly onChoose: (item: SelectorItem) => void;
   readonly onCancel: () => void;
 }) {
   const copy = COPY[locale];
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<SelectorItem[]>([]);
   const [resultsQuery, setResultsQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -527,11 +560,25 @@ export function ActivitySemanticReviewA31({
         if (cancelled) return;
 
         const nextProposals = (next.draft.proposals ?? []).map(
-          (proposal) => ({
-            ...proposal,
-            accepted: true,
-            originalValueObjectId: proposal.valueObjectId,
-          }),
+          (proposal) => {
+            const existingLeafId =
+              proposal.proposalKind === "semantic_proposal"
+                ? null
+                : proposal.valueObjectId || null;
+            return {
+              ...proposal,
+              accepted: true,
+              originalValueObjectId: existingLeafId,
+              linkedValueObjectId: existingLeafId,
+              linkedTitle: existingLeafId ? proposal.title : null,
+              linkedCanonicalKey: existingLeafId
+                ? proposal.canonicalKey ?? null
+                : null,
+              linkedPathText: existingLeafId
+                ? proposal.pathText ?? proposal.title
+                : null,
+            };
+          },
         );
 
         setPayload(next);
@@ -559,8 +606,11 @@ export function ActivitySemanticReviewA31({
       Array.from(
         new Set(
           proposals
-            .filter((proposal) => proposal.accepted !== false)
-            .map((proposal) => proposal.valueObjectId),
+            .filter(
+              (proposal) =>
+                proposal.accepted !== false && proposal.linkedValueObjectId,
+            )
+            .map((proposal) => proposal.linkedValueObjectId as string),
         ),
       ),
     [proposals],
@@ -570,13 +620,20 @@ export function ActivitySemanticReviewA31({
     () =>
       proposals.find(
         (proposal) =>
-          proposal.isPrimary && proposal.accepted !== false,
+          proposal.isPrimary &&
+          proposal.accepted !== false &&
+          Boolean(proposal.linkedValueObjectId),
       ) ?? null,
     [proposals],
   );
 
   const excludedIds = useMemo(
-    () => new Set(proposals.map((proposal) => proposal.valueObjectId)),
+    () =>
+      new Set(
+        proposals
+          .map((proposal) => proposal.linkedValueObjectId)
+          .filter((value): value is string => Boolean(value)),
+      ),
     [proposals],
   );
 
@@ -586,10 +643,10 @@ export function ActivitySemanticReviewA31({
         proposalIndex === index
           ? {
               ...proposal,
-              valueObjectId: item.id,
-              title: item.title,
-              canonicalKey: item.canonicalKey ?? null,
-              pathText: item.pathText ?? item.title,
+              linkedValueObjectId: item.id,
+              linkedTitle: item.title,
+              linkedCanonicalKey: item.canonicalKey ?? null,
+              linkedPathText: item.pathText ?? item.title,
               accepted: true,
             }
           : proposal,
@@ -602,10 +659,15 @@ export function ActivitySemanticReviewA31({
     setProposals((current) => [
       ...current,
       {
+        proposalKind: "manual_leaf",
         valueObjectId: item.id,
         title: item.title,
         canonicalKey: item.canonicalKey ?? null,
         pathText: item.pathText ?? item.title,
+        linkedValueObjectId: item.id,
+        linkedTitle: item.title,
+        linkedCanonicalKey: item.canonicalKey ?? null,
+        linkedPathText: item.pathText ?? item.title,
         isPrimary: false,
         lensCode: "manual_add",
         relationMode: "direct",
@@ -639,13 +701,15 @@ export function ActivitySemanticReviewA31({
     }
 
     const primary = acceptedPrimary;
+    const primaryLeafId = primary?.linkedValueObjectId ?? null;
     const primaryCorrection =
       primary &&
       primary.originalValueObjectId &&
-      primary.originalValueObjectId !== primary.valueObjectId
+      primaryLeafId &&
+      primary.originalValueObjectId !== primaryLeafId
         ? {
             originalValueObjectId: primary.originalValueObjectId,
-            correctedValueObjectId: primary.valueObjectId,
+            correctedValueObjectId: primaryLeafId,
           }
         : {};
 
@@ -666,6 +730,7 @@ export function ActivitySemanticReviewA31({
           reviewDraftId: draftId,
           idempotencyKey: idempotencyRef.current,
           selectedLeafIds,
+          primaryLeafId,
           primaryCorrection,
         }),
       });
@@ -798,6 +863,9 @@ export function ActivitySemanticReviewA31({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-bold">{copy.semantic}</h2>
+              <p className="mt-1 text-xs text-zinc-400">
+                {copy.catalogServerSearch}
+              </p>
               <p className="mt-1 text-xs text-zinc-500">
                 {copy.selected}: {selectedLeafIds.length} / {proposals.length}
               </p>
@@ -814,7 +882,7 @@ export function ActivitySemanticReviewA31({
 
               return (
                 <article
-                  key={`${proposal.valueObjectId}-${index}`}
+                  key={`${proposal.proposalKind ?? "legacy"}-${proposal.title}-${index}`}
                   className={`rounded-2xl border p-4 ${
                     accepted
                       ? "border-emerald-800 bg-emerald-950/10"
@@ -846,9 +914,23 @@ export function ActivitySemanticReviewA31({
                       <h3 className="mt-2 text-base font-bold text-zinc-100">
                         {proposal.title}
                       </h3>
-                      <p className="mt-1 text-xs text-zinc-500">
-                        {proposal.pathText}
-                      </p>
+                      {proposal.linkedValueObjectId ? (
+                        <div className="mt-2 rounded-xl border border-emerald-800 bg-emerald-950/20 p-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-400">
+                            {copy.linkedLeaf}
+                          </p>
+                          <p className="mt-1 text-sm font-semibold text-zinc-100">
+                            {proposal.linkedTitle}
+                          </p>
+                          <p className="mt-1 text-xs text-zinc-500">
+                            {proposal.linkedPathText}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-xs text-amber-300">
+                          {copy.unresolvedProposal}
+                        </p>
+                      )}
                       <p className="mt-2 text-sm leading-6 text-zinc-300">
                         {proposal.interpretationText}
                       </p>
@@ -902,14 +984,16 @@ export function ActivitySemanticReviewA31({
                       </button>
                       <button
                         type="button"
-                        title={copy.replace}
+                        title={
+                          proposal.linkedValueObjectId ? copy.replace : copy.add
+                        }
                         className="h-9 w-9 rounded-full border border-blue-900 text-blue-300"
                         onClick={() => {
                           setReplaceIndex(index);
                           setAdding(false);
                         }}
                       >
-                        ✎
+                        {proposal.linkedValueObjectId ? "✎" : "+"}
                       </button>
                     </div>
                   </div>
@@ -917,6 +1001,9 @@ export function ActivitySemanticReviewA31({
                   {replaceIndex === index ? (
                     <LeafSearch
                       locale={locale}
+                      initialQuery={
+                        proposal.searchTerms?.[0] || proposal.title
+                      }
                       excludeIds={excludedIds}
                       onChoose={(item) => replaceProposal(index, item)}
                       onCancel={() => setReplaceIndex(null)}
@@ -942,6 +1029,7 @@ export function ActivitySemanticReviewA31({
             {adding ? (
               <LeafSearch
                 locale={locale}
+                initialQuery=""
                 excludeIds={excludedIds}
                 onChoose={addProposal}
                 onCancel={() => setAdding(false)}
