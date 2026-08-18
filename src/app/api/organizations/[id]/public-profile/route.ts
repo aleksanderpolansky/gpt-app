@@ -16,7 +16,7 @@ import {
 } from "../../../../../../lib/actor-context";
 import { auth0 } from "../../../../../../lib/auth0";
 import { supabase } from "../../../../../../lib/supabase";
-import { localizeEntityContent } from "@/lib/localization/contentLocalization.server";
+import { persistHumanLocalizedEntityContent } from "@/lib/localization/contentLocalization.server";
 
 export const dynamic = "force-dynamic";
 
@@ -366,16 +366,7 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     ? getDefaultCurrencyByCountryCode(nextCountryCode)
     : organization.default_currency;
 
-  if (locationPayload && !nextDefaultCurrency) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "A supported organization country is required before its currency can be determined.",
-      },
-      { status: 400 },
-    );
-  }
+  // CONTENT_L10_LOCALE_ADDRESS_CURRENCY_MEDIA_HOTFIX_V6: currency is allowed to remain null while editing the enterprise profile.
 
   const nextSocialLinksJson = getNextSocialLinksJson(
     organization.social_links_json,
@@ -563,9 +554,7 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     }
   }
 
-  const contentLocalization = await localizeEntityContent({
-    userId: actorContext.appUserId,
-    actorId: actorContext.actorId,
+  const contentLocalization = await persistHumanLocalizedEntityContent({
     table: "organizations",
     entityId: organizationId,
     sourceLocaleHint: body.locale,

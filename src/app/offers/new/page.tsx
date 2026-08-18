@@ -7,6 +7,7 @@ import {
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import { readValueObjectPublicImageUrl } from "@/lib/value-object-public-image";
+import { getOrganizationCurrency } from "@/lib/commercial/currency";
 import {
   SuperOfferWizard,
   type SuperOfferProvider,
@@ -45,6 +46,7 @@ type OrganizationRow = {
   id: string;
   organization_name: string;
   owner_actor_id: string;
+  country_code: string | null;
   default_currency: string | null;
   logo_url: string | null;
   status: string;
@@ -176,7 +178,7 @@ export default async function SuperOfferWizardPage({
       ? supabase
           .from("organizations")
           .select(
-            "id, organization_name, owner_actor_id, default_currency, logo_url, status",
+            "id, organization_name, owner_actor_id, country_code, default_currency, logo_url, status",
           )
           .in("owner_actor_id", actorIds)
           .eq("status", "active")
@@ -257,7 +259,7 @@ export default async function SuperOfferWizardPage({
       kind: "organization",
       displayName: organization.organization_name,
       imageUrl: organization.logo_url,
-      currency: normalizeCurrency(organization.default_currency),
+      currency: getOrganizationCurrency(organization),
     });
   }
 

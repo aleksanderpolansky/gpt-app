@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDefaultCurrencyByCountryCode, normalizeCountryCode } from "@/lib/commercial/currency";
+import { GooglePlacesAddressError, verifyAddressSelectionToken, type VerifiedGoogleAddressSelection } from "@/lib/geo/google-places-address";
 import {
   ActorContextError,
   resolveActiveActorContext,
@@ -23,6 +24,8 @@ type OrganizationLocationRow = {
   country_code: string | null;
   city: string | null;
   district: string | null;
+  street_address: string | null;
+  postal_code: string | null;
   address_visibility: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -41,6 +44,8 @@ type ParsedLocationUpdateInput = {
   countryCode: string | null;
   city: string | null;
   district: string | null;
+  streetAddress: string | null;
+  postalCode: string | null;
   addressVisibility: string;
   latitude: number | null;
   longitude: number | null;
@@ -197,6 +202,8 @@ function parseLocationUpdateInput(body: Record<string, unknown>): {
   const countryCode = normalizeCountryCode(parseOptionalText(body.countryCode));
   const city = parseOptionalText(body.city);
   const district = parseOptionalText(body.district);
+  const streetAddress = parseOptionalText(body.streetAddress ?? body.street_address);
+  const postalCode = parseOptionalText(body.postalCode ?? body.postal_code);
   const addressVisibility = normalizeAddressVisibility(
     body.addressVisibility ?? body.address_visibility
   );
@@ -241,6 +248,8 @@ function parseLocationUpdateInput(body: Record<string, unknown>): {
       countryCode,
       city,
       district,
+      streetAddress,
+      postalCode,
       addressVisibility,
       latitude: latitudeResult.value,
       longitude: longitudeResult.value,
@@ -361,6 +370,8 @@ async function getCurrentPrimaryLocation(organizationId: string): Promise<{
       country_code,
       city,
       district,
+      street_address,
+      postal_code,
       address_visibility,
       latitude,
       longitude,
@@ -423,6 +434,8 @@ async function updatePrimaryLocation(input: {
     country_code: input.locationInput.countryCode,
     city: input.locationInput.city,
     district: input.locationInput.district,
+    street_address: input.locationInput.streetAddress,
+    postal_code: input.locationInput.postalCode,
     address_visibility: input.locationInput.addressVisibility,
     latitude: input.locationInput.latitude,
     longitude: input.locationInput.longitude,
@@ -442,6 +455,8 @@ async function updatePrimaryLocation(input: {
         country_code,
         city,
         district,
+        street_address,
+        postal_code,
         address_visibility,
         latitude,
         longitude,
@@ -481,6 +496,8 @@ async function updatePrimaryLocation(input: {
       country_code,
       city,
       district,
+      street_address,
+      postal_code,
       address_visibility,
       latitude,
       longitude,
@@ -566,8 +583,36 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     );
   }
 
+  let verifiedAddressSelection: VerifiedGoogleAddressSelection | null = null;
+  const addressSelectionToken = parseOptionalText(body.addressSelectionToken);
+
+  if (addressSelectionToken) {
+    try {
+      verifiedAddressSelection = verifyAddressSelectionToken(addressSelectionToken);
+    } catch (error) {
+      if (error instanceof GooglePlacesAddressError) {
+        return NextResponse.json({ ok: false, errorCode: error.code }, { status: error.status });
+      }
+      return NextResponse.json({ ok: false, errorCode: "ADDRESS_SELECTION_INVALID" }, { status: 400 });
+    }
+  }
+
+  const normalizedLocationBody = verifiedAddressSelection
+    ? {
+        ...body,
+        countryCode: verifiedAddressSelection.countryCode,
+        city: verifiedAddressSelection.city,
+        district: verifiedAddressSelection.district,
+        streetAddress: verifiedAddressSelection.streetAddress,
+        postalCode: verifiedAddressSelection.postalCode,
+        latitude: verifiedAddressSelection.latitude,
+        longitude: verifiedAddressSelection.longitude,
+        addressVisibility: "public",
+      }
+    : body;
+
   const { input: locationInput, errorMessage: inputErrorMessage } =
-    parseLocationUpdateInput(body);
+    parseLocationUpdateInput(normalizedLocationBody);
 
   if (inputErrorMessage || !locationInput) {
     return NextResponse.json(
@@ -597,6 +642,12 @@ export async function PATCH(request: Request, { params }: RouteProps) {
       },
       { status: 404 }
     );
+  }
+
+  const defaultCurrency = getDefaultCurrencyByCountryCode(locationInput.countryCode);
+
+  if (!defaultCurrency) {
+    return NextResponse.json({ ok: false, errorCode: "ORGANIZATION_CURRENCY_ADDRESS_REQUIRED" }, { status: 409 });
   }
 
   const {
@@ -634,21 +685,6 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     organizationId,
     primaryLocationId: updatedLocation.id,
   });
-
-  const defaultCurrency = getDefaultCurrencyByCountryCode(
-    locationInput.countryCode,
-  );
-
-  if (!defaultCurrency) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "A supported organization country is required before its currency can be determined.",
-      },
-      { status: 400 },
-    );
-  }
 
   const nowIso = new Date().toISOString();
 
@@ -688,6 +724,7 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     ok: true,
     organization: updatedOrganizationData as unknown as OrganizationRow,
     location: updatedLocation,
+    defaultCurrency,
     actingAs: {
       actorId: actorContext.actorId,
       actorType: actorContext.actorType,

@@ -885,7 +885,13 @@ export default function OrganizationPublicProfileEditClient({
   >(null);
   const [selectedAddressLabel, setSelectedAddressLabel] = useState<
     string | null
-  >(null);
+  >(
+    initialData.primaryLocation?.streetAddress &&
+      initialData.primaryLocation.latitude !== null &&
+      initialData.primaryLocation.longitude !== null
+      ? getAddressSearchValue(initialValues)
+      : null,
+  );
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -934,6 +940,7 @@ export default function OrganizationPublicProfileEditClient({
       district: selection.district ?? "",
       streetAddress: selection.streetAddress ?? "",
       postalCode: selection.postalCode ?? "",
+      addressVisibility: "public",
       latitude:
         selection.latitude === null ? "" : String(selection.latitude),
       longitude:
@@ -982,6 +989,10 @@ export default function OrganizationPublicProfileEditClient({
         logoUrlForSave === undefined
           ? values
           : { ...values, logoUrl: logoUrlForSave };
+      const locationWasEdited =
+        addressSelectionToken !== null ||
+        (["countryCode", "city", "district", "streetAddress", "postalCode", "serviceArea", "latitude", "longitude", "addressVisibility"] as Array<keyof EditValues>)
+          .some((key) => isDirty(key));
 
       const response = await fetch(
         `/api/organizations/${initialData.organization.id}/public-profile`,
@@ -1002,18 +1013,20 @@ export default function OrganizationPublicProfileEditClient({
             websiteUrl: values.websiteUrl,
             bookingUrl: values.bookingUrl,
             publicEmail: values.publicEmail,
-            location: {
-              countryCode: values.countryCode,
-              city: values.city,
-              district: values.district,
-              streetAddress: values.streetAddress,
-              postalCode: values.postalCode,
-              label: values.serviceArea,
-              latitude: values.latitude,
-              longitude: values.longitude,
-              addressVisibility: values.addressVisibility,
-              addressSelectionToken,
-            },
+            location: locationWasEdited
+              ? {
+                  countryCode: values.countryCode,
+                  city: values.city,
+                  district: values.district,
+                  streetAddress: values.streetAddress,
+                  postalCode: values.postalCode,
+                  label: values.serviceArea,
+                  latitude: values.latitude,
+                  longitude: values.longitude,
+                  addressVisibility: values.addressVisibility,
+                  addressSelectionToken,
+                }
+              : undefined,
           }),
         },
       );
@@ -1037,7 +1050,7 @@ export default function OrganizationPublicProfileEditClient({
         | null;
 
       if (!response.ok || !payload?.ok) {
-        throw new Error(payload?.error ?? messages.saveError);
+        throw new Error(messages.saveError);
       }
 
       const nextValues: EditValues = payload.primaryLocation
@@ -1070,9 +1083,12 @@ export default function OrganizationPublicProfileEditClient({
 
       setValues(nextValues);
       setSavedValues(nextValues);
-      setAddressSearchQuery(getAddressSearchValue(nextValues));
+      const savedAddressSearchValue = getAddressSearchValue(nextValues);
+      setAddressSearchQuery(savedAddressSearchValue);
       setAddressSelectionToken(null);
-      setSelectedAddressLabel(null);
+      if (locationWasEdited && savedAddressSearchValue.trim()) {
+        setSelectedAddressLabel(savedAddressSearchValue);
+      }
       setSaveState("saved");
     } catch (error) {
       const nextMessage =

@@ -15,7 +15,7 @@ type OrganizationMediaRow = {
   cover_image_url: string | null;
 };
 
-const CACHE_CONTROL = "public, max-age=300, stale-while-revalidate=3600";
+const CACHE_CONTROL = "private, no-store, max-age=0";
 const DATA_URL_RE = /^data:(image\/[a-zA-Z0-9.+-]+);base64,([a-zA-Z0-9+/=\r\n]+)$/;
 
 function placeholderResponse() {

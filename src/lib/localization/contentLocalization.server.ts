@@ -860,6 +860,26 @@ export async function localizeEntityContent(input: {
   }
 }
 
+export async function persistHumanLocalizedEntityContent(input: {
+  table: LocalizableEntityTable;
+  entityId: string;
+  sourceLocaleHint: unknown;
+  fields: LocalizedContentFieldMap;
+}) {
+  const locale = normalizeContentLocale(input.sourceLocaleHint);
+  const fields = normalizeInputFields(input.fields);
+  const metadata = await readEntityMetadata({ table: input.table, entityId: input.entityId });
+  const existing = readLocalizedContentEnvelope(metadata);
+  const humanEnvelope = createHumanEnvelope({ existing, locale, fields });
+  await writeEntityMetadata({
+    table: input.table,
+    entityId: input.entityId,
+    metadata: { ...metadata, localizedContent: humanEnvelope, contentLocalizationRuntime: ARCTOR_CONTENT_LOCALIZATION_RUNTIME },
+  });
+  return { ok: true as const, manualPersisted: true as const, aiLocalized: false as const, locale, warning: null };
+}
+
+// CONTENT_L10_LOCALE_ADDRESS_CURRENCY_MEDIA_HOTFIX_V6: manual locale edits are isolated; AI generation remains creation-time behavior.
 export async function ensureActivityEventLocalizations(input: {
   userId: string;
   actorId: string;

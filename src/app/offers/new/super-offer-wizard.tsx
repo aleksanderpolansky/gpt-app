@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import OrganizationAddressAutocomplete, { type OrganizationAddressSelection } from "@/components/commercial/OrganizationAddressAutocomplete";
 import {
   useMemo,
   useRef,
@@ -23,7 +24,7 @@ export type SuperOfferProvider = {
   readonly kind: SuperOfferProviderKind;
   readonly displayName: string;
   readonly imageUrl: string | null;
-  readonly currency: string;
+  readonly currency: string | null;
 };
 
 export type SuperOfferValueObject = {
@@ -455,6 +456,17 @@ const COPY: Record<LocaleCode, Copy> = {
   },
 };
 
+type AddressSetupCopy = { title: string; text: string; save: string; saving: string; cancel: string; selectAddress: string; unsupportedCountry: string; saveError: string; };
+const ADDRESS_SETUP_COPY: Record<LocaleCode, AddressSetupCopy> = {
+  en:{title:"Business address required",text:"Choose the business address so ARCTor can determine the currency before creating the first product or service.",save:"Save address",saving:"Saving...",cancel:"Cancel",selectAddress:"Select an address from the suggestions.",unsupportedCountry:"This country is not yet supported for automatic business currency.",saveError:"Could not save the business address."},
+  pl:{title:"Wymagany adres firmy",text:"Wybierz adres firmy, aby ARCTor mógł ustalić walutę przed utworzeniem pierwszego produktu lub usługi.",save:"Zapisz adres",saving:"Zapisywanie...",cancel:"Anuluj",selectAddress:"Wybierz adres z podpowiedzi.",unsupportedCountry:"Ten kraj nie jest jeszcze obsługiwany przy automatycznym ustalaniu waluty firmy.",saveError:"Nie udało się zapisać adresu firmy."},
+  ru:{title:"Нужен адрес предприятия",text:"Выберите адрес предприятия, чтобы ARCTor определил валюту перед созданием первого товара или услуги.",save:"Сохранить адрес",saving:"Сохраняем...",cancel:"Отмена",selectAddress:"Выберите адрес из подсказок.",unsupportedCountry:"Эта страна пока не поддерживается для автоматического определения валюты предприятия.",saveError:"Не удалось сохранить адрес предприятия."},
+  uk:{title:"Потрібна адреса підприємства",text:"Виберіть адресу підприємства, щоб ARCTor визначив валюту перед створенням першого товару або послуги.",save:"Зберегти адресу",saving:"Зберігаємо...",cancel:"Скасувати",selectAddress:"Виберіть адресу з підказок.",unsupportedCountry:"Ця країна поки не підтримується для автоматичного визначення валюти підприємства.",saveError:"Не вдалося зберегти адресу підприємства."},
+  de:{title:"Unternehmensadresse erforderlich",text:"Wählen Sie die Unternehmensadresse, damit ARCTor vor dem ersten Produkt oder der ersten Dienstleistung die Währung bestimmen kann.",save:"Adresse speichern",saving:"Speichern...",cancel:"Abbrechen",selectAddress:"Wählen Sie eine Adresse aus den Vorschlägen.",unsupportedCountry:"Dieses Land wird für die automatische Unternehmenswährung noch nicht unterstützt.",saveError:"Die Unternehmensadresse konnte nicht gespeichert werden."},
+  es:{title:"Se necesita la dirección de la empresa",text:"Elige la dirección de la empresa para que ARCTor pueda determinar la moneda antes de crear el primer producto o servicio.",save:"Guardar dirección",saving:"Guardando...",cancel:"Cancelar",selectAddress:"Elige una dirección de las sugerencias.",unsupportedCountry:"Este país todavía no es compatible con la determinación automática de la moneda de la empresa.",saveError:"No se pudo guardar la dirección de la empresa."},
+  cs:{title:"Je vyžadována adresa podniku",text:"Vyberte adresu podniku, aby ARCTor mohl před vytvořením prvního produktu nebo služby určit měnu.",save:"Uložit adresu",saving:"Ukládání...",cancel:"Zrušit",selectAddress:"Vyberte adresu z návrhů.",unsupportedCountry:"Tato země zatím není podporována pro automatické určení měny podniku.",saveError:"Adresu podniku se nepodařilo uložit."}
+};
+
 const MAX_SOURCE_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_DATA_URL_LENGTH = 1_450_000;
 const MAX_IMAGE_DIMENSION = 1200;
@@ -624,12 +636,21 @@ export function SuperOfferWizard({
   );
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [currencyOverrides, setCurrencyOverrides] = useState<Record<string, string>>({});
+  const [addressSetupProviderKey, setAddressSetupProviderKey] = useState<string | null>(null);
+  const [addressSetupQuery, setAddressSetupQuery] = useState("");
+  const [addressSetupSelection, setAddressSetupSelection] = useState<OrganizationAddressSelection | null>(null);
+  const [addressSetupPending, setAddressSetupPending] = useState(false);
+  const [addressSetupError, setAddressSetupError] = useState<string | null>(null);
+  const addressSetupCopy = ADDRESS_SETUP_COPY[locale];
 
   const selectedProvider =
     providers.find((provider) => provider.key === providerKey) ?? providers[0];
   const selectedItem = items.find(
     (item) => item.id === selectedValueObjectId,
   );
+  const selectedProviderCurrency = selectedProvider ? currencyOverrides[selectedProvider.key] ?? selectedProvider.currency : null;
+  const addressSetupProvider = addressSetupProviderKey ? providers.find((provider) => provider.key === addressSetupProviderKey) ?? null : null;
 
   const filteredItems = useMemo(() => {
     const query = searchText.trim().toLocaleLowerCase(locale);
@@ -716,9 +737,30 @@ export function SuperOfferWizard({
     }
   }
 
+  async function saveAddressSetup() {
+    if (!addressSetupProvider || !addressSetupProvider.organizationId || !addressSetupSelection || addressSetupPending) {
+      if (!addressSetupSelection) setAddressSetupError(addressSetupCopy.selectAddress);
+      return;
+    }
+    setAddressSetupPending(true); setAddressSetupError(null);
+    try {
+      const response = await fetch(`/api/organizations/${encodeURIComponent(addressSetupProvider.organizationId)}/location`, { method:"PATCH", headers:{"Content-Type":"application/json",Accept:"application/json"}, body:JSON.stringify({ countryCode:addressSetupSelection.countryCode, city:addressSetupSelection.city, district:addressSetupSelection.district, streetAddress:addressSetupSelection.streetAddress, postalCode:addressSetupSelection.postalCode, latitude:addressSetupSelection.latitude, longitude:addressSetupSelection.longitude, addressVisibility:"public", addressSelectionToken:addressSetupSelection.addressSelectionToken }) });
+      const data = (await response.json().catch(() => null)) as { ok?:boolean; errorCode?:string; defaultCurrency?:string; organization?:{default_currency?:string|null} } | null;
+      const nextCurrency=data?.defaultCurrency ?? data?.organization?.default_currency ?? null;
+      if(!response.ok || !data?.ok || !nextCurrency){ setAddressSetupError(data?.errorCode==="ORGANIZATION_CURRENCY_ADDRESS_REQUIRED" ? addressSetupCopy.unsupportedCountry : addressSetupCopy.saveError); return; }
+      setCurrencyOverrides((current)=>({ ...current, [addressSetupProvider.key]: nextCurrency }));
+      setAddressSetupProviderKey(null); setAddressSetupQuery(""); setAddressSetupSelection(null); setAddressSetupError(null);
+    } catch { setAddressSetupError(addressSetupCopy.saveError); } finally { setAddressSetupPending(false); }
+  }
+
   async function createNewValueObject() {
     if (!selectedProvider || pendingKey) {
       return;
+    }
+
+    const providerCurrency = selectedProviderCurrency ?? (selectedProvider.kind === "organization" ? null : "EUR");
+    if (!providerCurrency) {
+      setAddressSetupProviderKey(selectedProvider.key); setAddressSetupQuery(""); setAddressSetupSelection(null); setAddressSetupError(null); return;
     }
 
     const normalizedTitle = title.trim();
@@ -764,7 +806,7 @@ export function SuperOfferWizard({
           title: normalizedTitle,
           description: description.trim() || null,
           defaultPrice: normalizedPrice,
-          defaultCurrency: selectedProvider.currency,
+          defaultCurrency: providerCurrency,
           defaultDurationMinutes:
             objectKind === "service_type" ? duration : null,
           locale,
@@ -1028,7 +1070,7 @@ export function SuperOfferWizard({
                       {copy.currency}
                     </span>
                     <div className="flex min-h-12 items-center rounded-xl border border-[#dfe3f1] bg-[#f8fafc] px-4 text-[14px] font-semibold text-[#1a1d2e]">
-                      {selectedProvider?.currency ?? "—"}
+                      {selectedProviderCurrency ?? "—"}
                     </div>
                   </div>
                 </div>
@@ -1189,6 +1231,22 @@ export function SuperOfferWizard({
           </section>
         ) : null}
       </div>
+      {addressSetupProvider ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/35 p-4">
+          <div className="w-full max-w-[560px] rounded-[24px] border border-black/10 bg-white p-5 shadow-[0_24px_80px_rgba(15,23,42,0.28)]">
+            <h2 className="text-[20px] font-bold text-[#111827]">{addressSetupCopy.title}</h2>
+            <p className="mt-2 text-[13px] leading-5 text-[#6b7280]">{addressSetupCopy.text}</p>
+            <div className="mt-4">
+              <OrganizationAddressAutocomplete locale={locale} value={addressSetupQuery} onChange={(value)=>{setAddressSetupQuery(value); if(addressSetupSelection && value!==addressSetupSelection.formattedAddress) setAddressSetupSelection(null); setAddressSetupError(null);}} onSelect={(selection)=>{setAddressSetupQuery(selection.formattedAddress); setAddressSetupSelection(selection); setAddressSetupError(null);}} countryCodeHint={null} selectedAddress={addressSetupSelection?.formattedAddress ?? null} />
+            </div>
+            {addressSetupError ? <div className="mt-3 rounded-xl border border-[#fecaca] bg-[#fff1f2] px-3 py-2 text-[12px] text-[#b42318]">{addressSetupError}</div> : null}
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" disabled={addressSetupPending} onClick={()=>{setAddressSetupProviderKey(null);setAddressSetupQuery("");setAddressSetupSelection(null);setAddressSetupError(null);}} className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-2.5 text-[13px] font-semibold text-[#4a4f6a] disabled:opacity-50">{addressSetupCopy.cancel}</button>
+              <button type="button" disabled={addressSetupPending || !addressSetupSelection} onClick={()=>void saveAddressSetup()} className="rounded-xl bg-[#3b6ef8] px-4 py-2.5 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{addressSetupPending ? addressSetupCopy.saving : addressSetupCopy.save}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
