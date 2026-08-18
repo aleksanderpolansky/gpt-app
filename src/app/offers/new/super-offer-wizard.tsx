@@ -893,8 +893,8 @@ export function SuperOfferWizard({
   }
 
   return (
-    <main className="min-h-full bg-[#f5f6fb] px-5 py-5 text-[#1a1d2e]">
-      <div className="mx-auto grid w-full max-w-[1280px] gap-5">
+    <main className="min-h-full overflow-x-hidden bg-[#f5f6fb] px-3 py-4 text-[#1a1d2e] sm:px-5 sm:py-5">
+      <div className="mx-auto grid w-full min-w-0 max-w-[1280px] gap-5">
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href={appendLocale("/certificates?view=provided", locale)}
@@ -932,8 +932,8 @@ export function SuperOfferWizard({
         ) : null}
 
         {mode === "new" ? (
-          <section className="grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
-            <article className="rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-sm">
+          <section className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] xl:gap-5">
+            <article className="min-w-0 rounded-[24px] border border-black/[0.07] bg-white p-4 shadow-sm sm:p-5">
               <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7c8099]">
                 {copy.photo}
               </div>
@@ -986,8 +986,8 @@ export function SuperOfferWizard({
               </p>
             </article>
 
-            <article className="rounded-[24px] border border-black/[0.07] bg-white p-5 shadow-sm">
-              <div className="grid gap-5">
+            <article className="min-w-0 rounded-[24px] border border-black/[0.07] bg-white p-4 shadow-sm sm:p-5">
+              <div className="grid min-w-0 gap-5">
                 <label className="grid gap-2">
                   <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7c8099]">
                     {copy.provider}
@@ -995,7 +995,7 @@ export function SuperOfferWizard({
                   <select
                     value={selectedProvider?.key ?? ""}
                     onChange={(event) => setProviderKey(event.target.value)}
-                    className="min-h-12 rounded-xl border border-[#dfe3f1] bg-white px-4 text-[14px] font-semibold text-[#1a1d2e]"
+                    className="min-h-12 w-full min-w-0 max-w-full rounded-xl border border-[#dfe3f1] bg-white px-4 text-[14px] font-semibold text-[#1a1d2e]"
                   >
                     {providers.map((provider) => (
                       <option key={provider.key} value={provider.key}>
@@ -1035,7 +1035,7 @@ export function SuperOfferWizard({
                     value={title}
                     onChange={(event) => setTitle(event.target.value)}
                     maxLength={180}
-                    className="min-h-12 rounded-xl border border-[#dfe3f1] bg-white px-4 text-[14px] text-[#1a1d2e]"
+                    className="min-h-12 w-full min-w-0 max-w-full rounded-xl border border-[#dfe3f1] bg-white px-4 text-[14px] text-[#1a1d2e]"
                   />
                 </label>
 
@@ -1048,7 +1048,7 @@ export function SuperOfferWizard({
                     onChange={(event) => setDescription(event.target.value)}
                     maxLength={4000}
                     rows={5}
-                    className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e]"
+                    className="w-full min-w-0 max-w-full rounded-xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] text-[#1a1d2e]"
                   />
                 </label>
 
@@ -1061,7 +1061,7 @@ export function SuperOfferWizard({
                       inputMode="decimal"
                       value={defaultPrice}
                       onChange={(event) => setDefaultPrice(event.target.value)}
-                      className="min-h-12 rounded-xl border border-[#dfe3f1] bg-white px-4 text-[14px] text-[#1a1d2e]"
+                      className="min-h-12 w-full min-w-0 max-w-full rounded-xl border border-[#dfe3f1] bg-white px-4 text-[14px] text-[#1a1d2e]"
                     />
                   </label>
 
@@ -1086,7 +1086,7 @@ export function SuperOfferWizard({
                       onChange={(event) =>
                         setDefaultDurationMinutes(event.target.value)
                       }
-                      className="min-h-12 rounded-xl border border-[#dfe3f1] bg-white px-4 text-[14px] text-[#1a1d2e]"
+                      className="min-h-12 w-full min-w-0 max-w-full rounded-xl border border-[#dfe3f1] bg-white px-4 text-[14px] text-[#1a1d2e]"
                     />
                     <span className="text-[12px] text-[#7c8099]">
                       {copy.durationHint}
@@ -1120,7 +1120,7 @@ export function SuperOfferWizard({
                   value={searchText}
                   onChange={(event) => setSearchText(event.target.value)}
                   placeholder={copy.searchPlaceholder}
-                  className="min-h-12 rounded-xl border border-[#dfe3f1] bg-white px-4 text-[14px] text-[#1a1d2e]"
+                  className="min-h-12 w-full min-w-0 max-w-full rounded-xl border border-[#dfe3f1] bg-white px-4 text-[14px] text-[#1a1d2e]"
                 />
               </label>
             </div>
@@ -1250,3 +1250,5 @@ export function SuperOfferWizard({
     </main>
   );
 }
+
+// ARCTOR_BUSINESS_GIFT_CARD_PREVIEW_MEDIA_MOBILE_PERF_V1_MOBILE

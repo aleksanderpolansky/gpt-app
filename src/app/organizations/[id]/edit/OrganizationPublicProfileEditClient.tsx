@@ -82,6 +82,13 @@ export type OrganizationPublicProfileEditInitialData = {
   } | null;
   categoryName: string | null;
   publicProfileHref: string | null;
+  giftCards: Array<{
+    id: string;
+    title: string;
+    imageUrl: string | null;
+    href: string;
+    pointsPrice: number;
+  }>;
   counts: {
     offersCount: number;
     certificateOffersCount: number;
@@ -966,7 +973,7 @@ function FeaturedContentEditorCard({
   shortDescription,
   linkUrl,
   copy,
-  giftCardCount,
+  giftCards,
   addSuperOfferHref,
   uploading,
   onPickImage,
@@ -978,7 +985,7 @@ function FeaturedContentEditorCard({
   shortDescription: string;
   linkUrl: string;
   copy: FeaturedContentCopy;
-  giftCardCount: number;
+  giftCards: OrganizationPublicProfileEditInitialData["giftCards"];
   addSuperOfferHref: string;
   uploading: boolean;
   onPickImage: () => void;
@@ -996,15 +1003,6 @@ function FeaturedContentEditorCard({
         {imageUrl ? (
           <div className="relative mt-3 h-[118px] overflow-hidden rounded-xl border border-[#edf0f7] bg-[#f8f9fd]">
             <img src={imageUrl} alt="" className="h-full w-full object-cover" />
-            <button
-              type="button"
-              onClick={onRemoveImage}
-              aria-label={copy.removeImage}
-              title={copy.removeImage}
-              className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-lg border border-[#fecdd3] bg-white/95 text-[#e11d48] shadow-sm"
-            >
-              <Trash2 size={14} />
-            </button>
           </div>
         ) : (
           <button
@@ -1019,14 +1017,25 @@ function FeaturedContentEditorCard({
         )}
 
         {imageUrl ? (
-          <button
-            type="button"
-            onClick={onPickImage}
-            disabled={uploading}
-            className="mt-2 text-[11px] font-semibold text-[#3b6ef8] hover:underline disabled:opacity-50"
-          >
-            {uploading ? copy.uploadingImage : copy.uploadImage}
-          </button>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={onPickImage}
+              disabled={uploading}
+              className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-[#dfe4ff] bg-[#eef2ff] px-2.5 text-[11px] font-semibold text-[#3b6ef8] transition hover:border-[#3b6ef8]/40 disabled:opacity-50"
+            >
+              <Camera size={13} />
+              {uploading ? copy.uploadingImage : copy.uploadImage}
+            </button>
+            <button
+              type="button"
+              onClick={onRemoveImage}
+              className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-[#fecdd3] bg-white px-2.5 text-[11px] font-semibold text-[#e11d48] transition hover:bg-[#fff1f2]"
+            >
+              <Trash2 size={13} />
+              {copy.removeImage}
+            </button>
+          </div>
         ) : null}
 
         <label className="mt-3 block">
@@ -1060,9 +1069,41 @@ function FeaturedContentEditorCard({
         <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6f7494]">
           {copy.giftCards}
         </h3>
-        <p className="mt-1 text-[12px] text-[#9ca3b8]">
-          {giftCardCount > 0 ? String(giftCardCount) : copy.noOffers}
-        </p>
+        {giftCards.length > 0 ? (
+          <div className="mt-2 space-y-1.5">
+            {giftCards.slice(0, 2).map((giftCard) => (
+              <Link
+                key={giftCard.id}
+                href={giftCard.href}
+                className="flex min-w-0 items-center gap-2 rounded-lg border border-[#edf0f7] bg-[#fbfcff] p-1.5 transition hover:border-[#cfd8ff] hover:bg-[#f6f8ff]"
+              >
+                {giftCard.imageUrl ? (
+                  <img
+                    src={giftCard.imageUrl}
+                    alt=""
+                    className="h-9 w-9 shrink-0 rounded-md object-cover"
+                  />
+                ) : (
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#eef2ff] text-[10px] font-bold text-[#3b6ef8]">
+                    GC
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="line-clamp-1 text-[11px] font-semibold text-[#1a1d2e]">
+                    {giftCard.title}
+                  </div>
+                  {giftCard.pointsPrice > 0 ? (
+                    <div className="mt-0.5 text-[10px] text-[#7c8099]">
+                      {giftCard.pointsPrice} POINTS
+                    </div>
+                  ) : null}
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-1 text-[12px] text-[#9ca3b8]">{copy.noOffers}</p>
+        )}
         <Link
           href={addSuperOfferHref}
           className="mt-2 inline-flex rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-3 py-2 text-[12px] font-semibold text-[#3b6ef8] transition hover:border-[#3b6ef8]/40"
@@ -2111,7 +2152,7 @@ export default function OrganizationPublicProfileEditClient({
             shortDescription={values.featuredShortDescription}
             linkUrl={values.featuredLinkUrl}
             copy={featuredCopy}
-            giftCardCount={initialData.counts.certificateOffersCount}
+            giftCards={initialData.giftCards}
             addSuperOfferHref={addSuperOfferHref}
             uploading={featuredUploadState === "uploading"}
             onPickImage={handleFeaturedImagePickerOpen}

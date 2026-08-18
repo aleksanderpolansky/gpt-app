@@ -8,7 +8,14 @@ import { auth0 } from "../../../../../../../lib/auth0";
 import { resolveOfficialEurReferenceRate } from "../../../../../../../lib/exchange-rates/official-eur-reference-rate";
 import { supabase } from "../../../../../../../lib/supabase";
 import { getOrganizationCurrency } from "@/lib/commercial/currency";
-import { localizeEntityContent } from "@/lib/localization/contentLocalization.server";
+import {
+  ARCTOR_CONTENT_LOCALIZATION_RUNTIME,
+  localizeEntityContent,
+} from "@/lib/localization/contentLocalization.server";
+import {
+  ARCTOR_CONTENT_LOCALES,
+  readLocalizedContentEnvelope,
+} from "@/lib/localization/contentLocalization";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +57,7 @@ type ValueObjectRow = {
   default_price: number | null;
   default_currency: string | null;
   organization_id: string | null;
+  metadata_json: unknown;
   status: string;
 };
 
@@ -352,6 +360,7 @@ export async function POST(
       default_price,
       default_currency,
       organization_id,
+      metadata_json,
       status
     `,
     )
@@ -599,18 +608,94 @@ export async function POST(
     );
   }
 
-  const contentLocalization = await localizeEntityContent({
-    userId: actorContext.appUserId,
-    actorId: actorContext.actorId,
-    table: "activity_events",
-    entityId: activityEventId,
-    sourceLocaleHint: locale,
-    fields: {
-      title: valueObject.title,
-      description: valueObject.description,
-      termsText,
-    },
-  });
+  let contentLocalization:
+    | Awaited<ReturnType<typeof localizeEntityContent>>
+    | {
+        ok: true;
+        manualPersisted: true;
+        aiLocalized: false;
+        locale: LocaleCode;
+        warning: null;
+        inheritedFromValueObject: true;
+      }
+    | null = null;
+
+  const sourceLocalization = readLocalizedContentEnvelope(
+    valueObject.metadata_json,
+  );
+  const sourceDescriptionRequired = Boolean(valueObject.description?.trim());
+  const canReuseSourceLocalization =
+    !termsText &&
+    sourceLocalization !== null &&
+    ARCTOR_CONTENT_LOCALES.every((contentLocale) => {
+      const localizedTitle = sourceLocalization.variants[contentLocale]?.title;
+      const localizedDescription =
+        sourceLocalization.variants[contentLocale]?.description;
+
+      return Boolean(localizedTitle) &&
+        (!sourceDescriptionRequired || Boolean(localizedDescription));
+    });
+
+  if (canReuseSourceLocalization && sourceLocalization) {
+    const { data: activityLocalizationData, error: activityLocalizationReadError } =
+      await supabase
+        .from("activity_events")
+        .select("id,metadata_json")
+        .eq("id", activityEventId)
+        .eq("user_id", actorContext.appUserId)
+        .eq("acting_as_actor_id", actorContext.actorId)
+        .maybeSingle();
+
+    if (!activityLocalizationReadError && activityLocalizationData) {
+      const rawActivityMetadata = activityLocalizationData.metadata_json;
+      const activityMetadata =
+        rawActivityMetadata &&
+        typeof rawActivityMetadata === "object" &&
+        !Array.isArray(rawActivityMetadata)
+          ? (rawActivityMetadata as Record<string, unknown>)
+          : {};
+
+      const { error: inheritedLocalizationWriteError } = await supabase
+        .from("activity_events")
+        .update({
+          metadata_json: {
+            ...activityMetadata,
+            localizedContent: sourceLocalization,
+            contentLocalizationRuntime: ARCTOR_CONTENT_LOCALIZATION_RUNTIME,
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", activityEventId)
+        .eq("user_id", actorContext.appUserId)
+        .eq("acting_as_actor_id", actorContext.actorId);
+
+      if (!inheritedLocalizationWriteError) {
+        contentLocalization = {
+          ok: true,
+          manualPersisted: true,
+          aiLocalized: false,
+          locale,
+          warning: null,
+          inheritedFromValueObject: true,
+        };
+      }
+    }
+  }
+
+  if (!contentLocalization) {
+    contentLocalization = await localizeEntityContent({
+      userId: actorContext.appUserId,
+      actorId: actorContext.actorId,
+      table: "activity_events",
+      entityId: activityEventId,
+      sourceLocaleHint: locale,
+      fields: {
+        title: valueObject.title,
+        description: valueObject.description,
+        termsText,
+      },
+    });
+  }
 
   return NextResponse.json({
     ok: true,

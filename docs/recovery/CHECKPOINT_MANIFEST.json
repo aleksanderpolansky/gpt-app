@@ -1,11 +1,11 @@
 {
   "schemaVersion": 7,
-  "generatedAt": "2026-08-18T15:30:00.000Z",
+  "generatedAt": "2026-08-18T15:51:00.000Z",
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
   "branch": "main",
-  "originMainAtCheckpoint": "afa4b5af56ecd5ad5395d9b54551fd6bd17742e8",
-  "checkpointMeaning": "FEATURED BLOCK V2 layout hotfix: location label moved closer to map, gift cards header pulled up.",
+  "originMainAtCheckpoint": "e2341fba522a29680bfc01fefc8ced6bcb20fc6e",
+  "checkpointMeaning": "Organization gift-card preview uses activity-based certificates; featured image deletion is explicit; gift-certificate creation reuses complete product localization; super-offer first step is mobile-safe.",
   "globalReality": {
     "p8Blocked": true,
     "objectsTotal": 150,
@@ -54,7 +54,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Live-check public address card and featured card vertical rhythm in PL locale.",
+  "nextAction": "Live-check gift-card preview image/title, featured-image removal persistence, certificate create latency, and /offers/new on smartphone.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -65,7 +65,7 @@
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
   "previousRecoveryCommit": "d91549773dae71206e46f3182bfd433f9c30316d",
-  "documentedState": "BUSINESS_FEATURED_BLOCK_V2_LAYOUT_HOTFIX_CODED_AWAITING_LIVE_ACCEPTANCE",
+  "documentedState": "BUSINESS_GIFT_CARD_PREVIEW_MEDIA_MOBILE_PERF_V1_CODED_AWAITING_LIVE_ACCEPTANCE",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -528,5 +528,15 @@
     "publicLocationLabelCloserToMap": true,
     "publicGiftCardsHeaderPulledUp": true,
     "editGiftCardsHeaderPulledUp": true
+  },
+  "businessGiftCardPreviewMediaMobilePerfV1": {
+    "featuredImageRemoveControlVisible": true,
+    "giftCardPreviewSource": "activity_gift_certificate_terms",
+    "giftCardPreviewUsesProductImageSnapshot": true,
+    "ownerEditGiftCardCountUsesActivitySource": true,
+    "giftCertificateLocalizationReuseWhenCompleteAndNoTerms": true,
+    "giftCertificateAiFallbackPreserved": true,
+    "superOfferFirstStepMobileIntrinsicWidthHardened": true,
+    "databaseSchemaChanged": false
   }
 }

@@ -6,6 +6,7 @@ import { supabase } from "../../../../../lib/supabase";
 import { resolveLocalizedContentFieldsStrict } from "@/lib/localization/contentLocalization";
 import { readOrganizationContactChannels } from "@/lib/commercial/organizationContactChannels";
 import { readOrganizationFeaturedContent } from "@/lib/commercial/organizationFeaturedContent";
+import { getPublicGiftCertificatePreviewForOrganization } from "@/app/certificates/gift-certificate-data";
 import OrganizationPublicProfileEditClient, {
   type OrganizationPublicProfileEditInitialData,
 } from "./OrganizationPublicProfileEditClient";
@@ -146,20 +147,11 @@ async function getCurrentCategoryName(organizationId: string) {
   return ((categoryData ?? [])[0] as CategoryRow | undefined)?.name ?? null;
 }
 
-async function getCount(input: {
-  organizationId: string;
-  certificateOnly?: boolean;
-}) {
-  let query = supabase
+async function getOfferCount(organizationId: string) {
+  const { count } = await supabase
     .from("offers")
     .select("id", { count: "exact", head: true })
-    .eq("organization_id", input.organizationId);
-
-  if (input.certificateOnly) {
-    query = query.eq("certificate_available", true);
-  }
-
-  const { count } = await query;
+    .eq("organization_id", organizationId);
 
   return count ?? 0;
 }
@@ -226,7 +218,7 @@ export default async function OrganizationEditPage({
     locationResult,
     categoryName,
     offersCount,
-    certificateOffersCount,
+    giftCardPreview,
   ] = await Promise.all([
     supabase
       .from("organization_locations")
@@ -256,8 +248,12 @@ export default async function OrganizationEditPage({
       .order("created_at", { ascending: false })
       .limit(1),
     getCurrentCategoryName(organization.id),
-    getCount({ organizationId: organization.id }),
-    getCount({ organizationId: organization.id, certificateOnly: true }),
+    getOfferCount(organization.id),
+    getPublicGiftCertificatePreviewForOrganization({
+      organizationId: organization.id,
+      locale,
+      limit: 2,
+    }),
   ]);
 
   if (locationResult.error) {
@@ -335,9 +331,19 @@ export default async function OrganizationEditPage({
       getProfileCategoryLabelFromSocialLinks(organization.social_links_json) ??
       categoryName,
     publicProfileHref,
+    giftCards: giftCardPreview.items.map((certificate) => ({
+      id: certificate.activityEventId,
+      title: certificate.title,
+      imageUrl: certificate.productImageUrl,
+      href:
+        locale === "en"
+          ? "/certificates/" + certificate.activityEventId
+          : "/certificates/" + certificate.activityEventId + "?locale=" + encodeURIComponent(locale),
+      pointsPrice: certificate.pointsPrice,
+    })),
     counts: {
       offersCount,
-      certificateOffersCount,
+      certificateOffersCount: giftCardPreview.count,
       pointsCount: 1,
     },
   };

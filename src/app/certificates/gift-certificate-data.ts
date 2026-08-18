@@ -736,6 +736,130 @@ function sortByNewest(
   );
 }
 
+export type GiftCertificateOrganizationPreviewItem = {
+  readonly activityEventId: string;
+  readonly title: string;
+  readonly productImageUrl: string | null;
+  readonly pointsPrice: number;
+};
+
+export async function getPublicGiftCertificatePreviewForOrganization(input: {
+  organizationId: string;
+  locale?: unknown;
+  limit?: number;
+}): Promise<{ items: GiftCertificateOrganizationPreviewItem[]; count: number }> {
+  const organizationId = input.organizationId.trim();
+  const limit = Math.min(6, Math.max(1, Math.trunc(input.limit ?? 2)));
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (!organizationId) {
+    return { items: [], count: 0 };
+  }
+
+  const { data, error, count } = await supabase
+    .from("activity_gift_certificate_terms")
+    .select(
+      "activity_event_id,value_object_id,points_price,provider_organization_id,lifecycle_status,public_visibility_status,published_at,available_until",
+      { count: "exact" },
+    )
+    .eq("provider_organization_id", organizationId)
+    .eq("lifecycle_status", "available")
+    .eq("public_visibility_status", "visible")
+    .not("published_at", "is", null)
+    .gte("available_until", today)
+    .order("published_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const rows = (data ?? []) as Array<{
+    activity_event_id: string;
+    value_object_id: string;
+    points_price: number | string;
+  }>;
+
+  if (rows.length === 0) {
+    return { items: [], count: count ?? 0 };
+  }
+
+  const activityIds = [...new Set(rows.map((row) => row.activity_event_id))];
+  const valueObjectIds = [...new Set(rows.map((row) => row.value_object_id))];
+
+  const [activityResult, valueObjectResult] = await Promise.all([
+    supabase
+      .from("activity_events")
+      .select("id,title,status,activity_role_code,metadata_json")
+      .in("id", activityIds)
+      .eq("activity_role_code", "planned"),
+    supabase
+      .from("value_objects")
+      .select("id,metadata_json")
+      .in("id", valueObjectIds),
+  ]);
+
+  if (activityResult.error) {
+    throw new Error(activityResult.error.message);
+  }
+
+  if (valueObjectResult.error) {
+    throw new Error(valueObjectResult.error.message);
+  }
+
+  const activitiesById = new Map(
+    ((activityResult.data ?? []) as Array<{
+      id: string;
+      title: string;
+      status: string;
+      activity_role_code: string;
+      metadata_json: unknown;
+    }>).map((row) => [row.id, row]),
+  );
+  const valueObjectMetadataById = new Map(
+    ((valueObjectResult.data ?? []) as Array<{
+      id: string;
+      metadata_json: unknown;
+    }>).map((row) => [row.id, row.metadata_json]),
+  );
+  const locale = normalizeContentLocale(input.locale);
+
+  const items = rows.flatMap((row): GiftCertificateOrganizationPreviewItem[] => {
+    const activity = activitiesById.get(row.activity_event_id);
+    if (!activity || activity.status !== "planned") {
+      return [];
+    }
+
+    const localized = resolveLocalizedContentFieldsStrict({
+      metadata: activity.metadata_json,
+      locale,
+      fieldCodes: ["title"],
+    });
+    const imageSnapshot = readGiftCertificateProductImageSnapshot(
+      activity.metadata_json,
+    );
+    const sourceImage = readValueObjectPublicImageUrl(
+      valueObjectMetadataById.get(row.value_object_id),
+    );
+
+    return [
+      {
+        activityEventId: row.activity_event_id,
+        title: localized.title ?? "—",
+        productImageUrl: imageSnapshot.captured
+          ? imageSnapshot.imageUrl
+          : sourceImage,
+        pointsPrice: toNumber(row.points_price),
+      },
+    ];
+  });
+
+  return {
+    items: items.slice(0, limit),
+    count: count ?? items.length,
+  };
+}
+
 export async function listPublicGiftCertificates(
   locale: unknown = "en",
 ): Promise<GiftCertificateCatalogItem[]> {

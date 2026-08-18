@@ -29,6 +29,7 @@ import OrganizationLocationMapPreview from "@/components/commercial/Organization
 import { resolveLocalizedContentFieldsStrict } from "@/lib/localization/contentLocalization";
 import { getPrimaryPublicOrganizationContactChannel } from "@/lib/commercial/organizationContactChannels";
 import { readOrganizationFeaturedContent } from "@/lib/commercial/organizationFeaturedContent";
+import { getPublicGiftCertificatePreviewForOrganization } from "@/app/certificates/gift-certificate-data";
 
 
 
@@ -1869,6 +1870,14 @@ function PublicOrganizationMapPreview({
   more: string;
 };
 
+type PublicGiftCardPreview = {
+  id: string;
+  title: string;
+  imageUrl: string | null;
+  href: string;
+  pointsPrice: number;
+};
+
 function getPublicFeaturedContentCopy(
   locale?: string,
 ): PublicFeaturedContentCopy {
@@ -1935,7 +1944,7 @@ function PublicFeaturedContentCard({
   readonly imageUrl: string | null;
   readonly linkUrl: string | null;
   readonly shortDescription: string | null;
-  readonly giftCards: PublicDirectoryOffer[];
+  readonly giftCards: PublicGiftCardPreview[];
   readonly locale?: string;
 }) {
   const copy = getPublicFeaturedContentCopy(locale);
@@ -1993,14 +2002,34 @@ function PublicFeaturedContentCard({
 
         {giftCards.length > 0 ? (
           <div className="mt-2 space-y-1.5">
-            {giftCards.slice(0, 2).map((offer) => (
-              <a
-                key={offer.id}
-                href="#public-offers"
-                className="block line-clamp-1 text-[12px] font-semibold text-[#1a1d2e] hover:text-[#3b6ef8]"
+            {giftCards.slice(0, 2).map((giftCard) => (
+              <Link
+                key={giftCard.id}
+                href={giftCard.href}
+                className="flex min-w-0 items-center gap-2 rounded-lg border border-[#edf0f7] bg-[#fbfcff] p-1.5 transition hover:border-[#cfd8ff] hover:bg-[#f6f8ff]"
               >
-                {offer.title}
-              </a>
+                {giftCard.imageUrl ? (
+                  <img
+                    src={giftCard.imageUrl}
+                    alt=""
+                    className="h-9 w-9 shrink-0 rounded-md object-cover"
+                  />
+                ) : (
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#eef2ff] text-[10px] font-bold text-[#3b6ef8]">
+                    GC
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="line-clamp-1 text-[11px] font-semibold text-[#1a1d2e]">
+                    {giftCard.title}
+                  </div>
+                  {giftCard.pointsPrice > 0 ? (
+                    <div className="mt-0.5 text-[10px] text-[#7c8099]">
+                      {giftCard.pointsPrice} POINTS
+                    </div>
+                  ) : null}
+                </div>
+              </Link>
             ))}
           </div>
         ) : (
@@ -2075,6 +2104,17 @@ export default async function DirectoryOrganizationPage({
     notFound();
   }
 
+  const giftCardPreviewPromise = organization
+    ? getPublicGiftCertificatePreviewForOrganization({
+        organizationId: organization.id,
+        locale: selectedLocale,
+        limit: 2,
+      }).catch((error) => {
+        console.error("Organization gift-card preview failed", error);
+        return { items: [], count: 0 };
+      })
+    : Promise.resolve({ items: [], count: 0 });
+
   const offersResult = organization
     ? await getDirectoryOrganizationOffers(organization.id, selectedLocale)
     : { offers: [], errorMessage: null };
@@ -2083,6 +2123,7 @@ export default async function DirectoryOrganizationPage({
     offersResult.offers,
     systemLabels,
   );
+  const giftCardPreview = await giftCardPreviewPromise;
   const offersErrorMessage = offersResult.errorMessage;
 
   const firstOfferWithCertificate =
@@ -2186,10 +2227,19 @@ export default async function DirectoryOrganizationPage({
     organization?.description ??
     t.fallbacks.descriptionMissing;
 
-  const certificateOffers = offers.filter(
-    (offer) => offer.certificateAvailable,
+  const certificateOffers: PublicGiftCardPreview[] = giftCardPreview.items.map(
+    (certificate) => ({
+      id: certificate.activityEventId,
+      title: certificate.title,
+      imageUrl: certificate.productImageUrl,
+      href: appendLocaleToHref(
+        "/certificates/" + certificate.activityEventId,
+        selectedLocale,
+      ),
+      pointsPrice: certificate.pointsPrice,
+    }),
   );
-  const certificateOffersCount = certificateOffers.length;
+  const certificateOffersCount = giftCardPreview.count;
   const publicMessengerUrl = organization
     ? getPublicMessengerUrl(organization)
     : null;
@@ -2483,3 +2533,5 @@ export default async function DirectoryOrganizationPage({
     </main>
   );
 }
+
+// ARCTOR_BUSINESS_GIFT_CARD_PREVIEW_MEDIA_MOBILE_PERF_V1: activity-based gift-card preview wired to organization page.
