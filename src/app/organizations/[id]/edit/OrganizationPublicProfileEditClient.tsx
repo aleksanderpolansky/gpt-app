@@ -988,7 +988,7 @@ function FeaturedContentEditorCard({
 }) {
   return (
     <div className="flex h-full min-h-[390px] flex-col overflow-hidden rounded-2xl border border-[#edf0f7] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.08)]">
-      <section className="min-h-0 flex-1">
+      <section className="min-h-0">
         <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6f7494]">
           {copy.specialOrNews}
         </h3>

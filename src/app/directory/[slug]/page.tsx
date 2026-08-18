@@ -1639,7 +1639,7 @@ function PublicOrganizationAddressSummary({
         {locationLabel}
       </div>
 
-      <div className="text-[11px] text-[#9ca3b8]">{locationCaption}</div>
+      <div className="mt-5 text-[11px] text-[#9ca3b8]">{locationCaption}</div>
     </div>
   );
 }
@@ -1945,7 +1945,7 @@ function PublicFeaturedContentCard({
 
   return (
     <div className="flex h-full min-h-[390px] flex-col overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
-      <section className="min-h-0 flex-1">
+      <section className="min-h-0">
         <h3 className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
           {copy.specialOrNews}
         </h3>
