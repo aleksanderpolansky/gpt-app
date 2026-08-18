@@ -1,11 +1,11 @@
 {
   "schemaVersion": 7,
-  "generatedAt": "2026-08-17T15:30:00.000Z",
+  "generatedAt": "2026-08-18T12:51:00.000Z",
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
   "branch": "main",
-  "originMainAtCheckpoint": "e12b4f294c16af7ded94c2172f44209759fad1b0",
-  "checkpointMeaning": "CONTENT-L10 Global Content Localization V1: persistent 7-locale user content, strict public locale reads, human override protection.",
+  "originMainAtCheckpoint": "81eebeb1057b5221e9c2b224c47be5ed90a1b5fb",
+  "checkpointMeaning": "BUSINESS CONTACTS PUBLIC-FIRST INLINE EDIT V1: Phone + Website + direct messaging in the visitor layout.",
   "globalReality": {
     "p8Blocked": true,
     "objectsTotal": 150,
@@ -54,7 +54,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Apply 20260817173000_content_l10_global_content_localization_v1.sql, run release validator/build, push main, then live-create one organization/service/certificate and verify locale switching.",
+  "nextAction": "Live-test Phone, Website and one direct-message channel in PL/UK/ES; social feeds, booking, service area and calendar remain deferred.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -65,7 +65,7 @@
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
   "previousRecoveryCommit": "d91549773dae71206e46f3182bfd433f9c30316d",
-  "documentedState": "CONTENT_L10_GLOBAL_CONTENT_LOCALIZATION_V1_CODED_AWAITING_LIVE_ACCEPTANCE",
+  "documentedState": "BUSINESS_CONTACTS_PUBLIC_FIRST_INLINE_EDIT_V1_CODED_AWAITING_LIVE_ACCEPTANCE",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -491,5 +491,20 @@
       "globalForbidden": true,
       "commercialForbidden": true
     }
+  },
+  "businessContactsV1": {
+    "storage": "organizations.public_phone + organizations.website_url + social_links_json.arctor_contact_channels_v1",
+    "supportedDirectChannels": [
+      "whatsapp",
+      "telegram",
+      "signal",
+      "viber",
+      "custom"
+    ],
+    "editingMode": "public_first_inline_single_expander",
+    "localizedValues": false,
+    "localizedUiLabels": true,
+    "socialFeedsSeparated": true,
+    "sqlRequired": false
   }
 }

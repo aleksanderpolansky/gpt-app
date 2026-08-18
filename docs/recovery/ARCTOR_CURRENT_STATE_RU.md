@@ -601,3 +601,13 @@ Live acceptance также обнаружил и закрыл schema gap: ai_usa
 - primary correction может сохранять actor-scoped wording example, без auto-mutation Global profile.
 ## CONTENT-L10 Global Content Localization V1 — 2026-08-17
 Реализован единый persistent localization envelope V2 для пользовательского контента на 7 локалей: en/pl/ru/uk/de/es/cs. Организации, legacy offers, product/service value_objects и gift-certificate activity_events локализуются при создании/редактировании. Публичные directory/offers/certificates используют strict locale resolver без fallback на исходный язык. Ручная локаль фиксируется в humanLocales и не перезаписывается последующей AI-локализацией. Для organizations/offers добавляется metadata_json; activity_events/value_objects используют существующий metadata_json.
+
+
+## 2026-08-18 — BUSINESS CONTACTS PUBLIC-FIRST INLINE EDIT V1
+
+- Базовая карточка предприятия получила редактируемые публичные Phone + Website + direct-message channels.
+- Редактор остается public-first: автор видит тот же layout, что посетитель; дополнительные owner-only поля раскрываются вниз под строкой публичных действий.
+- Одновременно открыт максимум один contact editor.
+- Поддержаны WhatsApp, Telegram, Signal, Viber и Custom direct link.
+- Соцсети не смешиваются с direct contacts: каналы сохраняются в social_links_json.arctor_contact_channels_v1; social feed/publishing остаются отдельной будущей задачей.
+- SQL и изменение схемы БД не требуются.

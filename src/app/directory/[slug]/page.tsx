@@ -27,6 +27,7 @@ import {
 import PurchaseConfirmationRequestCard from "@/components/commercial/PurchaseConfirmationRequestCard";
 import OrganizationLocationMapPreview from "@/components/commercial/OrganizationLocationMapPreview";
 import { resolveLocalizedContentFieldsStrict } from "@/lib/localization/contentLocalization";
+import { getPrimaryPublicOrganizationContactChannel } from "@/lib/commercial/organizationContactChannels";
 
 
 
@@ -1142,7 +1143,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     contact: "Contact",
     phone: "Phone",
     website: "Website",
-    messenger: "Messenger",
+    messenger: "Message",
     description: "Description",
     offers: "Offers",
     certificates: "Gift certificates",
@@ -1161,7 +1162,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     contact: "Kontakt",
     phone: "Telefon",
     website: "Strona",
-    messenger: "Komunikator",
+    messenger: "Napisz",
     description: "Opis",
     offers: "Oferty",
     certificates: "Bony podarunkowe",
@@ -1180,7 +1181,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     contact: "\u041a\u043e\u043d\u0442\u0430\u043a\u0442",
     phone: "\u0422\u0435\u043b\u0435\u0444\u043e\u043d",
     website: "\u0421\u0430\u0439\u0442",
-    messenger: "\u041c\u0435\u0441\u0435\u043d\u0434\u0436\u0435\u0440",
+    messenger: "\u041d\u0430\u043f\u0438\u0441\u0430\u0442\u0438",
     description: "\u041e\u043f\u0438\u0441",
     offers: "\u041f\u0440\u043e\u043f\u043e\u0437\u0438\u0446\u0456\u0457",
     certificates: "\u041f\u043e\u0434\u0430\u0440\u0443\u043d\u043a\u043e\u0432\u0456 \u0441\u0435\u0440\u0442\u0438\u0444\u0456\u043a\u0430\u0442\u0438",
@@ -1199,7 +1200,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     contact: "\u041a\u043e\u043d\u0442\u0430\u043a\u0442",
     phone: "\u0422\u0435\u043b\u0435\u0444\u043e\u043d",
     website: "\u0421\u0430\u0439\u0442",
-    messenger: "\u041c\u0435\u0441\u0441\u0435\u043d\u0434\u0436\u0435\u0440",
+    messenger: "\u041d\u0430\u043f\u0438\u0441\u0430\u0442\u044c",
     description: "\u041e\u043f\u0438\u0441\u0430\u043d\u0438\u0435",
     offers: "\u041f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u044f",
     certificates: "\u041f\u043e\u0434\u0430\u0440\u043e\u0447\u043d\u044b\u0435 \u0441\u0435\u0440\u0442\u0438\u0444\u0438\u043a\u0430\u0442\u044b",
@@ -1218,7 +1219,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     contact: "Kontakt",
     phone: "Telefon",
     website: "Website",
-    messenger: "Messenger",
+    messenger: "Nachricht",
     description: "Beschreibung",
     offers: "Angebote",
     certificates: "Geschenkgutscheine",
@@ -1237,7 +1238,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     contact: "Contacto",
     phone: "Tel\u00e9fono",
     website: "Sitio web",
-    messenger: "Mensajer\u00eda",
+    messenger: "Escribir",
     description: "Descripci\u00f3n",
     offers: "Ofertas",
     certificates: "Certificados regalo",
@@ -1256,7 +1257,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     contact: "Kontakt",
     phone: "Telefon",
     website: "Web",
-    messenger: "Messenger",
+    messenger: "Napsat",
     description: "Popis",
     offers: "Nab\u00eddky",
     certificates: "D\u00e1rkov\u00e9 poukazy",
@@ -1293,10 +1294,6 @@ function getPublicOrganizationDashboardLabel(
   locale?: string,
 ) {
   const labelLocale = getPublicOrganizationDashboardLocale(locale);
-
-  if (key === "messenger" && labelLocale === "cs") {
-    return "Komunik\u00e1tor";
-  }
 
   return (
     PUBLIC_ORGANIZATION_DASHBOARD_LABELS[labelLocale][key] ??
@@ -1395,14 +1392,18 @@ function normalizePublicExternalHref(value: string | null | undefined) {
 }
 
 function getPublicMessengerUrl(organization: DirectoryOrganization) {
+  const primaryContactChannel = getPrimaryPublicOrganizationContactChannel(
+    organization.socialLinks,
+  );
+
+  if (primaryContactChannel) {
+    return primaryContactChannel.href;
+  }
+
+  // Legacy compatibility only. New direct contact methods live under
+  // social_links_json.arctor_contact_channels_v1 so future social feeds remain separate.
   const socialLinks = organization.socialLinks ?? {};
-  const candidateKeys = [
-    "messenger",
-    "facebook",
-    "whatsapp",
-    "telegram",
-    "instagram",
-  ];
+  const candidateKeys = ["messenger", "whatsapp", "telegram"];
 
   for (const key of candidateKeys) {
     const value = socialLinks[key];

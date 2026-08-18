@@ -10,7 +10,9 @@ import {
   MessageCircle,
   Navigation,
   Phone,
+  Plus,
   RotateCcw,
+  Trash2,
   Save,
   Star,
   TrendingUp,
@@ -30,6 +32,10 @@ import OrganizationAddressAutocomplete, {
 } from "@/components/commercial/OrganizationAddressAutocomplete";
 import OrganizationLocationMapPreview from "@/components/commercial/OrganizationLocationMapPreview";
 import OrganizationHideButton from "../OrganizationHideButton";
+import {
+  ORGANIZATION_CONTACT_CHANNEL_TYPES,
+  type OrganizationContactChannel,
+} from "@/lib/commercial/organizationContactChannels";
 
 
 
@@ -46,6 +52,7 @@ export type OrganizationPublicProfileEditInitialData = {
     publicEmail: string | null;
     publicPhone: string | null;
     websiteUrl: string | null;
+    contactChannels: OrganizationContactChannel[];
     bookingUrl: string | null;
     logoUrl: string | null;
     coverImageUrl: string | null;
@@ -90,6 +97,7 @@ type EditValues = {
   websiteUrl: string;
   bookingUrl: string;
   publicEmail: string;
+  contactChannels: OrganizationContactChannel[];
   categoryLabel: string;
   countryCode: string;
   city: string;
@@ -428,6 +436,123 @@ const EDIT_MESSAGES: Record<EditLocaleKey, EditMessages> = {
   },
 };
 
+
+type ContactEditorCopy = {
+  messageAction: string;
+  close: string;
+  phoneHint: string;
+  websiteHint: string;
+  messengerHint: string;
+  addChannel: string;
+  value: string;
+  customLabel: string;
+  primary: string;
+  public: string;
+  remove: string;
+  custom: string;
+};
+
+const CONTACT_EDITOR_COPY: Record<EditLocaleKey, ContactEditorCopy> = {
+  en: {
+    messageAction: "Message",
+    close: "Close",
+    phoneHint: "Public phone number shown to visitors.",
+    websiteHint: "Public website. ARCTor opens it in a new tab.",
+    messengerHint: "Add direct ways visitors can message the business. Social-network feeds are configured separately.",
+    addChannel: "Add contact method",
+    value: "Contact value or link",
+    customLabel: "Contact name",
+    primary: "Primary",
+    public: "Public",
+    remove: "Remove",
+    custom: "Other",
+  },
+  pl: {
+    messageAction: "Napisz",
+    close: "Zamknij",
+    phoneHint: "Publiczny numer telefonu widoczny dla odwiedzających.",
+    websiteHint: "Publiczna strona internetowa. ARCTor otworzy ją w nowej karcie.",
+    messengerHint: "Dodaj bezpośrednie sposoby kontaktu z firmą. Kanały społecznościowe będą konfigurowane osobno.",
+    addChannel: "Dodaj sposób kontaktu",
+    value: "Dane kontaktowe lub link",
+    customLabel: "Nazwa kontaktu",
+    primary: "Główny",
+    public: "Publiczny",
+    remove: "Usuń",
+    custom: "Inny",
+  },
+  uk: {
+    messageAction: "Написати",
+    close: "Закрити",
+    phoneHint: "Публічний номер телефону, який бачать відвідувачі.",
+    websiteHint: "Публічний сайт. ARCTor відкриє його в новій вкладці.",
+    messengerHint: "Додайте прямі способи зв'язку з підприємством. Соціальні мережі налаштовуються окремо.",
+    addChannel: "Додати спосіб зв'язку",
+    value: "Контакт або посилання",
+    customLabel: "Назва контакту",
+    primary: "Основний",
+    public: "Публічний",
+    remove: "Видалити",
+    custom: "Інший",
+  },
+  ru: {
+    messageAction: "Написать",
+    close: "Закрыть",
+    phoneHint: "Публичный номер телефона, который видят посетители.",
+    websiteHint: "Публичный сайт. ARCTor откроет его в новой вкладке.",
+    messengerHint: "Добавьте прямые способы связи с предприятием. Социальные сети настраиваются отдельно.",
+    addChannel: "Добавить способ связи",
+    value: "Контакт или ссылка",
+    customLabel: "Название контакта",
+    primary: "Основной",
+    public: "Публичный",
+    remove: "Удалить",
+    custom: "Другой",
+  },
+  de: {
+    messageAction: "Nachricht",
+    close: "Schließen",
+    phoneHint: "Öffentliche Telefonnummer für Besucher.",
+    websiteHint: "Öffentliche Website. ARCTor öffnet sie in einem neuen Tab.",
+    messengerHint: "Fügen Sie direkte Kontaktwege hinzu. Social-Media-Feeds werden separat eingerichtet.",
+    addChannel: "Kontaktweg hinzufügen",
+    value: "Kontakt oder Link",
+    customLabel: "Kontaktname",
+    primary: "Primär",
+    public: "Öffentlich",
+    remove: "Entfernen",
+    custom: "Andere",
+  },
+  es: {
+    messageAction: "Escribir",
+    close: "Cerrar",
+    phoneHint: "Número de teléfono público visible para los visitantes.",
+    websiteHint: "Sitio web público. ARCTor lo abre en una pestaña nueva.",
+    messengerHint: "Añade formas directas de contactar con la empresa. Las redes sociales se configurarán por separado.",
+    addChannel: "Añadir contacto",
+    value: "Contacto o enlace",
+    customLabel: "Nombre del contacto",
+    primary: "Principal",
+    public: "Público",
+    remove: "Eliminar",
+    custom: "Otro",
+  },
+  cs: {
+    messageAction: "Napsat",
+    close: "Zavřít",
+    phoneHint: "Veřejné telefonní číslo zobrazené návštěvníkům.",
+    websiteHint: "Veřejný web. ARCTor jej otevře na nové kartě.",
+    messengerHint: "Přidejte přímé způsoby kontaktu. Sociální sítě budou nastaveny samostatně.",
+    addChannel: "Přidat kontakt",
+    value: "Kontakt nebo odkaz",
+    customLabel: "Název kontaktu",
+    primary: "Hlavní",
+    public: "Veřejný",
+    remove: "Odstranit",
+    custom: "Jiný",
+  },
+};
+
 const ORGANIZATION_TYPE_OPTIONS = [
   "private_business",
   "company",
@@ -513,6 +638,7 @@ function getInitialValues(data: OrganizationPublicProfileEditInitialData): EditV
     websiteUrl: text(data.organization.websiteUrl),
     bookingUrl: text(data.organization.bookingUrl),
     publicEmail: text(data.organization.publicEmail),
+    contactChannels: data.organization.contactChannels.map((channel) => ({ ...channel })),
     categoryLabel: text(data.categoryName),
     countryCode: text(location?.countryCode ?? data.organization.countryCode),
     city: text(location?.city),
@@ -695,17 +821,23 @@ function MiniActionButton({
   active,
   disabled,
   icon: Icon,
+  onClick,
+  ariaExpanded,
   children,
 }: {
   active?: boolean;
   disabled?: boolean;
   icon?: ElementType;
+  onClick?: () => void;
+  ariaExpanded?: boolean;
   children: ReactNode;
 }) {
   return (
     <button
       type="button"
       disabled={disabled}
+      onClick={onClick}
+      aria-expanded={ariaExpanded}
       className={cx(
         "inline-flex min-h-[36px] items-center gap-1.5 rounded-xl border px-4 text-[14px] font-medium transition",
         active
@@ -717,6 +849,263 @@ function MiniActionButton({
       {Icon ? <Icon size={14} /> : null}
       {children}
     </button>
+  );
+}
+
+
+function ContactInlineEditor({
+  active,
+  messages,
+  copy,
+  phone,
+  website,
+  channels,
+  onPhoneChange,
+  onWebsiteChange,
+  onChannelsChange,
+  onClose,
+}: {
+  active: "phone" | "website" | "messenger";
+  messages: EditMessages;
+  copy: ContactEditorCopy;
+  phone: string;
+  website: string;
+  channels: OrganizationContactChannel[];
+  onPhoneChange: (value: string) => void;
+  onWebsiteChange: (value: string) => void;
+  onChannelsChange: (value: OrganizationContactChannel[]) => void;
+  onClose: () => void;
+}) {
+  const title =
+    active === "phone"
+      ? messages.phone
+      : active === "website"
+        ? messages.website
+        : copy.messageAction;
+
+  function updateChannel(
+    index: number,
+    patch: Partial<OrganizationContactChannel>,
+  ) {
+    onChannelsChange(
+      channels.map((channel, channelIndex) => {
+        if (channelIndex !== index) {
+          return patch.isPrimary === true
+            ? { ...channel, isPrimary: false }
+            : channel;
+        }
+
+        return { ...channel, ...patch };
+      }),
+    );
+  }
+
+  function addChannel() {
+    onChannelsChange([
+      ...channels,
+      {
+        type: "whatsapp",
+        label: null,
+        value: "",
+        isPrimary: channels.length === 0,
+        isPublic: true,
+      },
+    ]);
+  }
+
+  function removeChannel(index: number) {
+    const nextChannels = channels.filter(
+      (_channel, channelIndex) => channelIndex !== index,
+    );
+
+    if (
+      nextChannels.length > 0 &&
+      !nextChannels.some((channel) => channel.isPrimary)
+    ) {
+      nextChannels[0] = { ...nextChannels[0], isPrimary: true };
+    }
+
+    onChannelsChange(nextChannels);
+  }
+
+  return (
+    <section className="mt-3 rounded-2xl border border-[#edf0f7] bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.08)]">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6f7494]">
+            {title}
+          </div>
+          <p className="mt-1 max-w-[760px] text-[12px] leading-5 text-[#7c8099]">
+            {active === "phone"
+              ? copy.phoneHint
+              : active === "website"
+                ? copy.websiteHint
+                : copy.messengerHint}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-xl border border-[#e4e7f0] bg-white px-3 py-2 text-[12px] font-semibold text-[#4d536f] transition hover:bg-[#f8f9fd]"
+        >
+          {copy.close}
+        </button>
+      </div>
+
+      {active === "phone" ? (
+        <div className="mt-4 max-w-[520px]">
+          <input
+            type="tel"
+            value={phone}
+            onChange={(event) => onPhoneChange(event.target.value)}
+            placeholder="+48 500 123 456"
+            className="w-full rounded-xl border border-[#dfe3f1] bg-[#f5f6fb] px-3 py-2.5 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-2 focus:ring-[#3b6ef8]/15"
+          />
+        </div>
+      ) : null}
+
+      {active === "website" ? (
+        <div className="mt-4 max-w-[620px]">
+          <input
+            type="url"
+            value={website}
+            onChange={(event) => onWebsiteChange(event.target.value)}
+            placeholder="https://example.com"
+            className="w-full rounded-xl border border-[#dfe3f1] bg-[#f5f6fb] px-3 py-2.5 text-[14px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-2 focus:ring-[#3b6ef8]/15"
+          />
+        </div>
+      ) : null}
+
+      {active === "messenger" ? (
+        <div className="mt-4 space-y-3">
+          {channels.map((channel, index) => (
+            <div
+              key={`${channel.type}-${index}`}
+              className="grid gap-2 rounded-xl border border-[#edf0f7] bg-[#f8f9fd] p-3 md:grid-cols-[150px_minmax(180px,1fr)_minmax(120px,180px)_auto]"
+            >
+              <select
+                value={channel.type}
+                onChange={(event) =>
+                  updateChannel(index, {
+                    type: event.target.value as OrganizationContactChannel["type"],
+                    label:
+                      event.target.value === "custom" ? channel.label : null,
+                  })
+                }
+                className="rounded-lg border border-[#dfe3f1] bg-white px-3 py-2 text-[13px] text-[#4d536f] outline-none focus:border-[#3b6ef8]"
+              >
+                {ORGANIZATION_CONTACT_CHANNEL_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type === "custom"
+                      ? copy.custom
+                      : type.charAt(0).toUpperCase() + type.slice(1)}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                value={channel.value}
+                onChange={(event) =>
+                  updateChannel(index, { value: event.target.value })
+                }
+                placeholder={copy.value}
+                className="rounded-lg border border-[#dfe3f1] bg-white px-3 py-2 text-[13px] text-[#1a1d2e] outline-none focus:border-[#3b6ef8]"
+              />
+
+              {channel.type === "custom" ? (
+                <input
+                  value={channel.label ?? ""}
+                  onChange={(event) =>
+                    updateChannel(index, {
+                      label: event.target.value || null,
+                    })
+                  }
+                  placeholder={copy.customLabel}
+                  className="rounded-lg border border-[#dfe3f1] bg-white px-3 py-2 text-[13px] text-[#1a1d2e] outline-none focus:border-[#3b6ef8]"
+                />
+              ) : (
+                <div className="flex items-center gap-3 px-1 text-[12px] text-[#6f7494]">
+                  <label className="inline-flex items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      checked={channel.isPrimary}
+                      onChange={(event) =>
+                        updateChannel(index, {
+                          isPrimary: event.target.checked,
+                        })
+                      }
+                    />
+                    {copy.primary}
+                  </label>
+                  <label className="inline-flex items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      checked={channel.isPublic}
+                      onChange={(event) =>
+                        updateChannel(index, {
+                          isPublic: event.target.checked,
+                        })
+                      }
+                    />
+                    {copy.public}
+                  </label>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2">
+                {channel.type === "custom" ? (
+                  <div className="flex items-center gap-3 px-1 text-[12px] text-[#6f7494]">
+                    <label className="inline-flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={channel.isPrimary}
+                        onChange={(event) =>
+                          updateChannel(index, {
+                            isPrimary: event.target.checked,
+                          })
+                        }
+                      />
+                      {copy.primary}
+                    </label>
+                    <label className="inline-flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={channel.isPublic}
+                        onChange={(event) =>
+                          updateChannel(index, {
+                            isPublic: event.target.checked,
+                          })
+                        }
+                      />
+                      {copy.public}
+                    </label>
+                  </div>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => removeChannel(index)}
+                  aria-label={copy.remove}
+                  title={copy.remove}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#fecdd3] bg-white text-[#e11d48] transition hover:bg-[#fff1f2]"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={addChannel}
+            disabled={channels.length >= 8}
+            className="inline-flex items-center gap-2 rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2.5 text-[13px] font-semibold text-[#3b6ef8] transition hover:border-[#3b6ef8]/40 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Plus size={14} />
+            {copy.addChannel}
+          </button>
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -894,6 +1283,10 @@ export default function OrganizationPublicProfileEditClient({
   );
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [activeContactEditor, setActiveContactEditor] = useState<
+    "phone" | "website" | "messenger" | null
+  >(null);
+  const contactCopy = CONTACT_EDITOR_COPY[locale];
 
   const dirtyKeys = useMemo(
     () =>
@@ -977,6 +1370,12 @@ export default function OrganizationPublicProfileEditClient({
     return values[key] !== savedValues[key];
   }
 
+  function setContactChannels(channels: OrganizationContactChannel[]) {
+    setValues((current) => ({ ...current, contactChannels: channels }));
+    setSaveState("idle");
+    setErrorMessage(null);
+  }
+
   async function saveChanges() {
     setSaveState("saving");
     setErrorMessage(null);
@@ -1013,6 +1412,7 @@ export default function OrganizationPublicProfileEditClient({
             websiteUrl: values.websiteUrl,
             bookingUrl: values.bookingUrl,
             publicEmail: values.publicEmail,
+            contactChannels: values.contactChannels,
             location: locationWasEdited
               ? {
                   countryCode: values.countryCode,
@@ -1407,13 +1807,61 @@ export default function OrganizationPublicProfileEditClient({
         </section>
 
         <section className="mt-4 flex flex-wrap gap-2">
-          <MiniActionButton disabled icon={Phone}>{messages.phone}</MiniActionButton>
-          <MiniActionButton disabled icon={Globe}>{messages.website}</MiniActionButton>
-          <MiniActionButton disabled icon={MessageCircle}>{messages.messenger}</MiniActionButton>
-          <MiniActionButton active>{messages.description}</MiniActionButton>
+          <MiniActionButton
+            active={activeContactEditor === "phone"}
+            icon={Phone}
+            onClick={() =>
+              setActiveContactEditor((current) =>
+                current === "phone" ? null : "phone",
+              )
+            }
+            ariaExpanded={activeContactEditor === "phone"}
+          >
+            {values.publicPhone.trim() || messages.phone}
+          </MiniActionButton>
+          <MiniActionButton
+            active={activeContactEditor === "website"}
+            icon={Globe}
+            onClick={() =>
+              setActiveContactEditor((current) =>
+                current === "website" ? null : "website",
+              )
+            }
+            ariaExpanded={activeContactEditor === "website"}
+          >
+            {messages.website}
+          </MiniActionButton>
+          <MiniActionButton
+            active={activeContactEditor === "messenger"}
+            icon={MessageCircle}
+            onClick={() =>
+              setActiveContactEditor((current) =>
+                current === "messenger" ? null : "messenger",
+              )
+            }
+            ariaExpanded={activeContactEditor === "messenger"}
+          >
+            {contactCopy.messageAction}
+          </MiniActionButton>
+          <MiniActionButton active={activeContactEditor === null}>{messages.description}</MiniActionButton>
           <MiniActionButton>{messages.viewOffers}</MiniActionButton>
           <MiniActionButton>{messages.points}</MiniActionButton>
         </section>
+
+        {activeContactEditor ? (
+          <ContactInlineEditor
+            active={activeContactEditor}
+            messages={messages}
+            copy={contactCopy}
+            phone={values.publicPhone}
+            website={values.websiteUrl}
+            channels={values.contactChannels}
+            onPhoneChange={(value) => setField("publicPhone", value)}
+            onWebsiteChange={(value) => setField("websiteUrl", value)}
+            onChannelsChange={setContactChannels}
+            onClose={() => setActiveContactEditor(null)}
+          />
+        ) : null}
 
         <section className="mt-4 grid gap-4 xl:grid-cols-2">
           <BigCard title={messages.description} detailLabel={messages.details}>

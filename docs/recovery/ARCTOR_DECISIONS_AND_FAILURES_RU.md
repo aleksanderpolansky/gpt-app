@@ -611,3 +611,8 @@ Missing/no-match/no-rule = 1. Несколько matched rules multiply.
 Произвольный JavaScript/SQL expression запрещён.
 ## 2026-08-17 — CONTENT-L10
 Решение: не создавать отдельную таблицу переводов на текущем этапе; расширить уже работающий localizedContent envelope до schemaVersion=2 и хранить его в metadata_json сущности. Публичный read path не имеет fallback на source/original. Авторская ручная версия локали имеет приоритет над AI. AI вызывается только на create/edit, обычный read не вызывает перевод. Legacy schemaVersion=1 читается совместимо и поднимается в памяти до V2.
+
+
+### 2026-08-18 — решение: public-first inline editing для контактов предприятия
+
+Решение: не создавать отдельную параллельную admin-form для контактов. Phone, Website и Message редактируются из той же строки действий, которую видит посетитель. По клику владельца один компактный editor раскрывается вниз; дополнительные owner-only поля живут в этом раскрытии. Телефон, URL и direct-message identifiers не локализуются. UI labels локализуются на 7 языков. Социальные сети и их ленты не являются messenger fields и будут реализованы отдельным слоем.

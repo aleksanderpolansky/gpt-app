@@ -4,6 +4,7 @@ import { resolveActiveActorContext } from "../../../../../lib/actor-context";
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
 import { resolveLocalizedContentFieldsStrict } from "@/lib/localization/contentLocalization";
+import { readOrganizationContactChannels } from "@/lib/commercial/organizationContactChannels";
 import OrganizationPublicProfileEditClient, {
   type OrganizationPublicProfileEditInitialData,
 } from "./OrganizationPublicProfileEditClient";
@@ -287,6 +288,7 @@ export default async function OrganizationEditPage({
       publicEmail: organization.public_email,
       publicPhone: organization.public_phone,
       websiteUrl: organization.website_url,
+      contactChannels: readOrganizationContactChannels(organization.social_links_json),
       bookingUrl: organization.booking_url,
       logoUrl: organization.public_slug
         ? `/api/directory/organizations/${encodeURIComponent(organization.public_slug)}/logo`

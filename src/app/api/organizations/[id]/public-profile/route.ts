@@ -17,6 +17,11 @@ import {
 import { auth0 } from "../../../../../../lib/auth0";
 import { supabase } from "../../../../../../lib/supabase";
 import { persistHumanLocalizedEntityContent } from "@/lib/localization/contentLocalization.server";
+import {
+  parseOrganizationContactChannelsInput,
+  writeOrganizationContactChannels,
+  type OrganizationContactChannel,
+} from "@/lib/commercial/organizationContactChannels";
 
 export const dynamic = "force-dynamic";
 
@@ -65,8 +70,9 @@ function parseNullableText(value: unknown) {
 function getNextSocialLinksJson(
   currentValue: Record<string, unknown> | null,
   categoryLabel: string | null,
+  contactChannels: OrganizationContactChannel[] | undefined,
 ) {
-  const nextValue =
+  let nextValue =
     currentValue && typeof currentValue === "object" && !Array.isArray(currentValue)
       ? { ...currentValue }
       : {};
@@ -75,6 +81,10 @@ function getNextSocialLinksJson(
     nextValue.public_profile_category_label = categoryLabel;
   } else {
     delete nextValue.public_profile_category_label;
+  }
+
+  if (contactChannels !== undefined) {
+    nextValue = writeOrganizationContactChannels(nextValue, contactChannels);
   }
 
   return nextValue;
@@ -312,6 +322,31 @@ export async function PATCH(request: Request, { params }: RouteProps) {
   }
 
   const categoryLabel = parseNullableText(body.categoryLabel);
+  const contactChannelsWereSubmitted = Object.prototype.hasOwnProperty.call(
+    body,
+    "contactChannels",
+  );
+  let normalizedContactChannels: OrganizationContactChannel[] | undefined;
+
+  if (contactChannelsWereSubmitted) {
+    const parsedContactChannels = parseOrganizationContactChannelsInput(
+      body.contactChannels,
+    );
+
+    if (!parsedContactChannels.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: parsedContactChannels.errorCode,
+          errorCode: parsedContactChannels.errorCode,
+        },
+        { status: 400 },
+      );
+    }
+
+    normalizedContactChannels = parsedContactChannels.channels;
+  }
+
   const logoUrlWasSubmitted = Object.prototype.hasOwnProperty.call(body, "logoUrl");
   const logoUrl = logoUrlWasSubmitted
     ? parseNullableText(body.logoUrl)
@@ -371,6 +406,7 @@ export async function PATCH(request: Request, { params }: RouteProps) {
   const nextSocialLinksJson = getNextSocialLinksJson(
     organization.social_links_json,
     categoryLabel,
+    normalizedContactChannels,
   );
   const now = new Date().toISOString();
 
