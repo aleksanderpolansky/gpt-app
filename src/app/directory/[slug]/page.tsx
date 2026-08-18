@@ -26,12 +26,14 @@ import {
 } from "../../../i18n/messages/system-labels";
 import PurchaseConfirmationRequestCard from "@/components/commercial/PurchaseConfirmationRequestCard";
 import OrganizationLocationMapPreview from "@/components/commercial/OrganizationLocationMapPreview";
+import { resolveLocalizedContentFieldsStrict } from "@/lib/localization/contentLocalization";
 
 
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
+// CONTENT_L10_DIRECTORY_DETAIL_MEDIA_HOTFIX_V2: strict locale resolution and non-blocking binary media.
 
 type DirectoryCategory = {
   id: string;
@@ -224,6 +226,7 @@ type DirectoryOrganizationRow = {
   logo_url: string | null;
   cover_image_url: string | null;
   social_links_json: Record<string, unknown> | null;
+  metadata_json: unknown;
   directory_published_at: string | null;
   created_at: string;
   updated_at: string | null;
@@ -272,6 +275,7 @@ type PublicOfferRow = {
   is_cancellable: boolean;
   points_refund_policy: string;
   max_certificates_total: number | null;
+  metadata_json: unknown;
   created_at: string;
   updated_at: string | null;
 };
@@ -640,9 +644,15 @@ function getPrimaryCategory(
 
 function mapDirectoryOrganization(
   row: DirectoryOrganizationRow,
-  classifications: DirectoryObjectActionClassification[]
+  classifications: DirectoryObjectActionClassification[],
+  locale: string,
 ): DirectoryOrganization {
   const primaryCategory = getPrimaryCategory(row, classifications);
+  const localized = resolveLocalizedContentFieldsStrict({
+    metadata: row.metadata_json,
+    locale,
+    fieldCodes: ["organizationName", "description", "shortDescription"],
+  });
 
   const primaryLocation =
     row.organization_locations?.find(
@@ -657,10 +667,10 @@ function mapDirectoryOrganization(
   return {
     id: row.id,
     ownerActorId: row.owner_actor_id,
-    name: row.organization_name,
+    name: localized.organizationName ?? "—",
     type: row.organization_type,
-    description: row.description,
-    shortDescription: row.short_description,
+    description: localized.description,
+    shortDescription: localized.shortDescription,
     publicSlug: row.public_slug,
     countryCode: row.country_code,
     defaultCurrency: row.default_currency,
@@ -670,8 +680,10 @@ function mapDirectoryOrganization(
     publicPhone: row.public_phone,
     websiteUrl: row.website_url,
     bookingUrl: row.booking_url,
-    logoUrl: row.logo_url,
-    coverImageUrl: row.cover_image_url,
+    logoUrl: row.public_slug
+      ? `/api/directory/organizations/${encodeURIComponent(row.public_slug)}/logo`
+      : null,
+    coverImageUrl: null,
     socialLinks: row.social_links_json ?? {},
     directoryPublishedAt: row.directory_published_at,
     createdAt: row.created_at,
@@ -688,13 +700,19 @@ function mapDirectoryOrganization(
   };
 }
 
-function mapPublicOffer(row: PublicOfferRow): PublicDirectoryOffer {
+function mapPublicOffer(row: PublicOfferRow, locale: string): PublicDirectoryOffer {
+  const localized = resolveLocalizedContentFieldsStrict({
+    metadata: row.metadata_json,
+    locale,
+    fieldCodes: ["title", "description", "discountLegalNote", "certificateTerms"],
+  });
+
   return {
     id: row.id,
     organizationId: row.organization_id,
     offerType: row.offer_type,
-    title: row.title,
-    description: row.description,
+    title: localized.title ?? "—",
+    description: localized.description,
     price: row.price,
     currency: row.currency,
     isPaid: row.is_paid,
@@ -717,14 +735,14 @@ function mapPublicOffer(row: PublicOfferRow): PublicDirectoryOffer {
     discountEndsAt: row.discount_ends_at,
     lowestPrice30Days: row.lowest_price_30_days,
     lowestPrice30DaysCurrency: row.lowest_price_30_days_currency,
-    discountLegalNote: row.discount_legal_note,
+    discountLegalNote: localized.discountLegalNote,
     certificate: {
       available: row.certificate_available,
       paymentMode: row.certificate_payment_mode,
       pointsPrice: row.certificate_points_price,
       moneyPrice: row.certificate_money_price,
       currency: row.certificate_currency,
-      terms: row.certificate_terms,
+      terms: localized.certificateTerms,
       validityDays: row.certificate_validity_days,
       requiresSellerConfirmation: row.requires_seller_confirmation,
       isTransferable: row.is_transferable,
@@ -737,7 +755,7 @@ function mapPublicOffer(row: PublicOfferRow): PublicDirectoryOffer {
   };
 }
 
-async function getDirectoryOrganization(slug: string): Promise<{
+async function getDirectoryOrganization(slug: string, locale: string): Promise<{
   organization: DirectoryOrganization | null;
   errorMessage: string | null;
 }> {
@@ -760,9 +778,8 @@ async function getDirectoryOrganization(slug: string): Promise<{
       public_phone,
       website_url,
       booking_url,
-      logo_url,
-      cover_image_url,
       social_links_json,
+      metadata_json,
       directory_published_at,
       created_at,
       updated_at,
@@ -834,13 +851,14 @@ async function getDirectoryOrganization(slug: string): Promise<{
   );
 
   return {
-    organization: mapDirectoryOrganization(organizationRow, classifications),
+    organization: mapDirectoryOrganization(organizationRow, classifications, locale),
     errorMessage: null,
   };
 }
 
 async function getDirectoryOrganizationOffers(
-  organizationId: string
+  organizationId: string,
+  locale: string,
 ): Promise<{
   offers: PublicDirectoryOffer[];
   errorMessage: string | null;
@@ -890,6 +908,7 @@ async function getDirectoryOrganizationOffers(
       is_cancellable,
       points_refund_policy,
       max_certificates_total,
+      metadata_json,
       created_at,
       updated_at
     `
@@ -909,8 +928,8 @@ async function getDirectoryOrganizationOffers(
   }
 
   return {
-    offers: ((data as unknown as PublicOfferRow[] | null) ?? []).map(
-      mapPublicOffer
+    offers: ((data as unknown as PublicOfferRow[] | null) ?? []).map((row) =>
+      mapPublicOffer(row, locale),
     ),
     errorMessage: null,
   };
@@ -1882,15 +1901,16 @@ export default async function DirectoryOrganizationPage({
   const slug = resolvedParams.slug;
   const t = getDirectoryDetailMessages(selectedLocale);
   const systemLabels = getSystemLabelsMessages(selectedLocale);
+  const actorContextPromise = getCurrentDirectoryActorContext();
 
-  const { organization, errorMessage } = await getDirectoryOrganization(slug);
+  const { organization, errorMessage } = await getDirectoryOrganization(slug, selectedLocale);
 
   if (!organization && !errorMessage) {
     notFound();
   }
 
   const offersResult = organization
-    ? await getDirectoryOrganizationOffers(organization.id)
+    ? await getDirectoryOrganizationOffers(organization.id, selectedLocale)
     : { offers: [], errorMessage: null };
 
   const offers = await getOffersWithCertificateAvailability(
@@ -2010,7 +2030,7 @@ export default async function DirectoryOrganizationPage({
   const publicPhoneUrl = organization?.publicPhone
     ? `tel:${organization.publicPhone}`
     : null;
-  const currentActorContext = await getCurrentDirectoryActorContext();
+  const currentActorContext = await actorContextPromise;
   const isOrganizationOwner = Boolean(
     organization?.ownerActorId &&
       currentActorContext?.actorId === organization.ownerActorId,

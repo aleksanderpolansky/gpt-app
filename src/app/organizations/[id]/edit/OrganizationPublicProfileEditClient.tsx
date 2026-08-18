@@ -460,6 +460,46 @@ function text(value: string | null | undefined) {
   return value?.trim() ?? "";
 }
 
+const MAX_ORGANIZATION_LOGO_EDGE_PX = 960;
+const MAX_ORGANIZATION_LOGO_DATA_URL_CHARS = 350_000;
+
+async function compressOrganizationLogoDataUrl(value: string) {
+  if (!value.startsWith("data:image/") || value.length <= MAX_ORGANIZATION_LOGO_DATA_URL_CHARS) {
+    return value;
+  }
+
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const nextImage = new Image();
+      nextImage.onload = () => resolve(nextImage);
+      nextImage.onerror = () => reject(new Error("Could not decode organization image."));
+      nextImage.src = value;
+    });
+
+    const maxSide = Math.max(image.naturalWidth, image.naturalHeight);
+    const scale = maxSide > MAX_ORGANIZATION_LOGO_EDGE_PX
+      ? MAX_ORGANIZATION_LOGO_EDGE_PX / maxSide
+      : 1;
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return value;
+    }
+
+    context.drawImage(image, 0, 0, width, height);
+    const compressed = canvas.toDataURL("image/webp", 0.82);
+
+    return compressed.length < value.length ? compressed : value;
+  } catch {
+    return value;
+  }
+}
+
 function getInitialValues(data: OrganizationPublicProfileEditInitialData): EditValues {
   const location = data.primaryLocation;
 
@@ -935,6 +975,14 @@ export default function OrganizationPublicProfileEditClient({
     setErrorMessage(null);
 
     try {
+      const logoUrlForSave = isDirty("logoUrl")
+        ? await compressOrganizationLogoDataUrl(values.logoUrl)
+        : undefined;
+      const valuesAfterLogoNormalization =
+        logoUrlForSave === undefined
+          ? values
+          : { ...values, logoUrl: logoUrlForSave };
+
       const response = await fetch(
         `/api/organizations/${initialData.organization.id}/public-profile`,
         {
@@ -944,7 +992,7 @@ export default function OrganizationPublicProfileEditClient({
           },
           body: JSON.stringify({
             locale: initialData.locale,
-            logoUrl: values.logoUrl,
+            logoUrl: logoUrlForSave,
             organizationName: values.organizationName,
             organizationType: values.organizationType,
             categoryLabel: values.categoryLabel,
@@ -994,7 +1042,7 @@ export default function OrganizationPublicProfileEditClient({
 
       const nextValues: EditValues = payload.primaryLocation
         ? {
-            ...values,
+            ...valuesAfterLogoNormalization,
             countryCode:
               payload.primaryLocation.country_code ?? values.countryCode,
             city: payload.primaryLocation.city ?? values.city,
@@ -1018,7 +1066,7 @@ export default function OrganizationPublicProfileEditClient({
               payload.primaryLocation.address_visibility ??
               values.addressVisibility,
           }
-        : values;
+        : valuesAfterLogoNormalization;
 
       setValues(nextValues);
       setSavedValues(nextValues);
@@ -1061,17 +1109,20 @@ export default function OrganizationPublicProfileEditClient({
 
     const reader = new FileReader();
 
-    reader.onload = () => {
+    reader.onload = async () => {
       const result = typeof reader.result === "string" ? reader.result : "";
 
       if (!result) {
         return;
       }
 
+      const compressed = await compressOrganizationLogoDataUrl(result);
       setValues((current) => ({
         ...current,
-        logoUrl: result,
+        logoUrl: compressed,
       }));
+      setSaveState("idle");
+      setErrorMessage(null);
     };
 
     reader.readAsDataURL(file);

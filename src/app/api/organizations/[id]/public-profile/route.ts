@@ -33,6 +33,7 @@ type OrganizationRow = {
   social_links_json: Record<string, unknown> | null;
   country_code: string | null;
   default_currency: string | null;
+  logo_url: string | null;
 };
 
 type LocationPayload = {
@@ -206,7 +207,7 @@ async function getOwnedOrganization(input: {
   const { data, error } = await supabase
     .from("organizations")
     .select(
-      "id, owner_actor_id, public_slug, social_links_json, country_code, default_currency",
+      "id, owner_actor_id, public_slug, social_links_json, country_code, default_currency, logo_url",
     )
     .eq("id", input.organizationId)
     .limit(1);
@@ -311,7 +312,10 @@ export async function PATCH(request: Request, { params }: RouteProps) {
   }
 
   const categoryLabel = parseNullableText(body.categoryLabel);
-  const logoUrl = parseNullableText(body.logoUrl);
+  const logoUrlWasSubmitted = Object.prototype.hasOwnProperty.call(body, "logoUrl");
+  const logoUrl = logoUrlWasSubmitted
+    ? parseNullableText(body.logoUrl)
+    : organization.logo_url;
   const locationPayload =
     body.location && typeof body.location === "object"
       ? (body.location as LocationPayload)

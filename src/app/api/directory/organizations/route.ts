@@ -7,6 +7,7 @@ import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 // DIRECTORY_QUERY_PERFORMANCE_V2: keep the primary organizations query lean; hydrate list-only relations in parallel.
+// CONTENT_L10_DIRECTORY_DETAIL_MEDIA_HOTFIX_V2: binary organization media is loaded separately from directory JSON.
 
 type DirectoryActionFilter =
   | "all"
@@ -930,8 +931,10 @@ function mapDirectoryOrganization(
     publicPhone: row.public_phone,
     websiteUrl: row.website_url,
     bookingUrl: row.booking_url,
-    logoUrl: row.logo_url,
-    coverImageUrl: row.cover_image_url,
+    logoUrl: row.public_slug
+      ? `/api/directory/organizations/${encodeURIComponent(row.public_slug)}/logo`
+      : null,
+    coverImageUrl: null,
     socialLinks: row.social_links_json ?? {},
     directoryPublishedAt: row.directory_published_at,
     createdAt: row.created_at,
@@ -1295,8 +1298,6 @@ export async function GET(request: NextRequest) {
       public_phone,
       website_url,
       booking_url,
-      logo_url,
-      cover_image_url,
       social_links_json,
       metadata_json,
       directory_published_at,

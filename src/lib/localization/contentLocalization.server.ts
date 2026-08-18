@@ -391,7 +391,7 @@ export async function generateLocalizedContentBatch(input: {
   }
 
   const system =
-    "Create localized display/search versions of user-authored ARCTor content for every requested locale. Detect the actual source language from the text; the supplied sourceLocaleHint is only a hint. Preserve meaning and tone. Preserve proper names, brands, URLs, codes, identifiers, numbers, dates, clock times and units exactly unless normal language grammar requires surrounding words to change. Never add facts, explanations, advice or commentary. Return only the required JSON.";
+    "Create localized display/search versions of user-authored ARCTor content for every requested locale. Detect the actual source language from the text; the supplied sourceLocaleHint is only a hint. Preserve meaning and tone. Preserve actual person names, brand names, URLs, codes, identifiers, numbers, dates, clock times and units. IMPORTANT: in organizationName and title fields, preserve only the actual proper-name or brand span; translate ordinary descriptive, profession, service and category words around it. Do not treat an entire organizationName or title as a proper name merely because it is a name/title field. Never add facts, explanations, advice or commentary. Return only the required JSON.";
   const user = {
     runtime: ARCTOR_CONTENT_LOCALIZATION_RUNTIME,
     sourceLocaleHint,

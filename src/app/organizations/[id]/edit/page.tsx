@@ -199,8 +199,6 @@ export default async function OrganizationEditPage({
       public_phone,
       website_url,
       booking_url,
-      logo_url,
-      cover_image_url,
       social_links_json,
       metadata_json,
       directory_published_at,
@@ -290,8 +288,10 @@ export default async function OrganizationEditPage({
       publicPhone: organization.public_phone,
       websiteUrl: organization.website_url,
       bookingUrl: organization.booking_url,
-      logoUrl: organization.logo_url,
-      coverImageUrl: organization.cover_image_url,
+      logoUrl: organization.public_slug
+        ? `/api/directory/organizations/${encodeURIComponent(organization.public_slug)}/logo`
+        : null,
+      coverImageUrl: null,
       countryCode: organization.country_code,
       defaultCurrency: organization.default_currency,
       directoryStatus: organization.directory_status,
