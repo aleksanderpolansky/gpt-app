@@ -5,6 +5,7 @@ import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
 import { resolveLocalizedContentFieldsStrict } from "@/lib/localization/contentLocalization";
 import { readOrganizationContactChannels } from "@/lib/commercial/organizationContactChannels";
+import { readOrganizationFeaturedContent } from "@/lib/commercial/organizationFeaturedContent";
 import OrganizationPublicProfileEditClient, {
   type OrganizationPublicProfileEditInitialData,
 } from "./OrganizationPublicProfileEditClient";
@@ -273,8 +274,17 @@ export default async function OrganizationEditPage({
   const localizedOrganization = resolveLocalizedContentFieldsStrict({
     metadata: organization.metadata_json,
     locale,
-    fieldCodes: ["organizationName", "description", "shortDescription"],
+    fieldCodes: [
+      "organizationName",
+      "description",
+      "shortDescription",
+      "featuredShortDescription",
+    ],
   });
+
+  const featuredContent = readOrganizationFeaturedContent(
+    organization.social_links_json,
+  );
 
   const initialData: OrganizationPublicProfileEditInitialData = {
     locale,
@@ -289,6 +299,10 @@ export default async function OrganizationEditPage({
       publicPhone: organization.public_phone,
       websiteUrl: organization.website_url,
       contactChannels: readOrganizationContactChannels(organization.social_links_json),
+      featuredImageUrl: featuredContent.imageUrl,
+      featuredLinkUrl: featuredContent.linkUrl,
+      featuredShortDescription:
+        localizedOrganization.featuredShortDescription ?? null,
       bookingUrl: organization.booking_url,
       logoUrl: organization.public_slug
         ? `/api/directory/organizations/${encodeURIComponent(organization.public_slug)}/logo`

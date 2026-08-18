@@ -28,6 +28,7 @@ import PurchaseConfirmationRequestCard from "@/components/commercial/PurchaseCon
 import OrganizationLocationMapPreview from "@/components/commercial/OrganizationLocationMapPreview";
 import { resolveLocalizedContentFieldsStrict } from "@/lib/localization/contentLocalization";
 import { getPrimaryPublicOrganizationContactChannel } from "@/lib/commercial/organizationContactChannels";
+import { readOrganizationFeaturedContent } from "@/lib/commercial/organizationFeaturedContent";
 
 
 
@@ -90,6 +91,9 @@ type DirectoryOrganization = {
   logoUrl: string | null;
   coverImageUrl: string | null;
   socialLinks: Record<string, unknown>;
+  featuredImageUrl: string | null;
+  featuredLinkUrl: string | null;
+  featuredShortDescription: string | null;
   directoryPublishedAt: string | null;
   createdAt: string;
   updatedAt: string | null;
@@ -652,8 +656,17 @@ function mapDirectoryOrganization(
   const localized = resolveLocalizedContentFieldsStrict({
     metadata: row.metadata_json,
     locale,
-    fieldCodes: ["organizationName", "description", "shortDescription"],
+    fieldCodes: [
+      "organizationName",
+      "description",
+      "shortDescription",
+      "featuredShortDescription",
+    ],
   });
+
+  const featuredContent = readOrganizationFeaturedContent(
+    row.social_links_json,
+  );
 
   const primaryLocation =
     row.organization_locations?.find(
@@ -686,6 +699,9 @@ function mapDirectoryOrganization(
       : null,
     coverImageUrl: null,
     socialLinks: row.social_links_json ?? {},
+    featuredImageUrl: featuredContent.imageUrl,
+    featuredLinkUrl: featuredContent.linkUrl,
+    featuredShortDescription: localized.featuredShortDescription,
     directoryPublishedAt: row.directory_published_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -1449,18 +1465,7 @@ function PublicDashboardTopCard({
         {children}
       </div>
 
-      {footerIconOnly ? (
-        <div className="mt-auto flex items-center justify-end pt-3">
-          <div
-            className="flex h-7 w-7 items-center justify-center rounded-lg"
-            style={{ backgroundColor: `${accent}18` }}
-            aria-label={label}
-            title={label}
-          >
-            <Icon size={14} style={{ color: accent }} />
-          </div>
-        </div>
-      ) : null}
+
     </div>
   );
 }
@@ -1552,10 +1557,19 @@ function PublicOrganizationLogoPreview({
         <div className="line-clamp-2 text-[13px] font-semibold text-[#1a1d2e]">
           {organization.name}
         </div>
-        <div className="mt-1 text-[11px] text-[#9ca3b8]">
-          {getPublicProfileCategoryLabel(organization) ??
-            organization.primaryCategory?.name ??
-            categoryFallback}
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <div className="min-w-0 line-clamp-1 text-[11px] text-[#9ca3b8]">
+            {getPublicProfileCategoryLabel(organization) ??
+              organization.primaryCategory?.name ??
+              categoryFallback}
+          </div>
+          <div
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#eef2ff] text-[#3b6ef8]"
+            aria-label={categoryFallback}
+            title={categoryFallback}
+          >
+            <Star size={14} />
+          </div>
         </div>
       </div>
     </div>
@@ -1621,7 +1635,7 @@ function PublicOrganizationAddressSummary({
 }) {
   return (
     <div className="flex min-h-[74px] flex-col justify-start gap-1.5">
-      <div className="line-clamp-2 text-[20px] font-bold leading-tight text-[#1a1d2e]">
+      <div className="line-clamp-2 text-[16px] font-semibold leading-snug text-[#1a1d2e]">
         {locationLabel}
       </div>
 
@@ -1848,7 +1862,158 @@ function PublicOrganizationMapPreview({
       </a>
     </div>
   );
-}function PublicDashboardActionButton({
+}type PublicFeaturedContentCopy = {
+  specialOrNews: string;
+  giftCards: string;
+  noOffers: string;
+  more: string;
+};
+
+function getPublicFeaturedContentCopy(
+  locale?: string,
+): PublicFeaturedContentCopy {
+  const labelLocale = getPublicOrganizationDashboardLocale(locale);
+
+  const copy: Record<
+    PublicOrganizationDashboardLocaleKey,
+    PublicFeaturedContentCopy
+  > = {
+    en: {
+      specialOrNews: "Special offers or news",
+      giftCards: "Gift cards",
+      noOffers: "No offers yet",
+      more: "Learn more",
+    },
+    pl: {
+      specialOrNews: "Oferty specjalne lub aktualności",
+      giftCards: "Karty podarunkowe",
+      noOffers: "Na razie brak ofert",
+      more: "Więcej",
+    },
+    uk: {
+      specialOrNews: "Спеціальні пропозиції або новини",
+      giftCards: "Подарункові картки",
+      noOffers: "Поки що немає пропозицій",
+      more: "Докладніше",
+    },
+    ru: {
+      specialOrNews: "Спецпредложения или новости",
+      giftCards: "Подарочные карты",
+      noOffers: "Пока нет предложений",
+      more: "Подробнее",
+    },
+    de: {
+      specialOrNews: "Sonderangebote oder Neuigkeiten",
+      giftCards: "Geschenkkarten",
+      noOffers: "Noch keine Angebote",
+      more: "Mehr",
+    },
+    es: {
+      specialOrNews: "Ofertas especiales o novedades",
+      giftCards: "Tarjetas regalo",
+      noOffers: "Aún no hay ofertas",
+      more: "Más información",
+    },
+    cs: {
+      specialOrNews: "Speciální nabídky nebo novinky",
+      giftCards: "Dárkové karty",
+      noOffers: "Zatím žádné nabídky",
+      more: "Více",
+    },
+  };
+
+  return copy[labelLocale] ?? copy.en;
+}
+
+function PublicFeaturedContentCard({
+  imageUrl,
+  linkUrl,
+  shortDescription,
+  giftCards,
+  locale,
+}: {
+  readonly imageUrl: string | null;
+  readonly linkUrl: string | null;
+  readonly shortDescription: string | null;
+  readonly giftCards: PublicDirectoryOffer[];
+  readonly locale?: string;
+}) {
+  const copy = getPublicFeaturedContentCopy(locale);
+  const hasFeaturedContent = Boolean(
+    imageUrl || linkUrl || shortDescription,
+  );
+
+  return (
+    <div className="flex h-full min-h-[390px] flex-col overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+      <section className="min-h-0 flex-1">
+        <h3 className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
+          {copy.specialOrNews}
+        </h3>
+
+        {hasFeaturedContent ? (
+          <div className="mt-3">
+            {imageUrl ? (
+              <div className="mb-3 h-[150px] overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#f8f9fd]">
+                <img
+                  src={imageUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            ) : null}
+
+            {shortDescription ? (
+              <p className="line-clamp-3 text-[12px] leading-5 text-[#5a5f7a]">
+                {shortDescription}
+              </p>
+            ) : null}
+
+            {linkUrl ? (
+              <a
+                href={linkUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex text-[12px] font-semibold text-[#3b6ef8] hover:underline"
+              >
+                {copy.more}
+              </a>
+            ) : null}
+          </div>
+        ) : (
+          <p className="mt-3 text-[12px] text-[#9ca3b8]">
+            {copy.noOffers}
+          </p>
+        )}
+      </section>
+
+      <section className="mt-4 border-t border-[#edf0f7] pt-4">
+        <h3 className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
+          {copy.giftCards}
+        </h3>
+
+        {giftCards.length > 0 ? (
+          <div className="mt-2 space-y-1.5">
+            {giftCards.slice(0, 2).map((offer) => (
+              <a
+                key={offer.id}
+                href="#public-offers"
+                className="block line-clamp-1 text-[12px] font-semibold text-[#1a1d2e] hover:text-[#3b6ef8]"
+              >
+                {offer.title}
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-2 text-[12px] text-[#9ca3b8]">
+            {copy.noOffers}
+          </p>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function PublicDashboardActionButton({
   href,
   icon: Icon,
   children,
@@ -2021,9 +2186,10 @@ export default async function DirectoryOrganizationPage({
     organization?.description ??
     t.fallbacks.descriptionMissing;
 
-  const certificateOffersCount = offers.filter(
+  const certificateOffers = offers.filter(
     (offer) => offer.certificateAvailable,
-  ).length;
+  );
+  const certificateOffersCount = certificateOffers.length;
   const publicMessengerUrl = organization
     ? getPublicMessengerUrl(organization)
     : null;
@@ -2152,9 +2318,12 @@ export default async function DirectoryOrganizationPage({
                   />
                 </div>
               </PublicDashboardTopCard>
-              <div
-                aria-label="reserved-public-profile-block"
-                className="h-full min-h-0 overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm"
+              <PublicFeaturedContentCard
+                imageUrl={organization.featuredImageUrl}
+                linkUrl={organization.featuredLinkUrl}
+                shortDescription={organization.featuredShortDescription}
+                giftCards={certificateOffers}
+                locale={selectedLocale}
               />
               <PurchaseConfirmationRequestCard
                 organizationId={organization.id}

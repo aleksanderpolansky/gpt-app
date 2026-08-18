@@ -1,11 +1,11 @@
 {
   "schemaVersion": 7,
-  "generatedAt": "2026-08-18T12:51:00.000Z",
+  "generatedAt": "2026-08-18T14:09:00.000Z",
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
   "branch": "main",
-  "originMainAtCheckpoint": "81eebeb1057b5221e9c2b224c47be5ed90a1b5fb",
-  "checkpointMeaning": "BUSINESS CONTACTS PUBLIC-FIRST INLINE EDIT V1: Phone + Website + direct messaging in the visitor layout.",
+  "originMainAtCheckpoint": "afa4b5af56ecd5ad5395d9b54551fd6bd17742e8",
+  "checkpointMeaning": "BUSINESS FEATURED BLOCK + GIFT CARDS V1: public-first promo/news + gift cards top-row card.",
   "globalReality": {
     "p8Blocked": true,
     "objectsTotal": 150,
@@ -54,7 +54,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Live-test Phone, Website and one direct-message channel in PL/UK/ES; social feeds, booking, service area and calendar remain deferred.",
+  "nextAction": "Live-test featured image upload, link, short description and PL/UK/ES public rendering; then decide whether to continue Gift cards terminology migration.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -65,7 +65,7 @@
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
   "previousRecoveryCommit": "d91549773dae71206e46f3182bfd433f9c30316d",
-  "documentedState": "BUSINESS_CONTACTS_PUBLIC_FIRST_INLINE_EDIT_V1_CODED_AWAITING_LIVE_ACCEPTANCE",
+  "documentedState": "BUSINESS_FEATURED_BLOCK_GIFT_CARDS_V1_CODED_AWAITING_LIVE_ACCEPTANCE",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -506,5 +506,22 @@
     "localizedUiLabels": true,
     "socialFeedsSeparated": true,
     "sqlRequired": false
+  },
+  "businessFeaturedBlockV1": {
+    "storageBucket": "arctor-public-media",
+    "allowedImageMimeTypes": [
+      "image/jpeg",
+      "image/png",
+      "image/webp"
+    ],
+    "maxUploadMb": 5,
+    "compactMetadataKey": "organizations.social_links_json.arctor_featured_content_v1",
+    "localizedField": "featuredShortDescription",
+    "publicSections": [
+      "special_or_news",
+      "gift_cards"
+    ],
+    "publicFirstEditing": true,
+    "sqlMigrationRequired": false
   }
 }

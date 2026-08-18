@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-18T12:51:00.000Z",
+  "generatedAt": "2026-08-18T14:09:00.000Z",
   "copiedCount": 57,
-  "generatedEvidenceCount": 20,
-  "indexedCount": 94,
+  "generatedEvidenceCount": 21,
+  "indexedCount": 95,
   "missingPatterns": [],
   "files": [
     {
@@ -652,6 +652,13 @@
       "sourceDownloadsName": null,
       "sha256": "ca15976c820960ae709ec93e25a823f461d251f2caeef7d5e16a8f88399c0275",
       "origin": "business_contacts_public_first_inline_edit_v1"
+    },
+    {
+      "group": "CONTENT_L10",
+      "file": "docs/recovery/evidence/CONTENT_L10/ARCTOR_BUSINESS_FEATURED_BLOCK_GIFT_CARDS_V1_20260818.md",
+      "sourceDownloadsName": null,
+      "sha256": "cc7a2d18222f8a6d784e4e2b4d08056157ace4b3be08c9d2f9227b71de781824",
+      "origin": "business_featured_block_gift_cards_v1"
     }
   ]
 }

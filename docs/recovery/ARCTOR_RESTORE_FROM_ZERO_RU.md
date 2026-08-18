@@ -394,3 +394,8 @@ Safety:
 - fact commit transactional and idempotent;
 - primary wording learning actor-scoped only;
 - Global recognition profile auto mutation=false.
+
+
+## Public organization featured media
+
+Для BUSINESS FEATURED BLOCK V1 отдельная SQL migration не нужна. Endpoint POST /api/organizations/[id]/featured-media при первой загрузке проверяет Supabase Storage bucket arctor-public-media и при отсутствии создает его как public с JPEG/PNG/WebP и лимитом 5 MB. Восстановление приложения должно сохранять SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY: тот же server client используется для создания bucket и загрузки.

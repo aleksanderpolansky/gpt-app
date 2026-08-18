@@ -22,6 +22,11 @@ import {
   writeOrganizationContactChannels,
   type OrganizationContactChannel,
 } from "@/lib/commercial/organizationContactChannels";
+import {
+  parseOrganizationFeaturedContentInput,
+  writeOrganizationFeaturedContent,
+  type OrganizationFeaturedContent,
+} from "@/lib/commercial/organizationFeaturedContent";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +76,7 @@ function getNextSocialLinksJson(
   currentValue: Record<string, unknown> | null,
   categoryLabel: string | null,
   contactChannels: OrganizationContactChannel[] | undefined,
+  featuredContent: OrganizationFeaturedContent | undefined,
 ) {
   let nextValue =
     currentValue && typeof currentValue === "object" && !Array.isArray(currentValue)
@@ -85,6 +91,10 @@ function getNextSocialLinksJson(
 
   if (contactChannels !== undefined) {
     nextValue = writeOrganizationContactChannels(nextValue, contactChannels);
+  }
+
+  if (featuredContent !== undefined) {
+    nextValue = writeOrganizationFeaturedContent(nextValue, featuredContent);
   }
 
   return nextValue;
@@ -347,6 +357,31 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     normalizedContactChannels = parsedContactChannels.channels;
   }
 
+  const featuredContentWasSubmitted = Object.prototype.hasOwnProperty.call(
+    body,
+    "featuredContent",
+  );
+  let normalizedFeaturedContent: OrganizationFeaturedContent | undefined;
+
+  if (featuredContentWasSubmitted) {
+    const parsedFeaturedContent = parseOrganizationFeaturedContentInput(
+      body.featuredContent,
+    );
+
+    if (!parsedFeaturedContent.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: parsedFeaturedContent.errorCode,
+          errorCode: parsedFeaturedContent.errorCode,
+        },
+        { status: 400 },
+      );
+    }
+
+    normalizedFeaturedContent = parsedFeaturedContent.value;
+  }
+
   const logoUrlWasSubmitted = Object.prototype.hasOwnProperty.call(body, "logoUrl");
   const logoUrl = logoUrlWasSubmitted
     ? parseNullableText(body.logoUrl)
@@ -407,6 +442,7 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     organization.social_links_json,
     categoryLabel,
     normalizedContactChannels,
+    normalizedFeaturedContent,
   );
   const now = new Date().toISOString();
 
@@ -598,6 +634,9 @@ export async function PATCH(request: Request, { params }: RouteProps) {
       organizationName: updatedOrganization.organization_name,
       description: updatedOrganization.description,
       shortDescription: updatedOrganization.short_description,
+      featuredShortDescription: parseNullableText(
+        body.featuredShortDescription,
+      ),
     },
   });
 

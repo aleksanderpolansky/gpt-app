@@ -611,3 +611,13 @@ Live acceptance также обнаружил и закрыл schema gap: ai_usa
 - Поддержаны WhatsApp, Telegram, Signal, Viber и Custom direct link.
 - Соцсети не смешиваются с direct contacts: каналы сохраняются в social_links_json.arctor_contact_channels_v1; social feed/publishing остаются отдельной будущей задачей.
 - SQL и изменение схемы БД не требуются.
+
+
+## 2026-08-18 — BUSINESS FEATURED BLOCK + GIFT CARDS V1
+
+- Третий пустой блок верхней строки карточки предприятия получил public-first назначение: спецпредложения/новости + подарочные карты.
+- В owner edit layout этот же блок содержит загрузку изображения, HTTPS-ссылку и короткое локализуемое описание; отдельная admin-form не создается.
+- Публичное промо-изображение хранится в Supabase Storage bucket arctor-public-media; в organizations.social_links_json хранится только компактный URL/link metadata.
+- Короткое описание входит в существующий CONTENT-L10 localizedContent envelope как featuredShortDescription.
+- Полный rename сертификатов/superoffer во всем UI пока не выполнялся.
+- Звездочка logo card выровнена со строкой категории; адрес сделан визуально вторичным.

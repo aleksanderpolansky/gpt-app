@@ -53,6 +53,9 @@ export type OrganizationPublicProfileEditInitialData = {
     publicPhone: string | null;
     websiteUrl: string | null;
     contactChannels: OrganizationContactChannel[];
+    featuredImageUrl: string | null;
+    featuredLinkUrl: string | null;
+    featuredShortDescription: string | null;
     bookingUrl: string | null;
     logoUrl: string | null;
     coverImageUrl: string | null;
@@ -98,6 +101,9 @@ type EditValues = {
   bookingUrl: string;
   publicEmail: string;
   contactChannels: OrganizationContactChannel[];
+  featuredImageUrl: string;
+  featuredLinkUrl: string;
+  featuredShortDescription: string;
   categoryLabel: string;
   countryCode: string;
   city: string;
@@ -553,6 +559,114 @@ const CONTACT_EDITOR_COPY: Record<EditLocaleKey, ContactEditorCopy> = {
   },
 };
 
+type FeaturedContentCopy = {
+  specialOrNews: string;
+  giftCards: string;
+  noOffers: string;
+  shortDescription: string;
+  shortDescriptionPlaceholder: string;
+  link: string;
+  linkPlaceholder: string;
+  uploadImage: string;
+  uploadingImage: string;
+  removeImage: string;
+  addSuperOffer: string;
+};
+
+const FEATURED_CONTENT_COPY: Record<EditLocaleKey, FeaturedContentCopy> = {
+  en: {
+    specialOrNews: "Special offers or news",
+    giftCards: "Gift cards",
+    noOffers: "No offers yet",
+    shortDescription: "Short description",
+    shortDescriptionPlaceholder: "A short message for visitors",
+    link: "Link",
+    linkPlaceholder: "https://example.com/offer",
+    uploadImage: "Upload image",
+    uploadingImage: "Uploading...",
+    removeImage: "Remove image",
+    addSuperOffer: "Add super offer",
+  },
+  pl: {
+    specialOrNews: "Oferty specjalne lub aktualności",
+    giftCards: "Karty podarunkowe",
+    noOffers: "Na razie brak ofert",
+    shortDescription: "Krótki opis",
+    shortDescriptionPlaceholder: "Krótka informacja dla odwiedzających",
+    link: "Link",
+    linkPlaceholder: "https://example.com/oferta",
+    uploadImage: "Dodaj obraz",
+    uploadingImage: "Przesyłanie...",
+    removeImage: "Usuń obraz",
+    addSuperOffer: "Dodaj superofertę",
+  },
+  uk: {
+    specialOrNews: "Спеціальні пропозиції або новини",
+    giftCards: "Подарункові картки",
+    noOffers: "Поки що немає пропозицій",
+    shortDescription: "Короткий опис",
+    shortDescriptionPlaceholder: "Коротка інформація для відвідувачів",
+    link: "Посилання",
+    linkPlaceholder: "https://example.com/offer",
+    uploadImage: "Завантажити зображення",
+    uploadingImage: "Завантаження...",
+    removeImage: "Видалити зображення",
+    addSuperOffer: "Додати суперпропозицію",
+  },
+  ru: {
+    specialOrNews: "Спецпредложения или новости",
+    giftCards: "Подарочные карты",
+    noOffers: "Пока нет предложений",
+    shortDescription: "Короткое описание",
+    shortDescriptionPlaceholder: "Короткая информация для посетителей",
+    link: "Ссылка",
+    linkPlaceholder: "https://example.com/offer",
+    uploadImage: "Загрузить изображение",
+    uploadingImage: "Загрузка...",
+    removeImage: "Удалить изображение",
+    addSuperOffer: "Добавить суперпредложение",
+  },
+  de: {
+    specialOrNews: "Sonderangebote oder Neuigkeiten",
+    giftCards: "Geschenkkarten",
+    noOffers: "Noch keine Angebote",
+    shortDescription: "Kurzbeschreibung",
+    shortDescriptionPlaceholder: "Kurze Information für Besucher",
+    link: "Link",
+    linkPlaceholder: "https://example.com/angebot",
+    uploadImage: "Bild hochladen",
+    uploadingImage: "Wird hochgeladen...",
+    removeImage: "Bild entfernen",
+    addSuperOffer: "Superangebot hinzufügen",
+  },
+  es: {
+    specialOrNews: "Ofertas especiales o novedades",
+    giftCards: "Tarjetas regalo",
+    noOffers: "Aún no hay ofertas",
+    shortDescription: "Descripción breve",
+    shortDescriptionPlaceholder: "Información breve para los visitantes",
+    link: "Enlace",
+    linkPlaceholder: "https://example.com/oferta",
+    uploadImage: "Subir imagen",
+    uploadingImage: "Subiendo...",
+    removeImage: "Eliminar imagen",
+    addSuperOffer: "Añadir superoferta",
+  },
+  cs: {
+    specialOrNews: "Speciální nabídky nebo novinky",
+    giftCards: "Dárkové karty",
+    noOffers: "Zatím žádné nabídky",
+    shortDescription: "Krátký popis",
+    shortDescriptionPlaceholder: "Krátká informace pro návštěvníky",
+    link: "Odkaz",
+    linkPlaceholder: "https://example.com/nabidka",
+    uploadImage: "Nahrát obrázek",
+    uploadingImage: "Nahrávání...",
+    removeImage: "Odstranit obrázek",
+    addSuperOffer: "Přidat supernabídku",
+  },
+};
+
 const ORGANIZATION_TYPE_OPTIONS = [
   "private_business",
   "company",
@@ -639,6 +753,11 @@ function getInitialValues(data: OrganizationPublicProfileEditInitialData): EditV
     bookingUrl: text(data.organization.bookingUrl),
     publicEmail: text(data.organization.publicEmail),
     contactChannels: data.organization.contactChannels.map((channel) => ({ ...channel })),
+    featuredImageUrl: text(data.organization.featuredImageUrl),
+    featuredLinkUrl: text(data.organization.featuredLinkUrl),
+    featuredShortDescription: text(
+      data.organization.featuredShortDescription,
+    ),
     categoryLabel: text(data.categoryName),
     countryCode: text(location?.countryCode ?? data.organization.countryCode),
     city: text(location?.city),
@@ -800,18 +919,7 @@ function TopCard({
         {children}
       </div>
 
-      {footerIconOnly ? (
-        <div className="mt-auto flex items-center justify-end pt-3">
-          <div
-            className="flex h-7 w-7 items-center justify-center rounded-full"
-            style={{ backgroundColor: `${accent}14`, color: accent }}
-            aria-label={label}
-            title={label}
-          >
-            <Icon size={15} />
-          </div>
-        </div>
-      ) : null}
+
     </div>
   );
 }
@@ -852,6 +960,119 @@ function MiniActionButton({
   );
 }
 
+
+function FeaturedContentEditorCard({
+  imageUrl,
+  shortDescription,
+  linkUrl,
+  copy,
+  giftCardCount,
+  addSuperOfferHref,
+  uploading,
+  onPickImage,
+  onRemoveImage,
+  onShortDescriptionChange,
+  onLinkChange,
+}: {
+  imageUrl: string;
+  shortDescription: string;
+  linkUrl: string;
+  copy: FeaturedContentCopy;
+  giftCardCount: number;
+  addSuperOfferHref: string;
+  uploading: boolean;
+  onPickImage: () => void;
+  onRemoveImage: () => void;
+  onShortDescriptionChange: (value: string) => void;
+  onLinkChange: (value: string) => void;
+}) {
+  return (
+    <div className="flex h-full min-h-[390px] flex-col overflow-hidden rounded-2xl border border-[#edf0f7] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.08)]">
+      <section className="min-h-0 flex-1">
+        <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6f7494]">
+          {copy.specialOrNews}
+        </h3>
+
+        {imageUrl ? (
+          <div className="relative mt-3 h-[118px] overflow-hidden rounded-xl border border-[#edf0f7] bg-[#f8f9fd]">
+            <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+            <button
+              type="button"
+              onClick={onRemoveImage}
+              aria-label={copy.removeImage}
+              title={copy.removeImage}
+              className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-lg border border-[#fecdd3] bg-white/95 text-[#e11d48] shadow-sm"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onPickImage}
+            disabled={uploading}
+            className="mt-3 flex h-[86px] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#cfd6f6] bg-[#f8f9fd] text-[12px] font-semibold text-[#3b6ef8] transition hover:border-[#3b6ef8]/50 hover:bg-[#f3f6ff] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Camera size={16} />
+            {uploading ? copy.uploadingImage : copy.uploadImage}
+          </button>
+        )}
+
+        {imageUrl ? (
+          <button
+            type="button"
+            onClick={onPickImage}
+            disabled={uploading}
+            className="mt-2 text-[11px] font-semibold text-[#3b6ef8] hover:underline disabled:opacity-50"
+          >
+            {uploading ? copy.uploadingImage : copy.uploadImage}
+          </button>
+        ) : null}
+
+        <label className="mt-3 block">
+          <span className="mb-1 block text-[11px] font-medium text-[#7c8099]">
+            {copy.shortDescription}
+          </span>
+          <textarea
+            value={shortDescription}
+            onChange={(event) => onShortDescriptionChange(event.target.value)}
+            rows={2}
+            placeholder={copy.shortDescriptionPlaceholder}
+            className="w-full resize-none rounded-xl border border-[#dfe3f1] bg-[#f8f9fd] px-3 py-2 text-[12px] leading-5 text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-2 focus:ring-[#3b6ef8]/15"
+          />
+        </label>
+
+        <label className="mt-2 block">
+          <span className="mb-1 block text-[11px] font-medium text-[#7c8099]">
+            {copy.link}
+          </span>
+          <input
+            type="url"
+            value={linkUrl}
+            onChange={(event) => onLinkChange(event.target.value)}
+            placeholder={copy.linkPlaceholder}
+            className="w-full rounded-xl border border-[#dfe3f1] bg-[#f8f9fd] px-3 py-2 text-[12px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8] focus:ring-2 focus:ring-[#3b6ef8]/15"
+          />
+        </label>
+      </section>
+
+      <section className="mt-4 border-t border-[#edf0f7] pt-4">
+        <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6f7494]">
+          {copy.giftCards}
+        </h3>
+        <p className="mt-1 text-[12px] text-[#9ca3b8]">
+          {giftCardCount > 0 ? String(giftCardCount) : copy.noOffers}
+        </p>
+        <Link
+          href={addSuperOfferHref}
+          className="mt-2 inline-flex rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-3 py-2 text-[12px] font-semibold text-[#3b6ef8] transition hover:border-[#3b6ef8]/40"
+        >
+          {copy.addSuperOffer}
+        </Link>
+      </section>
+    </div>
+  );
+}
 
 function ContactInlineEditor({
   active,
@@ -1287,6 +1508,10 @@ export default function OrganizationPublicProfileEditClient({
     "phone" | "website" | "messenger" | null
   >(null);
   const contactCopy = CONTACT_EDITOR_COPY[locale];
+  const featuredCopy = FEATURED_CONTENT_COPY[locale];
+  const [featuredUploadState, setFeaturedUploadState] = useState<
+    "idle" | "uploading"
+  >("idle");
 
   const dirtyKeys = useMemo(
     () =>
@@ -1413,6 +1638,11 @@ export default function OrganizationPublicProfileEditClient({
             bookingUrl: values.bookingUrl,
             publicEmail: values.publicEmail,
             contactChannels: values.contactChannels,
+            featuredContent: {
+              imageUrl: values.featuredImageUrl,
+              linkUrl: values.featuredLinkUrl,
+            },
+            featuredShortDescription: values.featuredShortDescription,
             location: locationWasEdited
               ? {
                   countryCode: values.countryCode,
@@ -1507,9 +1737,13 @@ export default function OrganizationPublicProfileEditClient({
   const serviceArea = values.serviceArea.trim();
   const mapsHref = buildMapsHref(values, organizationName);
   const deletedOrganizationsHref = `/organizations/deleted?locale=${encodeURIComponent(locale)}`;
+  const addSuperOfferHref = `/offers/new?organizationId=${encodeURIComponent(
+    initialData.organization.id,
+  )}&locale=${encodeURIComponent(locale)}`;
 
 
   const logoFileInputRef = useRef<HTMLInputElement | null>(null);
+  const featuredImageInputRef = useRef<HTMLInputElement | null>(null);
 
   function handleLogoFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.currentTarget.files?.[0];
@@ -1546,6 +1780,74 @@ export default function OrganizationPublicProfileEditClient({
 
   function handleLogoPickerOpen() {
     logoFileInputRef.current?.click();
+  }
+
+  async function handleFeaturedImageFileChange(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (
+      file.type !== "image/jpeg" &&
+      file.type !== "image/png" &&
+      file.type !== "image/webp"
+    ) {
+      input.value = "";
+      return;
+    }
+
+    setFeaturedUploadState("uploading");
+    setErrorMessage(null);
+
+    try {
+      const sourceDataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () =>
+          typeof reader.result === "string"
+            ? resolve(reader.result)
+            : reject(new Error(messages.saveError));
+        reader.onerror = () => reject(new Error(messages.saveError));
+        reader.readAsDataURL(file);
+      });
+      const compressedDataUrl = await compressOrganizationLogoDataUrl(
+        sourceDataUrl,
+      );
+      const compressedBlob = await fetch(compressedDataUrl).then((response) =>
+        response.blob(),
+      );
+      const uploadBody = new FormData();
+      uploadBody.append("file", compressedBlob, file.name);
+
+      const response = await fetch(
+        `/api/organizations/${initialData.organization.id}/featured-media`,
+        { method: "POST", body: uploadBody },
+      );
+      const payload = (await response.json().catch(() => null)) as
+        | { ok?: boolean; publicUrl?: string; error?: string }
+        | null;
+
+      if (!response.ok || !payload?.ok || !payload.publicUrl) {
+        throw new Error(messages.saveError);
+      }
+
+      setField("featuredImageUrl", payload.publicUrl);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : messages.saveError,
+      );
+    } finally {
+      input.value = "";
+      setFeaturedUploadState("idle");
+    }
+  }
+
+  function handleFeaturedImagePickerOpen() {
+    featuredImageInputRef.current?.click();
   }
 
   return (
@@ -1708,19 +2010,28 @@ export default function OrganizationPublicProfileEditClient({
                     placeholder={messages.titleFallback}
                   />
                 </EditableShell>
-                <div className="mt-2">
-                  <EditableShell
-                    dirty={isDirty("categoryLabel")}
-                    onReset={() => resetField("categoryLabel")}
-                    resetLabel={messages.undo}
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <EditableShell
+                      dirty={isDirty("categoryLabel")}
+                      onReset={() => resetField("categoryLabel")}
+                      resetLabel={messages.undo}
+                    >
+                      <TextInput
+                        value={values.categoryLabel}
+                        onChange={(value) => setField("categoryLabel", value)}
+                        className="text-[12px] text-[#9ca3b8]"
+                        placeholder={messages.category}
+                      />
+                    </EditableShell>
+                  </div>
+                  <div
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#eef2ff] text-[#3b6ef8]"
+                    aria-label={messages.category}
+                    title={messages.category}
                   >
-                    <TextInput
-                      value={values.categoryLabel}
-                      onChange={(value) => setField("categoryLabel", value)}
-                      className="text-[12px] text-[#9ca3b8]"
-                      placeholder={messages.category}
-                    />
-                  </EditableShell>
+                    <Star size={15} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1745,7 +2056,7 @@ export default function OrganizationPublicProfileEditClient({
                 <TextInput
                   value={values.streetAddress}
                   onChange={(value) => setLocationField("streetAddress", value)}
-                  className="text-[18px] font-bold text-[#111827]"
+                  className="text-[15px] font-semibold text-[#111827]"
                   placeholder=""
                 />
               </EditableShell>
@@ -1795,9 +2106,27 @@ export default function OrganizationPublicProfileEditClient({
               />
             </div>
           </TopCard>
-          <div
-            aria-label="reserved-owner-profile-block"
-            className="h-full min-h-0 overflow-hidden rounded-2xl border border-[#edf0f7] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.08)]"
+          <FeaturedContentEditorCard
+            imageUrl={values.featuredImageUrl}
+            shortDescription={values.featuredShortDescription}
+            linkUrl={values.featuredLinkUrl}
+            copy={featuredCopy}
+            giftCardCount={initialData.counts.certificateOffersCount}
+            addSuperOfferHref={addSuperOfferHref}
+            uploading={featuredUploadState === "uploading"}
+            onPickImage={handleFeaturedImagePickerOpen}
+            onRemoveImage={() => setField("featuredImageUrl", "")}
+            onShortDescriptionChange={(value) =>
+              setField("featuredShortDescription", value)
+            }
+            onLinkChange={(value) => setField("featuredLinkUrl", value)}
+          />
+          <input
+            ref={featuredImageInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handleFeaturedImageFileChange}
           />
           <PurchaseConfirmationRequestCard
             organizationId={initialData.organization.id}
