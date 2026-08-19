@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-18T14:09:00.000Z",
+  "generatedAt": "2026-08-19T07:15:00.000Z",
   "copiedCount": 57,
-  "generatedEvidenceCount": 21,
-  "indexedCount": 95,
+  "generatedEvidenceCount": 22,
+  "indexedCount": 96,
   "missingPatterns": [],
   "files": [
     {
@@ -659,6 +659,15 @@
       "sourceDownloadsName": null,
       "sha256": "cc7a2d18222f8a6d784e4e2b4d08056157ace4b3be08c9d2f9227b71de781824",
       "origin": "business_featured_block_gift_cards_v1"
+    },
+    {
+      "group": "AI_RIGHT_RAIL",
+      "file": "docs/recovery/evidence/AI_RIGHT_RAIL/ARCTOR_AI_RIGHT_RAIL_MULTIMODAL_ACTIVITY_V1_EVIDENCE.json",
+      "sourceDownloadsName": null,
+      "sha256": "775ddbef4c52c5774d05871bd2a15c16444139f3ad0e0cf490949cbd54625d9c",
+      "origin": "ai_right_rail_multimodal_activity_v1_release_evidence",
+      "note": "V4 includes V3 production ESLint failure/rollback evidence and lint-safe fix strategy.",
+      "hashPolicy": "sha256_utf8_text_after_crlf_to_lf_normalization"
     }
   ]
 }

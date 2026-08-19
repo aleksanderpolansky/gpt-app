@@ -5,6 +5,9 @@ import {
   OPENAI_MAX_OUTPUT_TOKENS,
 } from "./openaiConfig";
 
+export const ARCTOR_AI_RIGHT_RAIL_IMAGE_INPUT_V1 =
+  "ARCTOR_AI_RIGHT_RAIL_IMAGE_INPUT_V1" as const;
+
 const apiKey = process.env.OPENAI_API_KEY;
 
 if (!apiKey) {
@@ -42,6 +45,7 @@ type RunAiJsonRequest = {
   // Allows a tightly controlled caller to use a ceiling different from the
   // global OPENAI_MAX_OUTPUT_TOKENS setting. This is not user-controlled.
   outputTokenCeiling?: number;
+  userImageDataUrl?: string | null;
 };
 
 export type RunAiJsonUsageMetadata = {
@@ -233,12 +237,20 @@ export async function runAiJsonWithUsageMetadata<T = unknown>({
   store,
   reasoningEffort,
   outputTokenCeiling,
+  userImageDataUrl,
 }: RunAiJsonRequest): Promise<RunAiJsonWithUsageMetadataResult<T>> {
   if (!AI_ENABLED) {
     throw new Error("AI is disabled by AI_ENABLED=false");
   }
 
   const resolvedModel = model || OPENAI_DEFAULT_MODEL;
+
+  const userContent = userImageDataUrl
+    ? [
+        { type: "input_text", text: JSON.stringify(user) },
+        { type: "input_image", image_url: userImageDataUrl, detail: "low" },
+      ]
+    : JSON.stringify(user);
 
   const requestBody = {
     model: resolvedModel,
@@ -252,7 +264,7 @@ export async function runAiJsonWithUsageMetadata<T = unknown>({
       },
       {
         role: "user",
-        content: JSON.stringify(user),
+        content: userContent,
       },
     ],
     max_output_tokens: getSafeMaxOutputTokens(
@@ -319,6 +331,7 @@ export async function runAiJson<T = unknown>({
   store,
   reasoningEffort,
   outputTokenCeiling,
+  userImageDataUrl,
 }: RunAiJsonRequest): Promise<T> {
   const result = await runAiJsonWithUsageMetadata<T>({
     system,
@@ -332,6 +345,7 @@ export async function runAiJson<T = unknown>({
     store,
     reasoningEffort,
     outputTokenCeiling,
+    userImageDataUrl,
   });
 
   return result.parsed;

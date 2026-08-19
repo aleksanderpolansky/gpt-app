@@ -638,3 +638,19 @@ Live acceptance также обнаружил и закрыл schema gap: ai_usa
 - Создание подарочного сертификата больше не вызывает повторный AI-перевод title/description, если товар/услуга уже имеет полный 7-locale envelope и termsText пуст. Для неполной локализации или собственных условий сертификата старый AI fallback сохранён.
 - Первый шаг `/offers/new` получил mobile intrinsic-width hardening: min-width=0, ограничение form controls, более узкие mobile paddings и двухколоночный layout только с XL.
 - SQL/схема БД в этом шаге не меняются.
+
+## 2026-08-19 — AI RIGHT RAIL MULTIMODAL ACTIVITY V1
+
+- Правый `AI-Navigator` переводится из недоделанного single-button rail в три явных режима: `past` / `future` / `chat`.
+- Desktop использует корпоративный segmented switcher ARCTor; mobile — три постоянные кнопки справа с теми же режимами. Messenger/WhatsApp используются только как UX-референс поведения, не как визуальный стиль.
+- `past` и `future` не создают новый write-path: они вызывают канонический `/api/activity/quick-capture` с явным `temporalDirection` и стабильным `clientRequestId`. Past ведёт в review-first flow; future — в календарь. Retry сохраняет тот же request id, чтобы неопределённый сетевой повтор не дублировал activity event.
+- Chat получил optimistic user message, стабильный scroll-to-bottom, сохранение позиции при ручном чтении выше, индикатор новых сообщений, retry, CTA-кнопки и восстановление server chat history, когда локальная история отсутствует.
+- Голосовой ввод V1 реализован как browser speech-to-text в composer; новая серверная запись аудио не создаётся.
+- Фото V1 разрешено только в `chat`, JPG/PNG/WebP до 3 MiB. Ограничение 3 MiB выбрано из-за Vercel Function payload 4.5 MB после base64 expansion. Activity capture остаётся review-first/no-AI-at-capture и фото туда этим релизом не добавляется.
+- Responses API получает изображение как `input_image` data URL с `detail=low`; `store=false` сохраняется.
+- `invalid_price_snapshot` диагностирован как compatibility regression между GSR1E активными USD price snapshots (`usd_to_eur_rate = null`) и старым EUR-wallet chat billing. Runtime теперь использует текущие активные token prices и, только если активный snapshot не содержит FX, подставляет последний сохранённый положительный OpenAI USD→EUR rate в памяти. DB/schema этим релизом не меняются.
+- Пользовательские тексты новых режимов/ошибок/CTA имеют ru/pl/en/es/uk/de/cs варианты через существующий i18n helper.
+- Статус: CODED_AWAITING_PRODUCTION_BUILD_AND_LIVE_ACCEPTANCE.
+
+### AI RIGHT RAIL — production gate 19.08.2026 / ESLint hotfix V4
+V3 дошёл до реального `npm run lint` на production checkout и был корректно остановлен до commit: validator 18/18 PASS, затем `react-hooks/set-state-in-effect` обнаружил синхронный `setSelectedImage(null)` внутри `useEffect` в `global-ai-navigator.tsx`. Runner выполнил rollback PASS, поэтому baseline остался `f0595a0d286f0a04b88d2bdacf89fb3987852b89`. V4 переносит очистку image attachment в явный обработчик смены режима, делает обработку нового сообщения deferred через `setTimeout`, исправляет dependency массива эффекта и удаляет 6 legacy/unused UI символов, показанных production ESLint. Статус остаётся CODED_AWAITING_PRODUCTION_BUILD_AND_LIVE_ACCEPTANCE.

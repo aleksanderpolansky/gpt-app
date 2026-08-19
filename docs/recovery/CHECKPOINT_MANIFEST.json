@@ -1,11 +1,11 @@
 {
   "schemaVersion": 7,
-  "generatedAt": "2026-08-18T15:51:00.000Z",
+  "generatedAt": "2026-08-19T07:15:00.000Z",
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
   "branch": "main",
-  "originMainAtCheckpoint": "e2341fba522a29680bfc01fefc8ced6bcb20fc6e",
-  "checkpointMeaning": "Organization gift-card preview uses activity-based certificates; featured image deletion is explicit; gift-certificate creation reuses complete product localization; super-offer first step is mobile-safe.",
+  "originMainAtCheckpoint": "f0595a0d286f0a04b88d2bdacf89fb3987852b89",
+  "checkpointMeaning": "AI Navigator right rail V1: reliable messenger UX, explicit past/future/chat modes, canonical activity handoff, voice dictation, chat photo input, and EUR billing compatibility recovery.",
   "globalReality": {
     "p8Blocked": true,
     "objectsTotal": 150,
@@ -54,7 +54,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Live-check gift-card preview image/title, featured-image removal persistence, certificate create latency, and /offers/new on smartphone.",
+  "nextAction": "Run production release gates, then live-accept free chat/photo/voice, past review handoff, future calendar handoff, mobile 3-button UX, desktop segmented UX, and 7 locales.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -65,7 +65,7 @@
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
   "previousRecoveryCommit": "d91549773dae71206e46f3182bfd433f9c30316d",
-  "documentedState": "BUSINESS_GIFT_CARD_PREVIEW_MEDIA_MOBILE_PERF_V1_CODED_AWAITING_LIVE_ACCEPTANCE",
+  "documentedState": "AI_RIGHT_RAIL_MULTIMODAL_ACTIVITY_V1_CODED_AWAITING_PRODUCTION_BUILD_AND_LIVE_ACCEPTANCE",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -477,7 +477,7 @@
     "evidence": "docs/recovery/evidence/AI_ADMIN/ARCTOR_AI_ADMIN_CONTROL_CATALOG_V1_PRECOMMIT_REPORT.txt",
     "evidenceSha256": "3c4a2a6766fd2660c8ffd8fffe5074b1314b72294505e65ea6717171c042eab7"
   },
-  "updatedAt": "2026-08-15T09:09:55.285Z",
+  "updatedAt": "2026-08-19T07:15:00.000Z",
   "valueObjectAuthoring": {
     "contract": "P1C_CREATE_VALUE_OBJECT_ONTOLOGY_V1",
     "root": {
@@ -538,5 +538,39 @@
     "giftCertificateAiFallbackPreserved": true,
     "superOfferFirstStepMobileIntrinsicWidthHardened": true,
     "databaseSchemaChanged": false
+  },
+  "aiRightRailMultimodalActivityV1": {
+    "status": "coded_awaiting_production_build_and_live_acceptance",
+    "baselineCommit": "f0595a0d286f0a04b88d2bdacf89fb3987852b89",
+    "modes": [
+      "past",
+      "future",
+      "chat"
+    ],
+    "pastWritePath": "POST /api/activity/quick-capture temporalDirection=past",
+    "futureWritePath": "POST /api/activity/quick-capture temporalDirection=future",
+    "retryIdempotency": "stable_clientRequestId",
+    "chatEndpoint": "POST /api/test",
+    "chatHistoryRecovery": "GET /api/messages when local history absent",
+    "autoscroll": "stick_to_bottom_unless_user_scrolled_up_then_unread_control",
+    "voiceInput": "browser_speech_recognition_no_new_server_audio_storage",
+    "photoInput": {
+      "mode": "chat_only_v1",
+      "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+      ],
+      "maxMiB": 3,
+      "openAiDetail": "low",
+      "store": false
+    },
+    "pricingCompatibility": "active token prices + current snapshot FX when present, else latest stored positive OpenAI USD/EUR rate in-memory",
+    "sqlRequired": false,
+    "recoveryEvidence": "docs/recovery/evidence/AI_RIGHT_RAIL/ARCTOR_AI_RIGHT_RAIL_MULTIMODAL_ACTIVITY_V1_EVIDENCE.json",
+    "recoveryEvidenceSha256": "775ddbef4c52c5774d05871bd2a15c16444139f3ad0e0cf490949cbd54625d9c",
+    "lastFailedProductionGate": "V3 changed-file ESLint: react-hooks/set-state-in-effect; rollback PASS; no commit/push",
+    "v4LintHotfix": "handler_based_image_clear + deferred_message_effect + dependency_cleanup + unused_cleanup",
+    "recoveryEvidenceHashPolicy": "sha256_utf8_text_after_crlf_to_lf_normalization"
   }
 }

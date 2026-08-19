@@ -2,17 +2,26 @@
 
 import { useEffect, useState, type ReactNode, type TouchEvent } from "react";
 import { usePathname } from "next/navigation";
-import { ChevronLeft, MessageSquare, X } from "lucide-react";
+import { Activity, CalendarPlus, ChevronLeft, MessageSquare, X } from "lucide-react";
 
-import { AiNavigatorProvider } from "./ai-navigator-provider";
+import { AiNavigatorProvider, useAiNavigator, type AiNavigatorMode } from "./ai-navigator-provider";
 import { GlobalAiNavigator } from "./global-ai-navigator";
 import { GlobalSidebar, GlobalTopBar } from "./global-navigation";
+
+export const ARCTOR_AI_RIGHT_RAIL_CORPORATE_MOBILE_MODES_V1 =
+  "ARCTOR_AI_RIGHT_RAIL_CORPORATE_MOBILE_MODES_V1" as const;
 
 type MobileLayer = "left" | "right" | null;
 
 const mobileAiHandleStyle = {
   bottom: "calc(72px + env(safe-area-inset-bottom))",
 };
+
+const MOBILE_AI_MODES: Array<{ mode: AiNavigatorMode; label: string; icon: typeof Activity }> = [
+  { mode: "past", label: "Past activity", icon: Activity },
+  { mode: "future", label: "Plan activity", icon: CalendarPlus },
+  { mode: "chat", label: "Free chat", icon: MessageSquare },
+];
 
 function shouldRenderPlainPage(pathname: string) {
   return (
@@ -125,19 +134,46 @@ function MobileLayeredShell({
   readonly onTouchStart: (event: TouchEvent<HTMLElement>) => void;
   readonly onTouchEnd: (event: TouchEvent<HTMLElement>) => void;
 }) {
+  const { navigatorMode, setNavigatorMode } = useAiNavigator();
+
+  function openAiMode(mode: AiNavigatorMode) {
+    setNavigatorMode(mode);
+    onOpenLayer("right");
+  }
+
   return (
     <div className="lg:hidden">
       {activeLayer !== "right" ? (
-        <button
-          type="button"
-          onClick={() => onOpenLayer("right")}
-          aria-label="Open AI Navigator"
-          className="fixed right-3 z-40 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/50 bg-gradient-to-br from-[#8b5cf6] to-[#3b6ef8] text-white shadow-[0_14px_34px_rgba(59,110,248,0.28)] transition-transform active:scale-95"
+        <div
+          className="fixed right-3 z-40 flex flex-col gap-2"
           style={mobileAiHandleStyle}
+          aria-label="AI Navigator modes"
         >
-          <MessageSquare size={20} />
-          <ChevronLeft size={13} className="absolute left-1.5 text-white/75" />
-        </button>
+          {MOBILE_AI_MODES.map((item) => {
+            const Icon = item.icon;
+            const active = navigatorMode === item.mode;
+            return (
+              <button
+                key={item.mode}
+                type="button"
+                onClick={() => openAiMode(item.mode)}
+                aria-label={item.label}
+                aria-pressed={active}
+                className={active
+                  ? "relative flex h-12 w-12 items-center justify-center rounded-2xl border border-[#3b6ef8]/20 bg-[#3b6ef8] text-white shadow-[0_10px_26px_rgba(59,110,248,0.24)] transition-transform active:scale-95"
+                  : "relative flex h-12 w-12 items-center justify-center rounded-2xl border border-[rgba(59,110,248,0.14)] bg-white/95 text-[#3b6ef8] shadow-[0_8px_24px_rgba(15,23,42,0.12)] backdrop-blur transition-transform active:scale-95"}
+              >
+                <Icon size={18} />
+                {item.mode === "chat" ? (
+                  <ChevronLeft
+                    size={10}
+                    className={active ? "absolute left-1 text-white/70" : "absolute left-1 text-[#3b6ef8]/50"}
+                  />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
       ) : null}
 
       {activeLayer ? (
@@ -183,7 +219,7 @@ function MobileLayeredShell({
           >
             <X size={16} />
           </button>
-          <GlobalAiNavigator className="flex h-full w-full flex-col overflow-hidden bg-white" />
+          <GlobalAiNavigator mobileDrawer className="flex h-full w-full flex-col overflow-hidden bg-white" />
         </section>
       ) : null}
     </div>

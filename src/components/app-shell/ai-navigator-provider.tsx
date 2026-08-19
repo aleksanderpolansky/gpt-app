@@ -11,6 +11,9 @@ import {
   type ReactNode,
 } from "react";
 
+import { useRouter } from "next/navigation";
+
+import { getLocaleMessage, normalizeLocale, type LocaleCode, type LocaleMessageMap } from "@/i18n";
 import { useUserSessionClient } from "../auth/user-session-client";
 
 export type AiNavigatorMessageRole =
@@ -21,11 +24,34 @@ export type AiNavigatorMessageRole =
   | "activity"
   | "error";
 
+export type AiNavigatorMode = "past" | "future" | "chat";
+
+export type AiNavigatorImageAttachment = {
+  kind: "image";
+  name: string;
+  mimeType: "image/jpeg" | "image/png" | "image/webp";
+  dataUrl?: string;
+};
+
+export type AiNavigatorMessageAction = {
+  href: string;
+  label: string;
+};
+
 export type AiNavigatorMessage = {
   id: number;
   role: AiNavigatorMessageRole;
   text: string;
   createdAt: string;
+  attachment?: AiNavigatorImageAttachment;
+  action?: AiNavigatorMessageAction;
+  retryText?: string;
+  retryRequestId?: string;
+};
+
+export type AiNavigatorSendOptions = {
+  image?: AiNavigatorImageAttachment | null;
+  clientRequestId?: string;
 };
 
 type ApiTestResponse = {
@@ -33,14 +59,26 @@ type ApiTestResponse = {
   error?: string;
 };
 
+type ServerChatHistoryResponse = {
+  success?: boolean;
+  messages?: Array<{
+    id?: string | number;
+    role?: string;
+    content?: string;
+    created_at?: string;
+  }>;
+};
+
 type AiNavigatorContextValue = {
   messages: AiNavigatorMessage[];
   input: string;
   isSending: boolean;
+  navigatorMode: AiNavigatorMode;
   selectedTier: "nano" | "standard" | "pro";
+  setNavigatorMode: (value: AiNavigatorMode) => void;
   setSelectedTier: (value: "nano" | "standard" | "pro") => void;
   setInput: (value: string) => void;
-  sendMessage: (message?: string) => Promise<void>;
+  sendMessage: (message?: string, options?: AiNavigatorSendOptions) => Promise<void>;
   addActivityPreview: (text: string) => void;
   clearHistory: () => void;
 };
@@ -56,11 +94,98 @@ const DEFAULT_MESSAGES: AiNavigatorMessage[] = [
   },
 ];
 
+export const ARCTOR_AI_RIGHT_RAIL_MULTIMODAL_ACTIVITY_V1 =
+  "ARCTOR_AI_RIGHT_RAIL_MULTIMODAL_ACTIVITY_V1" as const;
+
 export const UI_MINI_FIX_AI_NAVIGATOR_COMPACT_INITIAL_STATE =
   "UI_MINI_FIX_AI_NAVIGATOR_COMPACT_INITIAL_STATE" as const;
 
 function safeStorageKey(email: string | null) {
   return `gpt-app:ai-navigator:v2-compact:${email || "guest"}`;
+}
+
+function serializeMessagesForLocalStorage(messages: AiNavigatorMessage[]) {
+  return messages.slice(-80).map((message) => ({
+    ...message,
+    attachment: message.attachment
+      ? {
+          kind: message.attachment.kind,
+          name: message.attachment.name,
+          mimeType: message.attachment.mimeType,
+        }
+      : undefined,
+  }));
+}
+
+function getNavigatorLocale(): LocaleCode {
+  if (typeof window === "undefined") return "en";
+  const search = new URLSearchParams(window.location.search);
+  return normalizeLocale(search.get("locale") ?? search.get("lang") ?? "en", "en");
+}
+
+function buildLocaleAwareNavigatorHref(pathname: string) {
+  const locale = getNavigatorLocale();
+  if (locale === "en") return pathname;
+  const separator = pathname.includes("?") ? "&" : "?";
+  return `${pathname}${separator}locale=${encodeURIComponent(locale)}`;
+}
+
+function createNavigatorRequestId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `ai-rail-${crypto.randomUUID()}`;
+  }
+
+  return `ai-rail-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+const AI_RAIL_PROVIDER_COPY = {
+  pastSaved: {
+    ru: "Активность добавлена в журнал событий. Факты ещё не записаны: откройте проверку, чтобы подтвердить объекты наблюдения и факты.",
+    pl: "Aktywność została dodana do dziennika zdarzeń. Fakty nie zostały jeszcze zapisane: otwórz weryfikację, aby sprawdzić obiekty obserwacji i fakty.",
+    en: "The activity was added to the event log. Facts have not been written yet; open review to verify observation objects and facts.",
+    es: "La actividad se añadió al registro de eventos. Los hechos aún no se han guardado; abre la revisión para comprobar los objetos de observación y los hechos.",
+    uk: "Активність додано до журналу подій. Факти ще не записані: відкрийте перевірку, щоб підтвердити об’єкти спостереження та факти.",
+    de: "Die Aktivität wurde im Aktivitätsprotokoll gespeichert. Fakten wurden noch nicht geschrieben; öffnen Sie die Prüfung für Beobachtungsobjekte und Fakten.",
+    cs: "Aktivita byla přidána do deníku událostí. Fakta zatím nebyla zapsána; otevřete kontrolu objektů pozorování a faktů.",
+  },
+  pastAction: { ru: "Проверить анализ", pl: "Sprawdź analizę", en: "Review analysis", es: "Revisar análisis", uk: "Перевірити аналіз", de: "Analyse prüfen", cs: "Zkontrolovat analýzu" },
+  futureSaved: {
+    ru: "Плановая активность добавлена. Откройте календарь, чтобы проверить время и детали события.",
+    pl: "Planowana aktywność została dodana. Otwórz kalendarz, aby sprawdzić czas i szczegóły zdarzenia.",
+    en: "The planned activity was added. Open the calendar to review its time and details.",
+    es: "La actividad planificada se añadió. Abre el calendario para revisar la hora y los detalles.",
+    uk: "Заплановану активність додано. Відкрийте календар, щоб перевірити час і деталі події.",
+    de: "Die geplante Aktivität wurde hinzugefügt. Öffnen Sie den Kalender, um Zeit und Details zu prüfen.",
+    cs: "Plánovaná aktivita byla přidána. Otevřete kalendář a zkontrolujte čas a podrobnosti.",
+  },
+  futureAction: { ru: "Открыть календарь", pl: "Otwórz kalendarz", en: "Open calendar", es: "Abrir calendario", uk: "Відкрити календар", de: "Kalender öffnen", cs: "Otevřít kalendář" },
+  genericError: {
+    ru: "Не удалось выполнить запрос. Попробуйте ещё раз.",
+    pl: "Nie udało się wykonać żądania. Spróbuj ponownie.",
+    en: "The request could not be completed. Please try again.",
+    es: "No se pudo completar la solicitud. Inténtalo de nuevo.",
+    uk: "Не вдалося виконати запит. Спробуйте ще раз.",
+    de: "Die Anfrage konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
+    cs: "Požadavek se nepodařilo dokončit. Zkuste to znovu.",
+  },
+  insufficientBalance: { ru: "Недостаточно AI-баланса для выбранной модели.", pl: "Brak wystarczającego salda AI dla wybranego modelu.", en: "There is not enough AI balance for the selected model.", es: "No hay saldo AI suficiente para el modelo seleccionado.", uk: "Недостатньо AI-балансу для вибраної моделі.", de: "Für das gewählte Modell ist nicht genügend AI-Guthaben vorhanden.", cs: "Pro vybraný model není dostatečný zůstatek AI." },
+  pricingUnavailable: { ru: "Тариф AI временно недоступен. Попробуйте ещё раз через несколько секунд.", pl: "Cennik AI jest chwilowo niedostępny. Spróbuj ponownie za chwilę.", en: "AI pricing is temporarily unavailable. Please try again in a moment.", es: "La tarifa de AI no está disponible temporalmente. Inténtalo de nuevo en unos instantes.", uk: "Тариф AI тимчасово недоступний. Спробуйте ще раз за кілька секунд.", de: "Die AI-Preisinformation ist vorübergehend nicht verfügbar. Bitte versuchen Sie es gleich erneut.", cs: "Ceník AI je dočasně nedostupný. Zkuste to za chvíli znovu." },
+} satisfies Record<string, LocaleMessageMap>;
+
+function providerCopy(key: keyof typeof AI_RAIL_PROVIDER_COPY) {
+  return getLocaleMessage(AI_RAIL_PROVIDER_COPY[key], getNavigatorLocale(), undefined, { fallbackLocale: "en" });
+}
+
+function getActivitySavedCopy(mode: Exclude<AiNavigatorMode, "chat">) {
+  return mode === "past"
+    ? { text: providerCopy("pastSaved"), label: providerCopy("pastAction") }
+    : { text: providerCopy("futureSaved"), label: providerCopy("futureAction") };
+}
+
+function friendlyAiError(code: string | undefined) {
+  if (code === "insufficient_ai_balance") return providerCopy("insufficientBalance");
+  if (code === "invalid_price_snapshot" || code === "missing_active_price_snapshot") return providerCopy("pricingUnavailable");
+  return providerCopy("genericError");
 }
 
 function readMessagesFromLocalStorage(storageKey: string): AiNavigatorMessage[] {
@@ -2591,34 +2716,38 @@ function buildCalendarActivityReviewPackageReply(message: string): string {
 async function askLegacyAi(
   message: string,
   selectedTier: "nano" | "standard" | "pro",
+  options?: {
+    forceChat?: boolean;
+    image?: AiNavigatorImageAttachment | null;
+  },
 ): Promise<string> {
-  if (isCalendarPlannedActivityCandidateMessage(message)) {
+  if (!options?.forceChat && isCalendarPlannedActivityCandidateMessage(message)) {
     return buildCalendarActivityReviewPackageReply(message);
   }
 
-  if (isActivityFactsSaveGateWriteCommand(message)) {
+  if (!options?.forceChat && isActivityFactsSaveGateWriteCommand(message)) {
     return await executeActivityFactsSaveGateWriteFromPendingPreview();
   }
 
-  if (isControlledActivityRecordWriteCommand(message)) {
+  if (!options?.forceChat && isControlledActivityRecordWriteCommand(message)) {
     return await executeControlledActivityRecordWriteFromPendingPreview();
   }
 
   const classification = classifyUnifiedMessage(message);
 
-  if (classification.intent === "activity_preview") {
+  if (!options?.forceChat && classification.intent === "activity_preview") {
     return await buildNoWriteSemanticActivityPreviewReply(classification);
   }
 
-  if (classification.intent === "value_object_command") {
+  if (!options?.forceChat && classification.intent === "value_object_command") {
     return buildValueObjectCommandPreviewReply(classification);
   }
 
-  if (classification.intent === "correction") {
+  if (!options?.forceChat && classification.intent === "correction") {
     return buildCorrectionPreviewReply(classification);
   }
 
-  if (classification.intent === "confirmation") {
+  if (!options?.forceChat && classification.intent === "confirmation") {
     if (latestLocalPendingPreview?.kind === "activity") {
       return await executeControlledActivityRecordWriteFromPendingPreview();
     }
@@ -2626,15 +2755,15 @@ async function askLegacyAi(
     return buildConfirmationGuardReply(classification);
   }
 
-  if (classification.intent === "cancel") {
+  if (!options?.forceChat && classification.intent === "cancel") {
     return buildCancelGuardReply(classification);
   }
 
-  if (classification.intent === "review_request") {
+  if (!options?.forceChat && classification.intent === "review_request") {
     return buildReviewRequestGuardReply(classification);
   }
 
-  if (classification.intent === "clarification") {
+  if (!options?.forceChat && classification.intent === "clarification") {
     return buildClarificationReply(classification);
   }
 
@@ -2648,7 +2777,18 @@ async function askLegacyAi(
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ message, selectedTier, locale: interfaceLocale }),
+    body: JSON.stringify({
+      message,
+      selectedTier,
+      locale: interfaceLocale,
+      image: options?.image?.dataUrl
+        ? {
+            dataUrl: options.image.dataUrl,
+            name: options.image.name,
+            mimeType: options.image.mimeType,
+          }
+        : null,
+    }),
   });
 
   let data: ApiTestResponse = {};
@@ -2664,10 +2804,60 @@ async function askLegacyAi(
       throw new Error("\u041d\u0443\u0436\u043d\u043e \u0432\u043e\u0439\u0442\u0438 \u0432 \u0441\u0438\u0441\u0442\u0435\u043c\u0443, \u0447\u0442\u043e\u0431\u044b \u043f\u043e\u043b\u0443\u0447\u0438\u0442\u044c \u043e\u0442\u0432\u0435\u0442 AI.");
     }
 
-    throw new Error(data.error || "\u041e\u0448\u0438\u0431\u043a\u0430 \u043e\u0442\u0432\u0435\u0442\u0430 \u0441\u0435\u0440\u0432\u0435\u0440\u0430.");
+    throw new Error(friendlyAiError(data.error));
   }
 
   return data.reply || data.error || "\u041e\u0442\u0432\u0435\u0442 \u043f\u0443\u0441\u0442\u043e\u0439.";
+}
+
+type QuickCaptureResponse = {
+  ok?: boolean;
+  error?: string;
+  calendarEventId?: string | null;
+  result?: {
+    reviewHref?: string | null;
+    activityEventIds?: string[];
+  } | null;
+};
+
+async function submitAiRailActivity(
+  text: string,
+  mode: Exclude<AiNavigatorMode, "chat">,
+  clientRequestId: string,
+) {
+  const locale = getNavigatorLocale();
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  const response = await fetch("/api/activity/quick-capture", {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      inputText: text,
+      locale,
+      timeZone,
+      temporalDirection: mode === "past" ? "past" : "future",
+      clientRequestId,
+    }),
+  });
+
+  const payload = (await response.json().catch(() => null)) as QuickCaptureResponse | null;
+
+  if (!response.ok || payload?.ok !== true) {
+    throw new Error(payload?.error || `ACTIVITY_QUICK_CAPTURE_HTTP_${response.status}`);
+  }
+
+  const defaultHref = mode === "past" ? "/activity-review" : "/calendar";
+  const href = mode === "past"
+    ? payload.result?.reviewHref?.trim() || defaultHref
+    : defaultHref;
+
+  return {
+    payload,
+    href: buildLocaleAwareNavigatorHref(href),
+  };
 }
 
 export function AiNavigatorProvider({
@@ -2676,12 +2866,14 @@ export function AiNavigatorProvider({
   readonly children: ReactNode;
 }) {
   const session = useUserSessionClient();
+  const router = useRouter();
   const storageKey = safeStorageKey(session.email);
   const storageReadyRef = useRef(false);
 
   const [messages, setMessages] = useState<AiNavigatorMessage[]>(DEFAULT_MESSAGES);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [navigatorMode, setNavigatorMode] = useState<AiNavigatorMode>("chat");
   const [selectedTier, setSelectedTier] = useState<"nano" | "standard" | "pro">("standard");
 
   useEffect(() => {
@@ -2690,13 +2882,51 @@ export function AiNavigatorProvider({
     }
 
     storageReadyRef.current = false;
+    let cancelled = false;
 
     const timeoutId = window.setTimeout(() => {
-      setMessages(readMessagesFromLocalStorage(storageKey));
+      const localMessages = readMessagesFromLocalStorage(storageKey);
+      setMessages(localMessages);
       storageReadyRef.current = true;
+
+      if (localMessages.length > DEFAULT_MESSAGES.length) {
+        return;
+      }
+
+      void fetch("/api/messages", {
+        credentials: "include",
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      })
+        .then(async (response) => {
+          if (!response.ok) return null;
+          return (await response.json().catch(() => null)) as ServerChatHistoryResponse | null;
+        })
+        .then((payload) => {
+          if (cancelled || payload?.success !== true || !Array.isArray(payload.messages) || payload.messages.length === 0) {
+            return;
+          }
+
+          const restored: AiNavigatorMessage[] = payload.messages
+            .filter((item) => typeof item.content === "string" && item.content.trim())
+            .map((item, index) => ({
+              id: Date.parse(item.created_at || "") || Date.now() + index,
+              role: item.role === "user" ? "user" : "ai",
+              text: item.content?.trim() ?? "",
+              createdAt: item.created_at || new Date().toISOString(),
+            }));
+
+          if (restored.length > 0) {
+            setMessages([DEFAULT_MESSAGES[0], ...restored]);
+          }
+        })
+        .catch(() => {
+          // Server history is optional recovery. Local chat remains usable.
+        });
     }, 0);
 
     return () => {
+      cancelled = true;
       window.clearTimeout(timeoutId);
     };
   }, [session.isLoading, storageKey]);
@@ -2709,7 +2939,7 @@ export function AiNavigatorProvider({
     try {
       window.localStorage.setItem(
         storageKey,
-        JSON.stringify(messages.slice(-80)),
+        JSON.stringify(serializeMessagesForLocalStorage(messages)),
       );
     } catch {
       // localStorage may be unavailable. The in-memory session history remains active.
@@ -2744,29 +2974,37 @@ export function AiNavigatorProvider({
   }, []);
 
   const sendMessage = useCallback(
-    async (message?: string) => {
+    async (message?: string, options?: AiNavigatorSendOptions) => {
       const trimmedInput = (message ?? input).trim();
+      const image = options?.image ?? null;
+      const activityRequestId = options?.clientRequestId ?? createNavigatorRequestId();
 
-      if (!trimmedInput || isSending) {
+      if ((!trimmedInput && !image) || isSending) {
         return;
+      }
+
+      if (navigatorMode !== "chat" && image) {
+        throw new Error("IMAGE_ATTACHMENT_ACTIVITY_MODE_NOT_SUPPORTED");
       }
 
       const now = new Date().toISOString();
       const userMessageId = Date.now();
       const assistantMessageId = userMessageId + 1;
+      const userText = trimmedInput || (image ? image.name : "");
 
       setMessages((previousMessages) => [
         ...previousMessages,
         {
           id: userMessageId,
           role: "user",
-          text: trimmedInput,
+          text: userText,
           createdAt: now,
+          attachment: image ?? undefined,
         },
         {
           id: assistantMessageId,
           role: "ai",
-          text: "\u0410\u043d\u0430\u043b\u0438\u0437\u0438\u0440\u0443\u044e \u0437\u0430\u043f\u0440\u043e\u0441...",
+          text: "…",
           createdAt: now,
         },
       ]);
@@ -2775,7 +3013,32 @@ export function AiNavigatorProvider({
       setIsSending(true);
 
       try {
-        const reply = await askLegacyAi(trimmedInput, selectedTier);
+        if (navigatorMode === "past" || navigatorMode === "future") {
+          const result = await submitAiRailActivity(trimmedInput, navigatorMode, activityRequestId);
+          const savedCopy = getActivitySavedCopy(navigatorMode);
+
+          setMessages((previousMessages) =>
+            previousMessages.map((messageItem) =>
+              messageItem.id === assistantMessageId
+                ? {
+                    ...messageItem,
+                    role: "ai",
+                    text: savedCopy.text,
+                    action: { href: result.href, label: savedCopy.label },
+                    createdAt: new Date().toISOString(),
+                  }
+                : messageItem,
+            ),
+          );
+
+          router.push(result.href);
+          return;
+        }
+
+        const reply = await askLegacyAi(trimmedInput || "Describe the attached image.", selectedTier, {
+          forceChat: true,
+          image,
+        });
 
         setMessages((previousMessages) =>
           previousMessages.map((messageItem) =>
@@ -2790,8 +3053,12 @@ export function AiNavigatorProvider({
           ),
         );
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043f\u043e\u043b\u0443\u0447\u0438\u0442\u044c \u043e\u0442\u0432\u0435\u0442 \u0418\u0418.";
+        const rawError = error instanceof Error ? error.message : "AI_NAVIGATOR_REQUEST_FAILED";
+        const errorMessage = rawError.startsWith("ACTIVITY_")
+          ? friendlyAiError(undefined)
+          : rawError === "IMAGE_ATTACHMENT_ACTIVITY_MODE_NOT_SUPPORTED"
+            ? friendlyAiError(undefined)
+            : rawError;
 
         setMessages((previousMessages) =>
           previousMessages.map((messageItem) =>
@@ -2800,6 +3067,8 @@ export function AiNavigatorProvider({
                   ...messageItem,
                   role: "error",
                   text: errorMessage,
+                  retryText: trimmedInput || undefined,
+                  retryRequestId: navigatorMode === "chat" ? undefined : activityRequestId,
                   createdAt: new Date().toISOString(),
                 }
               : messageItem,
@@ -2809,7 +3078,7 @@ export function AiNavigatorProvider({
         setIsSending(false);
       }
     },
-    [input, isSending, selectedTier],
+    [input, isSending, navigatorMode, router, selectedTier],
   );
 
   const clearHistory = useCallback(() => {
@@ -2827,7 +3096,9 @@ export function AiNavigatorProvider({
       messages,
       input,
       isSending,
+      navigatorMode,
       selectedTier,
+      setNavigatorMode,
       setSelectedTier,
       setInput,
       sendMessage,
@@ -2839,6 +3110,7 @@ export function AiNavigatorProvider({
       clearHistory,
       input,
       isSending,
+      navigatorMode,
       selectedTier,
       messages,
       sendMessage,

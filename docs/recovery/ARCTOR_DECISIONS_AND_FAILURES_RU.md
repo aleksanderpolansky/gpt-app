@@ -621,3 +621,35 @@ Missing/no-match/no-rule = 1. Несколько matched rules multiply.
 ### 2026-08-18 — решение: featured commercial slot предприятия
 
 Третий верхний блок карточки не является отдельной админ-панелью. В публичном режиме он показывает спецпредложение/новость и Gift cards. В owner edit режиме тот же блок становится редактируемым и принимает изображение, ссылку и короткое описание. Изображение нельзя хранить data URL внутри social_links_json, потому что этот JSON читается directory list API; иначе медиа раздует список и ухудшит latency. Поэтому binary media вынесено в публичный Supabase Storage bucket, а в JSON остается только URL.
+
+## 2026-08-19 — AI RIGHT RAIL: решения и причина `invalid_price_snapshot`
+
+### Зафиксированные решения
+
+1. `AI-Navigator` — глобальный interaction rail, а не отдельный activity engine. Три режима используют общий composer, но разные контролируемые backend paths.
+2. `past` / `future` обязаны переиспользовать `/api/activity/quick-capture`; отдельная запись activity из UI rail запрещена.
+3. Retry activity обязан сохранять исходный `clientRequestId`.
+4. После успешного past/future write AI rail показывает подтверждение + CTA, а main route переключается на review/calendar без уничтожения истории rail.
+5. UX autoscroll: новый user message виден сразу; если пользователь находится у нижней границы, ответы продолжают scroll; если пользователь вручную ушёл вверх, rail не перехватывает позицию и показывает `Новые сообщения`.
+6. Визуальный язык — ARCTor (`#3b6ef8`, `#eef2ff`, `#f5f6fb`, белые поверхности, умеренные borders/shadows/radius); копирование Messenger/WhatsApp styling запрещено.
+7. Voice V1 = browser dictation. Фото V1 = chat-only; расширение image-to-activity требует отдельного attachment/provenance contract.
+
+### Причина сбоя chat billing
+
+- `/api/test` списывает стоимость из EUR wallet и ожидает либо EUR price, либо USD price + `usd_to_eur_rate`.
+- `20260811_gsr1e_openai_pilot_price_refresh_budget_hardening_v1.sql` намеренно создал актуальные OpenAI USD snapshots с `usd_to_eur_rate = null` (`fx_intentionally_unset=true`), потому что GSR pilot контролировал USD budget.
+- Эти snapshots одновременно стали активными для обычного EUR-wallet chat route.
+- Следствие: `calculateEstimatedCostEur()` возвращал null, UI видел `invalid_price_snapshot`, OpenAI call блокировался preflight-ом.
+- Исправление не подменяет актуальные token prices старыми: используется активный snapshot цены, а отсутствующий FX берётся из последнего сохранённого положительного OpenAI rate только как compatibility fallback. Если актуальный snapshot снова содержит FX, fallback автоматически не используется.
+- Отдельный будущий housekeeping: определить canonical policy обновления FX snapshots, чтобы compatibility fallback не становился бессрочной бизнес-политикой.
+
+### Release tooling lesson: Windows PowerShell 5.1 и native stderr
+
+Первые два release runner этого блока остановились до любых изменений на `RUN=FETCH_ORIGIN_MAIN`. Строка Git `From https://github.com/...` является обычным stderr/progress native-команды, но при `$ErrorActionPreference='Stop'` и объединении `2>&1` Windows PowerShell 5.1 превратил её в terminating `NativeCommandError` раньше проверки `$LASTEXITCODE`. Поэтому прежняя привязка пользовательского FAIL к CRLF была неверной: EOL-hardening остаётся профилактикой, но не причиной этих двух production FAIL. Исправление V3: stdout/stderr native-команд сохраняются в REPORT, а успех определяется по exit code; REPORT создаётся прямо в корне Downloads. `git diff --check`, build, exact allowlist, rollback/resume и commit/push gates остаются обязательными.
+
+### 19.08.2026 — AI RIGHT RAIL V3: ESLint gate сработал правильно
+- V3 успешно прошёл fetch, clean/exact baseline, EOL-safe dry-run/apply и validator 18/18.
+- Production ESLint остановил релиз на `global-ai-navigator.tsx`: `react-hooks/set-state-in-effect` для `setSelectedImage(null)` внутри эффекта; одновременно показаны 7 warnings (6 unused legacy symbols + dependency `latestMessage`).
+- Commit/push не выполнялись; rollback = PASS; HEAD восстановлен на `f0595a0d...`.
+- Решение V4: не ослаблять ESLint и не добавлять disable-comment. Очистка photo attachment выполняется в пользовательском handler смены режима; message-follow effect выполняет state update из deferred callback и зависит от полного `latestMessage`; unused legacy declarations удалены.
+- Инженерный вывод: changed-file ESLint остаётся обязательным pre-build gate и должен выполняться до `npm run build`.

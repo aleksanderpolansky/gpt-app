@@ -6,6 +6,9 @@ import { resolveRuntimeMethodologyContext } from "@/lib/ai/methodology/methodolo
 
 export const dynamic = "force-dynamic";
 
+export const ARCTOR_AI_RIGHT_RAIL_CHAT_PRICE_IMAGE_COMPAT_V1 =
+  "ARCTOR_AI_RIGHT_RAIL_CHAT_PRICE_IMAGE_COMPAT_V1" as const;
+
 type AiTierCode = "nano" | "standard" | "pro";
 
 type ChatAiResponse = {
@@ -83,6 +86,9 @@ const ALLOWED_TIERS = new Set<AiTierCode>(["nano", "standard", "pro"]);
 const DEFAULT_TIER: AiTierCode = "standard";
 const CHAT_MAX_OUTPUT_TOKENS = 200;
 const PREFLIGHT_COST_SAFETY_MULTIPLIER = 1.25;
+const CHAT_IMAGE_MAX_BYTES = 3 * 1024 * 1024;
+const CHAT_IMAGE_PREFLIGHT_TOKEN_ALLOWANCE = 4096;
+const CHAT_IMAGE_DATA_URL_RE = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/;
 
 function parseSelectedTier(value: unknown): AiTierCode {
   if (typeof value !== "string") {
@@ -115,8 +121,62 @@ function toFixedNumber(value: number, digits: number) {
   return Number(value.toFixed(digits));
 }
 
-function estimateInputTokens(systemPrompt: string, userMessage: string) {
-  return Math.max(1, Math.ceil((systemPrompt.length + userMessage.length) / 4));
+function estimateInputTokens(systemPrompt: string, userMessage: string, hasImage = false) {
+  const textEstimate = Math.max(1, Math.ceil((systemPrompt.length + userMessage.length) / 4));
+  return textEstimate + (hasImage ? CHAT_IMAGE_PREFLIGHT_TOKEN_ALLOWANCE : 0);
+}
+
+function parseChatImage(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const dataUrl = typeof record.dataUrl === "string" ? record.dataUrl.trim() : "";
+  if (!dataUrl) return null;
+
+  const match = CHAT_IMAGE_DATA_URL_RE.exec(dataUrl);
+  if (!match) {
+    throw new Error("unsupported_chat_image");
+  }
+
+  const rawBytes = Math.floor((match[2].length * 3) / 4);
+  if (rawBytes <= 0 || rawBytes > CHAT_IMAGE_MAX_BYTES) {
+    throw new Error("chat_image_too_large");
+  }
+
+  return {
+    dataUrl,
+    mimeType: match[1],
+    name: typeof record.name === "string" ? record.name.slice(0, 180) : "image",
+  };
+}
+
+type FxRateResolution = {
+  rate: number | null;
+  source: "active_snapshot" | "historical_snapshot_fallback" | "not_available";
+};
+
+async function resolveUsdToEurRate(snapshot: AiModelPriceSnapshotRow): Promise<FxRateResolution> {
+  const directRate = asNumber(snapshot.usd_to_eur_rate);
+  if (directRate !== null && directRate > 0) {
+    return { rate: directRate, source: "active_snapshot" };
+  }
+
+  const { data, error } = await supabase
+    .from("ai_model_price_snapshots")
+    .select("usd_to_eur_rate, valid_from")
+    .eq("provider", "openai")
+    .not("usd_to_eur_rate", "is", null)
+    .order("valid_from", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ usd_to_eur_rate: string | number | null; valid_from: string | null }>();
+
+  if (error || !data) {
+    return { rate: null, source: "not_available" };
+  }
+
+  const fallbackRate = asNumber(data.usd_to_eur_rate);
+  return fallbackRate !== null && fallbackRate > 0
+    ? { rate: fallbackRate, source: "historical_snapshot_fallback" }
+    : { rate: null, source: "not_available" };
 }
 
 function getCostPer1mTokensEur(
@@ -251,6 +311,7 @@ async function buildBillingPreflight(params: {
   selectedTier: AiTierCode;
   systemPrompt: string;
   userMessage: string;
+  hasImage?: boolean;
 }): Promise<
   | { ok: true; preflight: BillingPreflight }
   | { ok: false; response: Response }
@@ -299,6 +360,12 @@ async function buildBillingPreflight(params: {
     };
   }
 
+  const fxResolution = await resolveUsdToEurRate(priceSnapshot);
+  const effectivePriceSnapshot: AiModelPriceSnapshotRow =
+    fxResolution.rate !== null
+      ? { ...priceSnapshot, usd_to_eur_rate: fxResolution.rate }
+      : priceSnapshot;
+
   const resolvedModelName = tier.default_model_name || priceSnapshot.model_name;
 
   const { data: wallet, error: walletError } = await supabase
@@ -338,10 +405,14 @@ async function buildBillingPreflight(params: {
   }
 
   const availableBalanceEur = toFixedNumber(Math.max(0, balanceEur - reservedEur), 8);
-  const estimatedInputTokens = estimateInputTokens(params.systemPrompt, params.userMessage);
+  const estimatedInputTokens = estimateInputTokens(
+    params.systemPrompt,
+    params.userMessage,
+    params.hasImage === true,
+  );
   const estimatedOutputTokens = CHAT_MAX_OUTPUT_TOKENS;
   const estimatedCostEur = calculateEstimatedCostEur({
-    priceSnapshot,
+    priceSnapshot: effectivePriceSnapshot,
     estimatedInputTokens,
     estimatedOutputTokens,
   });
@@ -380,7 +451,7 @@ async function buildBillingPreflight(params: {
       tierCode: params.selectedTier,
       modelName: resolvedModelName,
       wallet,
-      priceSnapshot,
+      priceSnapshot: effectivePriceSnapshot,
       estimatedInputTokens,
       estimatedOutputTokens,
       estimatedCostEur,
@@ -724,7 +795,24 @@ export async function POST(request: Request) {
       typeof body.message === "string" ? body.message.trim() : "";
     selectedTier = parseSelectedTier(body.selectedTier);
 
-    if (!userMessage) {
+    let chatImage: ReturnType<typeof parseChatImage> = null;
+    try {
+      chatImage = parseChatImage(body.image);
+    } catch (imageError) {
+      const imageCode = imageError instanceof Error ? imageError.message : "unsupported_chat_image";
+      return Response.json(
+        {
+          success: false,
+          error: imageCode,
+          reply: imageCode === "chat_image_too_large"
+            ? "The image is too large. Maximum size is 3 MB."
+            : "Unsupported image. Use JPG, PNG, or WebP.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (!userMessage && !chatImage) {
       return Response.json(
         { success: false, error: "Message is required" },
         { status: 400 },
@@ -764,6 +852,9 @@ export async function POST(request: Request) {
     const modelUserPayload = {
       message: userMessage,
       personalProcessingGuidance: methodologyContext.actorInstructionText,
+      attachment: chatImage
+        ? { kind: "image", name: chatImage.name, mimeType: chatImage.mimeType }
+        : null,
       instructionPriority: [
         "database_and_security_invariants",
         "explicit_current_message_data",
@@ -775,7 +866,9 @@ export async function POST(request: Request) {
       appUserId: appUser.id,
       selectedTier,
       systemPrompt,
-      userMessage: JSON.stringify(modelUserPayload),});
+      userMessage: JSON.stringify(modelUserPayload),
+      hasImage: Boolean(chatImage),
+    });
 
     if (!preflightResult.ok) {
       return preflightResult.response;
@@ -784,7 +877,7 @@ export async function POST(request: Request) {
     await supabase.from("chat_messages").insert({
       user_id: appUser.id,
       role: "user",
-      content: userMessage,
+      content: userMessage || `[image:${chatImage?.name ?? "attachment"}]`,
     });
 
     const aiCall = await runAiJsonWithUsageMetadata<ChatAiResponse>({
@@ -793,6 +886,8 @@ export async function POST(request: Request) {
       model: preflightResult.preflight.modelName,
       maxOutputTokens: CHAT_MAX_OUTPUT_TOKENS,
       structuredOutput: methodologyContext.structuredOutput,
+      userImageDataUrl: chatImage?.dataUrl ?? null,
+      store: false,
     });
 
     const aiResult = aiCall.parsed;

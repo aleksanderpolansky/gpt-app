@@ -399,3 +399,21 @@ Safety:
 ## Public organization featured media
 
 Для BUSINESS FEATURED BLOCK V1 отдельная SQL migration не нужна. Endpoint POST /api/organizations/[id]/featured-media при первой загрузке проверяет Supabase Storage bucket arctor-public-media и при отсутствии создает его как public с JPEG/PNG/WebP и лимитом 5 MB. Восстановление приложения должно сохранять SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY: тот же server client используется для создания bucket и загрузки.
+
+## AI RIGHT RAIL MULTIMODAL ACTIVITY V1 — восстановление/проверка
+
+При восстановлении после commit этого блока проверить:
+
+1. `src/components/app-shell/ai-navigator-provider.tsx` содержит marker `ARCTOR_AI_RIGHT_RAIL_MULTIMODAL_ACTIVITY_V1` и три режима `past|future|chat`.
+2. `past/future` вызывают `/api/activity/quick-capture` с `temporalDirection` и `clientRequestId`; никакого второго activity write endpoint нет.
+3. `src/components/app-shell/global-ai-navigator.tsx` содержит messenger UX: bottom sentinel, scroll tracking, `new messages`, retry, voice/photo controls и desktop segmented mode switcher.
+4. `src/components/app-shell/global-app-shell.tsx` содержит три mobile corporate buttons и drawer не перекрывает заголовок rail.
+5. `src/app/api/test/route.ts` принимает только JPG/PNG/WebP <= 3 MiB, сохраняет `store:false`, использует image token preflight allowance и FX compatibility fallback.
+6. `lib/ai/openaiClient.ts` передаёт image в Responses API как `input_image` + data URL, `detail=low`.
+7. `src/app/api/ai-billing/balance/route.ts` использует тот же FX compatibility rule для отображения model pricing availability.
+8. Выполнить `node scripts/validate-ai-right-rail-multimodal-activity-v1.mjs`, `npm run build`, `git diff --check`.
+9. Live acceptance: free chat text, free chat photo, voice dictation, past activity, future activity, retry network simulation, manual scroll-up/new-message behavior, mobile 3-button geometry, desktop segmented switch, ru/pl/en/es/uk/de/cs labels.
+10. DB postcheck после past write: capture пишет activity/review marker, facts at capture = 0; после future write событие присутствует в calendar path и не дублируется при retry.
+
+#### AI RIGHT RAIL V4 ESLint gate
+При восстановлении/повторном релизе сначала выполнить changed-file ESLint. Для `global-ai-navigator.tsx` не должно быть `react-hooks/set-state-in-effect`, `react-hooks/exhaustive-deps` и unused-symbol warnings, которые были зафиксированы V3. V3 не изменил production: rollback PASS, исходный baseline — `f0595a0d...`.

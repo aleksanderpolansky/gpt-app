@@ -4,6 +4,9 @@ import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
+
+export const ARCTOR_AI_RIGHT_RAIL_PRICE_DISPLAY_COMPAT_V1 =
+  "ARCTOR_AI_RIGHT_RAIL_PRICE_DISPLAY_COMPAT_V1" as const;
 export const runtime = "nodejs";
 
 const ROUTE_MARKER = "ai-eur-billing-balance-read-route-step17e-v1" as const;
@@ -277,9 +280,31 @@ async function getActivePriceSnapshots() {
   }
 
   const snapshots = (data as unknown as AiModelPriceSnapshotRow[] | null) ?? [];
+  let fallbackUsdToEurRate: number | null = null;
+
+  if (snapshots.some((snapshot) =>
+    (snapshot.pricing_currency ?? "USD").toUpperCase() === "USD" &&
+    getPositiveNumber(snapshot.usd_to_eur_rate) === null
+  )) {
+    const { data: fxRow } = await supabase
+      .from("ai_model_price_snapshots")
+      .select("usd_to_eur_rate, valid_from")
+      .eq("provider", "openai")
+      .not("usd_to_eur_rate", "is", null)
+      .order("valid_from", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ usd_to_eur_rate: string | number | null; valid_from: string | null }>();
+
+    fallbackUsdToEurRate = getPositiveNumber(fxRow?.usd_to_eur_rate);
+  }
+
   const latestByTier = new Map<string, AiModelPriceSnapshotRow>();
 
-  for (const snapshot of snapshots) {
+  for (const originalSnapshot of snapshots) {
+    const snapshot =
+      getPositiveNumber(originalSnapshot.usd_to_eur_rate) === null && fallbackUsdToEurRate !== null
+        ? { ...originalSnapshot, usd_to_eur_rate: fallbackUsdToEurRate }
+        : originalSnapshot;
     if (!latestByTier.has(snapshot.tier_code)) {
       latestByTier.set(snapshot.tier_code, snapshot);
     }
