@@ -57,7 +57,6 @@ type AiNavigatorMessageKey =
   | "aiNavigator.modeChat"
   | "aiNavigator.placeholderPast"
   | "aiNavigator.placeholderFuture"
-  | "aiNavigator.photoOnlyChat"
   | "aiNavigator.photoTooLarge"
   | "aiNavigator.photoUnsupported"
   | "aiNavigator.voiceUnsupported"
@@ -124,7 +123,6 @@ const aiNavigatorMessages: Record<AiNavigatorMessageKey, Record<LocaleCode, stri
   "aiNavigator.modeChat": { ru: "Общение", pl: "Rozmowa", en: "Chat", es: "Chat", uk: "Спілкування", de: "Chat", cs: "Chat" },
   "aiNavigator.placeholderPast": { ru: "Что произошло?", pl: "Co się wydarzyło?", en: "What happened?", es: "¿Qué ocurrió?", uk: "Що відбулося?", de: "Was ist passiert?", cs: "Co se stalo?" },
   "aiNavigator.placeholderFuture": { ru: "Что нужно запланировать?", pl: "Co zaplanować?", en: "What should be planned?", es: "¿Qué quieres planificar?", uk: "Що запланувати?", de: "Was soll geplant werden?", cs: "Co naplánovat?" },
-  "aiNavigator.photoOnlyChat": { ru: "Фото пока доступно только в режиме свободного общения.", pl: "Zdjęcia są na razie dostępne tylko w trybie rozmowy.", en: "Photos are currently available only in chat mode.", es: "Las fotos están disponibles por ahora solo en el modo chat.", uk: "Фото наразі доступні лише в режимі спілкування.", de: "Fotos sind derzeit nur im Chat-Modus verfügbar.", cs: "Fotografie jsou zatím dostupné jen v režimu chatu." },
   "aiNavigator.photoTooLarge": { ru: "Фото должно быть не больше 3 МБ.", pl: "Zdjęcie może mieć maksymalnie 3 MB.", en: "The photo must be 3 MB or smaller.", es: "La foto debe tener 3 MB como máximo.", uk: "Фото має бути не більше 3 МБ.", de: "Das Foto darf höchstens 3 MB groß sein.", cs: "Fotografie může mít nejvýše 3 MB." },
   "aiNavigator.photoUnsupported": { ru: "Поддерживаются JPG, PNG и WebP.", pl: "Obsługiwane są JPG, PNG i WebP.", en: "JPG, PNG, and WebP are supported.", es: "Se admiten JPG, PNG y WebP.", uk: "Підтримуються JPG, PNG та WebP.", de: "JPG, PNG und WebP werden unterstützt.", cs: "Podporovány jsou JPG, PNG a WebP." },
   "aiNavigator.voiceUnsupported": { ru: "Голосовой ввод недоступен в этом браузере.", pl: "Wprowadzanie głosowe nie jest dostępne w tej przeglądarce.", en: "Voice input is not available in this browser.", es: "La entrada por voz no está disponible en este navegador.", uk: "Голосове введення недоступне в цьому браузері.", de: "Spracheingabe ist in diesem Browser nicht verfügbar.", cs: "Hlasový vstup není v tomto prohlížeči dostupný." },
@@ -483,7 +481,11 @@ function MessageBubble({
   readonly t: AiNavigatorTranslate;
   readonly navigationT: (key: NavigationMessageKey) => string;
   readonly locale: LocaleCode;
-  readonly onRetry?: (text: string, requestId?: string) => void;
+  readonly onRetry?: (
+    text: string,
+    requestId?: string,
+    image?: AiNavigatorImageAttachment,
+  ) => void;
 }) {
   const timeLabel = formatMessageTime(message.createdAt, locale);
   const activityReview = parseActivityReviewPackage(message.text);
@@ -530,10 +532,14 @@ function MessageBubble({
         <p className="text-[12px] leading-relaxed text-red-700">
           <FormattedMessageContent text={message.text} />
         </p>
-        {message.retryText && onRetry ? (
+        {message.retryText !== undefined && onRetry ? (
           <button
             type="button"
-            onClick={() => onRetry(message.retryText ?? "", message.retryRequestId)}
+            onClick={() => onRetry(
+              message.retryText ?? "",
+              message.retryRequestId,
+              message.retryImage,
+            )}
             className="mt-2 inline-flex min-h-8 items-center rounded-lg border border-red-200 bg-white px-2.5 text-[10.5px] font-semibold text-red-700 transition-colors hover:bg-red-100"
           >
             {t("aiNavigator.retry")}
@@ -744,19 +750,12 @@ export function GlobalAiNavigator({
   }
 
   function changeNavigatorMode(mode: AiNavigatorMode) {
-    if (mode !== "chat" && selectedImage) {
-      setSelectedImage(null);
-    }
     setComposerNotice(null);
     setNavigatorMode(mode);
   }
 
   function choosePhoto() {
     setComposerNotice(null);
-    if (navigatorMode !== "chat") {
-      setComposerNotice(t("aiNavigator.photoOnlyChat"));
-      return;
-    }
     fileInputRef.current?.click();
   }
 
@@ -863,7 +862,9 @@ export function GlobalAiNavigator({
               t={t}
               navigationT={navigationT}
               locale={locale}
-              onRetry={(text, requestId) => { void sendMessage(text, { clientRequestId: requestId }); }}
+              onRetry={(text, requestId, image) => {
+                void sendMessage(text, { clientRequestId: requestId, image });
+              }}
             />
           ))}
           <div ref={messageEndRef} className="h-px" aria-hidden="true" />
@@ -937,9 +938,7 @@ export function GlobalAiNavigator({
             type="button"
             onClick={choosePhoto}
             aria-label="Attach photo"
-            className={navigatorMode === "chat"
-              ? "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-[#6f7690] transition-colors hover:bg-[#eef2ff] hover:text-[#3b6ef8]"
-              : "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-[#c3c7d2]"}
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-[#6f7690] transition-colors hover:bg-[#eef2ff] hover:text-[#3b6ef8]"
           >
             <ImagePlus size={17} />
           </button>

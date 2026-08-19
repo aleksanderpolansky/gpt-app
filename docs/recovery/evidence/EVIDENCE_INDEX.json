@@ -664,10 +664,11 @@
       "group": "AI_RIGHT_RAIL",
       "file": "docs/recovery/evidence/AI_RIGHT_RAIL/ARCTOR_AI_RIGHT_RAIL_MULTIMODAL_ACTIVITY_V1_EVIDENCE.json",
       "sourceDownloadsName": null,
-      "sha256": "775ddbef4c52c5774d05871bd2a15c16444139f3ad0e0cf490949cbd54625d9c",
+      "sha256": "7e8fa73b1eeae055109d0c1efacd40eead57288f982983777b74a3b02628b4e0",
       "origin": "ai_right_rail_multimodal_activity_v1_release_evidence",
       "note": "V4 includes V3 production ESLint failure/rollback evidence and lint-safe fix strategy.",
-      "hashPolicy": "sha256_utf8_text_after_crlf_to_lf_normalization"
+      "hashPolicy": "sha256_utf8_text_after_crlf_to_lf_normalization",
+      "description": "AI Right Rail V1/V5 evidence: released V4 baseline, all-mode private activity photos, semantic-review image input, bounded stale-price recovery."
     }
   ]
 }

@@ -4,7 +4,7 @@
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
   "branch": "main",
-  "originMainAtCheckpoint": "f0595a0d286f0a04b88d2bdacf89fb3987852b89",
+  "originMainAtCheckpoint": "2edd9026bd0d4e7764993d92c28ae30384fce01f",
   "checkpointMeaning": "AI Navigator right rail V1: reliable messenger UX, explicit past/future/chat modes, canonical activity handoff, voice dictation, chat photo input, and EUR billing compatibility recovery.",
   "globalReality": {
     "p8Blocked": true,
@@ -65,7 +65,7 @@
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
   "previousRecoveryCommit": "d91549773dae71206e46f3182bfd433f9c30316d",
-  "documentedState": "AI_RIGHT_RAIL_MULTIMODAL_ACTIVITY_V1_CODED_AWAITING_PRODUCTION_BUILD_AND_LIVE_ACCEPTANCE",
+  "documentedState": "AI_RIGHT_RAIL_MULTIMODAL_ACTIVITY_V1_V5_RELEASED_AWAITING_LIVE_ACCEPTANCE",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -540,8 +540,8 @@
     "databaseSchemaChanged": false
   },
   "aiRightRailMultimodalActivityV1": {
-    "status": "coded_awaiting_production_build_and_live_acceptance",
-    "baselineCommit": "f0595a0d286f0a04b88d2bdacf89fb3987852b89",
+    "status": "v5_released_awaiting_live_acceptance",
+    "baselineCommit": "2edd9026bd0d4e7764993d92c28ae30384fce01f",
     "modes": [
       "past",
       "future",
@@ -555,22 +555,30 @@
     "autoscroll": "stick_to_bottom_unless_user_scrolled_up_then_unread_control",
     "voiceInput": "browser_speech_recognition_no_new_server_audio_storage",
     "photoInput": {
-      "mode": "chat_only_v1",
+      "mode": "past_future_chat_v5",
       "mime": [
         "image/jpeg",
         "image/png",
         "image/webp"
       ],
       "maxMiB": 3,
-      "openAiDetail": "low",
-      "store": false
+      "chatStore": false,
+      "activityStorageBucket": "activity-evidence-media-v1",
+      "activityStoragePublic": false,
+      "activityCaptureAiCalls": 0,
+      "semanticReviewImageInput": true,
+      "imageNumericMeasurementsAllowed": false
     },
     "pricingCompatibility": "active token prices + current snapshot FX when present, else latest stored positive OpenAI USD/EUR rate in-memory",
     "sqlRequired": false,
     "recoveryEvidence": "docs/recovery/evidence/AI_RIGHT_RAIL/ARCTOR_AI_RIGHT_RAIL_MULTIMODAL_ACTIVITY_V1_EVIDENCE.json",
-    "recoveryEvidenceSha256": "775ddbef4c52c5774d05871bd2a15c16444139f3ad0e0cf490949cbd54625d9c",
-    "lastFailedProductionGate": "V3 changed-file ESLint: react-hooks/set-state-in-effect; rollback PASS; no commit/push",
+    "recoveryEvidenceSha256": "7e8fa73b1eeae055109d0c1efacd40eead57288f982983777b74a3b02628b4e0",
+    "lastFailedProductionGate": null,
     "v4LintHotfix": "handler_based_image_clear + deferred_message_effect + dependency_cleanup + unused_cleanup",
-    "recoveryEvidenceHashPolicy": "sha256_utf8_text_after_crlf_to_lf_normalization"
+    "recoveryEvidenceHashPolicy": "sha256_utf8_text_after_crlf_to_lf_normalization",
+    "runtimeDataWrite": "stale semantic-review price recovery may insert a new versioned ai_model_price_snapshots row within verification lease",
+    "priceSnapshotStaleRecovery": "standard/gpt-5.4-mini exact price match; verified 2026-08-19; expires 2026-08-26; fail-closed otherwise",
+    "lastSuccessfulReleaseCommit": "2edd9026bd0d4e7764993d92c28ae30384fce01f",
+    "v5Hotfix": "activity_photo_all_modes_private_evidence + semantic_review_image + bounded_price_snapshot_stale_recovery"
   }
 }

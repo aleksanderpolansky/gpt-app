@@ -28,6 +28,17 @@ const MAX_OUTPUT_TOKENS = 2800;
 const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_RETRIES = 0;
 const INPUT_TOKEN_CEILING = 40_000;
+const ACTIVITY_EVIDENCE_BUCKET = "activity-evidence-media-v1";
+const MAX_ACTIVITY_IMAGE_BYTES = 3 * 1024 * 1024;
+const ALLOWED_ACTIVITY_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+const STANDARD_PRICE_REFRESH_VERIFIED_AT = "2026-08-19T00:00:00.000Z";
+const STANDARD_PRICE_REFRESH_EXPIRES_AT = "2026-08-26T23:59:59.999Z";
+const STANDARD_PRICE_SOURCE_URL =
+  "https://developers.openai.com/api/docs/models/gpt-5.4-mini";
 
 const SUPPORTED_LOCALES = new Set([
   "ru",
@@ -122,6 +133,17 @@ type ActivityRow = {
   metadata_json: unknown;
 };
 
+type ActivityImageEvidence = {
+  kind: "image";
+  storageBucket: typeof ACTIVITY_EVIDENCE_BUCKET;
+  storagePath: string;
+  originalName: string;
+  mimeType: "image/jpeg" | "image/png" | "image/webp";
+  sizeBytes: number;
+  sha256: string;
+  provenance: "user_uploaded_raw_evidence";
+};
+
 
 type ModelMeasurement = {
   parameterCode?: unknown;
@@ -191,6 +213,152 @@ function asRecord(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as JsonRecord)
     : {};
+}
+
+function readActivityImageEvidence(value: unknown): ActivityImageEvidence | null {
+  const record = asRecord(value);
+  if (
+    record.kind !== "image" ||
+    record.storageBucket !== ACTIVITY_EVIDENCE_BUCKET ||
+    typeof record.storagePath !== "string" ||
+    typeof record.originalName !== "string" ||
+    typeof record.mimeType !== "string" ||
+    !ALLOWED_ACTIVITY_IMAGE_MIME_TYPES.has(record.mimeType) ||
+    typeof record.sizeBytes !== "number" ||
+    record.sizeBytes <= 0 ||
+    record.sizeBytes > MAX_ACTIVITY_IMAGE_BYTES ||
+    typeof record.sha256 !== "string" ||
+    !/^[0-9a-f]{64}$/i.test(record.sha256) ||
+    record.provenance !== "user_uploaded_raw_evidence"
+  ) {
+    return null;
+  }
+
+  return record as ActivityImageEvidence;
+}
+
+async function loadActivityImageDataUrl(input: {
+  appUserId: string;
+  evidence: ActivityImageEvidence;
+}) {
+  if (!input.evidence.storagePath.startsWith(`${input.appUserId}/`)) {
+    throw new Error("AI_A3_1_SEMANTIC_REVIEW_IMAGE_OWNERSHIP_PATH_INVALID");
+  }
+
+  const { data, error } = await supabase.storage
+    .from(ACTIVITY_EVIDENCE_BUCKET)
+    .download(input.evidence.storagePath);
+
+  if (error || !data) {
+    throw new Error(
+      `AI_A3_1_SEMANTIC_REVIEW_IMAGE_DOWNLOAD_FAILED:${error?.message ?? "missing blob"}`,
+    );
+  }
+
+  const bytes = Buffer.from(await data.arrayBuffer());
+  if (bytes.length <= 0 || bytes.length > MAX_ACTIVITY_IMAGE_BYTES) {
+    throw new Error("AI_A3_1_SEMANTIC_REVIEW_IMAGE_SIZE_INVALID");
+  }
+
+  const sha256 = crypto.createHash("sha256").update(bytes).digest("hex");
+  if (sha256 !== input.evidence.sha256.toLowerCase()) {
+    throw new Error("AI_A3_1_SEMANTIC_REVIEW_IMAGE_HASH_MISMATCH");
+  }
+
+  return `data:${input.evidence.mimeType};base64,${bytes.toString("base64")}`;
+}
+
+async function refreshStandardPriceSnapshotWithinVerifiedLease(input: {
+  tierCode: string;
+  modelName: string;
+}) {
+  if (
+    input.tierCode !== "standard" ||
+    input.modelName !== "gpt-5.4-mini" ||
+    Date.now() > Date.parse(STANDARD_PRICE_REFRESH_EXPIRES_AT)
+  ) {
+    return false;
+  }
+
+  const { data: current, error: currentError } = await supabase
+    .from("ai_model_price_snapshots")
+    .select(
+      "id,input_cost_per_1m_tokens,cached_input_cost_per_1m_tokens,output_cost_per_1m_tokens,usd_to_eur_rate,eur_markup_multiplier",
+    )
+    .eq("provider", "openai")
+    .eq("tier_code", "standard")
+    .eq("model_name", "gpt-5.4-mini")
+    .eq("pricing_currency", "USD")
+    .eq("is_active", true)
+    .order("valid_from", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (currentError || !current) {
+    throw new Error(
+      `AI_A3_1_PRICE_REFRESH_BASELINE_READ_FAILED:${currentError?.message ?? "missing snapshot"}`,
+    );
+  }
+
+  const inputPrice = asFiniteNumber(current.input_cost_per_1m_tokens);
+  const cachedPrice = asFiniteNumber(current.cached_input_cost_per_1m_tokens);
+  const outputPrice = asFiniteNumber(current.output_cost_per_1m_tokens);
+
+  if (inputPrice !== 0.75 || cachedPrice !== 0.075 || outputPrice !== 4.5) {
+    throw new Error("AI_A3_1_PRICE_REFRESH_BASELINE_MISMATCH_FAIL_CLOSED");
+  }
+
+  const now = new Date().toISOString();
+  const { data: inserted, error: insertError } = await supabase
+    .from("ai_model_price_snapshots")
+    .insert({
+      tier_code: "standard",
+      model_name: "gpt-5.4-mini",
+      provider: "openai",
+      pricing_currency: "USD",
+      display_currency: "EUR",
+      input_cost_per_1m_tokens: 0.75,
+      cached_input_cost_per_1m_tokens: 0.075,
+      output_cost_per_1m_tokens: 4.5,
+      usd_to_eur_rate: current.usd_to_eur_rate ?? null,
+      eur_markup_multiplier: current.eur_markup_multiplier ?? 1,
+      valid_from: now,
+      valid_to: null,
+      is_active: true,
+      source_url: STANDARD_PRICE_SOURCE_URL,
+      source_note:
+        "Runtime self-heal refresh from server-shipped price catalog verified 2026-08-19; fail-closed after verification lease expiry.",
+      metadata: {
+        verification_contract: "ARCTOR_A3_1_STANDARD_PRICE_REFRESH_V1",
+        verified_at: STANDARD_PRICE_REFRESH_VERIFIED_AT,
+        verification_expires_at: STANDARD_PRICE_REFRESH_EXPIRES_AT,
+        budget_currency: "USD",
+        source: "official_openai_model_documentation",
+      },
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !inserted?.id) {
+    throw new Error(
+      `AI_A3_1_PRICE_REFRESH_INSERT_FAILED:${insertError?.message ?? "missing inserted id"}`,
+    );
+  }
+
+  const { error: closeError } = await supabase
+    .from("ai_model_price_snapshots")
+    .update({ is_active: false, valid_to: now })
+    .eq("provider", "openai")
+    .eq("tier_code", "standard")
+    .eq("model_name", "gpt-5.4-mini")
+    .eq("is_active", true)
+    .neq("id", inserted.id);
+
+  if (closeError) {
+    // The newly inserted, newest snapshot remains authoritative. Cleanup can be retried later.
+  }
+
+  return true;
 }
 
 function asText(value: unknown): string {
@@ -295,17 +463,19 @@ async function reserveBudget(input: {
   modelName: string;
   estimatedInputTokens: number;
 }) {
-  const { data, error } = await supabase.rpc(
+  const budgetArgs = {
+    p_app_user_id: input.userId,
+    p_operation_id: input.operationId,
+    p_tier_code: input.tierCode,
+    p_model_name: input.modelName,
+    p_input_tokens: input.estimatedInputTokens,
+    p_cached_input_tokens: 0,
+    p_max_output_tokens: MAX_OUTPUT_TOKENS,
+  };
+
+  let { data, error } = await supabase.rpc(
     "preflight_ai_pilot_call_budget_v1",
-    {
-      p_app_user_id: input.userId,
-      p_operation_id: input.operationId,
-      p_tier_code: input.tierCode,
-      p_model_name: input.modelName,
-      p_input_tokens: input.estimatedInputTokens,
-      p_cached_input_tokens: 0,
-      p_max_output_tokens: MAX_OUTPUT_TOKENS,
-    },
+    budgetArgs,
   );
 
   if (error) {
@@ -314,7 +484,31 @@ async function reserveBudget(input: {
     );
   }
 
-  const row = asRecord(data);
+  let row = asRecord(data);
+
+  if (row.allowed !== true && asText(row.reason) === "PRICE_SNAPSHOT_STALE") {
+    const refreshed = await refreshStandardPriceSnapshotWithinVerifiedLease({
+      tierCode: input.tierCode,
+      modelName: input.modelName,
+    });
+
+    if (refreshed) {
+      const retry = await supabase.rpc(
+        "preflight_ai_pilot_call_budget_v1",
+        budgetArgs,
+      );
+      data = retry.data;
+      error = retry.error;
+
+      if (error) {
+        throw new Error(
+          `AI_A3_1_SEMANTIC_REVIEW_BUDGET_PREFLIGHT_RETRY_FAILED:${error.message}`,
+        );
+      }
+
+      row = asRecord(data);
+    }
+  }
 
   if (row.allowed !== true) {
     throw new Error(
@@ -652,6 +846,22 @@ function validateModelMeasurements(
   return output;
 }
 
+function filterImageMeasurementsToDeclaredText(input: {
+  measurements: NormalizedMeasurement[];
+  declaredText: string;
+}) {
+  const declared = input.declaredText.toLocaleLowerCase().replace(/\s+/g, " ").trim();
+  if (!declared) return [];
+
+  return input.measurements.filter((measurement) => {
+    const fragment = measurement.rawFragment
+      .toLocaleLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+    return Boolean(fragment) && declared.includes(fragment);
+  });
+}
+
 function ensureUniversalMeasurements(input: {
   measurements: NormalizedMeasurement[];
   activity: ActivityRow;
@@ -902,6 +1112,9 @@ export async function analyzeActivityForSemanticReviewA31(input: {
   }
 
   const activityMetadata = asRecord(activity.metadata_json);
+  const imageEvidence = readActivityImageEvidence(
+    activityMetadata.quickCaptureImageEvidence,
+  );
 
   if (
     activityMetadata.quickCaptureContract !==
@@ -921,7 +1134,11 @@ export async function analyzeActivityForSemanticReviewA31(input: {
     throw new Error("AI_A3_1_SEMANTIC_REVIEW_SOURCE_TEXT_EMPTY");
   }
 
-  const sourceTextHash = sourceHash(sourceText);
+  const sourceTextHash = sourceHash(
+    imageEvidence
+      ? `${sourceText}\nimage-sha256:${imageEvidence.sha256}`
+      : sourceText,
+  );
 
   const existing = await readExistingDraft({
     activityEventId: activity.id,
@@ -933,6 +1150,13 @@ export async function analyzeActivityForSemanticReviewA31(input: {
   if (existing) {
     return formatDraft(asRecord(existing), activity);
   }
+
+  const userImageDataUrl = imageEvidence
+    ? await loadActivityImageDataUrl({
+        appUserId: input.appUserId,
+        evidence: imageEvidence,
+      })
+    : null;
 
   const model = await resolveModel();
 
@@ -949,7 +1173,9 @@ and the human will choose which actual leaf, if any, should be linked.
 
 Hard rules:
 1. Measurements must contain ONLY quantities/states explicitly supported by the user's
-   text or supplied server timing. Never invent a measured value.
+   text or supplied server timing. Image evidence may inform semantic proposals, but MUST NOT
+   create numeric measurements in this contract because image-derived measurement provenance
+   is not yet committed by the downstream fact writer. Never invent a measured value.
 2. Do NOT output process_count. The server always adds process_count=1.
 3. Return exactly one primary semantic proposal and at least seven additional DISTINCT
    semantic proposals. These are ideas/meanings, not database objects.
@@ -981,7 +1207,11 @@ Hard rules:
 13. Normalize units to stable English singular snake_case codes: minute, hour, meter,
     kilometer, count, repetition, set, milliliter, liter, milligram, gram, kilogram,
     kcal, pln, eur, usd, score_0_10, boolean, text, tag, role, km_per_hour, etc.
-14. Return only the required JSON.
+14. If a user-uploaded image is present, treat it as private raw evidence for semantic
+    interpretation. You may identify visible entities, dishes, documents, schedule-like content,
+    or context for proposals. Do not claim hidden ingredients, quantities, diagnoses, exact
+    schedule times, or other facts that are not safely supported by the user's text/server timing.
+15. Return only the required JSON.
 `.trim();
 
   const user = {
@@ -996,6 +1226,16 @@ Hard rules:
       endedAt: activity.ended_at,
       durationMinutes: activity.duration_minutes,
     },
+    imageEvidence: imageEvidence
+      ? {
+          kind: imageEvidence.kind,
+          originalName: imageEvidence.originalName,
+          mimeType: imageEvidence.mimeType,
+          sizeBytes: imageEvidence.sizeBytes,
+          sha256: imageEvidence.sha256,
+          provenance: imageEvidence.provenance,
+        }
+      : null,
   };
 
   const operationId = crypto.randomUUID();
@@ -1019,6 +1259,8 @@ Hard rules:
       providerCatalogSent: false,
       serverLeafResolutionRequired: true,
       factsWritten: false,
+      imageEvidencePresent: Boolean(imageEvidence),
+      imageEvidenceProvenance: imageEvidence?.provenance ?? null,
     },
   });
 
@@ -1064,6 +1306,8 @@ Hard rules:
         minimumProposalCount: MIN_PROPOSALS,
         providerCatalogSent: false,
         serverLeafResolutionRequired: true,
+        imageEvidencePresent: Boolean(imageEvidence),
+        imageMeasurementsAllowed: false,
       },
     });
 
@@ -1148,6 +1392,7 @@ Hard rules:
       store: false,
       reasoningEffort: "low",
       outputTokenCeiling: MAX_OUTPUT_TOKENS,
+      userImageDataUrl,
     });
 
     await markAiContextManifestProviderCompleted(
@@ -1161,10 +1406,18 @@ Hard rules:
       usage: response.usage,
     });
 
+    const validatedModelMeasurements = validateModelMeasurements(
+      response.parsed.measurements,
+    );
+    const modelMeasurements = imageEvidence
+      ? filterImageMeasurementsToDeclaredText({
+          measurements: validatedModelMeasurements,
+          declaredText: asText(activityMetadata.quickCaptureSourceMessageText),
+        })
+      : validatedModelMeasurements;
+
     const measurements = ensureUniversalMeasurements({
-      measurements: validateModelMeasurements(
-        response.parsed.measurements,
-      ),
+      measurements: modelMeasurements,
       activity,
     });
 
@@ -1184,6 +1437,8 @@ Hard rules:
       serverLeafResolutionRequired: true,
       minimumSevenAdditionalProposals: proposals.length >= 8,
       factsWritten: false,
+      imageEvidencePresent: Boolean(imageEvidence),
+      imageMeasurementsAllowed: false,
     });
 
     await completeAiAnalysisExecution(analysisExecutionId);

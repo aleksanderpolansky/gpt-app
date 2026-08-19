@@ -653,3 +653,15 @@ Missing/no-match/no-rule = 1. Несколько matched rules multiply.
 - Commit/push не выполнялись; rollback = PASS; HEAD восстановлен на `f0595a0d...`.
 - Решение V4: не ослаблять ESLint и не добавлять disable-comment. Очистка photo attachment выполняется в пользовательском handler смены режима; message-follow effect выполняет state update из deferred callback и зависит от полного `latestMessage`; unused legacy declarations удалены.
 - Инженерный вывод: changed-file ESLint остаётся обязательным pre-build gate и должен выполняться до `npm run build`.
+
+
+## 2026-08-19 — AI RIGHT RAIL V5: photo evidence во всех режимах и stale price recovery
+
+Private binary evidence хранится в Supabase Storage bucket `activity-evidence-media-v1` с `public=false`; activity/signal metadata сохраняет только reference/MIME/size/SHA-256/provenance, без public URL и base64.
+
+1. Фото в `past/future` — это не chat decoration, а private raw evidence конкретной activity. Binary хранится отдельно от activity metadata и не публикуется.
+2. На capture фото не должно запускать semantic AI: activity/review marker создаются сразу, AI начинается только при открытии review.
+3. До отдельного provenance contract изображение может влиять на semantic proposals, но не создавать numeric measurements/facts. Server guard пропускает при наличии image evidence только те model measurements, чей `rawFragment` буквально поддержан user-declared text; при image-only input model measurements отбрасываются, а server timing остаётся отдельным источником. Это запрещает выдавать распознанный размер порции, часы графика или другие числа за user-declared fact.
+4. `PRICE_SNAPSHOT_STALE` — другой дефект, не связан с правой колонкой. GSR1E сознательно требует snapshot <=7 days, поэтому 11.08 snapshot закономерно заблокировал review 19.08.
+5. Нельзя бессрочно продлевать старую цену. V5 self-heal работает только для точного `standard/gpt-5.4-mini`, сверяет текущий DB snapshot с проверенными официальными значениями 0.75 / 0.075 / 4.50 USD за 1M input/cached/output и имеет жёсткий verification lease до 26.08.2026. При несовпадении или после expiry — fail-closed.
+6. Runtime refresh создаёт новый versioned price snapshot, а не переписывает историческую цену.

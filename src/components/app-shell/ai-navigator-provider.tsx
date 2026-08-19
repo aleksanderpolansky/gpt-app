@@ -47,6 +47,7 @@ export type AiNavigatorMessage = {
   action?: AiNavigatorMessageAction;
   retryText?: string;
   retryRequestId?: string;
+  retryImage?: AiNavigatorImageAttachment;
 };
 
 export type AiNavigatorSendOptions = {
@@ -114,6 +115,7 @@ function serializeMessagesForLocalStorage(messages: AiNavigatorMessage[]) {
           mimeType: message.attachment.mimeType,
         }
       : undefined,
+    retryImage: undefined,
   }));
 }
 
@@ -2824,23 +2826,55 @@ async function submitAiRailActivity(
   text: string,
   mode: Exclude<AiNavigatorMode, "chat">,
   clientRequestId: string,
+  image: AiNavigatorImageAttachment | null,
 ) {
   const locale = getNavigatorLocale();
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-  const response = await fetch("/api/activity/quick-capture", {
-    method: "POST",
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
+  const temporalDirection = mode === "past" ? "past" : "future";
+
+  let requestBody: BodyInit;
+  let headers: HeadersInit;
+
+  if (image?.dataUrl) {
+    const imageResponse = await fetch(image.dataUrl);
+    if (!imageResponse.ok) {
+      throw new Error("ACTIVITY_IMAGE_DATA_URL_INVALID");
+    }
+
+    const imageBlob = await imageResponse.blob();
+    const formData = new FormData();
+    formData.set("inputText", text);
+    formData.set("locale", locale);
+    formData.set("timeZone", timeZone);
+    formData.set("temporalDirection", temporalDirection);
+    formData.set("clientRequestId", clientRequestId);
+    formData.set(
+      "image",
+      new File([imageBlob], image.name || "activity-image", {
+        type: image.mimeType,
+      }),
+    );
+    requestBody = formData;
+    headers = { Accept: "application/json" };
+  } else {
+    requestBody = JSON.stringify({
       inputText: text,
       locale,
       timeZone,
-      temporalDirection: mode === "past" ? "past" : "future",
+      temporalDirection,
       clientRequestId,
-    }),
+    });
+    headers = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+  }
+
+  const response = await fetch("/api/activity/quick-capture", {
+    method: "POST",
+    credentials: "include",
+    headers,
+    body: requestBody,
   });
 
   const payload = (await response.json().catch(() => null)) as QuickCaptureResponse | null;
@@ -2983,10 +3017,6 @@ export function AiNavigatorProvider({
         return;
       }
 
-      if (navigatorMode !== "chat" && image) {
-        throw new Error("IMAGE_ATTACHMENT_ACTIVITY_MODE_NOT_SUPPORTED");
-      }
-
       const now = new Date().toISOString();
       const userMessageId = Date.now();
       const assistantMessageId = userMessageId + 1;
@@ -3014,7 +3044,12 @@ export function AiNavigatorProvider({
 
       try {
         if (navigatorMode === "past" || navigatorMode === "future") {
-          const result = await submitAiRailActivity(trimmedInput, navigatorMode, activityRequestId);
+          const result = await submitAiRailActivity(
+            trimmedInput,
+            navigatorMode,
+            activityRequestId,
+            image,
+          );
           const savedCopy = getActivitySavedCopy(navigatorMode);
 
           setMessages((previousMessages) =>
@@ -3056,9 +3091,7 @@ export function AiNavigatorProvider({
         const rawError = error instanceof Error ? error.message : "AI_NAVIGATOR_REQUEST_FAILED";
         const errorMessage = rawError.startsWith("ACTIVITY_")
           ? friendlyAiError(undefined)
-          : rawError === "IMAGE_ATTACHMENT_ACTIVITY_MODE_NOT_SUPPORTED"
-            ? friendlyAiError(undefined)
-            : rawError;
+          : rawError;
 
         setMessages((previousMessages) =>
           previousMessages.map((messageItem) =>
@@ -3067,8 +3100,9 @@ export function AiNavigatorProvider({
                   ...messageItem,
                   role: "error",
                   text: errorMessage,
-                  retryText: trimmedInput || undefined,
+                  retryText: trimmedInput,
                   retryRequestId: navigatorMode === "chat" ? undefined : activityRequestId,
+                  retryImage: image ?? undefined,
                   createdAt: new Date().toISOString(),
                 }
               : messageItem,

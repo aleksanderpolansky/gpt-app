@@ -46,20 +46,29 @@ const shell = "src/components/app-shell/global-app-shell.tsx";
 const apiTest = "src/app/api/test/route.ts";
 const balance = "src/app/api/ai-billing/balance/route.ts";
 const openai = "lib/ai/openaiClient.ts";
+const quickCapture = "src/app/api/activity/quick-capture/route.ts";
+const semanticReview = "src/lib/ai/activitySemanticReviewA31.server.ts";
 
 requireText("provider marker + explicit modes", provider, [
   "ARCTOR_AI_RIGHT_RAIL_MULTIMODAL_ACTIVITY_V1",
   'export type AiNavigatorMode = "past" | "future" | "chat"',
   'fetch("/api/activity/quick-capture"',
-  'temporalDirection: mode === "past" ? "past" : "future"',
+  'const temporalDirection = mode === "past" ? "past" : "future";',
   "clientRequestId",
   "retryRequestId",
   'router.push(result.href)',
   'fetch("/api/messages"',
   'forceChat: true',
+  'new FormData()',
+  'formData.set(',
+  'retryImage',
 ]);
 requireCount("one canonical rail activity write path", provider, 'fetch("/api/activity/quick-capture"', 1);
 requireCount("no direct activity-events write from rail provider", provider, 'fetch("/api/activity/events"', 0);
+
+requireAbsent("activity photo no longer blocked outside chat", provider, [
+  "IMAGE_ATTACHMENT_ACTIVITY_MODE_NOT_SUPPORTED",
+]);
 
 requireText("provider uses project i18n helper and seven locales", provider, [
   "getLocaleMessage",
@@ -106,6 +115,16 @@ requireAbsent("V3 ESLint blocker removed", rail, [
   "Trash2,",
 ]);
 
+requireAbsent("rail photo control is not chat-only", rail, [
+  "aiNavigator.photoOnlyChat",
+  'if (navigatorMode !== "chat") {\n      setComposerNotice',
+]);
+requireText("rail photo control stays active for every mode", rail, [
+  "function choosePhoto()",
+  "fileInputRef.current?.click()",
+  'accept="image/jpeg,image/png,image/webp"',
+]);
+
 requireText("mobile corporate three-mode controls", shell, [
   "ARCTOR_AI_RIGHT_RAIL_CORPORATE_MOBILE_MODES_V1",
   '{ mode: "past"',
@@ -142,6 +161,42 @@ requireText("OpenAI Responses image input contract", openai, [
   '{ type: "input_image", image_url: userImageDataUrl, detail: "low" }',
 ]);
 
+requireText("activity quick capture stores private image evidence without AI", quickCapture, [
+  'ACTIVITY_EVIDENCE_BUCKET = "activity-evidence-media-v1"',
+  "public: false",
+  "ACTIVITY_EVIDENCE_BUCKET_MUST_BE_PRIVATE",
+  "multipart/form-data",
+  'formData.get("image")',
+  "MAX_IMAGE_BYTES = 3 * 1024 * 1024",
+  "hasExpectedImageSignature",
+  "ACTIVITY_EVIDENCE_IMAGE_CONTENT_INVALID",
+  ".remove([uploadedEvidence.storagePath])",
+  'provenance: "user_uploaded_raw_evidence"',
+  "quickCaptureImageEvidence: imageEvidence",
+  "aiCallsAtCapture: 0",
+  "factsWrittenAtCapture: 0",
+]);
+requireText("semantic review consumes private image with integrity guards", semanticReview, [
+  'ACTIVITY_EVIDENCE_BUCKET = "activity-evidence-media-v1"',
+  "AI_A3_1_SEMANTIC_REVIEW_IMAGE_HASH_MISMATCH",
+  "input.evidence.storagePath.startsWith(`${input.appUserId}/`)",
+  "userImageDataUrl",
+  "imageMeasurementsAllowed: false",
+  "filterImageMeasurementsToDeclaredText",
+  "quickCaptureSourceMessageText",
+  "Image evidence may inform semantic proposals",
+]);
+requireText("semantic review stale price self-heal is bounded and fail-closed", semanticReview, [
+  'STANDARD_PRICE_REFRESH_VERIFIED_AT = "2026-08-19T00:00:00.000Z"',
+  'STANDARD_PRICE_REFRESH_EXPIRES_AT = "2026-08-26T23:59:59.999Z"',
+  'input.modelName !== "gpt-5.4-mini"',
+  "inputPrice !== 0.75",
+  "cachedPrice !== 0.075",
+  "outputPrice !== 4.5",
+  "AI_A3_1_PRICE_REFRESH_BASELINE_MISMATCH_FAIL_CLOSED",
+  'asText(row.reason) === "PRICE_SNAPSHOT_STALE"',
+]);
+
 requireText("root cause SQL still explicit", "supabase/manual-applied/20260811_gsr1e_openai_pilot_price_refresh_budget_hardening_v1.sql", [
   "usd_to_eur_rate",
   "null,",
@@ -154,27 +209,36 @@ requireText("historical positive FX seed exists", "supabase/migrations/202606221
 requireText("recovery current state", "docs/recovery/ARCTOR_CURRENT_STATE_RU.md", [
   "AI RIGHT RAIL MULTIMODAL ACTIVITY V1",
   "invalid_price_snapshot",
-  "CODED_AWAITING_PRODUCTION_BUILD_AND_LIVE_ACCEPTANCE",
+  "RELEASED_AWAITING_LIVE_UX_ACCEPTANCE",
+  "V5 activity image evidence + semantic-review price recovery",
 ]);
 requireText("recovery decisions/root cause", "docs/recovery/ARCTOR_DECISIONS_AND_FAILURES_RU.md", [
   "AI RIGHT RAIL: решения и причина `invalid_price_snapshot`",
   "fx_intentionally_unset=true",
   "clientRequestId",
+  "activity-evidence-media-v1",
+  "PRICE_SNAPSHOT_STALE",
 ]);
 requireText("restore instructions", "docs/recovery/ARCTOR_RESTORE_FROM_ZERO_RU.md", [
   "AI RIGHT RAIL MULTIMODAL ACTIVITY V1 — восстановление/проверка",
   "npm run build",
   "Live acceptance",
+  "AI RIGHT RAIL V5",
+  "activity-evidence-media-v1",
 ]);
 
 try {
   const manifest = JSON.parse(read("docs/recovery/CHECKPOINT_MANIFEST.json"));
   const state = manifest.aiRightRailMultimodalActivityV1;
   if (
-    manifest.originMainAtCheckpoint === "f0595a0d286f0a04b88d2bdacf89fb3987852b89" &&
-    state?.status === "coded_awaiting_production_build_and_live_acceptance" &&
+    manifest.originMainAtCheckpoint === "2edd9026bd0d4e7764993d92c28ae30384fce01f" &&
+    state?.status === "v5_released_awaiting_live_acceptance" &&
     state?.retryIdempotency === "stable_clientRequestId" &&
     state?.photoInput?.maxMiB === 3 &&
+    state?.photoInput?.mode === "past_future_chat_v5" &&
+    state?.photoInput?.activityStoragePublic === false &&
+    state?.photoInput?.activityCaptureAiCalls === 0 &&
+    state?.photoInput?.imageNumericMeasurementsAllowed === false &&
     state?.sqlRequired === false
   ) pass("checkpoint manifest updated", manifest.documentedState ?? "");
   else fail("checkpoint manifest updated", "AI right rail checkpoint fields mismatch");

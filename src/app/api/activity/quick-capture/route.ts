@@ -1,3 +1,6 @@
+import { Buffer } from "node:buffer";
+import crypto from "node:crypto";
+
 import { NextResponse } from "next/server";
 
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
@@ -27,6 +30,50 @@ const CONTRACT = "ARCTOR_AI_A3_1_REVIEW_FIRST_CAPTURE_V1";
 const REQUEST_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{7,179}$/;
 const IANA_TIME_ZONE_RE = /^[A-Za-z0-9_+\-/]{1,80}$/;
 const MAX_INPUT_CHARS = 12_000;
+const ACTIVITY_EVIDENCE_BUCKET = "activity-evidence-media-v1";
+const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
+const ALLOWED_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+const IMAGE_EXTENSION_BY_MIME: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+function hasExpectedImageSignature(bytes: Buffer, mimeType: string) {
+  if (mimeType === "image/jpeg") {
+    return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  }
+
+  if (mimeType === "image/png") {
+    const png = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+    return bytes.length >= png.length && png.every((value, index) => bytes[index] === value);
+  }
+
+  if (mimeType === "image/webp") {
+    return (
+      bytes.length >= 12 &&
+      bytes.subarray(0, 4).toString("ascii") === "RIFF" &&
+      bytes.subarray(8, 12).toString("ascii") === "WEBP"
+    );
+  }
+
+  return false;
+}
+
+type QuickCaptureImageEvidence = {
+  kind: "image";
+  storageBucket: typeof ACTIVITY_EVIDENCE_BUCKET;
+  storagePath: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  sha256: string;
+  provenance: "user_uploaded_raw_evidence";
+};
 
 type JsonRecord = Record<string, unknown>;
 
@@ -38,6 +85,11 @@ type SubmitBody = {
   temporalDirection?: unknown;
 };
 
+type ParsedSubmitBody = {
+  body: SubmitBody;
+  imageFile: File | null;
+};
+
 function asRecord(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as JsonRecord)
@@ -46,6 +98,169 @@ function asRecord(value: unknown): JsonRecord {
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function imageOnlySourceText(
+  locale: ActivityTimingLocalePp1,
+  temporalDirection: "past" | "future",
+) {
+  const values: Record<ActivityTimingLocalePp1, { past: string; future: string }> = {
+    ru: { past: "Фотография завершённой активности", future: "Фотография планируемой активности" },
+    en: { past: "Photo of a completed activity", future: "Photo of a planned activity" },
+    pl: { past: "Zdjęcie zakończonej aktywności", future: "Zdjęcie planowanej aktywności" },
+    uk: { past: "Фотографія завершеної активності", future: "Фотографія запланованої активності" },
+    de: { past: "Foto einer abgeschlossenen Aktivität", future: "Foto einer geplanten Aktivität" },
+    es: { past: "Foto de una actividad realizada", future: "Foto de una actividad planificada" },
+    cs: { past: "Fotografie dokončené aktivity", future: "Fotografie plánované aktivity" },
+  };
+  return values[locale][temporalDirection];
+}
+
+async function parseSubmitBody(request: Request): Promise<ParsedSubmitBody> {
+  const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
+
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await request.formData();
+    const imageCandidate = formData.get("image");
+    return {
+      body: {
+        inputText: formData.get("inputText"),
+        locale: formData.get("locale"),
+        timeZone: formData.get("timeZone"),
+        clientRequestId: formData.get("clientRequestId"),
+        temporalDirection: formData.get("temporalDirection"),
+      },
+      imageFile: imageCandidate instanceof File ? imageCandidate : null,
+    };
+  }
+
+  return {
+    body: (await request.json()) as SubmitBody,
+    imageFile: null,
+  };
+}
+
+function readImageEvidence(value: unknown): QuickCaptureImageEvidence | null {
+  const record = asRecord(value);
+  if (
+    record.kind !== "image" ||
+    record.storageBucket !== ACTIVITY_EVIDENCE_BUCKET ||
+    typeof record.storagePath !== "string" ||
+    typeof record.originalName !== "string" ||
+    typeof record.mimeType !== "string" ||
+    typeof record.sizeBytes !== "number" ||
+    typeof record.sha256 !== "string" ||
+    record.provenance !== "user_uploaded_raw_evidence"
+  ) {
+    return null;
+  }
+
+  return record as QuickCaptureImageEvidence;
+}
+
+async function ensurePrivateActivityEvidenceBucket() {
+  const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+  if (listError) {
+    throw new Error(`ACTIVITY_EVIDENCE_BUCKET_LIST_FAILED:${listError.message}`);
+  }
+
+  const existingBucket = (buckets ?? []).find(
+    (bucket) => bucket.id === ACTIVITY_EVIDENCE_BUCKET,
+  );
+  if (existingBucket) {
+    if (existingBucket.public !== false) {
+      throw new Error("ACTIVITY_EVIDENCE_BUCKET_MUST_BE_PRIVATE");
+    }
+    return;
+  }
+
+  const { error: createError } = await supabase.storage.createBucket(
+    ACTIVITY_EVIDENCE_BUCKET,
+    {
+      public: false,
+      allowedMimeTypes: [...ALLOWED_IMAGE_MIME_TYPES],
+      fileSizeLimit: MAX_IMAGE_BYTES,
+    },
+  );
+
+  if (createError && !/already exists|duplicate/i.test(createError.message)) {
+    throw new Error(`ACTIVITY_EVIDENCE_BUCKET_CREATE_FAILED:${createError.message}`);
+  }
+}
+
+async function uploadActivityEvidenceImage(input: {
+  file: File;
+  userId: string;
+  signalId: string;
+}) {
+  if (!ALLOWED_IMAGE_MIME_TYPES.has(input.file.type)) {
+    throw new Error("ACTIVITY_EVIDENCE_IMAGE_TYPE_UNSUPPORTED");
+  }
+  if (input.file.size <= 0 || input.file.size > MAX_IMAGE_BYTES) {
+    throw new Error("ACTIVITY_EVIDENCE_IMAGE_SIZE_INVALID");
+  }
+
+  await ensurePrivateActivityEvidenceBucket();
+
+  const bytes = Buffer.from(await input.file.arrayBuffer());
+  if (bytes.length !== input.file.size || !hasExpectedImageSignature(bytes, input.file.type)) {
+    throw new Error("ACTIVITY_EVIDENCE_IMAGE_CONTENT_INVALID");
+  }
+
+  const extension = IMAGE_EXTENSION_BY_MIME[input.file.type];
+  const storagePath = `${input.userId}/${input.signalId}/${crypto.randomUUID()}.${extension}`;
+  const sha256 = crypto.createHash("sha256").update(bytes).digest("hex");
+
+  const { error: uploadError } = await supabase.storage
+    .from(ACTIVITY_EVIDENCE_BUCKET)
+    .upload(storagePath, bytes, {
+      contentType: input.file.type,
+      cacheControl: "3600",
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error(`ACTIVITY_EVIDENCE_IMAGE_UPLOAD_FAILED:${uploadError.message}`);
+  }
+
+  return {
+    kind: "image",
+    storageBucket: ACTIVITY_EVIDENCE_BUCKET,
+    storagePath,
+    originalName: input.file.name.slice(0, 180) || "activity-image",
+    mimeType: input.file.type,
+    sizeBytes: input.file.size,
+    sha256,
+    provenance: "user_uploaded_raw_evidence",
+  } satisfies QuickCaptureImageEvidence;
+}
+
+async function persistSignalImageEvidence(input: {
+  signalId: string;
+  userId: string;
+  currentRawPayload: unknown;
+  currentMetadata: unknown;
+  evidence: QuickCaptureImageEvidence;
+}) {
+  const { error } = await supabase
+    .from("raw_activity_signals")
+    .update({
+      raw_payload: {
+        ...asRecord(input.currentRawPayload),
+        imageEvidence: input.evidence,
+      },
+      metadata_json: {
+        ...asRecord(input.currentMetadata),
+        imageEvidence: input.evidence,
+      },
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", input.signalId)
+    .eq("user_id", input.userId);
+
+  if (error) {
+    throw new Error(`ACTIVITY_EVIDENCE_SIGNAL_UPDATE_FAILED:${error.message}`);
+  }
 }
 
 function normalizeLocale(value: unknown): ActivityTimingLocalePp1 {
@@ -209,16 +424,18 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: SubmitBody;
+  let parsedBody: ParsedSubmitBody;
   try {
-    body = (await request.json()) as SubmitBody;
+    parsedBody = await parseSubmitBody(request);
   } catch {
     return NextResponse.json(
-      { ok: false, error: "Invalid JSON body" },
+      { ok: false, error: "Invalid request body" },
       { status: 400 },
     );
   }
 
+  const body = parsedBody.body;
+  const imageFile = parsedBody.imageFile;
   const inputText = text(body.inputText);
   const locale = normalizeLocale(body.locale);
   const timeZone = text(body.timeZone) || "UTC";
@@ -227,14 +444,29 @@ export async function POST(request: Request) {
     body.temporalDirection,
   );
 
-  if (!inputText || inputText.length > MAX_INPUT_CHARS) {
+  if ((!inputText && !imageFile) || inputText.length > MAX_INPUT_CHARS) {
     return NextResponse.json(
       {
         ok: false,
-        error: `inputText must contain 1-${MAX_INPUT_CHARS} characters`,
+        error: `inputText or image is required; inputText may contain at most ${MAX_INPUT_CHARS} characters`,
       },
       { status: 400 },
     );
+  }
+
+  if (imageFile) {
+    if (!ALLOWED_IMAGE_MIME_TYPES.has(imageFile.type)) {
+      return NextResponse.json(
+        { ok: false, error: "Only JPEG, PNG and WebP images are supported." },
+        { status: 400 },
+      );
+    }
+    if (imageFile.size <= 0 || imageFile.size > MAX_IMAGE_BYTES) {
+      return NextResponse.json(
+        { ok: false, error: "Image must be 3 MB or smaller." },
+        { status: 400 },
+      );
+    }
   }
 
   if (!REQUEST_ID_RE.test(clientRequestId)) {
@@ -258,6 +490,7 @@ export async function POST(request: Request) {
     );
   }
 
+  const sourceText = inputText || imageOnlySourceText(locale, temporalDirection);
   const idempotencyKey = `activity_ai_lab_quick_capture:${clientRequestId}`;
 
   let signal = await findDurableQuickCaptureSignalByKey({
@@ -286,7 +519,7 @@ export async function POST(request: Request) {
       userId: appUser.id,
       actorId: personActor.id,
       clientRequestId,
-      inputText,
+      inputText: sourceText,
       locale,
       timeZone,
       temporalDirection,
@@ -314,11 +547,50 @@ export async function POST(request: Request) {
     }
   }
 
+  let imageEvidence = readImageEvidence(asRecord(signal.metadata_json).imageEvidence);
+  if (!imageEvidence && imageFile) {
+    let uploadedEvidence: QuickCaptureImageEvidence | null = null;
+    try {
+      uploadedEvidence = await uploadActivityEvidenceImage({
+        file: imageFile,
+        userId: appUser.id,
+        signalId: signal.id,
+      });
+      await persistSignalImageEvidence({
+        signalId: signal.id,
+        userId: appUser.id,
+        currentRawPayload: signal.raw_payload,
+        currentMetadata: signal.metadata_json,
+        evidence: uploadedEvidence,
+      });
+      imageEvidence = uploadedEvidence;
+    } catch (error) {
+      if (uploadedEvidence) {
+        await supabase.storage
+          .from(ACTIVITY_EVIDENCE_BUCKET)
+          .remove([uploadedEvidence.storagePath])
+          .catch(() => null);
+      }
+
+      const message = error instanceof Error ? error.message : String(error);
+      return NextResponse.json(
+        {
+          ok: false,
+          accepted: true,
+          signalId: signal.id,
+          processingStatus: "failed",
+          error: message,
+        },
+        { status: 500 },
+      );
+    }
+  }
+
   try {
     const reportedAt = new Date().toISOString();
     const syntheticRow: AiLabQuickCaptureRow = {
       segmentId: "capture_1",
-      sourceFragment: inputText,
+      sourceFragment: sourceText,
       facts: [],
       temporal: {
         occurredAtIso: null,
@@ -329,7 +601,7 @@ export async function POST(request: Request) {
 
     const timing = buildAiLabQuickCaptureTiming({
       row: syntheticRow,
-      sourceText: inputText,
+      sourceText,
       locale,
       reportedAt,
       timeZone,
@@ -343,8 +615,8 @@ export async function POST(request: Request) {
         index: 0,
       }),
       temporalDirection,
-      rawText: inputText,
-      title: deriveAiLabActivityTitle(inputText, []),
+      rawText: sourceText,
+      title: deriveAiLabActivityTitle(sourceText, []),
       locale,
       timingLabel: timing.timingLabel,
       analysisOperationId: null,
@@ -372,7 +644,9 @@ export async function POST(request: Request) {
         quickCaptureContract: CONTRACT,
         quickCaptureReviewRequired: true,
         quickCaptureReviewStatus: "pending",
-        quickCaptureSourceMessageText: inputText,
+        quickCaptureSourceMessageText: inputText || null,
+        quickCaptureSourceTextKind: inputText ? "user_text" : "system_image_placeholder",
+        quickCaptureImageEvidence: imageEvidence,
         quickCaptureSourceSegmentId: "capture_1",
         quickCaptureSourceSignalId: signal.id,
         locale,
@@ -393,7 +667,7 @@ export async function POST(request: Request) {
       signalId: signal.id,
       userId: appUser.id,
       activityEventId: createdEvent.activityEventId,
-      sourceText: inputText,
+      sourceText,
       locale,
       temporalDirection,
     });
@@ -407,7 +681,9 @@ export async function POST(request: Request) {
       result,
       calendarEventId: createdEvent.calendarEventId,
       note:
-        "Activity is saved immediately. Semantic AI analysis starts only when the review item is opened. Facts written now: 0.",
+        imageEvidence
+          ? "Activity and private image evidence are saved immediately. Semantic AI analysis starts only when the review item is opened. Facts written now: 0."
+          : "Activity is saved immediately. Semantic AI analysis starts only when the review item is opened. Facts written now: 0.",
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

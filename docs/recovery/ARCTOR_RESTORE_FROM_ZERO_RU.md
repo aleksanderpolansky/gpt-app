@@ -417,3 +417,13 @@ Safety:
 
 #### AI RIGHT RAIL V4 ESLint gate
 При восстановлении/повторном релизе сначала выполнить changed-file ESLint. Для `global-ai-navigator.tsx` не должно быть `react-hooks/set-state-in-effect`, `react-hooks/exhaustive-deps` и unused-symbol warnings, которые были зафиксированы V3. V3 не изменил production: rollback PASS, исходный baseline — `f0595a0d...`.
+
+
+#### AI RIGHT RAIL V5 — activity image evidence / review price recovery
+1. Baseline до V5: `2edd9026bd0d4e7764993d92c28ae30384fce01f`.
+2. Фото должно быть доступно в `past`, `future`, `chat`; MIME JPEG/PNG/WebP, max 3 MiB.
+3. `POST /api/activity/quick-capture` поддерживает JSON без фото и multipart/form-data с полем `image`.
+4. Activity photo binary хранится только в private bucket `activity-evidence-media-v1`; metadata содержит reference + SHA256, не data URL/public URL.
+5. Semantic review повторно проверяет ownership path, MIME, size и SHA256 перед `input_image`. Image-derived numeric measurements остаются запрещены.
+6. Если budget RPC возвращает `PRICE_SNAPSHOT_STALE`, разрешён только exact standard/gpt-5.4-mini refresh в пределах server verification lease. После `2026-08-26T23:59:59.999Z` он обязан fail-closed до обновления catalog verification.
+7. Live acceptance: past+photo блюда; future+photo графика; image-only past; retry idempotency; private bucket not public; semantic review sees image; no facts at capture; stale price path создаёт не более одного актуального newest price row на retry operation; `npm run lint -- --max-warnings=0` и `npm run build` PASS.
