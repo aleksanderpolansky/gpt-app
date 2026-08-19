@@ -4,7 +4,7 @@
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
   "branch": "main",
-  "originMainAtCheckpoint": "2edd9026bd0d4e7764993d92c28ae30384fce01f",
+  "originMainAtCheckpoint": "062b22afe2c7250e8ec69383394b994763524e99",
   "checkpointMeaning": "AI Navigator right rail V1: reliable messenger UX, explicit past/future/chat modes, canonical activity handoff, voice dictation, chat photo input, and EUR billing compatibility recovery.",
   "globalReality": {
     "p8Blocked": true,
@@ -54,7 +54,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Run production release gates, then live-accept free chat/photo/voice, past review handoff, future calendar handoff, mobile 3-button UX, desktop segmented UX, and 7 locales.",
+  "nextAction": "Release V8 model selector TypeScript hotfix, then live-accept immediate capture + background review, progress UX, narrow icon modes and GPT-5.6 selector; canonical leaf routing remains deferred.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -65,7 +65,7 @@
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
   "previousRecoveryCommit": "d91549773dae71206e46f3182bfd433f9c30316d",
-  "documentedState": "AI_RIGHT_RAIL_MULTIMODAL_ACTIVITY_V1_V5_RELEASED_AWAITING_LIVE_ACCEPTANCE",
+  "documentedState": "AI_RIGHT_RAIL_BACKGROUND_REVIEW_MODEL_UI_V8_CODED_AWAITING_PRODUCTION_RELEASE",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -540,8 +540,8 @@
     "databaseSchemaChanged": false
   },
   "aiRightRailMultimodalActivityV1": {
-    "status": "v5_released_awaiting_live_acceptance",
-    "baselineCommit": "2edd9026bd0d4e7764993d92c28ae30384fce01f",
+    "status": "v8_coded_awaiting_production_release",
+    "baselineCommit": "062b22afe2c7250e8ec69383394b994763524e99",
     "modes": [
       "past",
       "future",
@@ -571,14 +571,30 @@
     },
     "pricingCompatibility": "active token prices + current snapshot FX when present, else latest stored positive OpenAI USD/EUR rate in-memory",
     "sqlRequired": false,
-    "recoveryEvidence": "docs/recovery/evidence/AI_RIGHT_RAIL/ARCTOR_AI_RIGHT_RAIL_MULTIMODAL_ACTIVITY_V1_EVIDENCE.json",
-    "recoveryEvidenceSha256": "7e8fa73b1eeae055109d0c1efacd40eead57288f982983777b74a3b02628b4e0",
-    "lastFailedProductionGate": null,
+    "recoveryEvidence": "docs/recovery/evidence/AI_RIGHT_RAIL/ARCTOR_AI_RIGHT_RAIL_BACKGROUND_REVIEW_MODEL_UI_V8_EVIDENCE.json",
+    "recoveryEvidenceSha256": "f1b3a8735e235a0e54300d0faab518fc771fa1bbfe9d66ee3b60253ecb936a16",
+    "lastFailedProductionGate": "V7 next build TypeScript: AiNavigatorModelOption uses tierCode but global rail referenced tier.code; rollback PASS",
     "v4LintHotfix": "handler_based_image_clear + deferred_message_effect + dependency_cleanup + unused_cleanup",
     "recoveryEvidenceHashPolicy": "sha256_utf8_text_after_crlf_to_lf_normalization",
     "runtimeDataWrite": "stale semantic-review price recovery may insert a new versioned ai_model_price_snapshots row within verification lease",
     "priceSnapshotStaleRecovery": "standard/gpt-5.4-mini exact price match; verified 2026-08-19; expires 2026-08-26; fail-closed otherwise",
     "lastSuccessfulReleaseCommit": "2edd9026bd0d4e7764993d92c28ae30384fce01f",
-    "v5Hotfix": "activity_photo_all_modes_private_evidence + semantic_review_image + bounded_price_snapshot_stale_recovery"
+    "v5Hotfix": "activity_photo_all_modes_private_evidence + semantic_review_image + bounded_price_snapshot_stale_recovery",
+    "backgroundSemanticReview": "next_after_scheduled_after_immediate_capture_response",
+    "backgroundReviewFactsWritten": 0,
+    "reviewLoadingUx": "four_stage_corporate_progress_skeleton",
+    "narrowDesktopModeUi": "icon_only_same_icons_as_mobile_with_title_and_aria_label",
+    "modelSelector": "gpt_5_6_luna_terra_sol_actual_names",
+    "modelTierRouting": {
+      "nano": "gpt-5.6-luna:low",
+      "standard": "gpt-5.6-terra:medium",
+      "pro": "gpt-5.6-sol:max"
+    },
+    "modelCatalogPolicy": "server_verified_registry_with_bounded_runtime_price_seed; future frontier changes require approved registry/pricing update",
+    "modelCatalogVerifiedAt": "2026-08-19T13:00:00.000Z",
+    "modelCatalogAutoSeedExpiresAt": "2026-08-26T23:59:59.999Z",
+    "canonicalLeafRetrievalChanged": false,
+    "v6Patch": "background_review_after_response + loading_progress + narrow_icon_modes + gpt56_actual_model_selector",
+    "v7Hotfix": "typed_primary_activity_event_id_from_validated_receipt_json_no_feature_semantic_change"
   }
 }

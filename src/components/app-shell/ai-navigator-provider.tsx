@@ -55,6 +55,22 @@ export type AiNavigatorSendOptions = {
   clientRequestId?: string;
 };
 
+export type AiNavigatorModelOption = {
+  tierCode: "nano" | "standard" | "pro";
+  modelName: string;
+  displayName: string;
+  shortLabel: string;
+  caption: string;
+  reasoningEffort: "low" | "medium" | "max";
+  frontier: boolean;
+};
+
+const DEFAULT_MODEL_OPTIONS: AiNavigatorModelOption[] = [
+  { tierCode: "nano", modelName: "gpt-5.6-luna", displayName: "GPT-5.6 Luna", shortLabel: "Luna", caption: "fast / economy", reasoningEffort: "low", frontier: false },
+  { tierCode: "standard", modelName: "gpt-5.6-terra", displayName: "GPT-5.6 Terra", shortLabel: "Terra", caption: "balanced", reasoningEffort: "medium", frontier: false },
+  { tierCode: "pro", modelName: "gpt-5.6-sol", displayName: "GPT-5.6 Sol", shortLabel: "Sol", caption: "max", reasoningEffort: "max", frontier: true },
+];
+
 type ApiTestResponse = {
   reply?: string;
   error?: string;
@@ -70,12 +86,18 @@ type ServerChatHistoryResponse = {
   }>;
 };
 
+type NavigatorModelCatalogResponse = {
+  ok?: boolean;
+  models?: AiNavigatorModelOption[];
+};
+
 type AiNavigatorContextValue = {
   messages: AiNavigatorMessage[];
   input: string;
   isSending: boolean;
   navigatorMode: AiNavigatorMode;
   selectedTier: "nano" | "standard" | "pro";
+  modelOptions: AiNavigatorModelOption[];
   setNavigatorMode: (value: AiNavigatorMode) => void;
   setSelectedTier: (value: "nano" | "standard" | "pro") => void;
   setInput: (value: string) => void;
@@ -142,23 +164,23 @@ function createNavigatorRequestId() {
 
 const AI_RAIL_PROVIDER_COPY = {
   pastSaved: {
-    ru: "Активность добавлена в журнал событий. Факты ещё не записаны: откройте проверку, чтобы подтвердить объекты наблюдения и факты.",
-    pl: "Aktywność została dodana do dziennika zdarzeń. Fakty nie zostały jeszcze zapisane: otwórz weryfikację, aby sprawdzić obiekty obserwacji i fakty.",
-    en: "The activity was added to the event log. Facts have not been written yet; open review to verify observation objects and facts.",
-    es: "La actividad se añadió al registro de eventos. Los hechos aún no se han guardado; abre la revisión para comprobar los objetos de observación y los hechos.",
-    uk: "Активність додано до журналу подій. Факти ще не записані: відкрийте перевірку, щоб підтвердити об’єкти спостереження та факти.",
-    de: "Die Aktivität wurde im Aktivitätsprotokoll gespeichert. Fakten wurden noch nicht geschrieben; öffnen Sie die Prüfung für Beobachtungsobjekte und Fakten.",
-    cs: "Aktivita byla přidána do deníku událostí. Fakta zatím nebyla zapsána; otevřete kontrolu objektů pozorování a faktů.",
+    ru: "Активность сохранена в журнале. ИИ уже выполняет разбор в фоне; факты пока не записываются. Откройте проверку, чтобы увидеть готовый результат или текущий статус анализа.",
+    pl: "Aktywność została zapisana w dzienniku. AI już analizuje ją w tle; fakty nie są jeszcze zapisywane. Otwórz weryfikację, aby zobaczyć gotowy wynik lub bieżący status analizy.",
+    en: "The activity was saved to the event log. AI analysis is already running in the background; facts are not written yet. Open review to see the ready result or the current analysis status.",
+    es: "La actividad se guardó en el registro. El análisis de IA ya se ejecuta en segundo plano; los hechos aún no se escriben. Abre la revisión para ver el resultado o el estado actual.",
+    uk: "Активність збережено в журналі. ШІ вже виконує розбір у фоні; факти поки не записуються. Відкрийте перевірку, щоб побачити готовий результат або поточний стан аналізу.",
+    de: "Die Aktivität wurde gespeichert. Die KI-Analyse läuft bereits im Hintergrund; Fakten werden noch nicht geschrieben. Öffnen Sie die Prüfung, um das Ergebnis oder den aktuellen Analysestatus zu sehen.",
+    cs: "Aktivita byla uložena do deníku. AI analýza už běží na pozadí; fakta se zatím nezapisují. Otevřete kontrolu a zobrazte výsledek nebo aktuální stav analýzy.",
   },
   pastAction: { ru: "Проверить анализ", pl: "Sprawdź analizę", en: "Review analysis", es: "Revisar análisis", uk: "Перевірити аналіз", de: "Analyse prüfen", cs: "Zkontrolovat analýzu" },
   futureSaved: {
-    ru: "Плановая активность добавлена. Откройте календарь, чтобы проверить время и детали события.",
-    pl: "Planowana aktywność została dodana. Otwórz kalendarz, aby sprawdzić czas i szczegóły zdarzenia.",
-    en: "The planned activity was added. Open the calendar to review its time and details.",
-    es: "La actividad planificada se añadió. Abre el calendario para revisar la hora y los detalles.",
-    uk: "Заплановану активність додано. Відкрийте календар, щоб перевірити час і деталі події.",
-    de: "Die geplante Aktivität wurde hinzugefügt. Öffnen Sie den Kalender, um Zeit und Details zu prüfen.",
-    cs: "Plánovaná aktivita byla přidána. Otevřete kalendář a zkontrolujte čas a podrobnosti.",
+    ru: "План сохранён. ИИ уже разбирает сообщение и вложения в фоне. Откройте календарь; когда вы откроете активность, готовый разбор будет использован сразу, если он уже завершён.",
+    pl: "Plan został zapisany. AI już analizuje wiadomość i załączniki w tle. Otwórz kalendarz; po otwarciu aktywności gotowa analiza zostanie użyta od razu, jeśli już się zakończyła.",
+    en: "The plan was saved. AI is already analyzing the message and attachments in the background. Open the calendar; when you open the activity, a completed analysis will be reused immediately.",
+    es: "El plan se guardó. La IA ya analiza el mensaje y los adjuntos en segundo plano. Abre el calendario; al abrir la actividad se reutilizará de inmediato cualquier análisis ya terminado.",
+    uk: "План збережено. ШІ вже розбирає повідомлення та вкладення у фоні. Відкрийте календар; коли відкриєте активність, готовий розбір буде використано одразу, якщо він уже завершився.",
+    de: "Der Plan wurde gespeichert. Die KI analysiert Nachricht und Anhänge bereits im Hintergrund. Öffnen Sie den Kalender; ein bereits fertiges Ergebnis wird beim Öffnen der Aktivität sofort verwendet.",
+    cs: "Plán byl uložen. AI už analyzuje zprávu a přílohy na pozadí. Otevřete kalendář; při otevření aktivity se hotová analýza použije okamžitě, pokud už skončila.",
   },
   futureAction: { ru: "Открыть календарь", pl: "Otwórz kalendarz", en: "Open calendar", es: "Abrir calendario", uk: "Відкрити календар", de: "Kalender öffnen", cs: "Otevřít kalendář" },
   genericError: {
@@ -2909,6 +2931,7 @@ export function AiNavigatorProvider({
   const [isSending, setIsSending] = useState(false);
   const [navigatorMode, setNavigatorMode] = useState<AiNavigatorMode>("chat");
   const [selectedTier, setSelectedTier] = useState<"nano" | "standard" | "pro">("standard");
+  const [modelOptions, setModelOptions] = useState<AiNavigatorModelOption[]>(DEFAULT_MODEL_OPTIONS);
 
   useEffect(() => {
     if (session.isLoading) {
@@ -3115,6 +3138,39 @@ export function AiNavigatorProvider({
     [input, isSending, navigatorMode, router, selectedTier],
   );
 
+  useEffect(() => {
+    let cancelled = false;
+
+    void fetch("/api/ai/model-catalog", {
+      credentials: "include",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return (await response.json().catch(() => null)) as NavigatorModelCatalogResponse | null;
+      })
+      .then((payload) => {
+        if (cancelled || payload?.ok !== true || !Array.isArray(payload.models)) return;
+        const models = payload.models.filter(
+          (item): item is AiNavigatorModelOption =>
+            Boolean(item) &&
+            (item.tierCode === "nano" || item.tierCode === "standard" || item.tierCode === "pro") &&
+            typeof item.modelName === "string" &&
+            typeof item.displayName === "string" &&
+            typeof item.shortLabel === "string",
+        );
+        if (models.length === 3) setModelOptions(models);
+      })
+      .catch(() => {
+        // The server catalog is presentation metadata. Safe built-in labels remain available.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const clearHistory = useCallback(() => {
     setMessages(DEFAULT_MESSAGES);
 
@@ -3132,6 +3188,7 @@ export function AiNavigatorProvider({
       isSending,
       navigatorMode,
       selectedTier,
+      modelOptions,
       setNavigatorMode,
       setSelectedTier,
       setInput,
@@ -3146,6 +3203,7 @@ export function AiNavigatorProvider({
       isSending,
       navigatorMode,
       selectedTier,
+      modelOptions,
       messages,
       sendMessage,
       setInput,

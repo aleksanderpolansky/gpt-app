@@ -427,3 +427,26 @@ Safety:
 5. Semantic review повторно проверяет ownership path, MIME, size и SHA256 перед `input_image`. Image-derived numeric measurements остаются запрещены.
 6. Если budget RPC возвращает `PRICE_SNAPSHOT_STALE`, разрешён только exact standard/gpt-5.4-mini refresh в пределах server verification lease. После `2026-08-26T23:59:59.999Z` он обязан fail-closed до обновления catalog verification.
 7. Live acceptance: past+photo блюда; future+photo графика; image-only past; retry idempotency; private bucket not public; semantic review sees image; no facts at capture; stale price path создаёт не более одного актуального newest price row на retry operation; `npm run lint -- --max-warnings=0` и `npm run build` PASS.
+
+### AI RIGHT RAIL V6 — восстановление
+1. Требуемый baseline для применения V6 patch: `062b22afe2c7250e8ec69383394b994763524e99`, clean `main`, `HEAD == origin/main`.
+2. Проверить `POST /api/activity/quick-capture`: raw activity создаётся сразу, response содержит `backgroundSemanticReview=scheduled`, factsWrittenAtCapture=0; background worker запускается через Next.js `after()`.
+3. Открыть ту же запись сразу после capture. Если draft уже готов, `/api/activity/review-analysis` должен вернуть cached draft; если ещё нет — пользователь видит progress/skeleton, а не пустой экран. Параллельный insert `23505` должен reuse winning draft.
+4. Проверить right rail: narrow desktop — 3 icon-only mode buttons с title/aria-label; mobile drawer — icon+label; mobile floating buttons остаются прежними корпоративными иконками.
+5. Проверить `/api/ai/model-catalog`: Luna/Terra/Sol, pro reasoning=max. Первый chat call каждого tier может versioned-upgrade price snapshot/default model в пределах verification lease. После expiry missing catalog обязан fail-closed.
+6. Прогнать `npm run lint -- --max-warnings=0` по изменённым TS/TSX, затем полный `npm run build`, `git diff --check`, staged allowlist, commit/push verification.
+7. Canonical leaf/candidate routing не проверять как acceptance V6: этот слой сознательно не изменён.
+
+### AI RIGHT RAIL V7 — TypeScript hotfix / восстановление
+1. Baseline: `062b22afe2c7250e8ec69383394b994763524e99`, clean `main`, `HEAD == origin/main`.
+2. Исторический V6 release attempt с `2026-08-19T15:48+02:00` считать FAIL-before-commit: build TypeScript остановился на неизвестном JSON-поле `activityEventIds`; rollback PASS.
+3. В `src/app/api/activity/quick-capture/route.ts` `readReviewFirstReceipt()` обязан возвращать `primaryActivityEventId: string | null`, вычисленный после `Array.isArray(result.activityEventIds)`. Duplicate branch не должен индексировать `existing.result.activityEventIds`.
+4. После применения прогнать validator V7, ESLint `--max-warnings=0`, полный `npm run build`, `git diff --check`, staged allowlist и только затем commit/push.
+5. Live acceptance остаётся V6: immediate raw save + background review, staged progress, icon-only narrow desktop modes, Luna/Terra/Sol selector. Canonical leaf routing не менять.
+
+### AI RIGHT RAIL V8 — model selector hotfix / восстановление
+1. Baseline: clean `main == origin/main == 062b22afe2c7250e8ec69383394b994763524e99`.
+2. V7 attempt at 2026-08-19 16:16+02:00 is FAIL-before-commit: Next TypeScript rejected `tier.code`; rollback PASS.
+3. Apply cumulative V8 patch. The model selector must use only `tier.tierCode`; `tier.code` is forbidden by validator.
+4. Run V8 validator, ESLint `--max-warnings=0`, full `npm run build`, `git diff --check`, staged allowlist and only then commit/push.
+5. Functional live acceptance remains V6: immediate raw save + background review, staged progress, icon-only narrow desktop modes, Luna/Terra/Sol selector. Canonical leaf routing remains deferred.

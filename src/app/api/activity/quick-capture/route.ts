@@ -1,7 +1,7 @@
 import { Buffer } from "node:buffer";
 import crypto from "node:crypto";
 
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
 import { supabase } from "../../../../../lib/supabase";
@@ -21,10 +21,14 @@ import {
 } from "@/lib/activity/aiLabDirectSave";
 import type { ActivityTimingLocalePp1 } from "@/lib/activity/pp1/activityTiming";
 import { normalizeQuickCaptureTemporalMode } from "@/lib/activity/quickCaptureTemporalMode";
+import { analyzeActivityForSemanticReviewA31 } from "@/lib/ai/activitySemanticReviewA31.server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
+
+export const ARCTOR_AI_RIGHT_RAIL_BACKGROUND_REVIEW_V1 =
+  "ARCTOR_AI_RIGHT_RAIL_BACKGROUND_REVIEW_V1" as const;
 
 const CONTRACT = "ARCTOR_AI_A3_1_REVIEW_FIRST_CAPTURE_V1";
 const REQUEST_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{7,179}$/;
@@ -407,11 +411,38 @@ async function readReviewFirstReceipt(signalId: string, userId: string) {
 
   return {
     signal,
+    primaryActivityEventId: hasActivityEventId ? text(activityEventIds[0]) : null,
     result:
       result.contractVersion === CONTRACT && hasActivityEventId
         ? result
         : null,
   };
+}
+
+function scheduleBackgroundSemanticReview(input: {
+  appUserId: string;
+  actorId: string;
+  activityEventId: string;
+  locale: ActivityTimingLocalePp1;
+  timeZone: string;
+}) {
+  after(async () => {
+    try {
+      await analyzeActivityForSemanticReviewA31({
+        appUserId: input.appUserId,
+        actorId: input.actorId,
+        activityEventId: input.activityEventId,
+        locale: input.locale,
+        timeZone: input.timeZone,
+      });
+    } catch (error) {
+      console.error(
+        "AI_RIGHT_RAIL_BACKGROUND_SEMANTIC_REVIEW_FAILED",
+        input.activityEventId,
+        error,
+      );
+    }
+  });
 }
 
 export async function POST(request: Request) {
@@ -501,15 +532,26 @@ export async function POST(request: Request) {
   if (signal) {
     const existing = await readReviewFirstReceipt(signal.id, appUser.id);
     if (existing?.result) {
+      const existingActivityEventId = existing.primaryActivityEventId;
+      if (existingActivityEventId) {
+        scheduleBackgroundSemanticReview({
+          appUserId: appUser.id,
+          actorId: personActor.id,
+          activityEventId: existingActivityEventId,
+          locale,
+          timeZone,
+        });
+      }
       return NextResponse.json({
         ok: true,
         accepted: true,
         duplicate: true,
         signalId: signal.id,
         processingStatus: "processed",
+        backgroundSemanticReview: existingActivityEventId ? "scheduled" : "not_scheduled",
         result: existing.result,
         note:
-          "Activity was already captured. No AI analysis and no fact write run at capture.",
+          "Activity was already captured. Background semantic review was re-requested idempotently; facts remain review-gated.",
       });
     }
   }
@@ -672,18 +714,27 @@ export async function POST(request: Request) {
       temporalDirection,
     });
 
+    scheduleBackgroundSemanticReview({
+      appUserId: appUser.id,
+      actorId: personActor.id,
+      activityEventId: createdEvent.activityEventId,
+      locale,
+      timeZone,
+    });
+
     return NextResponse.json({
       ok: true,
       accepted: true,
       duplicate: false,
       signalId: signal.id,
       processingStatus: "processed",
+      backgroundSemanticReview: "scheduled",
       result,
       calendarEventId: createdEvent.calendarEventId,
       note:
         imageEvidence
-          ? "Activity and private image evidence are saved immediately. Semantic AI analysis starts only when the review item is opened. Facts written now: 0."
-          : "Activity is saved immediately. Semantic AI analysis starts only when the review item is opened. Facts written now: 0.",
+          ? "Activity and private image evidence are saved immediately. Semantic AI review is scheduled in the background after the response. Facts written now: 0."
+          : "Activity is saved immediately. Semantic AI review is scheduled in the background after the response. Facts written now: 0.",
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

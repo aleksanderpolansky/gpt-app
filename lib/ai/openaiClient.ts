@@ -24,7 +24,7 @@ export type RunAiStructuredOutputContract = {
   strict?: boolean;
 };
 
-type RunAiReasoningEffort = "none" | "low" | "medium" | "high" | "xhigh";
+type RunAiReasoningEffort = "none" | "low" | "medium" | "high" | "xhigh" | "max";
 
 type RunAiJsonRequest = {
   system: string;

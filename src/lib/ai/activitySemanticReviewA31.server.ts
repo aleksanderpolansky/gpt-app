@@ -1463,6 +1463,23 @@ Hard rules:
       .single();
 
     if (draftError || !draft) {
+      if (draftError?.code === "23505") {
+        const racedDraft = await readExistingDraft({
+          activityEventId: activity.id,
+          appUserId: input.appUserId,
+          actorId: input.actorId,
+          sourceTextHash,
+        });
+        if (racedDraft) {
+          return {
+            ...formatDraft(asRecord(racedDraft), activity),
+            cached: true,
+            providerCalls: 1,
+            concurrentDraftReuse: true,
+          };
+        }
+      }
+
       throw new Error(
         `AI_A3_1_SEMANTIC_REVIEW_DRAFT_WRITE_FAILED:${draftError?.message ?? "missing row"}`,
       );

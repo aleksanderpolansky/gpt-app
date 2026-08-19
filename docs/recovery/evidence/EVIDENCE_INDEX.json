@@ -669,6 +669,13 @@
       "note": "V4 includes V3 production ESLint failure/rollback evidence and lint-safe fix strategy.",
       "hashPolicy": "sha256_utf8_text_after_crlf_to_lf_normalization",
       "description": "AI Right Rail V1/V5 evidence: released V4 baseline, all-mode private activity photos, semantic-review image input, bounded stale-price recovery."
+    },
+    {
+      "file": "docs/recovery/evidence/AI_RIGHT_RAIL/ARCTOR_AI_RIGHT_RAIL_BACKGROUND_REVIEW_MODEL_UI_V8_EVIDENCE.json",
+      "sha256": "f1b3a8735e235a0e54300d0faab518fc771fa1bbfe9d66ee3b60253ecb936a16",
+      "group": "AI_RIGHT_RAIL",
+      "status": "current",
+      "note": "V8 = V6 functional scope + V7 receipt hotfix + model selector tierCode TypeScript hotfix; V7 build failed before commit and rolled back."
     }
   ]
 }

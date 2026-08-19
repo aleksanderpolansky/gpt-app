@@ -353,6 +353,48 @@ function valueText(measurement: Measurement) {
   return `${measurement.valueText ?? "—"} ${measurement.unit}`;
 }
 
+
+const LOADING_FLOW: Record<
+  Locale,
+  { title: string; safe: string; steps: [string, string, string, string] }
+> = {
+  ru: {
+    title: "Готовим разбор активности",
+    safe: "Запись уже сохранена. Можно покинуть страницу — факты не создаются до вашего подтверждения.",
+    steps: ["Проверяем, готов ли фоновый разбор", "ИИ анализирует текст и вложения", "Проверяем структуру результата", "Готовим экран проверки"],
+  },
+  en: {
+    title: "Preparing activity review",
+    safe: "The activity is already saved. You can leave this page; facts are not created before your confirmation.",
+    steps: ["Checking for a completed background review", "AI is analyzing text and attachments", "Validating the result structure", "Preparing the review screen"],
+  },
+  pl: {
+    title: "Przygotowujemy analizę aktywności",
+    safe: "Aktywność jest już zapisana. Możesz opuścić stronę; fakty nie powstaną przed Twoim potwierdzeniem.",
+    steps: ["Sprawdzamy, czy analiza w tle jest już gotowa", "AI analizuje tekst i załączniki", "Sprawdzamy strukturę wyniku", "Przygotowujemy ekran weryfikacji"],
+  },
+  uk: {
+    title: "Готуємо розбір активності",
+    safe: "Активність уже збережена. Можна залишити сторінку — факти не створюються до вашого підтвердження.",
+    steps: ["Перевіряємо, чи готовий фоновий розбір", "ШІ аналізує текст і вкладення", "Перевіряємо структуру результату", "Готуємо екран перевірки"],
+  },
+  de: {
+    title: "Aktivitätsanalyse wird vorbereitet",
+    safe: "Die Aktivität ist bereits gespeichert. Sie können die Seite verlassen; Fakten entstehen erst nach Ihrer Bestätigung.",
+    steps: ["Prüfen, ob die Hintergrundanalyse fertig ist", "KI analysiert Text und Anhänge", "Ergebnisstruktur wird geprüft", "Prüfansicht wird vorbereitet"],
+  },
+  es: {
+    title: "Preparando el análisis de actividad",
+    safe: "La actividad ya está guardada. Puedes salir de la página; no se crean hechos antes de tu confirmación.",
+    steps: ["Comprobamos si el análisis en segundo plano ya está listo", "La IA analiza texto y adjuntos", "Validamos la estructura del resultado", "Preparamos la pantalla de revisión"],
+  },
+  cs: {
+    title: "Připravujeme analýzu aktivity",
+    safe: "Aktivita je už uložena. Stránku můžete opustit; fakta nevzniknou před vaším potvrzením.",
+    steps: ["Kontrolujeme, zda je analýza na pozadí hotová", "AI analyzuje text a přílohy", "Kontrolujeme strukturu výsledku", "Připravujeme obrazovku kontroly"],
+  },
+};
+
 function relationLabel(
   relationMode: Proposal["relationMode"],
   copy: (typeof COPY)[Locale],
@@ -518,6 +560,7 @@ export function ActivitySemanticReviewA31({
   const [payload, setPayload] = useState<ReviewPayload | null>(null);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingStage, setLoadingStage] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -527,6 +570,12 @@ export function ActivitySemanticReviewA31({
 
   useEffect(() => {
     let cancelled = false;
+    const stageTimers = [
+      window.setTimeout(() => !cancelled && setLoadingStage(0), 0),
+      window.setTimeout(() => !cancelled && setLoadingStage(1), 650),
+      window.setTimeout(() => !cancelled && setLoadingStage(2), 3200),
+      window.setTimeout(() => !cancelled && setLoadingStage(3), 6500),
+    ];
 
     async function run() {
       setLoading(true);
@@ -598,6 +647,7 @@ export function ActivitySemanticReviewA31({
 
     return () => {
       cancelled = true;
+      stageTimers.forEach((timerId) => window.clearTimeout(timerId));
     };
   }, [activityEventId, locale, timeZone]);
 
@@ -769,11 +819,68 @@ export function ActivitySemanticReviewA31({
   }
 
   if (loading) {
+    const flow = LOADING_FLOW[locale];
     return (
       <main className="min-h-screen bg-zinc-950 px-4 py-6 text-zinc-100 md:px-8">
-        <div className="mx-auto max-w-7xl rounded-3xl border border-emerald-900 bg-zinc-900/70 p-6">
-          <p className="text-sm text-emerald-300">{copy.loading}</p>
-          <p className="mt-2 text-xs text-zinc-500">{copy.noFactsYet}</p>
+        <div className="mx-auto max-w-7xl space-y-5">
+          <section className="overflow-hidden rounded-3xl border border-emerald-900/80 bg-zinc-900/80 shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
+            <div className="h-1 bg-zinc-800">
+              <div
+                className="h-full bg-emerald-400 transition-[width] duration-700 ease-out"
+                style={{ width: `${25 + loadingStage * 25}%` }}
+              />
+            </div>
+            <div className="p-5 md:p-6">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-400">ARCTor · AI-A3.1</p>
+                  <h1 className="mt-2 text-xl font-bold md:text-2xl">{flow.title}</h1>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">{flow.safe}</p>
+                </div>
+                <div className="flex items-center gap-2 rounded-full border border-emerald-900 bg-black/40 px-3 py-1.5 text-xs text-emerald-300">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
+                  {copy.loading}
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-2 md:grid-cols-2">
+                {flow.steps.map((step, index) => {
+                  const done = index < loadingStage;
+                  const active = index === loadingStage;
+                  return (
+                    <div
+                      key={step}
+                      className={active
+                        ? "flex items-center gap-3 rounded-2xl border border-emerald-800 bg-emerald-950/20 px-4 py-3"
+                        : "flex items-center gap-3 rounded-2xl border border-zinc-800 bg-black/30 px-4 py-3"}
+                    >
+                      <span className={done
+                        ? "flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-xs font-bold text-black"
+                        : active
+                          ? "flex h-7 w-7 items-center justify-center rounded-full border border-emerald-500 text-xs font-bold text-emerald-300"
+                          : "flex h-7 w-7 items-center justify-center rounded-full border border-zinc-700 text-xs text-zinc-600"}
+                      >
+                        {done ? "✓" : index + 1}
+                      </span>
+                      <span className={active ? "text-sm font-medium text-zinc-100" : "text-sm text-zinc-500"}>{step}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className="mt-4 text-xs text-amber-300">{copy.noFactsYet}</p>
+            </div>
+          </section>
+
+          <section className="grid gap-4 md:grid-cols-3" aria-hidden="true">
+            {[0, 1, 2].map((item) => (
+              <div key={item} className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+                <div className="h-3 w-24 animate-pulse rounded bg-zinc-800" />
+                <div className="mt-4 h-9 animate-pulse rounded-xl bg-zinc-900" />
+                <div className="mt-2 h-3 w-2/3 animate-pulse rounded bg-zinc-800/70" />
+              </div>
+            ))}
+          </section>
         </div>
       </main>
     );

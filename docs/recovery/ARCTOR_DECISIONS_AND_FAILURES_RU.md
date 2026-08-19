@@ -665,3 +665,27 @@ Private binary evidence хранится в Supabase Storage bucket `activity-ev
 4. `PRICE_SNAPSHOT_STALE` — другой дефект, не связан с правой колонкой. GSR1E сознательно требует snapshot <=7 days, поэтому 11.08 snapshot закономерно заблокировал review 19.08.
 5. Нельзя бессрочно продлевать старую цену. V5 self-heal работает только для точного `standard/gpt-5.4-mini`, сверяет текущий DB snapshot с проверенными официальными значениями 0.75 / 0.075 / 4.50 USD за 1M input/cached/output и имеет жёсткий verification lease до 26.08.2026. При несовпадении или после expiry — fail-closed.
 6. Runtime refresh создаёт новый versioned price snapshot, а не переписывает историческую цену.
+
+### 2026-08-19 — AI RIGHT RAIL V6: background review / model selector
+1. Решение: capture и semantic review — два процесса. Capture обязан завершить durable raw write раньше AI; AI запускается через `after()` после ответа и не блокирует переход пользователя.
+2. Фото остаётся evidence/source, а не отдельным жизненным событием «загружена фотография». Image-only intake получает техническое временное название, но immutable source/evidence сохраняется отдельно.
+3. Факты по-прежнему создаются только после human review commit. Background review создаёт только draft анализа.
+4. Параллельный background/manual review может дважды дойти до model stage на разных server instances; DB unique index остаётся последним guard. V6 обрабатывает `23505` повторным чтением winning draft, не создавая второй open draft.
+5. Узкий rail не показывает обрезанные `Відбул.../Заплан.../Спілку...`: в narrow desktop остаются фирменные иконки с accessibility labels; в mobile drawer текст разрешён.
+6. `Nano/Standard/Pro` больше не являются пользовательскими названиями моделей в right rail. Они остаются внутренними billing tier codes; UI показывает фактические `GPT-5.6 Luna/Terra/Sol`, а Pro-slot использует Sol + reasoning=max.
+7. Автоматическое назначение будущей frontier-модели не должно означать «самое новое имя = production». Нужны approved registry, compatible Structured Output/image support, актуальная цена и budget gates. V6 отделяет UI от tier name и создаёт server model catalog как точку дальнейшей автоматизации.
+8. Canonical leaf/candidate retrieval в V6 запрещено менять по решению пользователя; этот слой ожидает отдельную новую логику.
+
+### 2026-08-19 — AI RIGHT RAIL V7: TypeScript duplicate-receipt hotfix
+1. V6 production release не дошёл до commit: validator 23/23 и ESLint zero-warning прошли, но `next build` выявил `TS7053`/implicit-any на `existing.result.activityEventIds?.[0]`.
+2. Причина — `asRecord()` намеренно возвращает `Record<string, unknown>`; optional chaining не превращает неизвестное JSON-поле в массив. Нельзя повторно индексировать JSON после того, как его массивность уже проверена в другом месте.
+3. Правило: helper, который валидирует persisted JSON, должен возвращать потребителю уже типизированные scalar/array-derived значения. V7 возвращает `primaryActivityEventId: string | null`.
+4. Функциональные решения V6 (background review, progress UX, icon-only narrow rail, GPT-5.6 registry, неизменный canonical leaf routing) остаются без изменений.
+5. V6 runner сделал `ROLLBACK=PASS`; authoritative baseline для V7 остаётся `062b22afe2c7250e8ec69383394b994763524e99`.
+
+### 2026-08-19 — AI RIGHT RAIL V8: model option contract hotfix
+1. V7 production build failed before commit because UI consumed `AiNavigatorModelOption` with obsolete property name `code`; the actual server/client contract uses `tierCode`.
+2. TypeScript correctly caught all three call sites: selection comparison, React key and `setSelectedTier`.
+3. Rule: validators for shared typed option contracts must assert exact property names on the consumer side, not only the presence of catalog rendering.
+4. V8 uses `tier.tierCode` consistently and explicitly forbids `tier.code`.
+5. V7 rollback PASS; production baseline remains V5 commit `062b22afe2c7250e8ec69383394b994763524e99`.

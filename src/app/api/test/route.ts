@@ -3,13 +3,22 @@ import { supabase } from "../../../../lib/supabase";
 import { runAiJsonWithUsageMetadata } from "../../../../lib/ai/openaiClient";
 import type { RunAiJsonUsageMetadata } from "../../../../lib/ai/openaiClient";
 import { resolveRuntimeMethodologyContext } from "@/lib/ai/methodology/methodologyContext.server";
+import {
+  NAVIGATOR_MODEL_AUTO_SEED_EXPIRES_AT,
+  NAVIGATOR_MODEL_CATALOG_VERIFIED_AT,
+  getNavigatorModelDefinition,
+  type NavigatorAiTierCode,
+} from "../../../../lib/ai/navigatorModelCatalog";
 
 export const dynamic = "force-dynamic";
 
 export const ARCTOR_AI_RIGHT_RAIL_CHAT_PRICE_IMAGE_COMPAT_V1 =
   "ARCTOR_AI_RIGHT_RAIL_CHAT_PRICE_IMAGE_COMPAT_V1" as const;
 
-type AiTierCode = "nano" | "standard" | "pro";
+export const ARCTOR_AI_RIGHT_RAIL_GPT56_MODEL_REGISTRY_V1 =
+  "ARCTOR_AI_RIGHT_RAIL_GPT56_MODEL_REGISTRY_V1" as const;
+
+type AiTierCode = NavigatorAiTierCode;
 
 type ChatAiResponse = {
   reply: string;
@@ -40,6 +49,11 @@ type AiModelPriceSnapshotRow = {
   output_cost_per_1m_tokens: string | number;
   usd_to_eur_rate: string | number | null;
   eur_markup_multiplier: string | number | null;
+  valid_from?: string | null;
+  valid_to?: string | null;
+  is_active?: boolean | null;
+  source_url?: string | null;
+  metadata?: unknown;
 };
 
 type AiCreditWalletRow = {
@@ -306,6 +320,150 @@ function billingErrorResponse(params: {
   );
 }
 
+
+function pricesMatchCatalog(
+  snapshot: AiModelPriceSnapshotRow,
+  tierCode: AiTierCode,
+) {
+  const expected = getNavigatorModelDefinition(tierCode);
+  const input = asNumber(snapshot.input_cost_per_1m_tokens);
+  const cached = asNumber(snapshot.cached_input_cost_per_1m_tokens);
+  const output = asNumber(snapshot.output_cost_per_1m_tokens);
+  return (
+    snapshot.model_name === expected.modelName &&
+    input === expected.inputUsdPer1m &&
+    cached === expected.cachedInputUsdPer1m &&
+    output === expected.outputUsdPer1m
+  );
+}
+
+async function ensureNavigatorTierModelCatalog(input: {
+  tier: AiModelTierRow;
+  tierCode: AiTierCode;
+}) {
+  const expected = getNavigatorModelDefinition(input.tierCode);
+
+  const { data: exactSnapshot, error: exactError } = await supabase
+    .from("ai_model_price_snapshots")
+    .select(
+      "tier_code, model_name, provider, pricing_currency, display_currency, input_cost_per_1m_tokens, cached_input_cost_per_1m_tokens, output_cost_per_1m_tokens, usd_to_eur_rate, eur_markup_multiplier, valid_from, valid_to, is_active, source_url, metadata",
+    )
+    .eq("tier_code", input.tierCode)
+    .eq("provider", "openai")
+    .eq("model_name", expected.modelName)
+    .eq("is_active", true)
+    .is("valid_to", null)
+    .order("valid_from", { ascending: false })
+    .limit(1)
+    .maybeSingle<AiModelPriceSnapshotRow>();
+
+  if (exactError) {
+    throw new Error(`AI_NAVIGATOR_GPT56_PRICE_READ_FAILED:${exactError.message}`);
+  }
+
+  if (exactSnapshot) {
+    if (!pricesMatchCatalog(exactSnapshot, input.tierCode)) {
+      throw new Error("AI_NAVIGATOR_GPT56_PRICE_MISMATCH_FAIL_CLOSED");
+    }
+
+    if (input.tier.default_model_name !== expected.modelName) {
+      const { error: tierUpdateError } = await supabase
+        .from("ai_model_tiers")
+        .update({ default_model_name: expected.modelName })
+        .eq("tier_code", input.tierCode)
+        .eq("enabled", true);
+      if (tierUpdateError) {
+        console.warn("AI_NAVIGATOR_GPT56_TIER_UPDATE_WARNING", tierUpdateError.message);
+      }
+    }
+
+    return exactSnapshot;
+  }
+
+  if (Date.now() > Date.parse(NAVIGATOR_MODEL_AUTO_SEED_EXPIRES_AT)) {
+    throw new Error("AI_NAVIGATOR_GPT56_AUTO_SEED_LEASE_EXPIRED");
+  }
+
+  const fxResolution = await supabase
+    .from("ai_model_price_snapshots")
+    .select("usd_to_eur_rate, valid_from")
+    .eq("provider", "openai")
+    .not("usd_to_eur_rate", "is", null)
+    .order("valid_from", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ usd_to_eur_rate: string | number | null; valid_from: string | null }>();
+
+  if (fxResolution.error || !fxResolution.data) {
+    throw new Error("AI_NAVIGATOR_GPT56_FX_RATE_UNAVAILABLE");
+  }
+
+  const fxRate = asNumber(fxResolution.data.usd_to_eur_rate);
+  if (fxRate === null || fxRate <= 0) {
+    throw new Error("AI_NAVIGATOR_GPT56_FX_RATE_INVALID");
+  }
+
+  const nowIso = new Date().toISOString();
+  const { data: inserted, error: insertError } = await supabase
+    .from("ai_model_price_snapshots")
+    .insert({
+      tier_code: input.tierCode,
+      model_name: expected.modelName,
+      provider: "openai",
+      pricing_currency: "USD",
+      display_currency: "EUR",
+      input_cost_per_1m_tokens: expected.inputUsdPer1m,
+      cached_input_cost_per_1m_tokens: expected.cachedInputUsdPer1m,
+      output_cost_per_1m_tokens: expected.outputUsdPer1m,
+      usd_to_eur_rate: fxRate,
+      eur_markup_multiplier: 1,
+      valid_from: nowIso,
+      valid_to: null,
+      is_active: true,
+      source_url: expected.sourceUrl,
+      source_note: `ARCTor verified navigator model catalog ${NAVIGATOR_MODEL_CATALOG_VERIFIED_AT}`,
+      metadata: {
+        contract: ARCTOR_AI_RIGHT_RAIL_GPT56_MODEL_REGISTRY_V1,
+        verifiedAt: NAVIGATOR_MODEL_CATALOG_VERIFIED_AT,
+        autoSeedExpiresAt: NAVIGATOR_MODEL_AUTO_SEED_EXPIRES_AT,
+        reasoningEffort: expected.reasoningEffort,
+        source: "server_verified_openai_model_catalog",
+      },
+    })
+    .select(
+      "tier_code, model_name, provider, pricing_currency, display_currency, input_cost_per_1m_tokens, cached_input_cost_per_1m_tokens, output_cost_per_1m_tokens, usd_to_eur_rate, eur_markup_multiplier, valid_from, valid_to, is_active, source_url, metadata",
+    )
+    .single<AiModelPriceSnapshotRow>();
+
+  if (insertError || !inserted) {
+    throw new Error(`AI_NAVIGATOR_GPT56_PRICE_INSERT_FAILED:${insertError?.message ?? "missing row"}`);
+  }
+
+  const { error: tierUpdateError } = await supabase
+    .from("ai_model_tiers")
+    .update({ default_model_name: expected.modelName })
+    .eq("tier_code", input.tierCode)
+    .eq("enabled", true);
+
+  if (tierUpdateError) {
+    console.warn("AI_NAVIGATOR_GPT56_TIER_UPDATE_WARNING", tierUpdateError.message);
+  }
+
+  const { error: deactivateError } = await supabase
+    .from("ai_model_price_snapshots")
+    .update({ is_active: false, valid_to: nowIso })
+    .eq("tier_code", input.tierCode)
+    .eq("provider", "openai")
+    .eq("is_active", true)
+    .is("valid_to", null)
+    .neq("model_name", expected.modelName);
+
+  if (deactivateError) {
+    console.warn("AI_NAVIGATOR_GPT56_OLD_PRICE_DEACTIVATE_WARNING", deactivateError.message);
+  }
+
+  return inserted;
+}
+
 async function buildBillingPreflight(params: {
   appUserId: string;
   selectedTier: AiTierCode;
@@ -335,27 +493,22 @@ async function buildBillingPreflight(params: {
     };
   }
 
-  const { data: priceSnapshot, error: priceError } = await supabase
-    .from("ai_model_price_snapshots")
-    .select(
-      "tier_code, model_name, provider, pricing_currency, display_currency, input_cost_per_1m_tokens, cached_input_cost_per_1m_tokens, output_cost_per_1m_tokens, usd_to_eur_rate, eur_markup_multiplier",
-    )
-    .eq("tier_code", params.selectedTier)
-    .eq("provider", "openai")
-    .eq("is_active", true)
-    .is("valid_to", null)
-    .order("valid_from", { ascending: false })
-    .limit(1)
-    .maybeSingle<AiModelPriceSnapshotRow>();
-
-  if (priceError || !priceSnapshot) {
+  let priceSnapshot: AiModelPriceSnapshotRow;
+  try {
+    priceSnapshot = await ensureNavigatorTierModelCatalog({
+      tier,
+      tierCode: params.selectedTier,
+    });
+  } catch (catalogError) {
+    const code = catalogError instanceof Error ? catalogError.message : "AI_NAVIGATOR_GPT56_CATALOG_FAILED";
     return {
       ok: false,
       response: billingErrorResponse({
         status: 503,
         code: "missing_active_price_snapshot",
-        message: "Ð”Ð»Ñ Ð²Ñ‹Ð±Ñ€Ð°Ð½Ð½Ð¾Ð¹ Ð¼Ð¾Ð´ÐµÐ»Ð¸ Ð¿Ð¾ÐºÐ° Ð½ÐµÑ‚ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾Ð¹ Ñ†ÐµÐ½Ñ‹. ÐŸÐ¾Ð¿Ñ€Ð¾Ð±ÑƒÐ¹Ñ‚Ðµ Ð´Ñ€ÑƒÐ³Ð¾Ð¹ ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ AI.",
+        message: code,
         selectedTier: params.selectedTier,
+        modelName: getNavigatorModelDefinition(params.selectedTier).modelName,
       }),
     };
   }
@@ -366,7 +519,7 @@ async function buildBillingPreflight(params: {
       ? { ...priceSnapshot, usd_to_eur_rate: fxResolution.rate }
       : priceSnapshot;
 
-  const resolvedModelName = tier.default_model_name || priceSnapshot.model_name;
+  const resolvedModelName = getNavigatorModelDefinition(params.selectedTier).modelName;
 
   const { data: wallet, error: walletError } = await supabase
     .from("ai_credit_wallets")
@@ -884,6 +1037,7 @@ export async function POST(request: Request) {
       system: systemPrompt,
       user: modelUserPayload,
       model: preflightResult.preflight.modelName,
+      reasoningEffort: getNavigatorModelDefinition(selectedTier).reasoningEffort,
       maxOutputTokens: CHAT_MAX_OUTPUT_TOKENS,
       structuredOutput: methodologyContext.structuredOutput,
       userImageDataUrl: chatImage?.dataUrl ?? null,

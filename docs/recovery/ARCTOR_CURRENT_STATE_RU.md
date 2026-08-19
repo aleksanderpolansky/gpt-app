@@ -666,3 +666,24 @@ V3 дошёл до реального `npm run lint` на production checkout и
 - Для `PRICE_SNAPSHOT_STALE` semantic review делает один fail-closed self-heal только для exact mapping `standard -> gpt-5.4-mini`, если текущий активный snapshot по ценам точно совпадает с server-shipped каталогом, проверенным 19.08.2026. Verification lease истекает 26.08.2026; после этого runtime снова блокируется до новой проверки цен.
 - SQL schema change не требуется. Runtime может добавить новый versioned row в `ai_model_price_snapshots` только при stale-price recovery; старые snapshots закрываются после успешной вставки.
 - V5 baseline: `main @ 2edd9026bd0d4e7764993d92c28ae30384fce01f`. V5 patch сохраняется в Git только после validator + ESLint zero-warning + production build + diff/staged gates; поэтому состояние, попавшее в release commit, означает `RELEASED_AWAITING_LIVE_ACCEPTANCE`.
+
+### AI RIGHT RAIL — V6 background review + loading UX + GPT-5.6 model selector
+- Baseline V6: `main @ 062b22afe2c7250e8ec69383394b994763524e99` (V5 production PASS).
+- Для `past/future` quick capture по-прежнему сначала синхронно и идемпотентно сохраняет raw intake/activity/photo evidence; факты на этом шаге не создаются. После формирования HTTP-ответа `next/server after()` запускает `analyzeActivityForSemanticReviewA31` в фоне. Поэтому переход в журнал/календарь не ждёт OpenAI, а при последующем открытии review готовый draft переиспользуется из `activity_semantic_review_drafts_a31`.
+- Race между background review и ручным открытием review защищён: при PostgreSQL `23505` проигравший writer перечитывает уже созданный draft вместо показа ошибки. Canonical leaf/candidate retrieval этим шагом намеренно НЕ меняется.
+- Экран ожидания глубокого review больше не является пустой чёрной поверхностью: показан корпоративный progress/skeleton из четырёх понятных этапов и явное сообщение, что activity уже сохранена и можно покинуть страницу.
+- Узкий desktop rail использует те же три иконки `past / future / chat`, что mobile; текст скрыт визуально, но остаётся в `title`, `aria-label` и `sr-only`. В mobile drawer подписи сохраняются.
+- Chat model selector показывает фактические модели `5.6 Luna / 5.6 Terra / 5.6 Sol`; для правого frontier slot применяется `gpt-5.6-sol` с `reasoning.effort=max`. Internal tier codes `nano/standard/pro` сохраняются только как совместимые billing slots.
+- Runtime chat routing использует server-verified catalog: Luna 0.20/0.02/1.20 USD, Terra 2.00/0.20/12.00 USD, Sol 5.00/0.50/30.00 USD за 1M input/cached/output. Автоматический seed новых versioned price snapshots разрешён только до `2026-08-26T23:59:59.999Z`; несовпадающая цена или отсутствие FX приводит к fail-closed. Это data write, но не schema/SQL migration.
+- Будущая «самая мощная модель» не выбирается по имени вслепую: UI читает server model catalog, а frontier slot меняется только после совместимого registry/pricing gate. Это позволяет менять фактическое название без переделки UI, но не даёт неизвестной новой модели автоматически обойти Structured Output/budget guards.
+
+### AI RIGHT RAIL — V7 TypeScript receipt hotfix
+- Первый production-запуск V6 дошёл до validator `23/23`, ESLint `--max-warnings=0` и затем остановился на Next.js TypeScript gate до commit/push. Ошибка: `existing.result` имеет тип `JsonRecord`, поэтому `existing.result.activityEventIds?.[0]` пытался индексировать значение `unknown/{}`.
+- Release runner выполнил `ROLLBACK=PASS`; production остался на `main @ 062b22afe2c7250e8ec69383394b994763524e99`.
+- V7 не меняет функциональную семантику V6. `readReviewFirstReceipt()` теперь после `Array.isArray(...)` один раз получает проверенный первый id и возвращает `primaryActivityEventId: string | null`; duplicate quick-capture branch использует это типизированное поле вместо повторного чтения неизвестного JSON.
+- Acceptance V7 требует validator, ESLint zero-warning и полный local production `npm run build` до упаковки, а затем те же gates повторяются на Windows production repo до commit/push.
+
+### AI RIGHT RAIL — V8 model selector TypeScript hotfix
+- Production attempt V7 passed validator `25/25` and ESLint zero-warning, then failed Next.js TypeScript at `global-ai-navigator.tsx`: `AiNavigatorModelOption` defines `tierCode`, while the selector still used legacy `tier.code` in comparison/key/click handler.
+- Runner performed `ROLLBACK=PASS`; authoritative production baseline remains `062b22afe2c7250e8ec69383394b994763524e99`.
+- V8 changes only this type-contract mismatch and strengthens validator coverage; V6/V7 functional semantics remain unchanged.

@@ -36,11 +36,7 @@ import {
 export const ARCTOR_AI_RIGHT_RAIL_MESSENGER_UX_V1 =
   "ARCTOR_AI_RIGHT_RAIL_MESSENGER_UX_V1" as const;
 
-const AI_MODEL_TIERS = [
-  { code: "nano", label: "Nano", captionKey: "aiNavigator.modelNanoCaption" },
-  { code: "standard", label: "Standard", captionKey: "aiNavigator.modelStandardCaption" },
-  { code: "pro", label: "Pro", captionKey: "aiNavigator.modelProCaption" },
-] as const;
+
 
 type AiNavigatorMessageKey =
   | "aiNavigator.activityPreview"
@@ -641,6 +637,7 @@ export function GlobalAiNavigator({
     isSending,
     navigatorMode,
     selectedTier,
+    modelOptions,
     setNavigatorMode,
     setSelectedTier,
     setInput,
@@ -837,12 +834,14 @@ export function GlobalAiNavigator({
                 type="button"
                 aria-pressed={active}
                 onClick={() => changeNavigatorMode(item.mode)}
+                title={t(item.labelKey)}
+                aria-label={t(item.labelKey)}
                 className={active
-                  ? "flex min-h-9 items-center justify-center gap-1 rounded-lg border border-[#3b6ef8]/15 bg-white px-1.5 text-[10px] font-semibold text-[#3b6ef8] shadow-sm transition-all"
-                  : "flex min-h-9 items-center justify-center gap-1 rounded-lg border border-transparent px-1.5 text-[10px] font-medium text-[#727991] transition-colors hover:bg-white hover:text-[#3b6ef8]"}
+                  ? "flex min-h-9 items-center justify-center gap-1 rounded-lg border border-[#3b6ef8]/15 bg-white px-2 text-[10px] font-semibold text-[#3b6ef8] shadow-sm transition-all"
+                  : "flex min-h-9 items-center justify-center gap-1 rounded-lg border border-transparent px-2 text-[10px] font-medium text-[#727991] transition-colors hover:bg-white hover:text-[#3b6ef8]"}
               >
-                <Icon size={12} />
-                <span className="truncate">{t(item.labelKey)}</span>
+                <Icon size={14} />
+                {mobileDrawer ? <span className="truncate">{t(item.labelKey)}</span> : <span className="sr-only">{t(item.labelKey)}</span>}
               </button>
             );
           })}
@@ -889,20 +888,20 @@ export function GlobalAiNavigator({
               {navigationT("navigation.aiModel")}
             </p>
             <div className="grid grid-cols-3 gap-1.5">
-              {AI_MODEL_TIERS.map((tier) => {
-                const isSelected = selectedTier === tier.code;
+              {modelOptions.map((tier) => {
+                const isSelected = selectedTier === tier.tierCode;
                 return (
                   <button
-                    key={tier.code}
+                    key={tier.tierCode}
                     type="button"
-                    onClick={() => setSelectedTier(tier.code)}
+                    onClick={() => setSelectedTier(tier.tierCode)}
                     aria-pressed={isSelected}
                     className={isSelected
                       ? "rounded-lg border border-[#3b6ef8]/25 bg-[#eef2ff] px-2 py-2 text-left shadow-[0_3px_10px_rgba(59,110,248,0.10)] transition-all"
                       : "rounded-lg border border-transparent bg-[#f5f6fb] px-2 py-2 text-left transition-all hover:border-[#3b6ef8]/15 hover:bg-[#eef2ff]"}
                   >
-                    <span className={isSelected ? "block text-[12px] font-semibold leading-tight text-[#3b6ef8]" : "block text-[12px] font-semibold leading-tight text-[#2d3047]"}>{tier.label}</span>
-                    <span className={isSelected ? "mt-1 block text-[11px] font-medium leading-tight text-[#6f7fb8]" : "mt-1 block text-[11px] font-medium leading-tight text-[#7a8199]"}>{t(tier.captionKey)}</span>
+                    <span className={isSelected ? "block text-[11px] font-semibold leading-tight text-[#3b6ef8]" : "block text-[11px] font-semibold leading-tight text-[#2d3047]"}>{`5.6 ${tier.shortLabel}`}</span>
+                    <span className={isSelected ? "mt-1 block text-[10px] font-medium leading-tight text-[#6f7fb8]" : "mt-1 block text-[10px] font-medium leading-tight text-[#7a8199]"}>{tier.reasoningEffort === "max" ? "Max" : tier.caption}</span>
                   </button>
                 );
               })}
