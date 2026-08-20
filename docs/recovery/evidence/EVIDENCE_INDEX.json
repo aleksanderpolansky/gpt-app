@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-19T07:15:00.000Z",
+  "generatedAt": "2026-08-19T22:30:00+02:00",
   "copiedCount": 57,
   "generatedEvidenceCount": 22,
-  "indexedCount": 96,
+  "indexedCount": 98,
   "missingPatterns": [],
   "files": [
     {
@@ -676,6 +676,15 @@
       "group": "AI_RIGHT_RAIL",
       "status": "current",
       "note": "V8 = V6 functional scope + V7 receipt hotfix + model selector tierCode TypeScript hotfix; V7 build failed before commit and rolled back."
+    },
+    {
+      "file": "docs/recovery/evidence/HELP_FILES/ARCTOR_HELP_FILES_SYSTEM_V1_EVIDENCE.json",
+      "sha256": "771f7ff01b41f9a111197b1fd36264f5425086d4a411df00de3e5208c99ca2a6",
+      "group": "HELP_FILES",
+      "status": "current",
+      "origin": "help_files_system_v1_static_release_evidence",
+      "hashPolicy": "sha256_utf8_text_after_crlf_to_lf_normalization",
+      "note": "HELP/FILES V1: manual SQL PASS; V3 lint rollback; V4 build module-resolution rollback; V5 fixes uploaded-files import depth and keeps full build gate."
     }
   ]
 }

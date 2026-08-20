@@ -7,6 +7,7 @@ import { Activity, CalendarPlus, ChevronLeft, MessageSquare, X } from "lucide-re
 import { AiNavigatorProvider, useAiNavigator, type AiNavigatorMode } from "./ai-navigator-provider";
 import { GlobalAiNavigator } from "./global-ai-navigator";
 import { GlobalSidebar, GlobalTopBar } from "./global-navigation";
+import { GlobalHelpLayer } from "../help/global-help-layer";
 
 export const ARCTOR_AI_RIGHT_RAIL_CORPORATE_MOBILE_MODES_V1 =
   "ARCTOR_AI_RIGHT_RAIL_CORPORATE_MOBILE_MODES_V1" as const;
@@ -116,6 +117,7 @@ export function GlobalAppShell({
           onTouchStart={handleDrawerTouchStart}
           onTouchEnd={handleDrawerTouchEnd}
         />
+        <GlobalHelpLayer />
       </div>
     </AiNavigatorProvider>
   );

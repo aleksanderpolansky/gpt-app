@@ -1,0 +1,141 @@
+{
+  "contract": "ARCTOR_HELP_FILES_SYSTEM_V1",
+  "baseline": "10d6bab82cecd2abcfcebd8ead3279d79a2f799a",
+  "scope": {
+    "normalUserDashboard": [
+      "/settings/ai-processing",
+      "/uploaded-files"
+    ],
+    "adminDashboard": [
+      "/admin/ai-instructions",
+      "/admin/users",
+      "/admin/ai-billing",
+      "/admin/help-system"
+    ],
+    "adminRoutesServerGuarded": true,
+    "uploadedFilesV1": "private AI-Navigator activity image evidence with owner+sha256 guarded viewer; adapters can be added for other upload sources later",
+    "helpRegistry": "code-generated user page/heading/link registry plus global navigation; dynamic route patterns supported",
+    "helpBlocks": [
+      "what",
+      "why"
+    ],
+    "markerRule": "marker exists only when localized block text is non-empty",
+    "desktopHelpUi": "corporate popover",
+    "mobileHelpUi": "corporate bottom sheet",
+    "helpKeyStability": "page/navigation keys semantic; heading keys use source fingerprint + duplicate ordinal; runtime ordinal is only DOM locator"
+  },
+  "helpTranslationPolicy": {
+    "allLocales": [
+      "ru",
+      "pl",
+      "en",
+      "es",
+      "uk",
+      "de",
+      "cs"
+    ],
+    "everyNonEmptyAdminSaveInvokesAI": true,
+    "everySaveRegeneratesAllLocales": true,
+    "sourceLocaleTextPreservedExactly": true,
+    "previousTranslationsOverwrittenByNewRevision": true,
+    "databaseWriteOccursOnlyAfterSuccessfulTranslation": true,
+    "modelSlot": "server approved pro/frontier",
+    "currentModelExpected": "gpt-5.6-sol",
+    "reasoningEffort": "max",
+    "store": false,
+    "automaticRetries": 0,
+    "crossLocaleDraftPolicy": "successful save invalidates unsaved drafts of every locale for the same WHAT/WHY block because all translations were regenerated"
+  },
+  "database": {
+    "migration": "supabase/manual-applied/20260820_help_files_system_v1.sql",
+    "currentTable": "platform_help_content_current",
+    "historyTable": "platform_help_content_history",
+    "rpc": "upsert_platform_help_content_v1",
+    "rls": true,
+    "anonAuthenticatedPrivileges": "revoked",
+    "serviceRoleBoundary": true,
+    "revisionConcurrency": "transaction advisory lock per help_key+block_kind",
+    "translationsTypeGuard": "all seven json values must be strings",
+    "releaseMode": "manual_sql_editor_then_read_only_db_preflight",
+    "automaticDbPushAllowed": false,
+    "manualSqlAppliedAt": "2026-08-20",
+    "manualSqlVerification": "PASS current+history+RLS+RPC+service_role_execute"
+  },
+  "nonGoals": [
+    "canonical leaf/candidate retrieval changes",
+    "old Activity Container redesign",
+    "making private activity media public",
+    "manual per-locale preservation after help edit"
+  ],
+  "security": {
+    "uploadedFileRequest": "opaque signalId only; bucket/path never accepted from client",
+    "contentDisposition": "ASCII fallback + RFC5987 UTF-8 filename*",
+    "adminNavigation": "hidden client-side only after server-side platform-admin probe; /admin remains server guarded"
+  },
+  "releasePreflightV2": {
+    "v1Attempt": "FAIL_BEFORE_SOURCE_MUTATION",
+    "reason": "SUPABASE_LINK_TEMP access token not provided",
+    "dbMigrationApplied": false,
+    "gitBaselinePreserved": "10d6bab82cecd2abcfcebd8ead3279d79a2f799a",
+    "authBootstrap": "official interactive supabase login only on exact missing-account-token condition",
+    "secretLogging": false,
+    "serviceRoleAsManagementCredential": false
+  },
+  "productionAttempts": [
+    {
+      "attempt": "V2",
+      "date": "2026-08-20",
+      "result": "FAIL_BEFORE_SOURCE_MUTATION",
+      "gate": "DB_PREFLIGHT_DRY_RUN_UNEXPECTED_PENDING_MIGRATIONS",
+      "dbChanged": false,
+      "sourceChanged": false,
+      "commit": false,
+      "push": false,
+      "baseline": "10d6bab82cecd2abcfcebd8ead3279d79a2f799a"
+    },
+    {
+      "attempt": "V3",
+      "date": "2026-08-20",
+      "result": "FAIL_AFTER_DB_PREFLIGHT_BEFORE_BUILD_COMMIT_PUSH",
+      "gate": "ESLINT_CHANGED_TS_MAX_WARNINGS_0",
+      "dbContractPreflight": "PASS",
+      "manualSqlAlreadyApplied": true,
+      "lintWarnings": 7,
+      "lintErrors": 0,
+      "rollback": "PASS",
+      "sourceAfterRollback": "clean",
+      "commit": false,
+      "push": false,
+      "baseline": "10d6bab82cecd2abcfcebd8ead3279d79a2f799a"
+    },
+    {
+      "attempt": "V4",
+      "date": "2026-08-20",
+      "result": "FAIL_AT_NEXT_BUILD_BEFORE_COMMIT_PUSH",
+      "gate": "BUILD_FAILED_MODULE_NOT_FOUND",
+      "dbContractPreflight": "PASS",
+      "validator": "36/36 PASS",
+      "eslint": "PASS_ZERO_WARNINGS",
+      "build": "FAIL_4_MODULE_NOT_FOUND",
+      "rootCause": "uploaded-files API relative imports to root lib were one directory too deep",
+      "rollback": "PASS",
+      "commit": false,
+      "push": false,
+      "baseline": "10d6bab82cecd2abcfcebd8ead3279d79a2f799a"
+    }
+  ],
+  "v4Hotfix": {
+    "policy": "keep_eslint_max_warnings_0",
+    "removeLegacyDeadNavigationDeclarations": true,
+    "staticBrandImagesUseNextImage": true,
+    "arbitraryProfileRemoteImage": "documented narrow no-img-element exception; no wildcard remote host policy",
+    "databaseReapplyRequired": false
+  },
+  "v5Hotfix": {
+    "scope": "relative_import_depth_only_plus_recovery_and_validator",
+    "uploadedFilesRouteRootLibDepth": "../../../../lib",
+    "uploadedFilesOpenRouteRootLibDepth": "../../../../../lib",
+    "databaseReapplyRequired": false,
+    "canonicalLeafRoutingChanged": false
+  }
+}

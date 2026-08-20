@@ -687,3 +687,50 @@ V3 дошёл до реального `npm run lint` на production checkout и
 - Production attempt V7 passed validator `25/25` and ESLint zero-warning, then failed Next.js TypeScript at `global-ai-navigator.tsx`: `AiNavigatorModelOption` defines `tierCode`, while the selector still used legacy `tier.code` in comparison/key/click handler.
 - Runner performed `ROLLBACK=PASS`; authoritative production baseline remains `062b22afe2c7250e8ec69383394b994763524e99`.
 - V8 changes only this type-contract mismatch and strengthens validator coverage; V6/V7 functional semantics remain unchanged.
+
+
+## 2026-08-19 — HELP + FILES SYSTEM V1
+
+- В `Мой кабинет` обычному пользователю доступны только `Мои инструкции ИИ` и новая страница `Загруженные файлы`; системные инструкции и административные ссылки показываются только после server-side admin visibility check.
+- Администратор дополнительно видит `Системные инструкции ИИ`, `Пользователи`, `AI Billing` и новую `Справочную систему`; сами `/admin/*` страницы остаются под существующим `requirePlatformAdmin()` layout guard.
+- `Загруженные файлы` V1 индексирует private raw image evidence, загруженные через AI-Navigator для past/future activity capture. Storage path пользователю не раскрывается; viewer повторно проверяет owner signal path и SHA-256 перед inline/download response.
+- Справочная система имеет code-generated registry пользовательских routes/headings/internal links и global navigation. Контент хранится отдельно в PostgreSQL/Supabase по стабильному `help_key`, а не в JSX.
+- У каждого help-key два независимых блока: WHAT (`Что это такое?`) и WHY (`Зачем это вам?`). Пустой блок не показывает значок; заполненный WHAT дает `i`, заполненный WHY — `?`.
+- Desktop открывает корпоративный popover, mobile — bottom sheet.
+- КРИТИЧЕСКОЕ ОТЛИЧИЕ ОТ CONTENT-L10: каждое сохранение администратором непустого WHAT/WHY блока заново вызывает AI и полностью регенерирует ru/pl/en/es/uk/de/cs. Текущая редактируемая locale является новым источником; предыдущие переводы намеренно заменяются новой revision.
+- Help translation использует server-approved frontier slot `pro` (`GPT-5.6 Sol`, reasoning `max` в текущем catalog), `store=false`, `maxRetries=0`. Если перевод/валидация не прошли, запись в БД не выполняется.
+- История каждой help revision append-only сохраняется в `platform_help_content_history`; current projection — `platform_help_content_current`.
+- Canonical leaf/candidate retrieval и legacy Activity Container этим блоком НЕ меняются.
+
+
+## 2026-08-19 — V8 production release + HELP/FILES intake baseline
+
+- AI RIGHT RAIL V8 фактически прошёл production gate и запушен в `main` commit `10d6bab82cecd2abcfcebd8ead3279d79a2f799a`; старый статус `coded_awaiting_production_release` считать устаревшим.
+- HELP + FILES SYSTEM V1 строится от этого clean baseline. Help registry поддерживает dynamic route patterns, а persisted heading keys используют source fingerprint, чтобы вставка несвязанного заголовка выше не перепривязывала уже написанную справку.
+- Каждое непустое сохранение WHAT/WHY администратором заново переводит блок на все `ru/pl/en/es/uk/de/cs` через server-approved frontier slot; запись новой revision в БД выполняется только после успешного structured translation.
+- Успешное сохранение инвалидирует несохранённые черновики других locale этого же блока, потому что они уже стали устаревшими относительно новой семиязычной revision.
+### HELP + FILES SYSTEM V1 — production preflight / Supabase CLI auth hotfix V2
+- Первый production release attempt 20.08.2026 остановился ДО source mutation на database preflight: `supabase link` вернул `Access token not provided`; `ROLLBACK=NOT_NEEDED_NO_SOURCE_MUTATION`, migration не применялась, baseline остался `10d6bab82cecd2abcfcebd8ead3279d79a2f799a`.
+- Это не дефект HELP/FILES кода и не ошибка migration. Локальный Windows checkout не имел Supabase CLI account credential (`SUPABASE_ACCESS_TOKEN` или сохранённого `supabase login`).
+- V2 сохраняет fail-before-mutation boundary, но если безопасный DB URL отсутствует и linked flow требует account auth, выполняет официальный интерактивный `supabase login` с browser authorization, затем повторяет `link` и `db push --dry-run`. Секрет не вводится в ARCTor script, не сохраняется в REPORT и не передаётся как command-line token.
+- Интерактивная авторизация — credential bootstrap владельца, а не acceptance/test step. После единственного успешного login Supabase CLI хранит credential в системном credential store и следующие releases могут использовать его повторно.
+- HELP/FILES функциональная семантика, fresh-all-7-locale translation policy, canonical leaf routing и legacy Activity Container этим hotfix не меняются.
+
+### HELP + FILES SYSTEM V1 — manual SQL release policy V3
+- Второй production attempt 20.08.2026 успешно авторизовал Supabase CLI, но `db push --dry-run` показал большой исторический список локальных migrations, которые remote migration history не считает применёнными, включая HELP/FILES target. Safety gate правильно остановил release ДО source mutation с `DB_PREFLIGHT_DRY_RUN_UNEXPECTED_PENDING_MIGRATIONS`; DB/source/commit/push не менялись, baseline остался `10d6bab82cecd2abcfcebd8ead3279d79a2f799a`.
+- Поэтому для HELP/FILES и следующих подобных точечных schema changes принят текущий рабочий режим: additive/idempotent SQL выполняется владельцем вручную в Supabase SQL Editor, после чего code release делает только read-only DB contract preflight и не использует `supabase db push`.
+- SQL source-of-truth для HELP/FILES хранится в `supabase/manual-applied/20260820_help_files_system_v1.sql`, чтобы намеренно не добавлять ещё одну запись в локальную migration queue, которую CLI воспринимает как неприменённую.
+- Code release запрещён, пока read-only preflight не подтвердит обе help tables и наличие RPC boundary. Никакой DDL через application service-role executor не создаётся.
+
+
+### HELP + FILES SYSTEM V1 — V4 ESLint hotfix after manual SQL PASS
+- 20.08.2026 manual SQL `20260820_help_files_system_v1.sql` выполнен в Supabase SQL Editor и дал PASS по обеим help tables, RLS, RPC и service-role execute. V3 read-only DB preflight также дал PASS.
+- V3 code release затем остановился ДО build/commit/push на changed-file ESLint: `global-navigation.tsx` содержал 4 legacy dead declarations и 3 `@next/next/no-img-element` warnings. Runner сделал `ROLLBACK=PASS`; production code baseline остался `10d6bab82cecd2abcfcebd8ead3279d79a2f799a`, но HELP DB schema уже применена вручную.
+- V4 не ослабляет `--max-warnings=0`: удаляет только доказанно неиспользуемый legacy organization-nav код, переводит два локальных brand image на `next/image`, а для произвольного profile image оставляет точечное документированное исключение, потому что remote host заранее не перечислим.
+- V4 release должен начинаться с read-only DB contract preflight; повторный SQL/DDL и `supabase db push` не требуются.
+
+
+### HELP + FILES SYSTEM V1 — V5 import-depth hotfix
+- Manual HELP DB SQL уже применён и подтверждён PASS; повторный SQL не нужен.
+- V4 code release: DB preflight PASS, validator 36/36 PASS, ESLint zero-warning PASS, затем Next build FAIL на четырёх `Module not found` из-за over-deep imports в двух новых `/api/uploaded-files*` routes; rollback PASS, commit/push отсутствуют.
+- V5 исправляет module import depth и ожидает production build/commit/push. Code baseline до release остаётся `10d6bab82cecd2abcfcebd8ead3279d79a2f799a`.

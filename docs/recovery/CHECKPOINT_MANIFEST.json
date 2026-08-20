@@ -1,10 +1,10 @@
 {
   "schemaVersion": 7,
-  "generatedAt": "2026-08-19T07:15:00.000Z",
+  "generatedAt": "2026-08-19T22:30:00+02:00",
   "project": "ARCTor.app",
   "repository": "aleksanderpolansky/gpt-app",
   "branch": "main",
-  "originMainAtCheckpoint": "062b22afe2c7250e8ec69383394b994763524e99",
+  "originMainAtCheckpoint": "10d6bab82cecd2abcfcebd8ead3279d79a2f799a",
   "checkpointMeaning": "AI Navigator right rail V1: reliable messenger UX, explicit past/future/chat modes, canonical activity handoff, voice dictation, chat photo input, and EUR billing compatibility recovery.",
   "globalReality": {
     "p8Blocked": true,
@@ -38,7 +38,8 @@
     "supabase/manual-applied/20260813_ai_a3_p5a_global_fact_writer_rowtype_hotfix_v3.sql",
     "supabase/manual-applied/20260816_ai_a1_1_usage_operation_kind_schema_hotfix_v2.sql",
     "supabase/manual-applied/20260817_ai_a3_1_review_first_semantic_fact_pipeline_v2.sql",
-    "supabase/migrations/20260817173000_content_l10_global_content_localization_v1.sql"
+    "supabase/migrations/20260817173000_content_l10_global_content_localization_v1.sql",
+    "supabase/manual-applied/20260820_help_files_system_v1.sql"
   ],
   "goldStatus": {
     "passed": [
@@ -54,7 +55,7 @@
     "pending": [],
     "note": "The eight locked small-corpus preview cases are now individually passing. This does not by itself unblock P8."
   },
-  "nextAction": "Release V8 model selector TypeScript hotfix, then live-accept immediate capture + background review, progress UX, narrow icon modes and GPT-5.6 selector; canonical leaf routing remains deferred.",
+  "nextAction": "HELP+FILES V1: run the reviewed manual Supabase SQL once, then run the code-only V3 release with read-only DB contract preflight and live-accept Uploaded Files + WHAT/WHY help.",
   "recoveryDocs": [
     "docs/recovery/README_RU.md",
     "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
@@ -65,7 +66,7 @@
   ],
   "checkpointPolicy": "The Git commit containing this manifest is the authoritative recoverable code+knowledge checkpoint.",
   "previousRecoveryCommit": "d91549773dae71206e46f3182bfd433f9c30316d",
-  "documentedState": "AI_RIGHT_RAIL_BACKGROUND_REVIEW_MODEL_UI_V8_CODED_AWAITING_PRODUCTION_RELEASE",
+  "documentedState": "HELP_FILES_SYSTEM_V1_RELEASED_AWAITING_LIVE_ACCEPTANCE",
   "costSafetyPolicy": {
     "perOperationHardCapUsd": 0.1,
     "meaning": "emergency runaway fuse, not a target test budget",
@@ -540,7 +541,7 @@
     "databaseSchemaChanged": false
   },
   "aiRightRailMultimodalActivityV1": {
-    "status": "v8_coded_awaiting_production_release",
+    "status": "v8_released_awaiting_live_acceptance",
     "baselineCommit": "062b22afe2c7250e8ec69383394b994763524e99",
     "modes": [
       "past",
@@ -578,7 +579,7 @@
     "recoveryEvidenceHashPolicy": "sha256_utf8_text_after_crlf_to_lf_normalization",
     "runtimeDataWrite": "stale semantic-review price recovery may insert a new versioned ai_model_price_snapshots row within verification lease",
     "priceSnapshotStaleRecovery": "standard/gpt-5.4-mini exact price match; verified 2026-08-19; expires 2026-08-26; fail-closed otherwise",
-    "lastSuccessfulReleaseCommit": "2edd9026bd0d4e7764993d92c28ae30384fce01f",
+    "lastSuccessfulReleaseCommit": "10d6bab82cecd2abcfcebd8ead3279d79a2f799a",
     "v5Hotfix": "activity_photo_all_modes_private_evidence + semantic_review_image + bounded_price_snapshot_stale_recovery",
     "backgroundSemanticReview": "next_after_scheduled_after_immediate_capture_response",
     "backgroundReviewFactsWritten": 0,
@@ -595,6 +596,47 @@
     "modelCatalogAutoSeedExpiresAt": "2026-08-26T23:59:59.999Z",
     "canonicalLeafRetrievalChanged": false,
     "v6Patch": "background_review_after_response + loading_progress + narrow_icon_modes + gpt56_actual_model_selector",
-    "v7Hotfix": "typed_primary_activity_event_id_from_validated_receipt_json_no_feature_semantic_change"
+    "v7Hotfix": "typed_primary_activity_event_id_from_validated_receipt_json_no_feature_semantic_change",
+    "v8ReleaseCommit": "10d6bab82cecd2abcfcebd8ead3279d79a2f799a"
+  },
+  "helpFilesSystemV1": {
+    "status": "v5_import_depth_hotfix_coded_manual_db_already_applied_awaiting_production_release",
+    "baselineCommit": "10d6bab82cecd2abcfcebd8ead3279d79a2f799a",
+    "uploadedFilesRoute": "/uploaded-files",
+    "helpAdminRoute": "/admin/help-system",
+    "helpRegistryGeneratedCount": 261,
+    "normalUserDashboard": [
+      "/settings/ai-processing",
+      "/uploaded-files"
+    ],
+    "adminDashboard": [
+      "/admin/ai-instructions",
+      "/admin/users",
+      "/admin/ai-billing",
+      "/admin/help-system"
+    ],
+    "helpBlocks": [
+      "what",
+      "why"
+    ],
+    "translationPolicy": "fresh_all_7_locales_on_every_admin_save",
+    "translationModelSlot": "pro",
+    "currentTranslationModel": "gpt-5.6-sol",
+    "reasoningEffort": "max",
+    "canonicalLeafRoutingChanged": false,
+    "legacyActivityContainerChanged": false,
+    "recoveryEvidence": "docs/recovery/evidence/HELP_FILES/ARCTOR_HELP_FILES_SYSTEM_V1_EVIDENCE.json",
+    "recoveryEvidenceSha256": "771f7ff01b41f9a111197b1fd36264f5425086d4a411df00de3e5208c99ca2a6",
+    "registryDynamicRoutes": true,
+    "translationWritePolicy": "translate_and_validate_all_7_before_atomic_db_revision_write",
+    "databaseMigration": "supabase/manual-applied/20260820_help_files_system_v1.sql",
+    "lastFailedProductionGate": "V4 Next build: 4 Module not found errors from uploaded-files root-lib imports one directory too deep; DB preflight + validator 36/36 + ESLint zero-warning PASS; rollback PASS before commit/push.",
+    "databaseReleaseMode": "manual Supabase SQL Editor apply, then code-only release with read-only DB contract preflight",
+    "supabaseCredentialLogging": "forbidden",
+    "automaticDbPushAllowed": false,
+    "databaseManualSqlApplied": true,
+    "databaseManualSqlAppliedAt": "2026-08-20",
+    "v4LintPolicy": "keep --max-warnings=0; remove dead legacy nav code; next/image for local brand; one documented arbitrary-profile-url img exception",
+    "v5ImportDepthHotfix": "uploaded-files route ../../../../lib; open route ../../../../../lib; full Next module-resolution build remains mandatory"
   }
 }

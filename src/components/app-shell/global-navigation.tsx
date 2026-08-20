@@ -8,6 +8,7 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
+import Image from "next/image";
 import {
   Activity,
   ArrowLeftRight,
@@ -37,35 +38,6 @@ import { InterfaceLanguageSwitcher } from "./interface-language-switcher";
 
 type IconComponent = ElementType;
 
-type SidebarOrganizationLocation = {
-  country_code?: string | null;
-  city?: string | null;
-  district?: string | null;
-};
-
-type SidebarOrganization = {
-  id: string;
-  organization_name: string;
-  public_slug?: string | null;
-  primaryLocation?: SidebarOrganizationLocation | null;
-  location?: SidebarOrganizationLocation | null;
-  locations?: SidebarOrganizationLocation[];
-};
-
-type SidebarOrganizationsResponse = {
-  ok?: boolean;
-  error?: string;
-  organizations?: SidebarOrganization[];
-};
-
-type OrganizationCreateResponse = {
-  ok?: boolean;
-  error?: string;
-  organization?: {
-    id?: string | null;
-  } | null;
-};
-
 type SidebarProfile = {
   profileId: string;
   profileKind: "personal" | "avatar";
@@ -78,6 +50,12 @@ type SidebarProfilesResponse = {
   error?: string;
   errorMessage?: string;
   profiles?: SidebarProfile[];
+};
+
+type AdminNavigationResponse = {
+  ok?: boolean;
+  role?: "owner" | "admin" | "viewer";
+  canEdit?: boolean;
 };
 
 type NavigationTranslate = (
@@ -185,26 +163,6 @@ function useUnifiedCertificateView(): UnifiedCertificateView {
   }, []);
 
   return view;
-}
-
-function getDraftOrganizationName(locale: LocaleCode) {
-  switch (locale) {
-    case "ru":
-      return "\u041d\u043e\u0432\u043e\u0435 \u043f\u0440\u0435\u0434\u043f\u0440\u0438\u044f\u0442\u0438\u0435";
-    case "pl":
-      return "Nowe przedsi\u0119biorstwo";
-    case "es":
-      return "Nueva empresa";
-    case "uk":
-      return "\u041d\u043e\u0432\u0435 \u043f\u0456\u0434\u043f\u0440\u0438\u0454\u043c\u0441\u0442\u0432\u043e";
-    case "de":
-      return "Neues Unternehmen";
-    case "cs":
-      return "Nov\u00fd podnik";
-    case "en":
-    default:
-      return "New business";
-  }
 }
 
 function Badge({
@@ -544,68 +502,6 @@ function TreeItem({
   );
 }
 
-function getOrganizationInitial(organization: unknown) {
-  const record =
-    organization && typeof organization === "object"
-      ? organization as Record<string, unknown>
-      : {};
-
-  const candidate =
-    typeof record.name === "string"
-      ? record.name
-      : typeof record.title === "string"
-        ? record.title
-        : typeof record.displayName === "string"
-          ? record.displayName
-          : typeof record.organizationName === "string"
-            ? record.organizationName
-            : typeof record.slug === "string"
-              ? record.slug
-              : "";
-
-  const trimmed = candidate.trim();
-
-  return trimmed ? trimmed.charAt(0).toUpperCase() : "•";
-}
-function BusinessOrganizationTreeItem({
-  organization,
-  locale,
-}: {
-  readonly organization: SidebarOrganization;
-  readonly locale: LocaleCode;
-}) {
-  const locationLabel = getOrganizationLocationLabel(organization);
-  const href = organization.public_slug
-    ? buildLocaleAwareHref(
-        `/directory/${encodeURIComponent(organization.public_slug)}`,
-        locale,
-      )
-    : buildLocaleAwareHref("/directory?scope=mine", locale);
-
-  return (
-    <a
-      href={href}
-      title={organization.organization_name}
-      className="group ml-9 flex min-w-0 items-center gap-2 rounded-md py-1.5 pl-2 pr-2 text-[11.5px] font-medium text-[#5a5f7a] transition-all hover:bg-gray-50 hover:text-[#1a1d2e]"
-    >
-      <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#eef2ff] text-[10px] font-bold text-[#3b6ef8] ring-1 ring-[#dbe4ff]">
-        {getOrganizationInitial(organization)}
-      </span>
-
-      <span className="min-w-0 flex-1">
-        <span className="block truncate leading-tight">
-          {organization.organization_name}
-        </span>
-        {locationLabel ? (
-          <span className="mt-0.5 block truncate text-[10px] font-normal leading-tight text-[#9ca3b8]">
-            {locationLabel}
-          </span>
-        ) : null}
-      </span>
-    </a>
-  );
-}
-
 export const UI_MINI_FIX_BUSINESS_NAV_DETAIL_LINKS =
   "UI_MINI_FIX_BUSINESS_NAV_DETAIL_LINKS" as const;
 
@@ -641,11 +537,15 @@ function ProfileNavigationTreeItem({
       className="group ml-9 flex min-w-0 items-center gap-2 rounded-md py-1.5 pl-2 pr-2 text-[11.5px] font-normal text-[#7c8099] transition-all hover:bg-gray-50 hover:text-[#1a1d2e]"
     >
       {profile.imageUrl ? (
-        <img
-          src={profile.imageUrl}
-          alt=""
-          className="h-5 w-5 flex-shrink-0 rounded-full object-cover ring-1 ring-[#dbe4ff]"
-        />
+        <>
+          {/* Arbitrary user/profile media URLs are intentionally rendered as-is; Next Image remote hosts are not enumerable here. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={profile.imageUrl}
+            alt=""
+            className="h-5 w-5 flex-shrink-0 rounded-full object-cover ring-1 ring-[#dbe4ff]"
+          />
+        </>
       ) : (
         <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#eef2ff] px-1 text-[9px] font-bold text-[#3b6ef8] ring-1 ring-[#dbe4ff]">
           {getProfileInitials(profile.displayName)}
@@ -663,22 +563,6 @@ function ProfileNavigationTreeItem({
   );
 }
 
-function getOrganizationLocationLabel(organization: SidebarOrganization) {
-  const location =
-    organization.primaryLocation ??
-    organization.location ??
-    organization.locations?.[0] ??
-    null;
-
-  if (!location) {
-    return null;
-  }
-
-  const parts = [location.country_code, location.city, location.district].filter(Boolean);
-
-  return parts.length > 0 ? parts.join(", ") : null;
-}
-
 export function GlobalSidebar({
   className = "hidden w-[240px] flex-shrink-0 flex-col overflow-hidden border-r border-[rgba(0,0,0,0.07)] bg-white lg:flex",
 }: {
@@ -689,6 +573,7 @@ export function GlobalSidebar({
   const [profilesError, setProfilesError] = useState<string | null>(null);
   const [currentPathname, setCurrentPathname] = useState("");
   const [currentSearch, setCurrentSearch] = useState("");
+  const [showAdminNavigation, setShowAdminNavigation] = useState(false);
 
   const t = useNavigationTranslator();
   const locale = useInterfaceLocale();
@@ -757,6 +642,36 @@ export function GlobalSidebar({
     };
   }, [t]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadAdminNavigationVisibility() {
+      try {
+        const response = await fetch("/api/admin/navigation", {
+          method: "GET",
+          cache: "no-store",
+        });
+        const data = (await response.json().catch(() => null)) as
+          | AdminNavigationResponse
+          | null;
+
+        if (isMounted) {
+          setShowAdminNavigation(Boolean(response.ok && data?.ok));
+        }
+      } catch {
+        if (isMounted) {
+          setShowAdminNavigation(false);
+        }
+      }
+    }
+
+    void loadAdminNavigationVisibility();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const certificateSearch = useMemo(
     () => new URLSearchParams(currentSearch),
     [currentSearch],
@@ -766,12 +681,20 @@ export function GlobalSidebar({
   const isDashboardActive = currentPathname === "/";
   const isUserAiProcessingActive =
     currentPathname === "/settings/ai-processing";
+  const isUploadedFilesActive = currentPathname === "/uploaded-files";
   const isSystemAiInstructionsActive =
     currentPathname === "/admin/ai-instructions";
+  const isAdminUsersActive = currentPathname === "/admin/users";
+  const isAdminAiBillingActive = currentPathname === "/admin/ai-billing";
+  const isHelpSystemActive = currentPathname === "/admin/help-system";
   const isDashboardSectionActive =
     isDashboardActive ||
     isUserAiProcessingActive ||
-    isSystemAiInstructionsActive;
+    isUploadedFilesActive ||
+    isSystemAiInstructionsActive ||
+    isAdminUsersActive ||
+    isAdminAiBillingActive ||
+    isHelpSystemActive;
   const isCalendarActive = currentPathname.startsWith("/calendar");
   const isObservationObjectsActive = currentPathname.startsWith("/value-objects");
   const isActivityJournalCurrent =
@@ -818,9 +741,11 @@ export function GlobalSidebar({
     <aside className={className}>
       <div className="flex items-center gap-2.5 border-b border-[rgba(0,0,0,0.06)] px-4 py-4">
         <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#f7f4ff]">
-          <img
+          <Image
             src="/brand/arctor-logo.png"
             alt=""
+            width={32}
+            height={32}
             className="h-full w-full object-cover"
           />
         </div>
@@ -864,11 +789,39 @@ export function GlobalSidebar({
             active={isUserAiProcessingActive}
           />
           <TreeItem
-            label={t("navigation.systemAiInstructions")}
+            label={t("navigation.uploadedFiles")}
             depth={1}
-            href={localeHref("/admin/ai-instructions")}
-            active={isSystemAiInstructionsActive}
+            href={localeHref("/uploaded-files")}
+            active={isUploadedFilesActive}
           />
+          {showAdminNavigation ? (
+            <>
+              <TreeItem
+                label={t("navigation.systemAiInstructions")}
+                depth={1}
+                href={localeHref("/admin/ai-instructions")}
+                active={isSystemAiInstructionsActive}
+              />
+              <TreeItem
+                label={t("navigation.adminUsers")}
+                depth={1}
+                href={localeHref("/admin/users")}
+                active={isAdminUsersActive}
+              />
+              <TreeItem
+                label={t("navigation.adminAiBilling")}
+                depth={1}
+                href={localeHref("/admin/ai-billing")}
+                active={isAdminAiBillingActive}
+              />
+              <TreeItem
+                label={t("navigation.helpSystem")}
+                depth={1}
+                href={localeHref("/admin/help-system")}
+                active={isHelpSystemActive}
+              />
+            </>
+          ) : null}
         </ExpandableSidebarLinkItem>
 
         <SidebarDivider />
@@ -1047,9 +1000,11 @@ export function GlobalTopBar({
         aria-label="ARCTor.app"
         className="mr-2 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl transition-colors hover:bg-[#f5f6fb] sm:mr-3"
       >
-        <img
+        <Image
           src="/brand/arctor-logo.png"
           alt=""
+          width={36}
+          height={36}
           className="h-9 w-9 flex-shrink-0 rounded-xl object-contain"
         />
 

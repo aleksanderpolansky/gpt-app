@@ -689,3 +689,63 @@ Private binary evidence хранится в Supabase Storage bucket `activity-ev
 3. Rule: validators for shared typed option contracts must assert exact property names on the consumer side, not only the presence of catalog rendering.
 4. V8 uses `tier.tierCode` consistently and explicitly forbids `tier.code`.
 5. V7 rollback PASS; production baseline remains V5 commit `062b22afe2c7250e8ec69383394b994763524e99`.
+
+
+## 2026-08-19 — HELP+FILES V1: решения
+
+### D-HELP-01 — help content не является обычным localized content
+Для предприятий CONTENT-L10 защищает ручные locale-версии и AI в основном работает при создании. Для справки зафиксирована противоположная политика: любое новое сохранение администратором означает, что эта locale стала новым каноническим источником; ВСЕ 7 переводов создаются заново одной frontier-моделью. Это сознательное решение пользователя, а не побочный эффект.
+
+### D-HELP-02 — translate first, persist second
+Нельзя сначала сохранить source и потом асинхронно пытаться перевести. PUT `/api/admin/help-system` сначала получает и валидирует strict 7-locale Structured Output, затем одной DB-функцией добавляет history revision и заменяет current. Ошибка AI оставляет предыдущую опубликованную справку неизменной.
+
+### D-HELP-03 — strongest model через server catalog, не hardcoded UI
+Help translator берет `getNavigatorModelDefinition("pro")`; текущий mapping — `gpt-5.6-sol` + `reasoning=max`. При будущем изменении approved frontier slot help system меняется вместе с server registry, а не с клиентским UI.
+
+### D-HELP-04 — registry в коде, тексты в БД
+Структура страниц/heading/link/navigation воспроизводится из source generator; изменяемые WHAT/WHY и их переводы живут в PostgreSQL/Supabase с revision history. Empty text = marker отсутствует.
+
+### D-FILES-01 — private media не превращается в public URL
+`Загруженные файлы` открывает activity evidence только через авторизованный endpoint по signal id; endpoint сам получает storage reference из owned DB row, проверяет user path и SHA-256. Произвольный storage path из query запрещен.
+
+### D-HELP-05 — Activity Container не развиваем
+Legacy `/calendar/activity-review` container flow остается историческим UI и не используется как основа Help/Files V1. Его удаление/замена будет отдельным блоком.
+
+
+### D-HELP-02 — stable help identity + all-locale save invalidation
+- Persisted help content нельзя связывать только с позиционным ordinal: при вставке нового heading выше справка могла бы перейти к другому элементу. V1 использует semantic page/navigation keys и source fingerprint для heading key; ordinal остаётся только текущим DOM locator.
+- Dynamic routes (`[id]`, `[...slug]`, `[[...slug]]`) сопоставляются как route patterns, а не exact pathname.
+- После успешного admin save все 7 translations считаются новой единой revision; поэтому любые локальные несохранённые drafts других locale для того же WHAT/WHY блока удаляются как stale.
+- Revision RPC сериализует конкурентные save одного блока transaction advisory lock, чтобы не получить одинаковый revision number.
+### F-HELP-01 — V1 release preflight: Supabase CLI account token absent
+- Симптом: `SUPABASE_LINK_TEMP` завершился exit=1 с `Access token not provided` 20.08.2026.
+- Граница безопасности сработала правильно: `ROLLBACK=NOT_NEEDED_NO_SOURCE_MUTATION`; source mutation не начиналась, DB migration не применялась, commit/push отсутствовали.
+- Причина: runner умел использовать safe `--db-url` либо уже авторизованный linked Supabase CLI, но не имел bootstrap пути для первого account login на Windows машине.
+- Решение V2: сначала пробовать существующий credential без интерактива; только при точном auth-missing результате запускать официальный `supabase login` в attached console/browser, после чего повторять link. Никакой PAT не читается и не логируется нашим кодом.
+- Запрещено обходить эту проблему service-role REST ключом или создавать произвольный SQL-executor RPC: application service role не является Management API credential и не должен получать общий DDL execution channel.
+
+### F-HELP-02 — linked Supabase migration history расходится с историческим checkout
+- V2 после успешного `supabase login` и `link` дошёл до безопасного `db push --dry-run`, но CLI предложил десятки исторических migrations, а не только HELP/FILES target.
+- Это означает, что локальная директория `supabase/migrations` и remote migration history не могут сейчас использоваться как безопасный автоматический release channel без отдельной большой reconciliation-задачи.
+- Safety decision: НЕ выполнять `db push --include-all`, НЕ чинить history автоматически и НЕ пытаться прогнать старые migrations повторно.
+- Для точечного HELP/FILES schema change SQL выполняется вручную через Supabase SQL Editor. Репозиторная копия живёт в `supabase/manual-applied/20260820_help_files_system_v1.sql`.
+- После ручного SQL code runner выполняет только read-only runtime contract probe: таблицы должны читаться service-role, а вызов RPC с заведомо невалидным пустым help_key должен завершаться `HELP_KEY_REQUIRED`, что доказывает наличие функции без записи данных.
+- Точный gate V2: `DB_PREFLIGHT_DRY_RUN_UNEXPECTED_PENDING_MIGRATIONS`; source mutation не начиналась, DB не менялась, commit/push отсутствовали.
+
+
+### F-HELP-03 — V3 code release stopped by pre-existing navigation lint debt
+- Manual HELP/FILES SQL был успешно применён и подтверждён PASS; V3 read-only DB preflight также прошёл.
+- После patch/registry/validator 34/34 production ESLint с `--max-warnings=0` остановил release на `src/components/app-shell/global-navigation.tsx`: 4 неиспользуемых legacy declaration и 3 `@next/next/no-img-element` warning. Это произошло ДО `npm run build`, commit и push.
+- Runner корректно выполнил `ROLLBACK=PASS`, удалил 19 новых файлов и вернул code baseline `10d6bab82cecd2abcfcebd8ead3279d79a2f799a`. DB schema при этом остаётся применённой вручную и не откатывается, потому что SQL уже завершился PASS до запуска code release.
+- Решение V4: не снижать lint gate и не менять его на warning-tolerant. Удалить только доказанно неиспользуемый legacy organization-navigation код; static ARCTor logo перевести на `next/image`; произвольный profile media URL оставить обычным `<img>` с узким документированным lint exception, чтобы не вводить небезопасный wildcard remote image policy.
+- Инженерное правило: если changed-file lint захватывает исторический файл с legacy warnings, release обязан либо устранить warnings без изменения поведения, либо явно исключить файл из patch. `--max-warnings=0` сохраняется.
+
+- Gate identifier для recovery: `ESLINT_CHANGED_TS_MAX_WARNINGS_0` (production report: `ERROR=ESLINT_CHANGED_TS_FAILED exit=1`).
+
+
+### F-HELP-04 — V4 build stopped by uploaded-files relative import depth
+- V4 production attempt 20.08.2026 прошёл read-only DB preflight, registry generation, validator 36/36 и ESLint `--max-warnings=0`, но `next build` остановился на 4 `Module not found` errors.
+- Причина: два новых API route использовали относительные imports к root `lib/` на один уровень глубже фактической директории. Для `src/app/api/uploaded-files/route.ts` нужны `../../../../lib/...`; для `src/app/api/uploaded-files/open/route.ts` нужны `../../../../../lib/...`.
+- Runner сделал `ROLLBACK=PASS`, удалил 19 новых файлов; commit/push отсутствовали, code baseline остался `10d6bab82cecd2abcfcebd8ead3279d79a2f799a`. Manual HELP DB schema остаётся применённой и PASS.
+- Решение V5: исправить только module import depth, добавить validator checks, запрещающие V4 over-deep imports, и повторить zero-warning ESLint + полный Next build до commit.
+- Инженерное правило: для новых nested Next.js route относительный import к root `lib/` должен проверяться по реальному filesystem depth или существующему sibling-route pattern; syntax/transpile без module resolution недостаточен. Gate: `BUILD_FAILED` / `Module not found`.

@@ -450,3 +450,46 @@ Safety:
 3. Apply cumulative V8 patch. The model selector must use only `tier.tierCode`; `tier.code` is forbidden by validator.
 4. Run V8 validator, ESLint `--max-warnings=0`, full `npm run build`, `git diff --check`, staged allowlist and only then commit/push.
 5. Functional live acceptance remains V6: immediate raw save + background review, staged progress, icon-only narrow desktop modes, Luna/Terra/Sol selector. Canonical leaf routing remains deferred.
+
+
+## HELP + FILES SYSTEM V1 — восстановление
+
+1. Восстановить Git checkpoint, содержащий `supabase/manual-applied/20260820_help_files_system_v1.sql`.
+2. Проверить migration history и наличие `platform_help_content_current`, `platform_help_content_history`, `upsert_platform_help_content_v1(...)`.
+3. Проверить RLS, отсутствие прямых прав anon/authenticated и service-role server boundary.
+4. Запустить `node scripts/generate-help-registry-v1.mjs`; повторная генерация должна быть deterministic.
+5. Проверить `/api/admin/navigation`: normal user не получает admin navigation; owner/admin/viewer получает visibility.
+6. Проверить `/uploaded-files`: private activity image не раскрывает storage path; `/api/uploaded-files/open?signalId=...` работает только для владельца и сверяет SHA-256.
+7. Проверить `/admin/help-system`: viewer read-only, owner/admin edit.
+8. Сохранить один WHAT/WHY блок: current revision должна содержать ВСЕ ru/pl/en/es/uk/de/cs, а source locale должна совпасть с введенным текстом дословно.
+9. Отредактировать тот же блок в другой locale: revision увеличивается, ВСЕ 7 translations создаются заново. Это ожидаемое поведение.
+10. Проверить user page: `i` существует только при WHAT, `?` только при WHY; desktop popover/mobile bottom sheet используют текущую locale.
+
+
+### 11. HELP V1 additional acceptance
+- Открыть хотя бы одну dynamic user route (например route с `[id]`) и проверить, что заполненные `i/?` markers находятся возле правильных элементов.
+- Вставка несвязанного heading перед существующим не должна менять persisted helpKey существующего heading после повторной генерации registry.
+- Два последовательных сохранения одного блока из разных locale должны дать revision N и N+1; второе сохранение заново заменяет все 7 translations.
+- Имя private uploaded file с Unicode должно открываться/скачиваться через owner-guarded endpoint без раскрытия bucket/path.
+### HELP + FILES V1 — manual SQL + read-only code release
+1. Не использовать `supabase db push` для HELP/FILES на текущем checkout: V2 dry-run доказал, что remote migration history не совпадает с большим историческим набором локальных migrations.
+2. Выполнить `supabase/manual-applied/20260820_help_files_system_v1.sql` вручную в Supabase SQL Editor. Скрипт additive/idempotent и завершает выполнение собственным postcheck.
+3. После SQL запустить code release V3. До source mutation он обязан выполнить read-only DB contract preflight через существующие `NEXT_PUBLIC_SUPABASE_URL`/`SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`.
+4. Preflight проверяет чтение обеих help tables и существование RPC безопасным invalid-input вызовом, который должен вернуть `HELP_KEY_REQUIRED` и не создавать строк.
+5. Если DB contract не подтверждён — code release останавливается до patch. Если подтверждён — validator, ESLint, full build, diff gates, commit/push.
+6. Не добавлять HELP/FILES SQL обратно в `supabase/migrations`, пока отдельная migration-history reconciliation не будет спроектирована и принята.
+
+
+### HELP + FILES V1 — восстановление после V3 lint rollback
+1. Проверить code baseline `10d6bab82cecd2abcfcebd8ead3279d79a2f799a`, если V4 ещё не released.
+2. НЕ повторять HELP SQL автоматически: сначала read-only проверить `platform_help_content_current`, `platform_help_content_history` и `upsert_platform_help_content_v1`; 20.08.2026 manual SQL уже дал PASS.
+3. V3 code attempt считать не released: ESLint остановил его до build/commit/push, `ROLLBACK=PASS`.
+4. V4 сохраняет `eslint --max-warnings=0` и должен проходить changed-file lint без legacy navigation warnings.
+
+
+### HELP + FILES V1 — восстановление после V4 build rollback
+1. Code baseline до V5 release: `10d6bab82cecd2abcfcebd8ead3279d79a2f799a`; HELP DB schema уже применена вручную и повторного SQL не требует.
+2. V4 считать FAIL-before-commit: DB preflight/validator/ESLint прошли, `next build` остановился на relative import depth двух uploaded-files API routes, rollback PASS.
+3. В `src/app/api/uploaded-files/route.ts` root-lib imports должны быть `../../../../lib/...`.
+4. В `src/app/api/uploaded-files/open/route.ts` root-lib imports должны быть `../../../../../lib/...`.
+5. V5 обязан пройти import-depth validator, ESLint `--max-warnings=0`, полный `npm run build`, `git diff --check`, staged allowlist и только затем commit/push.
