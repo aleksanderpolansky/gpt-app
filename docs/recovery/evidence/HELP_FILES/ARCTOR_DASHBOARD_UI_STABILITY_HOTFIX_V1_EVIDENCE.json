@@ -1,0 +1,26 @@
+{
+  "evidenceId": "ARCTOR_DASHBOARD_UI_STABILITY_HOTFIX_V1",
+  "date": "2026-08-20",
+  "expectedBaseline": "9ada1d414a4cf35f41a2da95815cb2190ec7d5bf",
+  "scope": [
+    "help_marker_in_place_reconciliation",
+    "remove_artificial_help_rescans",
+    "dashboard_analytics_stale_while_revalidate",
+    "dashboard_block_loader_locale_independent"
+  ],
+  "sqlRequired": false,
+  "changedFiles": [
+    "src/components/help/global-help-layer.tsx",
+    "src/components/figma-dashboard/dashboard-analytics-builder.tsx",
+    "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
+    "docs/recovery/ARCTOR_DECISIONS_AND_FAILURES_RU.md",
+    "docs/recovery/evidence/HELP_FILES/ARCTOR_DASHBOARD_UI_STABILITY_HOTFIX_V1_EVIDENCE.json"
+  ],
+  "nonGoals": [
+    "help_content_changes",
+    "help_translation_changes",
+    "dashboard_semantics_changes",
+    "session_hydration_redesign",
+    "database_changes"
+  ]
+}

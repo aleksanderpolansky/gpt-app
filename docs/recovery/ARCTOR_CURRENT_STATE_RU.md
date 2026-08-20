@@ -744,3 +744,14 @@ V3 дошёл до реального `npm run lint` на production checkout и
 - Help content, translation policy, DB schema, registry keys, canonical leaf routing и legacy Activity Container не изменялись.
 - Первый production release attempt V1 прошёл functional validator 18/18, но остановился на release-tooling allowlist gate: PowerShell parser получил пустой CHANGED_ALLOWLIST_ACTUAL несмотря на применённые изменения; rollback PASS, commit/push отсутствовали.
 - V2 не меняет функциональный hotfix: исправлен только release-tooling — exact allowlist теперь проверяется через explicit staging + git diff --cached --name-only, а отсутствие лишних изменений отдельно подтверждается git diff --quiet и git ls-files --others.
+
+## 2026-08-20 — DASHBOARD_UI_STABILITY_HOTFIX_V1
+
+- Production baseline before hotfix: `9ada1d414a4cf35f41a2da95815cb2190ec7d5bf`.
+- Scope is frontend-only; SQL/database changes are not required.
+- Help markers are reconciled in place instead of being globally removed/recreated after every DOM mutation. Artificial 250/1000 ms rescans are removed; the MutationObserver remains only as a discovery trigger for genuinely new DOM targets such as the mobile drawer.
+- Existing help-marker hosts stay mounted during dashboard hydration/data updates, preventing visible blinking.
+- User dashboard analytics preserve the last successful block list and chart data during locale/data revalidation. A background refresh no longer replaces a rendered chart with a loading panel or clears it on refresh failure.
+- Dashboard analytics block definitions are loaded once per workspace mount and are no longer refetched merely because localized UI copy changed.
+- Existing HELP content, translations, uploaded files, billing, recognition and database contracts are unchanged.
+- Release-tooling history: the first launcher stopped before release because it required a separate SHA file; V1A then reached the release script but Windows PowerShell 5.1 treated harmless git fetch stderr (From https://github.com/...) as a terminating error under ErrorActionPreference=Stop. Both attempts rolled back/changed nothing in the repository. V1B fixes only the native-command logging wrapper: stderr is logged, while the native exit code remains the release gate.

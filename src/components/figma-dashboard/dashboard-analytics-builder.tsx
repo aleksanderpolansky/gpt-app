@@ -850,7 +850,9 @@ function AnalyticsBlockCard({
   );
 
   const loadData = useCallback(async () => {
-    setStatus("loading");
+    // Keep the last successful chart mounted while locale/data revalidation
+    // runs in the background. Only the first load uses the loading placeholder.
+    setStatus((current) => (current === "ready" ? "ready" : "loading"));
 
     try {
       const timeZone =
@@ -881,8 +883,8 @@ function AnalyticsBlockCard({
       setData(payload);
       setStatus("ready");
     } catch {
-      setData(null);
-      setStatus("error");
+      // A failed background refresh must not erase data the user already saw.
+      setStatus((current) => (current === "ready" ? "ready" : "error"));
     }
   }, [block.id, locale, ui.loadError]);
 
@@ -1669,7 +1671,9 @@ export function DashboardAnalyticsWorkspace({
   const [builderOpen, setBuilderOpen] = useState(false);
 
   const loadBlocks = useCallback(async () => {
-    setStatus("loading");
+    // Do not replace an already rendered workspace with a loading panel
+    // during background revalidation.
+    setStatus((current) => (current === "ready" ? "ready" : "loading"));
 
     try {
       const response = await fetch("/api/dashboard/analytics-blocks", {
@@ -1683,16 +1687,16 @@ export function DashboardAnalyticsWorkspace({
         | null;
 
       if (!response.ok || !payload?.ok) {
-        throw new Error(payload?.error ?? ui.loadError);
+        throw new Error(payload?.error ?? "DASHBOARD_ANALYTICS_BLOCKS_LOAD_FAILED");
       }
 
       setBlocks(Array.isArray(payload.blocks) ? payload.blocks : []);
       setStatus("ready");
     } catch {
-      setBlocks([]);
-      setStatus("error");
+      // Preserve the current block list if a later refresh fails.
+      setStatus((current) => (current === "ready" ? "ready" : "error"));
     }
-  }, [ui.loadError]);
+  }, []);
 
   useEffect(() => {
     const timerId = window.setTimeout(() => {

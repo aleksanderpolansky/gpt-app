@@ -759,3 +759,13 @@ Legacy `/calendar/activity-review` container flow остается истори�
 - Help content, translation policy, DB schema, registry keys, canonical leaf routing и legacy Activity Container не изменялись.
 - Первый production release attempt V1 прошёл functional validator 18/18, но остановился на release-tooling allowlist gate: PowerShell parser получил пустой CHANGED_ALLOWLIST_ACTUAL несмотря на применённые изменения; rollback PASS, commit/push отсутствовали.
 - V2 не меняет функциональный hotfix: исправлен только release-tooling — exact allowlist теперь проверяется через explicit staging + git diff --cached --name-only, а отсутствие лишних изменений отдельно подтверждается git diff --quiet и git ls-files --others.
+
+## 2026-08-20 — Decision: stable rendering for HELP markers and dashboard analytics
+
+- Do not implement HELP discovery by destructively removing every marker host and rebuilding it on each MutationObserver callback. Reconcile only missing/stale hosts.
+- DOM mutation may trigger discovery, but an already valid marker must retain DOM identity.
+- User-created analytics cards use stale-while-revalidate UX: keep the last successful visual result while a background request runs.
+- A failed background refresh must not erase a result that was already rendered successfully.
+- Changing interface locale must not refetch locale-independent dashboard block definitions. Localized chart data may refresh, but the existing chart remains visible until replacement data is ready.
+- This hotfix intentionally does not redesign dashboard/session hydration, page headings, HELP content, or analytics semantics.
+- Release tooling rule added after the V1A failure: on Windows PowerShell 5.1, native stderr must be captured as diagnostic output and must not itself be treated as failure; non-zero native exit code remains mandatory for failure.

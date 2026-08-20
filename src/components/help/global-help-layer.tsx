@@ -60,7 +60,12 @@ function createHost(target: Element, helpKey: string) {
   const existing = target.parentElement?.querySelector(
     `:scope > [data-arctor-help-host="${CSS.escape(helpKey)}"]`,
   );
-  if (existing instanceof HTMLElement) return existing;
+  if (existing instanceof HTMLElement) {
+    if (existing.previousElementSibling !== target) {
+      target.insertAdjacentElement("afterend", existing);
+    }
+    return existing;
+  }
 
   const host = document.createElement("span");
   host.setAttribute("data-arctor-help-host", helpKey);
@@ -216,21 +221,23 @@ export function GlobalHelpLayer() {
 
   useEffect(() => {
     let frame = 0;
-    const timers: number[] = [];
 
     function sync() {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        document
-          .querySelectorAll("[data-arctor-help-host]")
-          .forEach((node) => node.remove());
+        const existingHosts = [
+          ...document.querySelectorAll("[data-arctor-help-host]"),
+        ].filter((node): node is HTMLElement => node instanceof HTMLElement);
 
         if (entries.length === 0) {
-          setSlots([]);
+          for (const host of existingHosts) host.remove();
+          setSlots((current) => (current.length === 0 ? current : []));
           return;
         }
 
         const next: MarkerSlot[] = [];
+        const retainedHosts = new Set<HTMLElement>();
+
         for (const entry of entries) {
           // The API returns registry metadata for the matched route pattern.
           // Locate by semantic metadata/ordinal rather than reconstructing a
@@ -239,15 +246,36 @@ export function GlobalHelpLayer() {
           const target = findTargetForEntry(entry);
           if (!target || !target.isConnected) continue;
           const host = createHost(target, entry.helpKey);
+          retainedHosts.add(host);
           next.push({ helpKey: entry.helpKey, host, entry });
         }
-        setSlots(next);
+
+        // Reconcile in place: keep every still-valid host mounted so dashboard
+        // hydration/data mutations cannot make help markers blink. Remove only
+        // hosts that are no longer attached to a current target (for example,
+        // a hidden desktop nav after the mobile drawer becomes active).
+        for (const host of existingHosts) {
+          if (!retainedHosts.has(host) && host.isConnected) host.remove();
+        }
+
+        setSlots((current) => {
+          if (
+            current.length === next.length &&
+            current.every(
+              (slot, index) =>
+                slot.helpKey === next[index]?.helpKey &&
+                slot.host === next[index]?.host &&
+                slot.entry === next[index]?.entry,
+            )
+          ) {
+            return current;
+          }
+          return next;
+        });
       });
     }
 
     sync();
-    timers.push(window.setTimeout(sync, 250));
-    timers.push(window.setTimeout(sync, 1000));
     window.addEventListener("arctor:help-rescan", sync);
 
     function isHelpHostMutation(mutation: MutationRecord) {
@@ -278,7 +306,6 @@ export function GlobalHelpLayer() {
     return () => {
       observer.disconnect();
       cancelAnimationFrame(frame);
-      for (const timer of timers) window.clearTimeout(timer);
       window.removeEventListener("arctor:help-rescan", sync);
       document
         .querySelectorAll("[data-arctor-help-host]")
