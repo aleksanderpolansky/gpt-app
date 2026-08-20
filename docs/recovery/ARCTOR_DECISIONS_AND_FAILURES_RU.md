@@ -779,3 +779,14 @@ Legacy `/calendar/activity-review` container flow остается истори�
 3. useInterfaceLocale инициализируется initialLocale и сохраняет popstate-поддержку, но не делает стартовую коррекцию en -> фактическая locale.
 4. Release-transform обязан быть CRLF/LF-safe: сравнение выполняется после normalize LF в памяти, запись восстанавливает исходный EOL.
 5. Help markers, Help Registry, данные/формулы аналитики и БД не изменяются.
+
+
+## ARCTOR_DASHBOARD_ANALYTICS_SSR_BLOCKS_HOTFIX_V3 — решение
+Дата: 2026-08-20
+
+1. Персональная структура Dashboard не должна появляться после hydration, если сервер уже имеет сессию и actor context.
+2. / server-side получает dashboard_analytics_blocks для текущего appUser/active actor и сериализует их в FigmaDashboardContent.
+3. 401 для гостя трактуется как корректный пустой персональный список, а не как ошибка интерфейса.
+4. Не-401 ошибка server prefetch передаётся как null: Workspace показывает существующий retry UI и может выполнить клиентский loadBlocks только по явному Retry.
+5. Обязательный initial client GET /api/dashboard/analytics-blocks удаляется.
+6. Данные конкретных графиков, формулы, Help System, Auth0 contract и БД не изменяются.

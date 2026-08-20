@@ -43,6 +43,7 @@ import {
   type LocaleCode,
 } from "@/i18n";
 
+import type { DashboardAnalyticsBlock } from "@/lib/dashboard/analytics-contract";
 import { useUserSessionClient } from "../auth/user-session-client";
 import { DashboardAnalyticsWorkspace } from "./dashboard-analytics-builder";
 
@@ -576,8 +577,10 @@ function DirectionCard({
 
 export function FigmaDashboardContent({
   initialLocale,
+  initialAnalyticsBlocks,
 }: {
   readonly initialLocale: LocaleCode;
+  readonly initialAnalyticsBlocks: readonly DashboardAnalyticsBlock[] | null;
 }) {
   const locale = useInterfaceLocale(initialLocale);
   const t = useMemo<DashboardTranslate>(
@@ -842,7 +845,10 @@ export function FigmaDashboardContent({
         <ProgressKpi t={t} />
       </div>
 
-      <DashboardAnalyticsWorkspace locale={locale} />
+      <DashboardAnalyticsWorkspace
+        locale={locale}
+        initialBlocks={initialAnalyticsBlocks}
+      />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {FILTER_KEYS.map((filterKey) => (

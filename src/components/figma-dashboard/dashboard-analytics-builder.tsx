@@ -1660,13 +1660,17 @@ function AnalyticsBuilderModal({
 
 export function DashboardAnalyticsWorkspace({
   locale,
+  initialBlocks,
 }: {
   readonly locale: LocaleCode;
+  readonly initialBlocks: readonly DashboardAnalyticsBlock[] | null;
 }) {
   const ui = UI[locale];
-  const [blocks, setBlocks] = useState<DashboardAnalyticsBlock[]>([]);
+  const [blocks, setBlocks] = useState<DashboardAnalyticsBlock[]>(() =>
+    initialBlocks === null ? [] : [...initialBlocks],
+  );
   const [status, setStatus] = useState<"loading" | "ready" | "error">(
-    "loading",
+    initialBlocks === null ? "error" : "ready",
   );
   const [builderOpen, setBuilderOpen] = useState(false);
 
@@ -1697,13 +1701,6 @@ export function DashboardAnalyticsWorkspace({
       setStatus((current) => (current === "ready" ? "ready" : "error"));
     }
   }, []);
-
-  useEffect(() => {
-    const timerId = window.setTimeout(() => {
-      void loadBlocks();
-    }, 0);
-    return () => window.clearTimeout(timerId);
-  }, [loadBlocks]);
 
   async function removeBlock(blockId: string) {
     const response = await fetch(

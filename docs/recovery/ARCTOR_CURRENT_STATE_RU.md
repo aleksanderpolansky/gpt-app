@@ -765,3 +765,14 @@ Baseline: 57874a0185195322a5a7f1f029d67b7e61330631
 Причина: FigmaDashboardContent сначала гидратировался с locale=en, а затем useEffect читал фактический ?locale=pl/uk/... и менял locale. AnalyticsBlockCard включает locale в ключ запроса /api/dashboard/analytics-data, поэтому происходила вторая revalidation.
 Предыдущая попытка V2 безопасно остановилась на preflight PAGE_BASELINE_SHAPE_MISMATCH из-за CRLF working copy при LF-only сравнении; изменений исходников, commit и push не было, rollback прошёл.
 Решение V2A: transform нормализует EOL только в памяти и восстанавливает исходный EOL каждого файла; корневая страница передает locale из searchParams в самый первый render Dashboard. SQL не требуется.
+
+
+## ARCTOR_DASHBOARD_ANALYTICS_SSR_BLOCKS_HOTFIX_V3
+Дата: 2026-08-20
+Baseline: f41a8ff84525a9f23fbd7d8b348df2bdf9c7a74c
+
+Наблюдение после успешного V2A: как гость Dashboard визуально стабилен, но у вошедшего пользователя персональные аналитические блоки целиком появляются через 1–2 секунды после основной страницы.
+Причина: DashboardAnalyticsWorkspace всегда стартовал с blocks=[]/status=loading и только после hydration выполнял browser GET /api/dashboard/analytics-blocks. Для гостя персональных блоков нет, поэтому визуального скачка не видно; для авторизованного пользователя grid вставлялся позднее.
+Решение V3: определения персональных аналитических блоков читаются server-side при рендере / и передаются как initial props. Workspace сразу рендерит известный grid и больше не делает обязательный mount-fetch списка блоков. Если server prefetch реально не удался, остаётся существующий error/retry путь.
+Данные внутри каждого блока по-прежнему загружаются его существующим API и могут появиться внутри уже зарезервированной карточки; расчёты и API semantics не меняются.
+SQL не требуется.
