@@ -790,3 +790,9 @@ Legacy `/calendar/activity-review` container flow остается истори�
 4. Не-401 ошибка server prefetch передаётся как null: Workspace показывает существующий retry UI и может выполнить клиентский loadBlocks только по явному Retry.
 5. Обязательный initial client GET /api/dashboard/analytics-blocks удаляется.
 6. Данные конкретных графиков, формулы, Help System, Auth0 contract и БД не изменяются.
+
+
+## ARCTOR_DASHBOARD_SSR_CONTEXT_HOTFIX_V4B — решение
+Дата: 2026-08-20
+
+Dashboard SSR использует минимальный уже существующий actor-context вместо общего activityUserContext. SSR initialAnalyticsBlocks сохраняется; client-side позднее появление структуры Dashboard не возвращается. Ошибка actor-context даёт null для существующего retry/error path, отсутствие Auth0 session даёт []. Help System, БД, analytics formulas/data API и общий activityUserContext вне Dashboard не меняются.

@@ -1,7 +1,8 @@
 ﻿import { FigmaDashboardContent } from "../components/figma-dashboard/figma-dashboard";
 import { normalizeLocale } from "../i18n";
 import type { DashboardAnalyticsBlock } from "../lib/dashboard/analytics-contract";
-import { getActivityUserContext } from "../../lib/activity/activityUserContext";
+import { resolveActiveActorContext } from "../../lib/actor-context";
+import { auth0 } from "../../lib/auth0";
 import { supabase } from "../../lib/supabase";
 
 type HomeSearchParams = {
@@ -47,17 +48,22 @@ function mapDashboardAnalyticsBlock(row: Row): DashboardAnalyticsBlock {
 }
 
 async function loadInitialDashboardAnalyticsBlocks(): Promise<DashboardAnalyticsBlock[] | null> {
-  const { appUser, personActor, errorResponse } = await getActivityUserContext();
+  const session = await auth0.getSession();
 
-  if (errorResponse || !appUser || !personActor) {
-    return errorResponse?.status === 401 ? [] : null;
+  if (!session?.user?.sub) return [];
+
+  let actorContext: Awaited<ReturnType<typeof resolveActiveActorContext>>;
+  try {
+    actorContext = await resolveActiveActorContext(session.user.sub);
+  } catch {
+    return null;
   }
 
   const { data, error } = await supabase
     .from("dashboard_analytics_blocks")
     .select("*")
-    .eq("owner_user_id", appUser.id)
-    .eq("owner_actor_id", personActor.id)
+    .eq("owner_user_id", actorContext.appUserId)
+    .eq("owner_actor_id", actorContext.actorId)
     .eq("is_visible", true)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });

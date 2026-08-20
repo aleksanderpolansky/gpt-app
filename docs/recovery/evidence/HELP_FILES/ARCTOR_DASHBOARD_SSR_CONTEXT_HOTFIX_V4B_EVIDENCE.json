@@ -1,0 +1,19 @@
+{
+  "evidence_id": "ARCTOR_DASHBOARD_SSR_CONTEXT_HOTFIX_V4B",
+  "created_at": "2026-08-20",
+  "baseline": "43cacea3fe56e173b3c2c110b3af0885792ec546",
+  "sql_required": false,
+  "before": "getActivityUserContext -> resolveActiveActorContext + repeated app_users/persons/actors -> dashboard_analytics_blocks",
+  "after": "auth0.getSession -> resolveActiveActorContext -> dashboard_analytics_blocks",
+  "eliminated_dashboard_prefetch_reads": [
+    "repeated app_users",
+    "persons not needed by Dashboard",
+    "repeated actors"
+  ],
+  "changed_files": [
+    "src/app/page.tsx",
+    "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
+    "docs/recovery/ARCTOR_DECISIONS_AND_FAILURES_RU.md",
+    "docs/recovery/evidence/HELP_FILES/ARCTOR_DASHBOARD_SSR_CONTEXT_HOTFIX_V4B_EVIDENCE.json"
+  ]
+}

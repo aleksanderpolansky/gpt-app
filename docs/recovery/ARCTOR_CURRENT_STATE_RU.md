@@ -776,3 +776,10 @@ Baseline: f41a8ff84525a9f23fbd7d8b348df2bdf9c7a74c
 Решение V3: определения персональных аналитических блоков читаются server-side при рендере / и передаются как initial props. Workspace сразу рендерит известный grid и больше не делает обязательный mount-fetch списка блоков. Если server prefetch реально не удался, остаётся существующий error/retry путь.
 Данные внутри каждого блока по-прежнему загружаются его существующим API и могут появиться внутри уже зарезервированной карточки; расчёты и API semantics не меняются.
 SQL не требуется.
+
+
+## ARCTOR_DASHBOARD_SSR_CONTEXT_HOTFIX_V4B
+Дата: 2026-08-20
+Baseline: 43cacea3fe56e173b3c2c110b3af0885792ec546
+
+После неудачных запусков V4/V4A выполняется оптимизация SSR Dashboard после V3. V4 остановился в release-tooling из-за неинициализированного $committed. V4A прошёл baseline, no-mutation preflight, apply, validator 13/13 и staged allowlist, но остановился при логировании пустой строки вывода ESLint: обязательный параметр Write-Report Text не принимал empty string. Rollback V4A прошёл, commit/push не было. Функциональная оптимизация остаётся той же: визуальный скачок персональных аналитических блоков сохраняется устранённым, но тяжёлый getActivityUserContext заменён на auth0.getSession() -> resolveActiveActorContext() -> dashboard_analytics_blocks. Убраны три лишних последовательных Supabase-read из Dashboard-prefetch: повторный app_users, ненужный persons и повторный actors. Гость сразу получает пустой персональный список. SQL не требуется; другие страницы и общий activityUserContext не изменяются.
