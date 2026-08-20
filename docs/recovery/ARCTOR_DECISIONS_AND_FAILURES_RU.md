@@ -749,3 +749,13 @@ Legacy `/calendar/activity-review` container flow остается истори�
 - Runner сделал `ROLLBACK=PASS`, удалил 19 новых файлов; commit/push отсутствовали, code baseline остался `10d6bab82cecd2abcfcebd8ead3279d79a2f799a`. Manual HELP DB schema остаётся применённой и PASS.
 - Решение V5: исправить только module import depth, добавить validator checks, запрещающие V4 over-deep imports, и повторить zero-warning ESLint + полный Next build до commit.
 - Инженерное правило: для новых nested Next.js route относительный import к root `lib/` должен проверяться по реальному filesystem depth или существующему sibling-route pattern; syntax/transpile без module resolution недостаточен. Gate: `BUILD_FAILED` / `Module not found`.
+
+
+### 2026-08-20 — HELP popup/mobile marker UX hotfix V1
+- Исправлена блокировка desktop sidebar/main scrolling прозрачным full-screen help backdrop: backdrop теперь существует только на mobile, desktop popover закрывается Escape/outside-click и не перехватывает прокрутку страницы.
+- Длинный desktop help popover теперь получает viewport-safe top/maxHeight и собственный overflow-y, поэтому весь WHAT/WHY текст доступен без выхода ниже экрана.
+- Mobile help markers раньше привязывались к первому nav[aria-label=ARCTor], которым на смартфоне часто был скрытый desktop sidebar; теперь выбирается реально отображаемый nav.
+- Добавлен MutationObserver с защитой от self-mutations, чтобы help markers пересканировались после динамического открытия mobile navigation drawer.
+- Help content, translation policy, DB schema, registry keys, canonical leaf routing и legacy Activity Container не изменялись.
+- Первый production release attempt V1 прошёл functional validator 18/18, но остановился на release-tooling allowlist gate: PowerShell parser получил пустой CHANGED_ALLOWLIST_ACTUAL несмотря на применённые изменения; rollback PASS, commit/push отсутствовали.
+- V2 не меняет функциональный hotfix: исправлен только release-tooling — exact allowlist теперь проверяется через explicit staging + git diff --cached --name-only, а отсутствие лишних изменений отдельно подтверждается git diff --quiet и git ls-files --others.

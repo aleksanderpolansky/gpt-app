@@ -1,0 +1,32 @@
+{
+  "id": "ARCTOR_HELP_POPUP_MOBILE_HOTFIX_V1",
+  "date": "2026-08-20",
+  "baseline": "08e939c7bc8bac1be26d015b3f7722d8b2255324",
+  "scope": [
+    "desktop help popover must not block sidebar/main scrolling",
+    "long help content must remain fully reachable inside viewport",
+    "mobile navigation must show WHAT/WHY markers when drawer is mounted"
+  ],
+  "implementation": {
+    "desktopBackdrop": "mobile-only",
+    "desktopClose": [
+      "Escape",
+      "outside pointer"
+    ],
+    "desktopPopover": "viewport-safe maxHeight + overflow-y-auto",
+    "mobileNavigationTarget": "first rendered ARCTor nav, fallback first nav",
+    "dynamicDrawer": "MutationObserver rescan, self-help mutations ignored"
+  },
+  "releaseTooling": {
+    "attempt": "V2",
+    "v1Failure": "CHANGED_ALLOWLIST_ACTUAL empty after functional validator 18/18; rollback PASS",
+    "v2Gate": "explicit stage allowed files; cached-name allowlist; no unstaged tracked or untracked extras"
+  },
+  "unchanged": [
+    "help DB schema",
+    "help translation policy",
+    "help registry identity",
+    "canonical leaf routing",
+    "legacy Activity Container"
+  ]
+}

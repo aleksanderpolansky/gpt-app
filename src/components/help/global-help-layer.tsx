@@ -69,6 +69,9 @@ function createHost(target: Element, helpKey: string) {
   host.style.gap = "3px";
   host.style.marginLeft = "5px";
   host.style.verticalAlign = "middle";
+  host.style.flexShrink = "0";
+  host.style.position = "relative";
+  host.style.zIndex = "2";
   target.insertAdjacentElement("afterend", host);
   return host;
 }
@@ -78,9 +81,20 @@ function nthElement<T extends Element>(items: NodeListOf<T>, ordinal: number | n
   return items.item(index);
 }
 
+function isElementRendered(element: Element) {
+  if (element.getClientRects().length === 0) return false;
+  const style = window.getComputedStyle(element);
+  return style.display !== "none" && style.visibility !== "hidden";
+}
+
+function findActiveNavigation() {
+  const navs = [...document.querySelectorAll('nav[aria-label="ARCTor"]')];
+  return navs.find(isElementRendered) ?? navs[0] ?? null;
+}
+
 function findTargetForEntry(entry: HelpEntry) {
   if (entry.kind === "navigation") {
-    const nav = document.querySelector('nav[aria-label="ARCTor"]');
+    const nav = findActiveNavigation();
     if (!nav || !entry.hrefPath) return null;
     const matches = [...nav.querySelectorAll("a[href]")].filter((node) =>
       node instanceof HTMLAnchorElement && normalizeHrefPath(node) === entry.hrefPath,
@@ -153,6 +167,9 @@ function MarkerButtons({
     </>
   );
 }
+
+export const ARCTOR_HELP_POPUP_MOBILE_HOTFIX_V1 =
+  "ARCTOR_HELP_POPUP_MOBILE_HOTFIX_V1" as const;
 
 export function GlobalHelpLayer() {
   const pathnameRaw = usePathname();
@@ -233,7 +250,33 @@ export function GlobalHelpLayer() {
     timers.push(window.setTimeout(sync, 1000));
     window.addEventListener("arctor:help-rescan", sync);
 
+    function isHelpHostMutation(mutation: MutationRecord) {
+      if (
+        mutation.target instanceof Element &&
+        mutation.target.closest("[data-arctor-help-host]")
+      ) {
+        return true;
+      }
+      const changedNodes = [...mutation.addedNodes, ...mutation.removedNodes];
+      return (
+        changedNodes.length > 0 &&
+        changedNodes.every(
+          (node) =>
+            node instanceof Element &&
+            (node.matches("[data-arctor-help-host]") ||
+              Boolean(node.closest("[data-arctor-help-host]"))),
+        )
+      );
+    }
+
+    const observer = new MutationObserver((mutations) => {
+      if (mutations.every(isHelpHostMutation)) return;
+      sync();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
     return () => {
+      observer.disconnect();
       cancelAnimationFrame(frame);
       for (const timer of timers) window.clearTimeout(timer);
       window.removeEventListener("arctor:help-rescan", sync);
@@ -244,12 +287,26 @@ export function GlobalHelpLayer() {
   }, [entries, pathname]);
 
   useEffect(() => {
-    const close = () => setActive(null);
-    window.addEventListener("scroll", close, true);
-    window.addEventListener("resize", close);
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setActive(null);
+    }
+
+    function closeFromOutside(event: PointerEvent) {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest("[data-arctor-help-dialog]")) return;
+      if (target.closest("[data-arctor-help-host]")) return;
+      setActive(null);
+    }
+
+    const closeOnResize = () => setActive(null);
+    window.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("pointerdown", closeFromOutside);
+    window.addEventListener("resize", closeOnResize);
     return () => {
-      window.removeEventListener("scroll", close, true);
-      window.removeEventListener("resize", close);
+      window.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("pointerdown", closeFromOutside);
+      window.removeEventListener("resize", closeOnResize);
     };
   }, []);
 
@@ -257,12 +314,16 @@ export function GlobalHelpLayer() {
   const desktopStyle = useMemo(() => {
     if (!active) return {};
     const width = 360;
+    const maxHeight = Math.max(160, Math.min(480, window.innerHeight - 24));
     const left = Math.min(
       Math.max(12, active.rect.left),
       Math.max(12, window.innerWidth - width - 12),
     );
-    const top = Math.min(active.rect.bottom + 8, window.innerHeight - 260);
-    return { left, top, width };
+    const top = Math.max(
+      12,
+      Math.min(active.rect.bottom + 8, window.innerHeight - maxHeight - 12),
+    );
+    return { left, top, width, maxHeight };
   }, [active]);
 
   return (
@@ -284,12 +345,13 @@ export function GlobalHelpLayer() {
             type="button"
             aria-label={copy.close}
             onClick={() => setActive(null)}
-            className="fixed inset-0 z-[89] bg-[#0f172a]/25 backdrop-blur-[1px] md:bg-transparent md:backdrop-blur-none"
+            className="fixed inset-0 z-[89] bg-[#0f172a]/25 backdrop-blur-[1px] md:hidden"
           />
           <section
+            data-arctor-help-dialog="true"
             role="dialog"
             aria-modal="true"
-            className="fixed inset-x-3 bottom-3 z-[90] max-h-[70vh] overflow-auto rounded-[22px] border border-[rgba(0,0,0,0.08)] bg-white p-5 shadow-[0_22px_65px_rgba(15,23,42,0.24)] md:inset-x-auto md:bottom-auto md:max-h-[360px] md:rounded-2xl"
+            className="fixed inset-x-3 bottom-3 z-[90] max-h-[calc(100dvh-24px)] touch-pan-y overflow-y-auto overscroll-contain rounded-[22px] border border-[rgba(0,0,0,0.08)] bg-white p-5 shadow-[0_22px_65px_rgba(15,23,42,0.24)] md:inset-x-auto md:bottom-auto md:max-h-none md:rounded-2xl"
             style={typeof window !== "undefined" && window.innerWidth >= 768 ? desktopStyle : undefined}
           >
             <div className="flex items-start gap-3">

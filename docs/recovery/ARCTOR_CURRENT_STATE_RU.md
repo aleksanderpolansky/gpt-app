@@ -734,3 +734,13 @@ V3 дошёл до реального `npm run lint` на production checkout и
 - Manual HELP DB SQL уже применён и подтверждён PASS; повторный SQL не нужен.
 - V4 code release: DB preflight PASS, validator 36/36 PASS, ESLint zero-warning PASS, затем Next build FAIL на четырёх `Module not found` из-за over-deep imports в двух новых `/api/uploaded-files*` routes; rollback PASS, commit/push отсутствуют.
 - V5 исправляет module import depth и ожидает production build/commit/push. Code baseline до release остаётся `10d6bab82cecd2abcfcebd8ead3279d79a2f799a`.
+
+
+### 2026-08-20 — HELP popup/mobile marker UX hotfix V1
+- Исправлена блокировка desktop sidebar/main scrolling прозрачным full-screen help backdrop: backdrop теперь существует только на mobile, desktop popover закрывается Escape/outside-click и не перехватывает прокрутку страницы.
+- Длинный desktop help popover теперь получает viewport-safe top/maxHeight и собственный overflow-y, поэтому весь WHAT/WHY текст доступен без выхода ниже экрана.
+- Mobile help markers раньше привязывались к первому nav[aria-label=ARCTor], которым на смартфоне часто был скрытый desktop sidebar; теперь выбирается реально отображаемый nav.
+- Добавлен MutationObserver с защитой от self-mutations, чтобы help markers пересканировались после динамического открытия mobile navigation drawer.
+- Help content, translation policy, DB schema, registry keys, canonical leaf routing и legacy Activity Container не изменялись.
+- Первый production release attempt V1 прошёл functional validator 18/18, но остановился на release-tooling allowlist gate: PowerShell parser получил пустой CHANGED_ALLOWLIST_ACTUAL несмотря на применённые изменения; rollback PASS, commit/push отсутствовали.
+- V2 не меняет функциональный hotfix: исправлен только release-tooling — exact allowlist теперь проверяется через explicit staging + git diff --cached --name-only, а отсутствие лишних изменений отдельно подтверждается git diff --quiet и git ls-files --others.
