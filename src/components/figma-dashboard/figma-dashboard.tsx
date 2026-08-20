@@ -153,8 +153,8 @@ type AiTokenAvailabilityResponse = {
   readonly errorMessage?: string;
 };
 
-function useInterfaceLocale(): LocaleCode {
-  const [locale, setLocale] = useState<LocaleCode>("en");
+function useInterfaceLocale(initialLocale: LocaleCode): LocaleCode {
+  const [locale, setLocale] = useState<LocaleCode>(initialLocale);
 
   useEffect(() => {
     function readLocaleFromUrl() {
@@ -165,7 +165,6 @@ function useInterfaceLocale(): LocaleCode {
       setLocale(getLocaleSearchParam(new URLSearchParams(window.location.search)));
     }
 
-    readLocaleFromUrl();
     window.addEventListener("popstate", readLocaleFromUrl);
 
     return () => {
@@ -575,8 +574,12 @@ function DirectionCard({
   );
 }
 
-export function FigmaDashboardContent() {
-  const locale = useInterfaceLocale();
+export function FigmaDashboardContent({
+  initialLocale,
+}: {
+  readonly initialLocale: LocaleCode;
+}) {
+  const locale = useInterfaceLocale(initialLocale);
   const t = useMemo<DashboardTranslate>(
     () => (key, params) => getDashboardMessage(key, locale, params),
     [locale],

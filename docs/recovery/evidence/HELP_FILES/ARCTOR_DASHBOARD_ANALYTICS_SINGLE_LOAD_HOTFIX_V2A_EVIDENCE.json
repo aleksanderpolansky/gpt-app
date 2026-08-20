@@ -1,0 +1,28 @@
+{
+  "evidence_id": "ARCTOR_DASHBOARD_ANALYTICS_SINGLE_LOAD_HOTFIX_V2A",
+  "created_at": "2026-08-20",
+  "baseline": "57874a0185195322a5a7f1f029d67b7e61330631",
+  "sql_required": false,
+  "previous_failed_attempt": {
+    "id": "ARCTOR_DASHBOARD_ANALYTICS_SINGLE_LOAD_HOTFIX_V2",
+    "failure": "PAGE_BASELINE_SHAPE_MISMATCH caused by CRLF working copy vs LF-only preflight comparison",
+    "mutation_before_failure": false,
+    "rollback": "PASS"
+  },
+  "scope": "dashboard initial locale hydration; eliminate accidental second analytics-data fetch",
+  "changed_files": [
+    "src/app/page.tsx",
+    "src/components/figma-dashboard/figma-dashboard.tsx",
+    "docs/recovery/ARCTOR_CURRENT_STATE_RU.md",
+    "docs/recovery/ARCTOR_DECISIONS_AND_FAILURES_RU.md",
+    "docs/recovery/evidence/HELP_FILES/ARCTOR_DASHBOARD_ANALYTICS_SINGLE_LOAD_HOTFIX_V2A_EVIDENCE.json"
+  ],
+  "invariants": [
+    "no database changes",
+    "help marker behavior unchanged",
+    "analytics calculations unchanged",
+    "locale is present on first Dashboard render",
+    "popstate locale updates retained",
+    "existing file EOL style preserved"
+  ]
+}

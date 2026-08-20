@@ -755,3 +755,13 @@ V3 дошёл до реального `npm run lint` на production checkout и
 - Dashboard analytics block definitions are loaded once per workspace mount and are no longer refetched merely because localized UI copy changed.
 - Existing HELP content, translations, uploaded files, billing, recognition and database contracts are unchanged.
 - Release-tooling history: the first launcher stopped before release because it required a separate SHA file; V1A then reached the release script but Windows PowerShell 5.1 treated harmless git fetch stderr (From https://github.com/...) as a terminating error under ErrorActionPreference=Stop. Both attempts rolled back/changed nothing in the repository. V1B fixes only the native-command logging wrapper: stderr is logged, while the native exit code remains the release gate.
+
+
+## ARCTOR_DASHBOARD_ANALYTICS_SINGLE_LOAD_HOTFIX_V2A
+Дата: 2026-08-20
+Baseline: 57874a0185195322a5a7f1f029d67b7e61330631
+
+Остаточный UX-дефект после DASHBOARD_UI_STABILITY_HOTFIX_V1B: пользовательские аналитические блоки Dashboard один раз повторно запрашивали данные после первого появления.
+Причина: FigmaDashboardContent сначала гидратировался с locale=en, а затем useEffect читал фактический ?locale=pl/uk/... и менял locale. AnalyticsBlockCard включает locale в ключ запроса /api/dashboard/analytics-data, поэтому происходила вторая revalidation.
+Предыдущая попытка V2 безопасно остановилась на preflight PAGE_BASELINE_SHAPE_MISMATCH из-за CRLF working copy при LF-only сравнении; изменений исходников, commit и push не было, rollback прошёл.
+Решение V2A: transform нормализует EOL только в памяти и восстанавливает исходный EOL каждого файла; корневая страница передает locale из searchParams в самый первый render Dashboard. SQL не требуется.

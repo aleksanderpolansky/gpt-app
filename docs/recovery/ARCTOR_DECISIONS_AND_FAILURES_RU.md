@@ -769,3 +769,13 @@ Legacy `/calendar/activity-review` container flow остается истори�
 - Changing interface locale must not refetch locale-independent dashboard block definitions. Localized chart data may refresh, but the existing chart remains visible until replacement data is ready.
 - This hotfix intentionally does not redesign dashboard/session hydration, page headings, HELP content, or analytics semantics.
 - Release tooling rule added after the V1A failure: on Windows PowerShell 5.1, native stderr must be captured as diagnostic output and must not itself be treated as failure; non-zero native exit code remains mandatory for failure.
+
+
+## ARCTOR_DASHBOARD_ANALYTICS_SINGLE_LOAD_HOTFIX_V2A — решение
+Дата: 2026-08-20
+
+1. Locale Dashboard должен быть известен до первой hydration.
+2. src/app/page.tsx получает locale/lang из Next.js searchParams и передает initialLocale в FigmaDashboardContent.
+3. useInterfaceLocale инициализируется initialLocale и сохраняет popstate-поддержку, но не делает стартовую коррекцию en -> фактическая locale.
+4. Release-transform обязан быть CRLF/LF-safe: сравнение выполняется после normalize LF в памяти, запись восстанавливает исходный EOL.
+5. Help markers, Help Registry, данные/формулы аналитики и БД не изменяются.
