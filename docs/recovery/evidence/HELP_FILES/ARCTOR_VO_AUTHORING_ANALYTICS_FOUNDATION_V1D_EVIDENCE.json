@@ -1,0 +1,20 @@
+{
+  "evidence_id": "ARCTOR_VO_AUTHORING_ANALYTICS_FOUNDATION_V1D",
+  "created_at": "2026-08-20",
+  "baseline": "448c7f122a49e2b17ef7af3238b690a47849444b",
+  "sql_required": true,
+  "live_intake": {
+    "value_objects_total": 172,
+    "ontology_ready": 168,
+    "legacy_or_partial": 4,
+    "symptom_state_leaf_kind": true
+  },
+  "locked_invariants": [
+    "persisted facts are raw analytics inputs",
+    "symptom is STATE/symptom_state leaf",
+    "commercial product/service/offer/certificate flow is protected",
+    "no value_object rows are deleted or backfilled",
+    "new analytics coefficients never mutate persisted facts",
+    "old active fact-mutating coefficient rows must be zero"
+  ]
+}

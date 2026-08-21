@@ -796,3 +796,17 @@ Legacy `/calendar/activity-review` container flow остается истори�
 Дата: 2026-08-20
 
 Dashboard SSR использует минимальный уже существующий actor-context вместо общего activityUserContext. SSR initialAnalyticsBlocks сохраняется; client-side позднее появление структуры Dashboard не возвращается. Ошибка actor-context даёт null для существующего retry/error path, отсутствие Auth0 session даёт []. Help System, БД, analytics formulas/data API и общий activityUserContext вне Dashboard не меняются.
+
+
+## ARCTOR_VO_AUTHORING_ANALYTICS_FOUNDATION_V1D — решения
+Дата: 2026-08-20
+
+1. Persisted numeric facts являются исходными наблюдениями и не изменяются аналитическими коэффициентами.
+2. Накопленный эффект может быть абсолютным или условным; для условного важны знак, тенденция, скорость и срок до нуля/target/critical boundary.
+3. Отсутствие факта в настроенном refresh period может давать inactivity_delta.
+4. Symptom v1 — обычный STATE/symptom_state leaf; простая фиксация использует существующий process_count=1 факт после выбора этого leaf.
+5. Развитие/деградация — направление и скорость изменения накопленного состояния.
+6. Старые private draft_first/manual_draft новые записи больше не создают; commercial usage_scope=commercial сохранён.
+7. Product/service/offer/certificate — защищённый production-контур; наличие legacy mirror fields там не является основанием для очистки.
+8. Старые A3.1 fact-mutating coefficient rules не удаляются. V1C сохраняет требование: active rows должны отсутствовать, и запрещает создавать новые active rows.
+9. Автоматическое обучение коэффициентов V1A не включает; это отдельный будущий версионированный механизм.

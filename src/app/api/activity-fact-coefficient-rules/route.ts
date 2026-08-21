@@ -35,27 +35,10 @@ function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function numberOrNull(value: unknown) {
-  if (value === null || value === undefined || value === "") return null;
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function booleanOrNull(value: unknown) {
-  return typeof value === "boolean" ? value : null;
-}
-
 function validUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value,
   );
-}
-
-function parameterCode(value: unknown) {
-  const normalized = text(value).toLowerCase();
-  return /^[a-z][a-z0-9_]{0,79}$/.test(normalized)
-    ? normalized
-    : null;
 }
 
 export async function GET(request: Request) {
@@ -153,89 +136,16 @@ export async function GET(request: Request) {
   });
 }
 
-export async function POST(request: Request) {
-  const { appUser, personActor, errorResponse } = await getActivityUserContext();
-  if (errorResponse) return errorResponse;
-  if (!appUser || !personActor) {
-    return NextResponse.json(
-      { ok: false, error: "User context not found" },
-      { status: 500 },
-    );
-  }
-
-  let body: JsonRecord;
-  try {
-    body = asRecord(await request.json());
-  } catch {
-    return NextResponse.json(
-      { ok: false, error: "Invalid JSON body" },
-      { status: 400 },
-    );
-  }
-
-  const clientRuleId = text(body.clientRuleId);
-  const targetValueObjectId = text(body.targetValueObjectId);
-  const sourceValueObjectId = text(body.sourceValueObjectId);
-  const targetParameterCode = parameterCode(body.targetParameterCode);
-  const sourceParameterCode = parameterCode(body.sourceParameterCode);
-  const conditionOperator = text(body.conditionOperator);
-  const multiplier = numberOrNull(body.multiplier);
-  const priorityRaw = numberOrNull(body.priority);
-  const priority =
-    priorityRaw !== null && Number.isInteger(priorityRaw)
-      ? priorityRaw
-      : 1000;
-
-  if (
-    !validUuid(clientRuleId) ||
-    !validUuid(targetValueObjectId) ||
-    !validUuid(sourceValueObjectId) ||
-    !targetParameterCode ||
-    !sourceParameterCode ||
-    ![
-      "lt",
-      "lte",
-      "numeric_eq",
-      "gte",
-      "gt",
-      "text_eq",
-      "boolean_eq",
-    ].includes(conditionOperator) ||
-    multiplier === null
-  ) {
-    return NextResponse.json(
-      { ok: false, error: "Coefficient rule payload is invalid" },
-      { status: 400 },
-    );
-  }
-
-  const { data, error } = await supabase.rpc(
-    "save_activity_leaf_fact_coefficient_rule_a31_v1",
+export async function POST() {
+  return NextResponse.json(
     {
-      p_client_rule_id: clientRuleId,
-      p_owner_user_id: appUser.id,
-      p_owner_actor_id: personActor.id,
-      p_target_value_object_id: targetValueObjectId,
-      p_target_parameter_code: targetParameterCode,
-      p_source_value_object_id: sourceValueObjectId,
-      p_source_parameter_code: sourceParameterCode,
-      p_condition_operator: conditionOperator,
-      p_condition_numeric_value: numberOrNull(body.conditionNumericValue),
-      p_condition_text_value: text(body.conditionTextValue) || null,
-      p_condition_boolean_value: booleanOrNull(body.conditionBooleanValue),
-      p_multiplier: multiplier,
-      p_priority: priority,
+      ok: false,
+      error:
+        "Fact-mutating coefficient authoring is retired. Configure analytics effect coefficients on the leaf analytics card; persisted facts remain immutable.",
+      errorCode: "ARCTOR_FACT_MUTATING_COEFFICIENTS_RETIRED",
     },
+    { status: 410 },
   );
-
-  if (error) {
-    return NextResponse.json(
-      { ok: false, error: error.message },
-      { status: 409 },
-    );
-  }
-
-  return NextResponse.json({ ok: true, ...asRecord(data) });
 }
 
 export async function PATCH(request: Request) {

@@ -413,8 +413,8 @@ lacks(
 
 has(
   ruleRoute,
-  "save_activity_leaf_fact_coefficient_rule_a31_v1",
-  "COEFFICIENT_ROUTE_SAVE",
+  "ARCTOR_FACT_MUTATING_COEFFICIENTS_RETIRED",
+  "COEFFICIENT_ROUTE_AUTHORING_RETIRED",
 );
 has(
   ruleRoute,
@@ -466,10 +466,10 @@ lacks(
   "if (!open || query.trim().length < 2) {\n      setSourceObjects([]);",
   "COEFFICIENT_UI_NO_SYNC_SETSTATE_IN_SEARCH_EFFECT",
 );
-has(
+lacks(
   parameterManager,
   "ActivityFactCoefficientRuleManager",
-  "LEAF_CARD_COEFFICIENT_MANAGER",
+  "LEAF_CARD_FACT_MUTATING_COEFFICIENT_MANAGER_REMOVED",
 );
 has(
   parameterManager,

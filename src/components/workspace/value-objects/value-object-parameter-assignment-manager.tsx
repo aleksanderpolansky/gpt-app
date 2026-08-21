@@ -2,8 +2,6 @@
 
 import { useCallback, useMemo, useState } from "react";
 
-import { ActivityFactCoefficientRuleManager } from "./activity-fact-coefficient-rule-manager";
-
 import type {
   P72B2CatalogParameter,
   P72B2ParameterCatalogResponse,
@@ -364,8 +362,6 @@ export function ValueObjectParameterAssignmentManager({
           {isOpen ? "Close manager" : "Add or manage parameter"}
         </button>
       </div>
-
-      <ActivityFactCoefficientRuleManager valueObjectId={valueObjectId} />
 
       {isOpen ? (
         <div className="mt-5 grid gap-5">

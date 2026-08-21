@@ -31,16 +31,16 @@ type SelectorCard = {
 const SELECTOR_CARDS: SelectorCard[] = [
   {
     usageScope: "private",
-    eyebrow: "usage_scope = private",
+    eyebrow: "ontology authoring",
     title: "Частный ценный объект",
     description:
-      "Личный объект для целей, навыков, здоровья, обучения, семейных обязанностей, проектов и личной аналитики.",
+      "Обычный объект наблюдения в современной структуре root → intermediate → leaf. Коммерческий контур товаров и услуг остаётся отдельным.",
     contractLines: [
-      "organization_id = null",
-      "status = draft",
-      "source = manual",
+      "scope = actor",
+      "roles = root / intermediate / leaf",
+      "create RPC = create_value_object_ontology_v1",
       "visibility = private",
-      "redirect → /value-objects/{id}/edit",
+      "redirect → /value-objects/new/root",
     ],
     examples: [
       "изучение немецкого",
@@ -97,6 +97,11 @@ export default function NewValueObjectPage() {
   async function createDraft(usageScope: UsageScope) {
     setErrorMessage("");
     setResultMessage("");
+
+    if (usageScope === "private") {
+      router.push("/value-objects/new/root");
+      return;
+    }
 
     if (usageScope === "commercial" && !trimmedOrganizationId) {
       setErrorMessage(
@@ -321,7 +326,9 @@ export default function NewValueObjectPage() {
                 >
                   {isPending
                     ? "Создаю черновик..."
-                    : `Создать ${card.usageScope} draft`}
+                    : card.usageScope === "private"
+                      ? "Создать обычный ЦО"
+                      : `Создать ${card.usageScope} draft`}
                 </button>
               </article>
             );

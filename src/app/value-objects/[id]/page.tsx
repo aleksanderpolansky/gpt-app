@@ -9,9 +9,6 @@ import {
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import { localizeGlobalSystemValueObject } from "@/lib/reality-core/global-system-value-object-localization";
-import { ValueObjectInlineEditor } from "@/components/workspace/value-objects/value-object-inline-editor";
-import { ValueObjectSemanticDefinitionEditor } from "@/components/workspace/value-objects/value-object-semantic-definition-editor";
-import { ValueObjectAliasEditor } from "@/components/workspace/value-objects/value-object-alias-editor";
 import {
   ValueObjectProfileTopGrid,
   type ValueObjectOwnerPresentation,
@@ -20,12 +17,10 @@ import {
 } from "@/components/workspace/value-objects/value-object-profile-top-grid";
 import { ValueObjectSemanticRelationsManager } from "@/components/workspace/value-objects/value-object-semantic-relations-manager";
 import { ValueObjectFullCardPanel } from "@/components/workspace/value-objects/value-object-full-card-panel";
+import { ValueObjectAnalyticsProfileManager } from "@/components/workspace/value-objects/value-object-analytics-profile-manager";
 import { ActivityScheduleDisplay } from "./activity-schedule-display";
 import { ActivityMutualLinksPanel } from "@/components/activity/p5b/activity-mutual-links-panel";
-import {
-  isValueObjectLeafKindV2,
-  isValueObjectStructuralKindV2,
-} from "@/types/reality-core/reality-core-contracts-v2";
+import { isValueObjectLeafKindV2 } from "@/types/reality-core/reality-core-contracts-v2";
 
 type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
@@ -1254,12 +1249,6 @@ export default async function ValueObjectDetailPage({
 
   const directChildren = childrenByParent.get(valueObject.id) ?? [];
   const criteria = (criteriaData ?? []) as CriterionRow[];
-  const successCriteria = criteria.filter(
-    (criterion) => criterion.criterion_type_code === "success",
-  );
-  const failureCriteria = criteria.filter(
-    (criterion) => criterion.criterion_type_code === "failure",
-  );
   const ontologyNodeRole = valueObject.ontology_node_role_code;
   const isRoot =
     valueObject.ontology_node_role_code === "root" ||
@@ -1280,8 +1269,7 @@ export default async function ValueObjectDetailPage({
       valueObject.parent_value_object_id !== null);
   const isStructural =
     !isGlobalSystemObject &&
-    valueObject.node_role_code === "structural" &&
-    isValueObjectStructuralKindV2(valueObject.object_kind) &&
+    (isRoot || isIntermediate) &&
     (valueObject.status === "draft" || valueObject.status === "active");
   const isProductOrService =
     valueObject.object_kind === "product_type" ||
@@ -1415,17 +1403,15 @@ export default async function ValueObjectDetailPage({
   const activityCreateLabel = isProductOrService
     ? copy.addGiftCertificate
     : copy.addPlannedActivity;
-  const activitiesWithSchedule = plannedActivities.filter(
-    (activity) =>
-      activity.schedule_mode_code &&
-      activity.schedule_mode_code !== "unscheduled",
-  ).length;
-
   function countLeafDescendants(parentId: string): number {
     const children = childrenByParent.get(parentId) ?? [];
 
     return children.reduce((count, child) => {
-      if (child.node_role_code === "activity_leaf") {
+      if (
+        child.ontology_node_role_code === "leaf" ||
+        (!child.ontology_node_role_code &&
+          child.node_role_code === "activity_leaf")
+      ) {
         return count + 1;
       }
 
@@ -1682,6 +1668,13 @@ export default async function ValueObjectDetailPage({
           definitionVersion={valueObject.definition_version ?? 1}
           viewHref={viewHref}
         />
+
+        {isLeaf && !isProductOrService ? (
+          <ValueObjectAnalyticsProfileManager
+            valueObjectId={valueObject.id}
+            locale={locale}
+          />
+        ) : null}
 
         {isLeaf ? (
           <ActivityMutualLinksPanel

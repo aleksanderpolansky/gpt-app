@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 
-import { isValueObjectStructuralKindV2 } from "@/types/reality-core/reality-core-contracts-v2";
 import {
   ActorContextError,
   resolveActiveActorContext,
@@ -12,110 +11,101 @@ import { LeafCreateForm } from "./leaf-create-form";
 type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
 type LeafCreatePageProps = {
-  params: Promise<{
-    id: string;
-  }>;
-  searchParams?: Promise<{
-    locale?: string | string[];
-  }>;
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ locale?: string | string[] }>;
 };
 
-type StructuralParentRow = {
+type ParentRow = {
   id: string;
   title: string;
   object_kind: string | null;
-  node_role_code: string | null;
   branch_type_code: string | null;
   root_value_object_id: string | null;
-  parent_value_object_id: string | null;
   status: string;
+  canonical_key: string | null;
+  facet_code: string | null;
+  ontology_node_role_code: string | null;
+  scope_code: string | null;
 };
 
 function normalizeLocale(value: string | string[] | undefined): LocaleCode {
-  const normalized = Array.isArray(value) ? value[0] : value;
+  const candidate = Array.isArray(value) ? value[0] : value;
 
   if (
-    normalized === "pl" ||
-    normalized === "ru" ||
-    normalized === "uk" ||
-    normalized === "de" ||
-    normalized === "es" ||
-    normalized === "cs"
+    candidate === "pl" ||
+    candidate === "ru" ||
+    candidate === "uk" ||
+    candidate === "de" ||
+    candidate === "es" ||
+    candidate === "cs"
   ) {
-    return normalized;
+    return candidate;
   }
 
   return "en";
 }
 
-export default async function LeafCreatePage({
+export default async function NewLeafPage({
   params,
   searchParams,
 }: LeafCreatePageProps) {
-  const { id } = await params;
-  const resolvedSearchParams = await searchParams;
-  const locale = normalizeLocale(resolvedSearchParams?.locale);
   const session = await auth0.getSession();
-
   if (!session?.user?.sub) {
     notFound();
   }
 
   let actorContext: Awaited<ReturnType<typeof resolveActiveActorContext>>;
-
   try {
     actorContext = await resolveActiveActorContext(session.user.sub);
   } catch (error) {
     if (error instanceof ActorContextError) {
       notFound();
     }
-
     throw error;
   }
 
-  const { data: parentData, error: parentError } = await supabase
+  const { id } = await params;
+  const query = searchParams ? await searchParams : undefined;
+  const locale = normalizeLocale(query?.locale);
+
+  const { data, error } = await supabase
     .from("value_objects")
     .select(
-      `
-      id,
-      title,
-      object_kind,
-      node_role_code,
-      branch_type_code,
-      root_value_object_id,
-      parent_value_object_id,
-      status
-    `,
+      "id,title,object_kind,branch_type_code,root_value_object_id,status,canonical_key,facet_code,ontology_node_role_code,scope_code",
     )
     .eq("id", id)
     .eq("owner_user_id", actorContext.appUserId)
     .eq("owner_actor_id", actorContext.actorId)
-    .maybeSingle();
+    .single();
 
-  if (parentError) {
-    throw new Error(parentError.message);
-  }
-
-  const parent = parentData as StructuralParentRow | null;
-
-  if (!parent) {
+  if (error || !data) {
     notFound();
   }
 
+  const parent = data as ParentRow;
+  const role = parent.ontology_node_role_code;
+  const facetCode = parent.facet_code;
   const branchTypeCode = parent.branch_type_code;
-  const objectKind = parent.object_kind;
   const rootValueObjectId = parent.root_value_object_id;
+
   const parentIsEligible =
-    parent.node_role_code === "structural" &&
-    typeof rootValueObjectId === "string" &&
-    isValueObjectStructuralKindV2(objectKind) &&
+    parent.scope_code === "actor" &&
+    typeof parent.canonical_key === "string" &&
+    parent.canonical_key.length > 0 &&
+    (role === "root" || role === "intermediate") &&
+    typeof facetCode === "string" &&
+    facetCode.length > 0 &&
     typeof branchTypeCode === "string" &&
+    branchTypeCode.length > 0 &&
+    typeof rootValueObjectId === "string" &&
+    rootValueObjectId.length > 0 &&
     (parent.status === "draft" || parent.status === "active");
 
   if (
     !parentIsEligible ||
+    (role !== "root" && role !== "intermediate") ||
+    !facetCode ||
     !branchTypeCode ||
-    !objectKind ||
     !rootValueObjectId
   ) {
     notFound();
@@ -129,9 +119,11 @@ export default async function LeafCreatePage({
         id: parent.id,
         title: parent.title,
         branchTypeCode,
-        objectKind,
+        objectKind: parent.object_kind ?? "other",
         rootValueObjectId,
         status: parent.status,
+        facetCode,
+        ontologyNodeRoleCode: role,
       }}
     />
   );

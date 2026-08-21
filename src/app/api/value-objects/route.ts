@@ -17,6 +17,7 @@ import {
 export const dynamic = "force-dynamic";
 
 type UsageScope = "private" | "commercial";
+type ManualOntologyLeafKind = ValueObjectLeafKindV2 | "symptom";
 
 type AppUserRow = {
   id: string;
@@ -227,7 +228,7 @@ function normalizeStructuralObjectKind(
 
 function normalizeLeafObjectKind(
   value: unknown,
-): ValueObjectLeafKindV2 | null {
+): ManualOntologyLeafKind | null {
   if (value === undefined || value === null || value === "") {
     return "activity_pattern";
   }
@@ -237,6 +238,10 @@ function normalizeLeafObjectKind(
   }
 
   const normalized = value.trim();
+
+  if (normalized === "symptom") {
+    return "symptom";
+  }
 
   return isValueObjectLeafKindV2(normalized) ? normalized : null;
 }
@@ -613,8 +618,12 @@ function genericOntologyKindForFacet(facetCode: string): OntologyKindSpec | null
 }
 
 function mapLeafKindToOntology(
-  objectKind: ValueObjectLeafKindV2,
+  objectKind: ManualOntologyLeafKind,
 ): OntologyKindSpec {
+  if (objectKind === "symptom") {
+    return { facetCode: "STATE", objectKindCode: "symptom_state" };
+  }
+
   if (objectKind === "product_type") {
     return { facetCode: "ENTITY", objectKindCode: "product_type" };
   }
@@ -970,7 +979,7 @@ async function createLeafDraftValueObject(
     return NextResponse.json(
       {
         error:
-          "A valid leaf objectKind is required: activity_pattern, product_type or service_type",
+          "A valid leaf objectKind is required: activity_pattern, symptom, product_type or service_type",
       },
       { status: 400 },
     );
@@ -1301,7 +1310,19 @@ export async function POST(request: Request) {
     );
   }
 
-  if (usageScope) {
+  if (usageScope === "private") {
+    return NextResponse.json(
+      {
+        error:
+          "Legacy private draft-first Value Object creation is retired. Use ontology root/intermediate/leaf authoring.",
+        errorCode: "VO_AUTHORING_LEGACY_PRIVATE_DRAFT_RETIRED",
+        redirectUrl: "/value-objects/new/root",
+      },
+      { status: 409 },
+    );
+  }
+
+  if (usageScope === "commercial") {
     return createDraftValueObject(body, appUser, personActor, usageScope);
   }
 
