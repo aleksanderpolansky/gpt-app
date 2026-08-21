@@ -810,3 +810,15 @@ Dashboard SSR использует минимальный уже существ�
 7. Product/service/offer/certificate — защищённый production-контур; наличие legacy mirror fields там не является основанием для очистки.
 8. Старые A3.1 fact-mutating coefficient rules не удаляются. V1C сохраняет требование: active rows должны отсутствовать, и запрещает создавать новые active rows.
 9. Автоматическое обучение коэффициентов V1A не включает; это отдельный будущий версионированный механизм.
+
+
+## 2026-08-21 — Decision: branch-driven observation leaf semantics
+
+1. Отменено решение V1D, в котором `Symptom` трактовался как отдельный manual leaf kind `STATE/symptom_state`. Симптом — обычный объект наблюдения; отдельный picker/группа/тип для него запрещены.
+2. Root / intermediate / leaf описывают только структурное положение. Смысл обычного private leaf определяется structural path и политикой ветви, а не самостоятельным выбором `PROCESS / STATE / ...` на форме листа.
+3. `facet_code` и `object_kind_code` пока сохраняются как внутренний compatibility contract P1C, но не должны становиться пользовательской таксономией private observation tree. Нейтральные generic codes нельзя показывать как смысл объекта.
+4. Для текущего P1C guard private branch-driven authoring не ломает kind/facet registries: intermediate/leaf используют generic kind technical lineage. Будущая formal branch-policy architecture может заменить это без миграции пользовательского смысла, потому что смысл закреплён путем.
+5. Structural edge в пользовательском дереве — `part_of`. `is_a` не используется новым private branch-driven authoring для простого родительства.
+6. Private manual ontology objects не имеют полезной стадии черновика в текущем UX. Новый authoring сразу вызывает существующий lifecycle transition `draft -> active`; commercial draft-first остаётся отдельным защищённым контуром.
+7. Leaf creation under root запрещено в новом flow: пользователь сначала создаёт intermediate semantic branch, затем leaf внутри неё.
+8. Manual normalization старых private drafts должна быть узкой, обратимой и маркированной в metadata; GLOBAL/System, organizations, product/service/offer/certificate не затрагиваются.

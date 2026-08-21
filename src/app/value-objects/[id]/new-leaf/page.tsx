@@ -18,12 +18,9 @@ type LeafCreatePageProps = {
 type ParentRow = {
   id: string;
   title: string;
-  object_kind: string | null;
-  branch_type_code: string | null;
   root_value_object_id: string | null;
   status: string;
   canonical_key: string | null;
-  facet_code: string | null;
   ontology_node_role_code: string | null;
   scope_code: string | null;
 };
@@ -71,7 +68,7 @@ export default async function NewLeafPage({
   const { data, error } = await supabase
     .from("value_objects")
     .select(
-      "id,title,object_kind,branch_type_code,root_value_object_id,status,canonical_key,facet_code,ontology_node_role_code,scope_code",
+      "id,title,root_value_object_id,status,canonical_key,ontology_node_role_code,scope_code",
     )
     .eq("id", id)
     .eq("owner_user_id", actorContext.appUserId)
@@ -84,30 +81,18 @@ export default async function NewLeafPage({
 
   const parent = data as ParentRow;
   const role = parent.ontology_node_role_code;
-  const facetCode = parent.facet_code;
-  const branchTypeCode = parent.branch_type_code;
   const rootValueObjectId = parent.root_value_object_id;
 
   const parentIsEligible =
     parent.scope_code === "actor" &&
     typeof parent.canonical_key === "string" &&
     parent.canonical_key.length > 0 &&
-    (role === "root" || role === "intermediate") &&
-    typeof facetCode === "string" &&
-    facetCode.length > 0 &&
-    typeof branchTypeCode === "string" &&
-    branchTypeCode.length > 0 &&
+    role === "intermediate" &&
     typeof rootValueObjectId === "string" &&
     rootValueObjectId.length > 0 &&
     (parent.status === "draft" || parent.status === "active");
 
-  if (
-    !parentIsEligible ||
-    (role !== "root" && role !== "intermediate") ||
-    !facetCode ||
-    !branchTypeCode ||
-    !rootValueObjectId
-  ) {
+  if (!parentIsEligible || role !== "intermediate" || !rootValueObjectId) {
     notFound();
   }
 
@@ -118,12 +103,9 @@ export default async function NewLeafPage({
       parent={{
         id: parent.id,
         title: parent.title,
-        branchTypeCode,
-        objectKind: parent.object_kind ?? "other",
         rootValueObjectId,
         status: parent.status,
-        facetCode,
-        ontologyNodeRoleCode: role,
+        ontologyNodeRoleCode: "intermediate",
       }}
     />
   );

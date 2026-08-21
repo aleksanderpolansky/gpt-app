@@ -4,11 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import {
-  VALUE_OBJECT_STRUCTURAL_KINDS_V2,
-  type ValueObjectKindV2,
-} from "@/types/reality-core/reality-core-contracts-v2";
-
 type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
 type IntermediateCreateFormProps = {
@@ -33,17 +28,13 @@ type Copy = {
   inheritedBranch: string;
   objectTitle: string;
   objectDescription: string;
-  objectKind: string;
-  kindHint: string;
-  advancedSettings: string;
-  advancedHint: string;
   titlePlaceholder: string;
   descriptionPlaceholder: string;
   create: string;
   creating: string;
   back: string;
   errorPrefix: string;
-  draftNotice: string;
+  activeNotice: string;
   fixedRole: string;
   nestingRule: string;
 };
@@ -59,12 +50,6 @@ const COPY: Record<LocaleCode, Copy> = {
     inheritedBranch: "Inherited branch",
     objectTitle: "Intermediate object name",
     objectDescription: "Description",
-    objectKind: "Object kind",
-    kindHint:
-      "Choose the closest semantic nature. Activity pattern is reserved for leaves.",
-    advancedSettings: "Advanced settings",
-    advancedHint:
-      "Object kind is optional for structural objects. Leave “other” unless a specific kind already has real system behavior.",
     titlePlaceholder: "For example: Pulling exercises",
     descriptionPlaceholder:
       "What child objects should this structural group organize?",
@@ -72,8 +57,8 @@ const COPY: Record<LocaleCode, Copy> = {
     creating: "Creating…",
     back: "Back to parent",
     errorPrefix: "Could not create the intermediate object:",
-    draftNotice:
-      "The new intermediate object will be a private draft by default.",
+    activeNotice:
+      "The new intermediate object becomes active immediately. Its meaning is defined by its place in the observation tree.",
     fixedRole: "Node role",
     nestingRule:
       "Intermediate objects may contain leaves and other intermediate objects. Insertion and reparenting remain a separate controlled step.",
@@ -88,12 +73,6 @@ const COPY: Record<LocaleCode, Copy> = {
     inheritedBranch: "Dziedziczona gałąź",
     objectTitle: "Nazwa obiektu pośredniego",
     objectDescription: "Opis",
-    objectKind: "Rodzaj obiektu",
-    kindHint:
-      "Wybierz najbliższą naturę semantyczną. Wzorzec aktywności jest zarezerwowany dla liści.",
-    advancedSettings: "Ustawienia zaawansowane",
-    advancedHint:
-      "Rodzaj obiektu jest opcjonalny dla obiektów strukturalnych. Pozostaw „other”, jeśli dany rodzaj nie ma jeszcze rzeczywistego zachowania systemowego.",
     titlePlaceholder: "Na przykład: Ćwiczenia przyciągające",
     descriptionPlaceholder:
       "Jakie obiekty podrzędne ma porządkować ta grupa strukturalna?",
@@ -101,8 +80,8 @@ const COPY: Record<LocaleCode, Copy> = {
     creating: "Tworzenie…",
     back: "Wróć do obiektu nadrzędnego",
     errorPrefix: "Nie udało się utworzyć obiektu pośredniego:",
-    draftNotice:
-      "Nowy obiekt pośredni będzie domyślnie prywatnym szkicem.",
+    activeNotice:
+      "Nowy obiekt pośredni staje się aktywny od razu. Jego znaczenie określa miejsce w drzewie obserwacji.",
     fixedRole: "Rola węzła",
     nestingRule:
       "Obiekty pośrednie mogą zawierać liście i kolejne obiekty pośrednie. Wstawianie i przepinanie dzieci pozostają osobnym kontrolowanym krokiem.",
@@ -117,12 +96,6 @@ const COPY: Record<LocaleCode, Copy> = {
     inheritedBranch: "Унаследованная ветвь",
     objectTitle: "Название промежуточного объекта",
     objectDescription: "Описание",
-    objectKind: "Вид объекта",
-    kindHint:
-      "Выберите ближайшую смысловую природу. Шаблон активности предназначен только для листьев.",
-    advancedSettings: "Дополнительные настройки",
-    advancedHint:
-      "Вид объекта для структурных объектов необязателен. Оставьте «other», если для конкретного вида ещё нет реального системного поведения.",
     titlePlaceholder: "Например: Тяговые упражнения",
     descriptionPlaceholder:
       "Какие дочерние объекты должна объединять эта структурная группа?",
@@ -130,8 +103,8 @@ const COPY: Record<LocaleCode, Copy> = {
     creating: "Создание…",
     back: "Назад к родительскому объекту",
     errorPrefix: "Не удалось создать промежуточный объект:",
-    draftNotice:
-      "Новый промежуточный объект по умолчанию будет приватным черновиком.",
+    activeNotice:
+      "Новый промежуточный объект сразу становится действующим. Его смысл определяется местом в дереве наблюдений.",
     fixedRole: "Роль узла",
     nestingRule:
       "Промежуточные объекты могут содержать листья и другие промежуточные объекты. Вставка между существующими узлами и переподчинение остаются отдельным контролируемым шагом.",
@@ -146,12 +119,6 @@ const COPY: Record<LocaleCode, Copy> = {
     inheritedBranch: "Успадкована гілка",
     objectTitle: "Назва проміжного об’єкта",
     objectDescription: "Опис",
-    objectKind: "Вид об’єкта",
-    kindHint:
-      "Оберіть найближчу смислову природу. Шаблон активності призначений лише для листків.",
-    advancedSettings: "Додаткові налаштування",
-    advancedHint:
-      "Вид об’єкта для структурних об’єктів необов’язковий. Залиште «other», якщо конкретний вид ще не має реальної системної поведінки.",
     titlePlaceholder: "Наприклад: Тягові вправи",
     descriptionPlaceholder:
       "Які дочірні об’єкти має об’єднувати ця структурна група?",
@@ -159,8 +126,8 @@ const COPY: Record<LocaleCode, Copy> = {
     creating: "Створення…",
     back: "Назад до батьківського об’єкта",
     errorPrefix: "Не вдалося створити проміжний об’єкт:",
-    draftNotice:
-      "Новий проміжний об’єкт за замовчуванням буде приватною чернеткою.",
+    activeNotice:
+      "Новий проміжний об’єкт одразу стає діючим. Його зміст визначається місцем у дереві спостережень.",
     fixedRole: "Роль вузла",
     nestingRule:
       "Проміжні об’єкти можуть містити листки та інші проміжні об’єкти. Вставка між наявними вузлами й перепідпорядкування залишаються окремим контрольованим кроком.",
@@ -175,12 +142,6 @@ const COPY: Record<LocaleCode, Copy> = {
     inheritedBranch: "Geerbter Zweig",
     objectTitle: "Name des Zwischenobjekts",
     objectDescription: "Beschreibung",
-    objectKind: "Objektart",
-    kindHint:
-      "Wählen Sie die passende semantische Art. Aktivitätsmuster sind Blättern vorbehalten.",
-    advancedSettings: "Erweiterte Einstellungen",
-    advancedHint:
-      "Die Objektart ist für Strukturobjekte optional. Lassen Sie „other“ stehen, solange eine konkrete Art kein echtes Systemverhalten hat.",
     titlePlaceholder: "Zum Beispiel: Zugübungen",
     descriptionPlaceholder:
       "Welche untergeordneten Objekte soll diese Strukturgruppe ordnen?",
@@ -188,8 +149,8 @@ const COPY: Record<LocaleCode, Copy> = {
     creating: "Wird erstellt…",
     back: "Zurück zum übergeordneten Objekt",
     errorPrefix: "Zwischenobjekt konnte nicht erstellt werden:",
-    draftNotice:
-      "Das neue Zwischenobjekt ist standardmäßig ein privater Entwurf.",
+    activeNotice:
+      "Das neue Zwischenobjekt wird sofort aktiv. Seine Bedeutung ergibt sich aus seiner Position im Beobachtungsbaum.",
     fixedRole: "Knotenrolle",
     nestingRule:
       "Zwischenobjekte können Blätter und weitere Zwischenobjekte enthalten. Einfügen und Umhängen bleiben ein eigener kontrollierter Schritt.",
@@ -204,12 +165,6 @@ const COPY: Record<LocaleCode, Copy> = {
     inheritedBranch: "Rama heredada",
     objectTitle: "Nombre del objeto intermedio",
     objectDescription: "Descripción",
-    objectKind: "Tipo de objeto",
-    kindHint:
-      "Elige la naturaleza semántica más cercana. El patrón de actividad está reservado para hojas.",
-    advancedSettings: "Configuración avanzada",
-    advancedHint:
-      "El tipo de objeto es opcional para objetos estructurales. Mantén «other» mientras un tipo concreto no tenga comportamiento real del sistema.",
     titlePlaceholder: "Por ejemplo: Ejercicios de tracción",
     descriptionPlaceholder:
       "¿Qué objetos hijos debe organizar este grupo estructural?",
@@ -217,8 +172,8 @@ const COPY: Record<LocaleCode, Copy> = {
     creating: "Creando…",
     back: "Volver al objeto padre",
     errorPrefix: "No se pudo crear el objeto intermedio:",
-    draftNotice:
-      "El nuevo objeto intermedio será privado y borrador por defecto.",
+    activeNotice:
+      "El nuevo objeto intermedio queda activo de inmediato. Su significado lo define su posición en el árbol de observación.",
     fixedRole: "Rol del nodo",
     nestingRule:
       "Los objetos intermedios pueden contener hojas y otros objetos intermedios. La inserción y el cambio de padre siguen siendo un paso controlado separado.",
@@ -233,12 +188,6 @@ const COPY: Record<LocaleCode, Copy> = {
     inheritedBranch: "Zděděná větev",
     objectTitle: "Název mezilehlého objektu",
     objectDescription: "Popis",
-    objectKind: "Druh objektu",
-    kindHint:
-      "Zvolte nejbližší sémantickou povahu. Vzor aktivity je vyhrazen listům.",
-    advancedSettings: "Pokročilá nastavení",
-    advancedHint:
-      "Druh objektu je u strukturálních objektů volitelný. Ponechte „other“, dokud konkrétní druh nemá skutečné systémové chování.",
     titlePlaceholder: "Například: Tahové cviky",
     descriptionPlaceholder:
       "Jaké podřízené objekty má tato strukturální skupina uspořádat?",
@@ -246,8 +195,8 @@ const COPY: Record<LocaleCode, Copy> = {
     creating: "Vytváření…",
     back: "Zpět k nadřazenému objektu",
     errorPrefix: "Mezilehlý objekt se nepodařilo vytvořit:",
-    draftNotice:
-      "Nový mezilehlý objekt bude ve výchozím stavu soukromý koncept.",
+    activeNotice:
+      "Nový mezilehlý objekt je aktivní okamžitě. Jeho význam určuje místo ve stromu pozorování.",
     fixedRole: "Role uzlu",
     nestingRule:
       "Mezilehlé objekty mohou obsahovat listy a další mezilehlé objekty. Vložení a změna rodiče zůstávají samostatným řízeným krokem.",
@@ -259,15 +208,6 @@ type IntermediateCreateResponse = {
   error?: string;
   redirectUrl?: string;
 };
-
-const STRUCTURAL_OBJECT_KINDS = VALUE_OBJECT_STRUCTURAL_KINDS_V2;
-
-function humanizeCode(value: string) {
-  return value
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
 
 function buildLocaleHref(pathname: string, locale: LocaleCode) {
   if (locale === "en") {
@@ -286,8 +226,6 @@ export function IntermediateCreateForm({
   const copy = COPY[locale];
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [objectKind, setObjectKind] =
-    useState<ValueObjectKindV2>("other");
   const [pending, setPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -311,11 +249,10 @@ export function IntermediateCreateForm({
           Accept: "application/json",
         },
         body: JSON.stringify({
-          creationMode: "intermediate_draft_v3",
+          creationMode: "intermediate_branch_active_v4",
           parentValueObjectId: parent.id,
           title: normalizedTitle,
           description: description.trim() || null,
-          objectKind,
           locale,
         }),
       });
@@ -418,39 +355,10 @@ export function IntermediateCreateForm({
             </label>
           </div>
 
-          <details className="mt-5 rounded-2xl border border-[#e5e7f0] bg-[#fafbfe] p-4">
-            <summary className="cursor-pointer text-[13px] font-bold text-[#4a4f6a]">
-              {copy.advancedSettings}
-            </summary>
-            <p className="mt-3 text-[12px] leading-5 text-[#7c8099]">
-              {copy.advancedHint}
-            </p>
-            <label className="mt-4 grid gap-2">
-              <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#7c8099]">
-                {copy.objectKind}
-              </span>
-              <select
-                value={objectKind}
-                onChange={(event) =>
-                  setObjectKind(event.target.value as ValueObjectKindV2)
-                }
-                className="min-h-12 rounded-2xl border border-[#dfe3f1] bg-white px-4 py-3 text-[14px] font-semibold outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
-              >
-                {STRUCTURAL_OBJECT_KINDS.map((kind) => (
-                  <option key={kind} value={kind}>
-                    {humanizeCode(kind)} · {kind}
-                  </option>
-                ))}
-              </select>
-              <span className="text-[12px] leading-5 text-[#7c8099]">
-                {copy.kindHint}
-              </span>
-            </label>
-          </details>
 
           <div className="mt-6 grid gap-3 md:grid-cols-2">
             <div className="rounded-2xl border border-[#dfe6ff] bg-[#f7f9ff] p-4 text-[13px] font-semibold text-[#4a4f6a]">
-              {copy.draftNotice}
+              {copy.activeNotice}
             </div>
             <div className="rounded-2xl border border-[#e9ddff] bg-[#faf7ff] p-4 text-[13px] font-semibold text-[#5f4a82]">
               {copy.nestingRule}

@@ -176,12 +176,24 @@ function normalizeRootDraftCreationMode(value: unknown): boolean {
   return normalizeOptionalString(value) === "root_draft_v3";
 }
 
+function normalizeRootBranchActiveCreationMode(value: unknown): boolean {
+  return normalizeOptionalString(value) === "root_branch_active_v4";
+}
+
 function normalizeLeafDraftCreationMode(value: unknown): boolean {
   return normalizeOptionalString(value) === "leaf_draft_v3";
 }
 
+function normalizeLeafBranchActiveCreationMode(value: unknown): boolean {
+  return normalizeOptionalString(value) === "leaf_branch_active_v4";
+}
+
 function normalizeIntermediateDraftCreationMode(value: unknown): boolean {
   return normalizeOptionalString(value) === "intermediate_draft_v3";
+}
+
+function normalizeIntermediateBranchActiveCreationMode(value: unknown): boolean {
+  return normalizeOptionalString(value) === "intermediate_branch_active_v4";
 }
 
 function normalizeUuid(value: unknown): string | null {
@@ -640,6 +652,7 @@ async function createOntologyValueObject(params: {
   readonly personActor: ActorRow;
   readonly payload: Record<string, unknown>;
   readonly idempotencyKey: string;
+  readonly activateImmediately?: boolean;
 }) {
   const requestHash = createOntologyRequestHash(params.payload);
   const { data, error } = await supabase.rpc("create_value_object_ontology_v1", {
@@ -665,7 +678,7 @@ async function createOntologyValueObject(params: {
     };
   }
 
-  const card = data as OntologyCreateCard | null;
+  let card = data as OntologyCreateCard | null;
   const valueObjectId = normalizeUuid(card?.valueObject?.id);
 
   if (!card || !valueObjectId) {
@@ -680,6 +693,51 @@ async function createOntologyValueObject(params: {
         { status: 500 },
       ),
     };
+  }
+
+  if (
+    params.activateImmediately === true &&
+    card.valueObject?.statusCode === "draft"
+  ) {
+    const { data: activatedData, error: activationError } = await supabase.rpc(
+      "set_value_object_ontology_lifecycle_v1",
+      {
+        p_owner_user_id: params.appUser.id,
+        p_owner_actor_id: params.personActor.id,
+        p_value_object_id: valueObjectId,
+        p_new_status: "active",
+      },
+    );
+
+    if (activationError) {
+      return {
+        card: null,
+        valueObjectId,
+        errorResponse: NextResponse.json(
+          {
+            error: activationError.message,
+            errorCode: activationError.code ?? "VO_AUTHORING_ACTIVATION_FAILED",
+          },
+          { status: mapOntologyRpcErrorStatus(activationError) },
+        ),
+      };
+    }
+
+    card = activatedData as OntologyCreateCard | null;
+
+    if (!card || normalizeUuid(card.valueObject?.id) !== valueObjectId) {
+      return {
+        card: null,
+        valueObjectId,
+        errorResponse: NextResponse.json(
+          {
+            error: "Ontology activation returned an invalid card",
+            errorCode: "VO_AUTHORING_ACTIVATION_CARD_INVALID",
+          },
+          { status: 500 },
+        ),
+      };
+    }
   }
 
   return {
@@ -721,11 +779,15 @@ async function createRootDraftValueObject(
     visibilityCode: "private",
     privacyClassCode: "standard",
   };
+  const branchActiveRequested = normalizeRootBranchActiveCreationMode(
+    body.creationMode,
+  );
   const created = await createOntologyValueObject({
     appUser,
     personActor,
     payload,
     idempotencyKey: resolveOntologyIdempotencyKey(body.idempotencyKey, "root"),
+    activateImmediately: branchActiveRequested,
   });
 
   if (created.errorResponse || !created.card || !created.valueObjectId) {
@@ -740,7 +802,7 @@ async function createRootDraftValueObject(
 
   return NextResponse.json({
     ok: true,
-    mode: "root_draft_v3",
+    mode: branchActiveRequested ? "root_branch_active_v4" : "root_draft_v3",
     valueObject: created.card.valueObject,
     ontologyCard: created.card,
     redirectUrl: buildValueObjectDetailUrl(created.valueObjectId, locale),
@@ -848,7 +910,12 @@ async function createIntermediateDraftValueObject(
   const parentValueObjectId = normalizeUuid(body.parentValueObjectId);
   const title = normalizeRequiredString(body.title);
   const description = normalizeOptionalString(body.description);
-  const objectKind = normalizeStructuralObjectKind(body.objectKind);
+  const branchActiveRequested = normalizeIntermediateBranchActiveCreationMode(
+    body.creationMode,
+  );
+  const objectKind = branchActiveRequested
+    ? "other"
+    : normalizeStructuralObjectKind(body.objectKind);
   const locale = normalizeLocale(body.locale);
 
   if (!parentValueObjectId) {
@@ -896,8 +963,11 @@ async function createIntermediateDraftValueObject(
   }
 
   const parent = parentResult.parent;
-  const semanticKind =
-    parent.ontologyNodeRoleCode === "root"
+  const semanticKind = branchActiveRequested
+    ? parent.ontologyNodeRoleCode === "root"
+      ? { facetCode: "ENTITY" as const, objectKindCode: "generic_entity" }
+      : genericOntologyKindForFacet(parent.facetCode)
+    : parent.ontologyNodeRoleCode === "root"
       ? mapLegacyStructuralKindToOntology(objectKind)
       : genericOntologyKindForFacet(parent.facetCode);
 
@@ -918,7 +988,7 @@ async function createIntermediateDraftValueObject(
     objectKindCode: semanticKind.objectKindCode,
     nodeRoleCode: "intermediate",
     parentValueObjectId: parent.id,
-    hierarchyRelationCode: "is_a",
+    hierarchyRelationCode: branchActiveRequested ? "part_of" : "is_a",
     visibilityCode: "private",
     privacyClassCode: "standard",
   };
@@ -930,6 +1000,7 @@ async function createIntermediateDraftValueObject(
       body.idempotencyKey,
       "intermediate",
     ),
+    activateImmediately: branchActiveRequested,
   });
 
   if (created.errorResponse || !created.card || !created.valueObjectId) {
@@ -944,7 +1015,9 @@ async function createIntermediateDraftValueObject(
 
   return NextResponse.json({
     ok: true,
-    mode: "intermediate_draft_v3",
+    mode: branchActiveRequested
+      ? "intermediate_branch_active_v4"
+      : "intermediate_draft_v3",
     valueObject: created.card.valueObject,
     ontologyCard: created.card,
     parent: {
@@ -965,7 +1038,12 @@ async function createLeafDraftValueObject(
   const parentValueObjectId = normalizeUuid(body.parentValueObjectId);
   const title = normalizeRequiredString(body.title);
   const description = normalizeOptionalString(body.description);
-  const objectKind = normalizeLeafObjectKind(body.objectKind);
+  const branchActiveRequested = normalizeLeafBranchActiveCreationMode(
+    body.creationMode,
+  );
+  const objectKind = branchActiveRequested
+    ? null
+    : normalizeLeafObjectKind(body.objectKind);
   const locale = normalizeLocale(body.locale);
 
   if (!parentValueObjectId) {
@@ -975,7 +1053,7 @@ async function createLeafDraftValueObject(
     );
   }
 
-  if (!objectKind) {
+  if (!branchActiveRequested && !objectKind) {
     return NextResponse.json(
       {
         error:
@@ -1016,9 +1094,37 @@ async function createLeafDraftValueObject(
   }
 
   const parent = parentResult.parent;
-  const semanticKind = mapLeafKindToOntology(objectKind);
 
   if (
+    branchActiveRequested &&
+    parent.ontologyNodeRoleCode !== "intermediate"
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Branch-driven leaves must be created under an intermediate observation branch",
+        errorCode: "VO_AUTHORING_LEAF_REQUIRES_INTERMEDIATE_BRANCH",
+      },
+      { status: 409 },
+    );
+  }
+
+  const semanticKind = branchActiveRequested
+    ? genericOntologyKindForFacet(parent.facetCode)
+    : mapLeafKindToOntology(objectKind as ManualOntologyLeafKind);
+
+  if (!semanticKind) {
+    return NextResponse.json(
+      {
+        error: "Parent branch cannot accept an observation leaf",
+        errorCode: "VO_AUTHORING_LEAF_PARENT_FACET_UNSUPPORTED",
+      },
+      { status: 409 },
+    );
+  }
+
+  if (
+    !branchActiveRequested &&
     parent.ontologyNodeRoleCode === "intermediate" &&
     parent.facetCode !== semanticKind.facetCode
   ) {
@@ -1039,7 +1145,7 @@ async function createLeafDraftValueObject(
     objectKindCode: semanticKind.objectKindCode,
     nodeRoleCode: "leaf",
     parentValueObjectId: parent.id,
-    hierarchyRelationCode: "is_a",
+    hierarchyRelationCode: branchActiveRequested ? "part_of" : "is_a",
     visibilityCode: "private",
     privacyClassCode: "standard",
   };
@@ -1048,6 +1154,7 @@ async function createLeafDraftValueObject(
     personActor,
     payload,
     idempotencyKey: resolveOntologyIdempotencyKey(body.idempotencyKey, "leaf"),
+    activateImmediately: branchActiveRequested,
   });
 
   if (created.errorResponse || !created.card || !created.valueObjectId) {
@@ -1062,7 +1169,7 @@ async function createLeafDraftValueObject(
 
   return NextResponse.json({
     ok: true,
-    mode: "leaf_draft_v3",
+    mode: branchActiveRequested ? "leaf_branch_active_v4" : "leaf_draft_v3",
     valueObject: created.card.valueObject,
     ontologyCard: created.card,
     parent: {
@@ -1273,10 +1380,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const intermediateDraftRequested =
+  const intermediateRequested =
+    normalizeIntermediateBranchActiveCreationMode(body.creationMode) ||
     normalizeIntermediateDraftCreationMode(body.creationMode);
 
-  if (intermediateDraftRequested) {
+  if (intermediateRequested) {
     return createIntermediateDraftValueObject(
       body,
       appUser,
@@ -1284,19 +1392,19 @@ export async function POST(request: Request) {
     );
   }
 
-  const leafDraftRequested = normalizeLeafDraftCreationMode(
-    body.creationMode,
-  );
+  const leafRequested =
+    normalizeLeafBranchActiveCreationMode(body.creationMode) ||
+    normalizeLeafDraftCreationMode(body.creationMode);
 
-  if (leafDraftRequested) {
+  if (leafRequested) {
     return createLeafDraftValueObject(body, appUser, personActor);
   }
 
-  const rootDraftRequested = normalizeRootDraftCreationMode(
-    body.creationMode,
-  );
+  const rootRequested =
+    normalizeRootBranchActiveCreationMode(body.creationMode) ||
+    normalizeRootDraftCreationMode(body.creationMode);
 
-  if (rootDraftRequested) {
+  if (rootRequested) {
     return createRootDraftValueObject(body, appUser, personActor);
   }
 

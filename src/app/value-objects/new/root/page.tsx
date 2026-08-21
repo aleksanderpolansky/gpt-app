@@ -319,7 +319,7 @@ export default function ValueObjectRootCreatePage() {
           Accept: "application/json",
         },
         body: JSON.stringify({
-          creationMode: "root_draft_v3",
+          creationMode: "root_branch_active_v4",
           title: normalizedTitle,
           description: normalizedDescription,
           locale,
@@ -350,7 +350,7 @@ export default function ValueObjectRootCreatePage() {
     [copy.fixedRole, "root"],
     [copy.fixedFacet, "DOMAIN"],
     [copy.fixedKind, "domain_root"],
-    [copy.fixedStatus, "draft"],
+    [copy.fixedStatus, "active"],
     [copy.fixedVisibility, "private"],
   ] as const;
 

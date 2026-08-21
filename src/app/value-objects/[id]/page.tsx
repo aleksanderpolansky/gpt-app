@@ -594,6 +594,16 @@ const OWNER_KIND_LABELS: Record<
   },
 };
 
+const STATUS_LABELS: Record<LocaleCode, Record<string, string>> = {
+  en: { active: "Active", inactive: "Inactive", draft: "Draft", retired: "Retired", candidate: "Candidate" },
+  pl: { active: "Aktywny", inactive: "Nieaktywny", draft: "Szkic", retired: "Wycofany", candidate: "Kandydat" },
+  ru: { active: "Действующий", inactive: "Неактивный", draft: "Черновик", retired: "Выведен", candidate: "Кандидат" },
+  uk: { active: "Діючий", inactive: "Неактивний", draft: "Чернетка", retired: "Виведений", candidate: "Кандидат" },
+  de: { active: "Aktiv", inactive: "Inaktiv", draft: "Entwurf", retired: "Stillgelegt", candidate: "Kandidat" },
+  es: { active: "Activo", inactive: "Inactivo", draft: "Borrador", retired: "Retirado", candidate: "Candidato" },
+  cs: { active: "Aktivní", inactive: "Neaktivní", draft: "Koncept", retired: "Vyřazený", candidate: "Kandidát" },
+};
+
 const SUMMARY_LABELS: Record<
   LocaleCode,
   { ordinaryPrice: string; duration: string; linkedActivities: string; totalCriteria: string }
@@ -1423,7 +1433,7 @@ export default async function ValueObjectDetailPage({
   const summaryLabels = SUMMARY_LABELS[locale];
   const summaryItems: ValueObjectSummaryItem[] = isProductOrService
     ? [
-        { label: copy.status, value: valueObject.status || "—" },
+        { label: copy.status, value: STATUS_LABELS[locale][valueObject.status] || valueObject.status || "—" },
         {
           label: summaryLabels.ordinaryPrice,
           value: formatMoney(
@@ -1447,7 +1457,7 @@ export default async function ValueObjectDetailPage({
       ]
     : isLeaf
       ? [
-          { label: copy.status, value: valueObject.status || "—" },
+          { label: copy.status, value: STATUS_LABELS[locale][valueObject.status] || valueObject.status || "—" },
           {
             label: copy.role,
             value:
@@ -1462,7 +1472,7 @@ export default async function ValueObjectDetailPage({
           { label: summaryLabels.totalCriteria, value: String(criteria.length) },
         ]
       : [
-          { label: copy.status, value: valueObject.status || "—" },
+          { label: copy.status, value: STATUS_LABELS[locale][valueObject.status] || valueObject.status || "—" },
           {
             label: copy.role,
             value:
@@ -1473,6 +1483,13 @@ export default async function ValueObjectDetailPage({
           { label: copy.directChildren, value: String(directChildren.length) },
           { label: copy.descendantLeaves, value: String(descendantLeafCount) },
         ];
+
+  function treeRoleLabel(node: TreeNodeRow): string {
+    if (node.ontology_node_role_code === "root") return copy.rootEyebrow;
+    if (node.ontology_node_role_code === "leaf") return copy.leafEyebrow;
+    if (node.ontology_node_role_code === "intermediate") return copy.intermediateEyebrow;
+    return node.node_role_code || "—";
+  }
 
   function renderSubtree(parentId: string, depth = 0): ReactNode {
     const children = childrenByParent.get(parentId) ?? [];
@@ -1491,8 +1508,7 @@ export default async function ValueObjectDetailPage({
           className="rounded-2xl border border-[#e5e7eb] bg-[#fafbff] p-4 transition hover:border-[#c9d5ff] hover:bg-[#f5f7ff]"
         >
           <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#7c8099]">
-            {child.ontology_node_role_code || child.node_role_code || "—"} ·{" "}
-            {child.object_kind_code || child.object_kind || "—"} · {child.status}
+            {treeRoleLabel(child)}
           </div>
           <div className="mt-1 text-[16px] font-bold text-[#111827]">
             {child.title}
@@ -1626,21 +1642,30 @@ export default async function ValueObjectDetailPage({
           editMode={editMode}
           canEdit={canEdit}
           title={valueObject.title}
-          objectKindLabel={`${
-            valueObject.facet_code || valueObject.object_kind || "—"
-          } · ${
-            valueObject.ontology_node_role_code ||
-            valueObject.node_role_code ||
-            "—"
-          }`}
+          objectKindLabel={
+            isGlobalSystemObject || isProductOrService
+              ? `${
+                  valueObject.facet_code || valueObject.object_kind || "—"
+                } · ${
+                  valueObject.ontology_node_role_code ||
+                  valueObject.node_role_code ||
+                  "—"
+                }`
+              : isRoot
+                ? copy.rootEyebrow
+                : isIntermediate
+                  ? copy.intermediateEyebrow
+                  : isLeaf
+                    ? copy.leafEyebrow
+                    : copy.genericEyebrow
+          }
           imageUrl={publicProfileMetadata.imageUrl}
           location={effectiveLocation}
           locationIsInherited={!hasOwnLocation && Boolean(organizationLocation)}
           showLocationCard={
             hasOwnLocation ||
             Boolean(organizationLocation) ||
-            isProductOrService ||
-            valueObject.facet_code === "ENTITY"
+            isProductOrService
           }
           structureContext={{
             rootTitle: pathNodes[0]?.title ?? valueObject.title,
@@ -1792,15 +1817,17 @@ export default async function ValueObjectDetailPage({
                         >
                           {copy.addIntermediate}
                         </Link>
-                        <Link
-                          href={buildLocaleHref(
-                            `/value-objects/${valueObject.id}/new-leaf`,
-                            locale,
-                          )}
-                          className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[13px] font-bold text-[#3b6ef8] transition hover:border-[#aebfff] hover:bg-[#e8edff]"
-                        >
-                          {copy.addLeaf}
-                        </Link>
+                        {isIntermediate ? (
+                          <Link
+                            href={buildLocaleHref(
+                              `/value-objects/${valueObject.id}/new-leaf`,
+                              locale,
+                            )}
+                            className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[13px] font-bold text-[#3b6ef8] transition hover:border-[#aebfff] hover:bg-[#e8edff]"
+                          >
+                            {copy.addLeaf}
+                          </Link>
+                        ) : null}
                       </>
                     ) : null}
                   </div>

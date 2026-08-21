@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import {
-  ImageIcon,
   Layers3,
   Leaf,
   Network,
@@ -122,7 +121,7 @@ const COPY: Record<LocaleCode, LocalCopy> = {
     intermediateObjects: "Intermediate",
     leafObjects: "Leaves",
     drafts: "Drafts",
-    searchPlaceholder: "Search by name, description, facet, kind or path",
+    searchPlaceholder: "Search by name, description or path",
     sortNewest: "Newest first",
     sortTitle: "By name",
     sortStructure: "By structure",
@@ -155,7 +154,7 @@ const COPY: Record<LocaleCode, LocalCopy> = {
     intermediateObjects: "Pośrednie",
     leafObjects: "Liście",
     drafts: "Szkice",
-    searchPlaceholder: "Szukaj po nazwie, opisie, płaszczyźnie, rodzaju lub ścieżce",
+    searchPlaceholder: "Szukaj po nazwie, opisie lub ścieżce",
     sortNewest: "Od najnowszych",
     sortTitle: "Według nazwy",
     sortStructure: "Według struktury",
@@ -188,7 +187,7 @@ const COPY: Record<LocaleCode, LocalCopy> = {
     intermediateObjects: "Промежуточные",
     leafObjects: "Листы",
     drafts: "Черновики",
-    searchPlaceholder: "Поиск по названию, описанию, плоскости, виду или пути",
+    searchPlaceholder: "Поиск по названию, описанию или пути",
     sortNewest: "Сначала новые",
     sortTitle: "По названию",
     sortStructure: "По структуре",
@@ -221,7 +220,7 @@ const COPY: Record<LocaleCode, LocalCopy> = {
     intermediateObjects: "Проміжні",
     leafObjects: "Листи",
     drafts: "Чернетки",
-    searchPlaceholder: "Пошук за назвою, описом, площиною, видом або шляхом",
+    searchPlaceholder: "Пошук за назвою, описом або шляхом",
     sortNewest: "Спочатку нові",
     sortTitle: "За назвою",
     sortStructure: "За структурою",
@@ -254,7 +253,7 @@ const COPY: Record<LocaleCode, LocalCopy> = {
     intermediateObjects: "Zwischenobjekte",
     leafObjects: "Blätter",
     drafts: "Entwürfe",
-    searchPlaceholder: "Nach Name, Beschreibung, Ebene, Art oder Pfad suchen",
+    searchPlaceholder: "Nach Name, Beschreibung oder Pfad suchen",
     sortNewest: "Neueste zuerst",
     sortTitle: "Nach Name",
     sortStructure: "Nach Struktur",
@@ -287,7 +286,7 @@ const COPY: Record<LocaleCode, LocalCopy> = {
     intermediateObjects: "Intermedios",
     leafObjects: "Hojas",
     drafts: "Borradores",
-    searchPlaceholder: "Buscar por nombre, descripción, plano, tipo o ruta",
+    searchPlaceholder: "Buscar por nombre, descripción o ruta",
     sortNewest: "Más recientes",
     sortTitle: "Por nombre",
     sortStructure: "Por estructura",
@@ -320,7 +319,7 @@ const COPY: Record<LocaleCode, LocalCopy> = {
     intermediateObjects: "Mezilehlé",
     leafObjects: "Listy",
     drafts: "Koncepty",
-    searchPlaceholder: "Hledat podle názvu, popisu, roviny, typu nebo cesty",
+    searchPlaceholder: "Hledat podle názvu, popisu nebo cesty",
     sortNewest: "Nejnovější",
     sortTitle: "Podle názvu",
     sortStructure: "Podle struktury",
@@ -929,6 +928,9 @@ export function ActualValueObjectsList() {
                 : title;
               const definitionVersion =
                 valueObject.definition_version ?? 1;
+              const showTechnicalCodes =
+                valueObject.scope_code === "global" ||
+                valueObject.usage_scope === "commercial";
 
               return (
                 <article
@@ -938,11 +940,14 @@ export function ActualValueObjectsList() {
                   <div className="flex min-w-0 gap-3 sm:gap-4">
                     <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#dfe4ff] bg-[#eef2ff] text-[#3b6ef8] sm:h-24 sm:w-24">
                       {imageUrl ? (
-                        <img
-                          src={imageUrl}
-                          alt={title}
-                          className="h-full w-full object-cover object-center"
-                        />
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element -- User-configured public image URLs may use arbitrary hosts; native img avoids coupling authoring to the Next image host allowlist. */}
+                          <img
+                            src={imageUrl}
+                            alt={title}
+                            className="h-full w-full object-cover object-center"
+                          />
+                        </>
                       ) : (
                         <RoleIcon size={34} strokeWidth={1.5} />
                       )}
@@ -986,16 +991,20 @@ export function ActualValueObjectsList() {
                         {title}
                       </h2>
 
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#7c8099]">
-                        <span>{getFacetLabel(valueObject)}</span>
-                        <span aria-hidden="true">·</span>
-                        <span>{getKindLabel(valueObject)}</span>
-                      </div>
+                      {showTechnicalCodes ? (
+                        <>
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#7c8099]">
+                            <span>{getFacetLabel(valueObject)}</span>
+                            <span aria-hidden="true">·</span>
+                            <span>{getKindLabel(valueObject)}</span>
+                          </div>
 
-                      {valueObject.canonical_key ? (
-                        <div className="mt-1 break-all font-mono text-[10px] text-[#8b91a7] sm:truncate">
-                          {valueObject.canonical_key}
-                        </div>
+                          {valueObject.canonical_key ? (
+                            <div className="mt-1 break-all font-mono text-[10px] text-[#8b91a7] sm:truncate">
+                              {valueObject.canonical_key}
+                            </div>
+                          ) : null}
+                        </>
                       ) : null}
 
                       <p className="mt-2 max-h-10 overflow-hidden text-[12px] leading-5 text-[#5a5f7a]">

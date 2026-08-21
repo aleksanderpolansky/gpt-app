@@ -1,0 +1,34 @@
+{
+  "evidence_id": "ARCTOR_VO_BRANCH_DRIVEN_LEAF_AUTHORING_V1",
+  "created_at": "2026-08-21",
+  "baseline": "405c8081a6c0679fe08163e17dde5b518e897cc5",
+  "source": "local_safe_ai_intake_ARCTOR_AI_INTAKE_20260821_134215",
+  "production_supabase_used_for_analysis": false,
+  "locked_product_decisions": [
+    "root/intermediate/leaf are structural positions only",
+    "symptom is an ordinary observation object, not a separate leaf type",
+    "leaf meaning is determined by its branch/path",
+    "private leaf creation has no observation-kind picker",
+    "technical facet/kind do not control the private tree UI",
+    "new private ontology-authored objects become active immediately",
+    "structural parent edges authored by this flow use part_of",
+    "direct leaf creation under a root is disabled; leaves are created under intermediate branches",
+    "commercial product/service/offer/certificate authoring is unchanged"
+  ],
+  "compatibility": {
+    "legacy_draft_modes_preserved_server_side": true,
+    "symptom_state_registry_entry_deleted": false,
+    "create_value_object_ontology_v1_replaced": false,
+    "existing_lifecycle_rpc_reused": "set_value_object_ontology_lifecycle_v1",
+    "database_schema_change": false,
+    "manual_data_normalization_required": true
+  },
+  "verification": {
+    "validator": "30/30 PASS",
+    "typescript_transpile_syntax": "7/7 PASS",
+    "full_next_build": "must run in production repo release runner",
+    "eslint": "must run in production repo release runner",
+    "git_diff_check": "must run in production repo release runner",
+    "live_supabase_sql": "must be applied manually and postchecked before source release"
+  }
+}
