@@ -209,7 +209,7 @@ async function loadFacts(
 
   for (let from = 0; from < FACT_HARD_LIMIT; from += PAGE_SIZE) {
     const { data, error } = await supabase
-      .from("activity_object_facts")
+      .from("activity_object_analytics_inputs_v1")
       .select(
         "value_object_id,value_numeric,measure_type,period_start,period_end,metadata,created_at",
       )

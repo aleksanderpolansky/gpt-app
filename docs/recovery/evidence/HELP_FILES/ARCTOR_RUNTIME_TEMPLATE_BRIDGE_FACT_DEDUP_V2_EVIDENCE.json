@@ -1,0 +1,69 @@
+{
+  "evidence_id": "ARCTOR_RUNTIME_TEMPLATE_BRIDGE_FACT_DEDUP_V2",
+  "created_at": "2026-08-21",
+  "baseline": "5f1d8d24a25a3294424293192a82680d0a947d09",
+  "production_supabase_used_for_analysis": false,
+  "previous_v1_applied": false,
+  "decisions": [
+    "typical activity link count is variable; no magic observation-object count",
+    "free text is matched to a typical activity by a narrow nano identity stage",
+    "provider receives only a bounded typical-activity shortlist, never the observation-object catalog or impact profile",
+    "nano may only set a residual-review gate; it must not classify or map residual facts",
+    "template-only input skips broad semantic review",
+    "template plus explicit residual facts keeps the existing standard A3.1 fact/object review",
+    "unmatched input keeps the existing full A3.1 review-first path",
+    "template profile parameters are server-routed and are not re-analyzed by residual A3.1",
+    "confirmed physical facts win over same-event same-object same-parameter virtual contributions",
+    "no historical backfill and no activity_object_facts fan-out from the template matcher"
+  ],
+  "ai_stages": {
+    "template_match_ai": "nano",
+    "template_match_max_candidates": 24,
+    "template_match_observation_object_catalog_sent": false,
+    "template_match_impact_profile_sent": false,
+    "template_match_fact_mapping_allowed": false,
+    "residual_fact_ai": "standard_existing_a31",
+    "residual_fact_review_gated": true,
+    "unmatched_fallback": "existing_full_a31"
+  },
+  "database": {
+    "new_rpc": "apply_activity_template_match_v2",
+    "unified_read_view": "activity_object_analytics_inputs_v1",
+    "physical_fact_priority": true,
+    "history_backfill": false,
+    "new_fact_materialization_by_matcher": false
+  },
+  "source_patch_targets": [
+    "src/app/api/activity/quick-capture/route.ts",
+    "src/lib/ai/activitySemanticReviewA31.server.ts",
+    "src/app/api/value-objects/[id]/analytics-profile/route.ts"
+  ],
+  "database_postcheck": {
+    "revision": "FIX2",
+    "production_result": "20/20 PASS",
+    "allPass": true,
+    "apply_repeated_after_fix": false,
+    "rollback_used": false,
+    "fix_scope": "diagnostic_only_alias_agnostic_physical_first_check"
+  },
+  "source_release_attempt_v2": {
+    "status": "FAIL_PRECOMMIT_ROLLED_BACK",
+    "failed_check": "APPLY_PATCH_TARGETS ANALYTICS_FACT_SOURCE_COUNT_MISMATCH:0",
+    "commit_created": false,
+    "rollback": "PASS",
+    "baseline_restored": "5f1d8d24a25a3294424293192a82680d0a947d09"
+  },
+  "source_package_revision": "V4_RECOVERY_WHITESPACE_FIX",
+  "v3_fix": "Scope analytics source replacement to loadFacts() and replace only the .from(activity_object_facts) token; add patch-tool self-test before repository mutation.",
+  "source_release_attempt_v3": {
+    "status": "FAIL_PRECOMMIT_ROLLED_BACK",
+    "failed_check": "GIT_CACHED_DIFF_CHECK recovery trailing whitespace + blank line at EOF",
+    "runtime_validators_passed": true,
+    "eslint_passed": true,
+    "next_build_passed": true,
+    "commit_created": false,
+    "rollback": "PASS",
+    "baseline_restored": "5f1d8d24a25a3294424293192a82680d0a947d09"
+  },
+  "v4_fix": "Remove recovery trailing whitespace/extra EOF blank line and add package-level text whitespace/final-newline checks before repository mutation."
+}

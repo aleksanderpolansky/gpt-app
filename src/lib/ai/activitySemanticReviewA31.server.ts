@@ -672,7 +672,8 @@ async function markUsageFailed(usageEventId: string) {
     .eq("id", usageEventId);
 }
 
-function semanticReviewSchema() {
+function semanticReviewSchema(input: { residualMode: boolean }) {
+  const minimumProposalCount = input.residualMode ? 1 : MIN_PROPOSALS;
   return {
     type: "object",
     additionalProperties: false,
@@ -721,7 +722,7 @@ function semanticReviewSchema() {
       },
       proposals: {
         type: "array",
-        minItems: MIN_PROPOSALS,
+        minItems: minimumProposalCount,
         maxItems: MAX_PROPOSALS,
         items: {
           type: "object",
@@ -865,12 +866,14 @@ function filterImageMeasurementsToDeclaredText(input: {
 function ensureUniversalMeasurements(input: {
   measurements: NormalizedMeasurement[];
   activity: ActivityRow;
+  includeActivityDuration: boolean;
 }) {
   const output = input.measurements.filter(
     (item) => item.parameterCode !== "process_count",
   );
 
   if (
+    input.includeActivityDuration &&
     input.activity.duration_minutes !== null &&
     Number.isFinite(input.activity.duration_minutes) &&
     input.activity.duration_minutes >= 0
@@ -918,10 +921,10 @@ function normalizeProposalIdentity(value: string) {
   return value.normalize("NFKC").toLocaleLowerCase().replace(/\s+/g, " ").trim();
 }
 
-function validateModelProposals(raw: unknown): NormalizedProposal[] {
+function validateModelProposals(raw: unknown, minimumProposalCount = MIN_PROPOSALS): NormalizedProposal[] {
   if (
     !Array.isArray(raw) ||
-    raw.length < MIN_PROPOSALS ||
+    raw.length < minimumProposalCount ||
     raw.length > MAX_PROPOSALS
   ) {
     throw new Error("AI_A3_1_SEMANTIC_REVIEW_PROPOSAL_COUNT_INVALID");
@@ -1112,6 +1115,22 @@ export async function analyzeActivityForSemanticReviewA31(input: {
   }
 
   const activityMetadata = asRecord(activity.metadata_json);
+  const typicalTemplateMatch = asRecord(activityMetadata.typicalTemplateMatch);
+  const matchedTemplateTitle = asText(typicalTemplateMatch.templateTitle);
+  const matchedTemplateId = asText(typicalTemplateMatch.templateId);
+  const residualMode =
+    typicalTemplateMatch.contract === "ARCTOR_RUNTIME_TEMPLATE_MATCH_V2" &&
+    typicalTemplateMatch.residualReviewRequired === true &&
+    Boolean(matchedTemplateTitle) &&
+    Boolean(matchedTemplateId);
+  const serverCoveredParameterCodes = Array.isArray(
+    typicalTemplateMatch.serverCoveredParameterCodes,
+  )
+    ? typicalTemplateMatch.serverCoveredParameterCodes
+        .map(asText)
+        .filter(Boolean)
+        .slice(0, 16)
+    : [];
   const imageEvidence = readActivityImageEvidence(
     activityMetadata.quickCaptureImageEvidence,
   );
@@ -1134,10 +1153,14 @@ export async function analyzeActivityForSemanticReviewA31(input: {
     throw new Error("AI_A3_1_SEMANTIC_REVIEW_SOURCE_TEXT_EMPTY");
   }
 
+  const sourceIdentity = residualMode
+    ? `${sourceText}\nreview-mode:template-residual\ntemplate-id:${matchedTemplateId}`
+    : sourceText;
+
   const sourceTextHash = sourceHash(
     imageEvidence
-      ? `${sourceText}\nimage-sha256:${imageEvidence.sha256}`
-      : sourceText,
+      ? `${sourceIdentity}\nimage-sha256:${imageEvidence.sha256}`
+      : sourceIdentity,
   );
 
   const existing = await readExistingDraft({
@@ -1160,10 +1183,23 @@ export async function analyzeActivityForSemanticReviewA31(input: {
 
   const model = await resolveModel();
 
-  const schema = semanticReviewSchema();
+  const schema = semanticReviewSchema({ residualMode });
+
+  const residualModeInstructions = residualMode
+    ? `
+RESIDUAL REVIEW MODE OVERRIDES any conflicting general instruction below.
+The server has already recognized the typical activity "${matchedTemplateTitle}" and already handles these event parameters deterministically: ${serverCoveredParameterCodes.join(", ") || "process_count"}.
+Analyze ONLY additional facts explicitly stated by the user or directly supported by allowed image evidence.
+Do NOT propose the recognized typical activity itself, its ordinary repetitions/distance/duration, its impact-profile objects, or usual/possible consequences of performing it.
+Do NOT infer symptoms, effects, goals, emotions or outcomes merely because they are common for this activity.
+For residual review, return exactly one primary residual proposal and only as many additional DISTINCT residual proposals as are actually useful; at least one proposal is required.
+`.trim()
+    : "";
 
   const system = `
 You analyze one already-saved ARCTor activity for HUMAN semantic review.
+${residualModeInstructions}
+
 
 You are deliberately NOT given the ARCTor Value Object catalog. Do not guess or invent
 valueObjectId, canonical_key, database identifiers, or claim that a matching ARCTor object exists.
@@ -1177,8 +1213,10 @@ Hard rules:
    create numeric measurements in this contract because image-derived measurement provenance
    is not yet committed by the downstream fact writer. Never invent a measured value.
 2. Do NOT output process_count. The server always adds process_count=1.
-3. Return exactly one primary semantic proposal and at least seven additional DISTINCT
-   semantic proposals. These are ideas/meanings, not database objects.
+3. ${residualMode
+    ? "Return exactly one primary residual semantic proposal and only the additional DISTINCT residual proposals actually supported by the explicit extra facts."
+    : "Return exactly one primary semantic proposal and at least seven additional DISTINCT semantic proposals."}
+   These are ideas/meanings, not database objects.
 4. Each proposal title must be concise and understandable in the user's locale.
 5. Each proposal must contain 2-8 searchTerms for later deterministic server search.
    The FIRST search term must be the shortest concrete/common phrase most likely to occur
@@ -1219,6 +1257,14 @@ Hard rules:
     sourceText,
     locale,
     timeZone: input.timeZone,
+    reviewMode: residualMode ? "template_residual_facts" : "full_activity_review",
+    recognizedTypicalActivity: residualMode
+      ? {
+          templateId: matchedTemplateId,
+          title: matchedTemplateTitle,
+          serverCoveredParameterCodes,
+        }
+      : null,
     serverActivity: {
       activityEventId: activity.id,
       role: activity.activity_role_code,
@@ -1254,6 +1300,8 @@ Hard rules:
       activityEventId: activity.id,
       modelTierPolicy: "standard_required_no_nano_fallback",
       providerCallCountExpected: 1,
+      reviewMode: residualMode ? "template_residual_facts" : "full_activity_review",
+      recognizedTypicalActivityId: residualMode ? matchedTemplateId : null,
       creativeReview: true,
       freeSemanticProposalMode: true,
       providerCatalogSent: false,
@@ -1303,11 +1351,13 @@ Hard rules:
       contextMetadata: {
         activityEventId: activity.id,
         reviewBeforeFactCommit: true,
-        minimumProposalCount: MIN_PROPOSALS,
+        minimumProposalCount: residualMode ? 1 : MIN_PROPOSALS,
         providerCatalogSent: false,
         serverLeafResolutionRequired: true,
         imageEvidencePresent: Boolean(imageEvidence),
         imageMeasurementsAllowed: false,
+        residualTemplateReview: residualMode,
+        recognizedTypicalActivityId: residualMode ? matchedTemplateId : null,
       },
     });
 
@@ -1419,10 +1469,12 @@ Hard rules:
     const measurements = ensureUniversalMeasurements({
       measurements: modelMeasurements,
       activity,
+      includeActivityDuration: !residualMode,
     });
 
     const proposals = validateModelProposals(
       response.parsed.proposals,
+      residualMode ? 1 : MIN_PROPOSALS,
     );
 
     await markAiContextManifestValidated(manifestId, {
@@ -1435,7 +1487,9 @@ Hard rules:
       allProposalsAreExistingLeaves: false,
       providerCatalogSent: false,
       serverLeafResolutionRequired: true,
-      minimumSevenAdditionalProposals: proposals.length >= 8,
+      minimumSevenAdditionalProposals: residualMode ? null : proposals.length >= 8,
+      residualTemplateReview: residualMode,
+      recognizedTypicalActivityId: residualMode ? matchedTemplateId : null,
       factsWritten: false,
       imageEvidencePresent: Boolean(imageEvidence),
       imageMeasurementsAllowed: false,
