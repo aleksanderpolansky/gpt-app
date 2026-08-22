@@ -312,19 +312,132 @@ function modelSchema() {
   } as Record<string, unknown>;
 }
 
+function localeMeasurementLabel(locale: string, code: string) {
+  const labels: Record<string, Record<string, string>> = {
+    ru: { repetition_count: "Повторения", distance: "Расстояние", duration: "Длительность", mass: "Масса" },
+    uk: { repetition_count: "Повторення", distance: "Відстань", duration: "Тривалість", mass: "Маса" },
+    pl: { repetition_count: "Powtórzenia", distance: "Dystans", duration: "Czas trwania", mass: "Masa" },
+    en: { repetition_count: "Repetitions", distance: "Distance", duration: "Duration", mass: "Mass" },
+    de: { repetition_count: "Wiederholungen", distance: "Distanz", duration: "Dauer", mass: "Masse" },
+    es: { repetition_count: "Repeticiones", distance: "Distancia", duration: "Duración", mass: "Masa" },
+    cs: { repetition_count: "Opakování", distance: "Vzdálenost", duration: "Doba trvání", mass: "Hmotnost" },
+  };
+  return labels[locale]?.[code] ?? labels.en[code] ?? code;
+}
+
+function extractDeterministicMeasurements(
+  sourceText: string,
+  locale: string,
+): NormalizedMeasurement[] {
+  const output: NormalizedMeasurement[] = [];
+  const add = (item: NormalizedMeasurement) => {
+    const key = `${item.parameterCode}|${item.unit}|${item.valueNumeric ?? item.valueText ?? ""}`;
+    if (!output.some((candidate) => `${candidate.parameterCode}|${candidate.unit}|${candidate.valueNumeric ?? candidate.valueText ?? ""}` === key)) {
+      output.push(item);
+    }
+  };
+
+  const repetitionPatterns = [
+    /\b(\d{1,6})\s*(?:раз(?:а)?|повтор(?:а|ов)?|повторений|повторення|повторів|razy|powt(?:órzeń|orzen|\.)?|reps?|repetitions?|wiederholungen|wdh\.?|repeticiones|opakování|opak\.)(?=$|[^\p{L}\p{N}_])/iu,
+    /\b(\d{1,6})\s*[xх×]\b/iu,
+  ];
+  for (const pattern of repetitionPatterns) {
+    const match = sourceText.match(pattern);
+    if (match) {
+      add({
+        parameterCode: "repetition_count",
+        label: localeMeasurementLabel(locale, "repetition_count"),
+        measureType: "repetitions",
+        unit: "repetition",
+        valueNumeric: Number(match[1]),
+        valueText: null,
+        rawFragment: match[0],
+        confidence: 1,
+      });
+      break;
+    }
+  }
+
+  const distanceMatch = sourceText.match(/\b(\d+(?:[.,]\d+)?)\s*(км|km|километр(?:а|ов)?|метр(?:а|ов)?|м|meters?|metres?)(?=$|[^\p{L}\p{N}_])/iu);
+  if (distanceMatch) {
+    const rawValue = Number(distanceMatch[1].replace(",", "."));
+    const unitRaw = distanceMatch[2].toLocaleLowerCase();
+    const isKm = unitRaw === "км" || unitRaw === "km" || unitRaw.startsWith("километр");
+    add({
+      parameterCode: "distance",
+      label: localeMeasurementLabel(locale, "distance"),
+      measureType: "distance",
+      unit: isKm ? "kilometer" : "meter",
+      valueNumeric: rawValue,
+      valueText: null,
+      rawFragment: distanceMatch[0],
+      confidence: 1,
+    });
+  }
+
+  const massMatch = sourceText.match(/\b(\d+(?:[.,]\d+)?)\s*(кг|kg|килограмм(?:а|ов)?|г|gram(?:s)?|g)(?=$|[^\p{L}\p{N}_])/iu);
+  if (massMatch) {
+    const rawValue = Number(massMatch[1].replace(",", "."));
+    const unitRaw = massMatch[2].toLocaleLowerCase();
+    const isKg = unitRaw === "кг" || unitRaw === "kg" || unitRaw.startsWith("килограмм");
+    add({
+      parameterCode: "mass",
+      label: localeMeasurementLabel(locale, "mass"),
+      measureType: "mass",
+      unit: isKg ? "kilogram" : "gram",
+      valueNumeric: rawValue,
+      valueText: null,
+      rawFragment: massMatch[0],
+      confidence: 1,
+    });
+  }
+
+  const durationMatch = sourceText.match(/\b(\d+(?:[.,]\d+)?)\s*(мин(?:ут(?:а|ы)?)?|minutes?|mins?|min\.?|час(?:а|ов)?|hours?|hrs?|h)(?=$|[^\p{L}\p{N}_])/iu);
+  if (durationMatch) {
+    const rawValue = Number(durationMatch[1].replace(",", "."));
+    const unitRaw = durationMatch[2].toLocaleLowerCase();
+    const isHour = unitRaw.startsWith("час") || unitRaw.startsWith("hour") || unitRaw.startsWith("hr") || unitRaw === "h";
+    add({
+      parameterCode: "duration",
+      label: localeMeasurementLabel(locale, "duration"),
+      measureType: "duration",
+      unit: isHour ? "hour" : "minute",
+      valueNumeric: rawValue,
+      valueText: null,
+      rawFragment: durationMatch[0],
+      confidence: 1,
+    });
+  }
+
+  return output.slice(0, MAX_MEASUREMENTS);
+}
+
+function mergeMeasurements(
+  primary: NormalizedMeasurement[],
+  fallback: NormalizedMeasurement[],
+) {
+  const output: NormalizedMeasurement[] = [];
+  const seen = new Set<string>();
+  for (const item of [...primary, ...fallback]) {
+    const key = `${item.parameterCode}|${item.measureType}|${item.unit}|${item.valueNumeric ?? item.valueText ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    output.push(item);
+  }
+  return output.slice(0, MAX_MEASUREMENTS);
+}
+
 function validateMeasurements(
   raw: unknown,
   sourceText: string,
 ): NormalizedMeasurement[] {
-  if (!Array.isArray(raw) || raw.length > MAX_MEASUREMENTS) {
-    throw new Error("BASIC_INTAKE_MEASUREMENTS_INVALID");
-  }
+  if (!Array.isArray(raw)) return [];
 
   const normalizedSource = sourceText.toLocaleLowerCase();
   const seen = new Set<string>();
   const output: NormalizedMeasurement[] = [];
 
-  for (const item of raw as ModelMeasurement[]) {
+  for (const item of raw.slice(0, MAX_MEASUREMENTS) as ModelMeasurement[]) {
     const parameterCode = text(item.parameterCode).toLowerCase();
     const label = text(item.label);
     const measureType = text(item.measureType) as MeasureType;
@@ -338,22 +451,19 @@ function validateMeasurements(
       (valueNumeric !== null && valueText === null) ||
       (valueNumeric === null && valueText !== null);
 
-    if (
-      !/^[a-z][a-z0-9_]{0,79}$/.test(parameterCode) ||
-      !label ||
-      !MEASURE_TYPES.includes(measureType) ||
-      !/^[a-z][a-z0-9_]{0,39}$/.test(unit) ||
-      !exactlyOneValue ||
-      !rawFragment ||
-      !normalizedSource.includes(rawFragment.toLocaleLowerCase()) ||
-      confidence === null ||
-      confidence < 0 ||
-      confidence > 1
-    ) {
-      throw new Error("BASIC_INTAKE_MEASUREMENT_CONTRACT_INVALID");
-    }
+    const valid =
+      /^[a-z][a-z0-9_]{0,79}$/.test(parameterCode) &&
+      Boolean(label) &&
+      MEASURE_TYPES.includes(measureType) &&
+      /^[a-z][a-z0-9_]{0,39}$/.test(unit) &&
+      exactlyOneValue &&
+      Boolean(rawFragment) &&
+      normalizedSource.includes(rawFragment.toLocaleLowerCase()) &&
+      confidence !== null &&
+      confidence >= MEASUREMENT_CONFIDENCE_THRESHOLD &&
+      confidence <= 1;
 
-    if (confidence < MEASUREMENT_CONFIDENCE_THRESHOLD) continue;
+    if (!valid) continue;
 
     const key = [
       parameterCode,
@@ -381,9 +491,7 @@ function validateMeasurements(
 }
 
 function validateTemplateMatches(raw: unknown, candidates: Candidate[]) {
-  if (!Array.isArray(raw) || raw.length > MAX_TEMPLATE_MATCHES) {
-    throw new Error("BASIC_INTAKE_TEMPLATE_MATCHES_INVALID");
-  }
+  if (!Array.isArray(raw)) return [];
 
   const seen = new Set<number>();
   const accepted: Array<{
@@ -394,24 +502,20 @@ function validateTemplateMatches(raw: unknown, candidates: Candidate[]) {
     confidence: number;
   }> = [];
 
-  for (const item of raw as ModelTemplateMatch[]) {
+  for (const item of raw.slice(0, MAX_TEMPLATE_MATCHES) as ModelTemplateMatch[]) {
     const candidateIndex = finiteNumber(item.candidateIndex);
     const confidence = finiteNumber(item.confidence);
 
-    if (
-      candidateIndex === null ||
-      !Number.isInteger(candidateIndex) ||
-      candidateIndex < 0 ||
-      candidateIndex >= candidates.length ||
-      confidence === null ||
-      confidence < 0 ||
-      confidence > 1
-    ) {
-      throw new Error("BASIC_INTAKE_TEMPLATE_MATCH_CONTRACT_INVALID");
-    }
+    const valid =
+      candidateIndex !== null &&
+      Number.isInteger(candidateIndex) &&
+      candidateIndex >= 0 &&
+      candidateIndex < candidates.length &&
+      confidence !== null &&
+      confidence >= TEMPLATE_MATCH_CONFIDENCE_THRESHOLD &&
+      confidence <= 1;
 
-    if (confidence < TEMPLATE_MATCH_CONFIDENCE_THRESHOLD) continue;
-    if (seen.has(candidateIndex)) continue;
+    if (!valid || seen.has(candidateIndex)) continue;
     seen.add(candidateIndex);
 
     const candidate = candidates[candidateIndex];
@@ -425,6 +529,19 @@ function validateTemplateMatches(raw: unknown, candidates: Candidate[]) {
   }
 
   return accepted.sort((left, right) => right.confidence - left.confidence);
+}
+
+function deterministicTemplateFallback(candidates: Candidate[]) {
+  return candidates
+    .filter((candidate) => candidate.score >= 0.98)
+    .slice(0, MAX_TEMPLATE_MATCHES)
+    .map((candidate) => ({
+      templateId: candidate.id,
+      title: candidate.title,
+      shortTitle: candidate.short_title,
+      templateGroup: candidate.template_group,
+      confidence: candidate.score,
+    }));
 }
 
 function estimateBudgetInputTokens(input: {
@@ -726,6 +843,8 @@ export async function analyzeBasicActivityIntakeV1(input: {
       status: "pending",
       activityEventId: input.activityEventId,
       startedAt: new Date().toISOString(),
+      factsWritten: 0,
+      automaticTemplateBinding: false,
     },
   });
 
@@ -751,13 +870,76 @@ export async function analyzeBasicActivityIntakeV1(input: {
     throw new Error("BASIC_INTAKE_SOURCE_TEXT_EMPTY");
   }
 
-  const candidates = await loadCandidateTemplates({
-    appUserId: input.appUserId,
-    actorId: input.actorId,
+  const deterministicMeasurements = extractDeterministicMeasurements(
     sourceText,
-  });
+    input.locale,
+  );
 
-  const model = await resolveNanoModel();
+  let candidates: Candidate[] = [];
+  let candidateLoadWarning: string | null = null;
+  try {
+    candidates = await loadCandidateTemplates({
+      appUserId: input.appUserId,
+      actorId: input.actorId,
+      sourceText,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    candidateLoadWarning = message.split(":", 1)[0].slice(0, 120);
+  }
+
+  const activityMetadata = asRecord(activity.metadata_json);
+  const temporalDirection =
+    text(activityMetadata.temporalDirection) ||
+    text(activityMetadata.quickCaptureTemporalDirection) ||
+    (activity.activity_role_code === "planned" ? "future" : "past");
+
+  const fallbackAnalysis = async (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    const providerFailureCode = message.split(":", 1)[0].slice(0, 120);
+    const templateCandidates = deterministicTemplateFallback(candidates);
+    const analysis = {
+      contract: ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1,
+      status: "completed",
+      activityEventId: activity.id,
+      analyzedAt: new Date().toISOString(),
+      temporalDirection,
+      serverTiming: {
+        role: activity.activity_role_code,
+        startedAt: activity.started_at,
+        endedAt: activity.ended_at,
+        durationMinutes: activity.duration_minutes,
+      },
+      measurements: deterministicMeasurements,
+      templateCandidates,
+      noSuitableTypicalActivity: templateCandidates.length === 0,
+      typicalActivitiesHref: "/activity-templates",
+      analysisMode: "safe_server_fallback",
+      providerAvailable: false,
+      providerFailureCode,
+      candidateLoadWarning,
+      providerCalls: 0,
+      factsWritten: 0,
+      automaticTemplateBinding: false,
+    };
+
+    await writeAnalysisState({
+      signalId: input.signalId,
+      appUserId: input.appUserId,
+      normalizedPreview,
+      analysis,
+    });
+
+    return analysis;
+  };
+
+  let model: { tierCode: string; modelName: string };
+  try {
+    model = await resolveNanoModel();
+  } catch (error) {
+    return fallbackAnalysis(error);
+  }
+
   const schema = modelSchema();
   const system = `
 You perform ONE narrow background intake analysis for an already-saved ARCTor activity.
@@ -802,33 +984,35 @@ Hard rules:
   };
 
   const operationId = crypto.randomUUID();
-  const analysisExecutionId = await createAiAnalysisExecution({
-    appUserId: input.appUserId,
-    actorId: input.actorId,
-    externalOperationId: operationId,
-    surfaceCode: "activity_semantic_review",
-    operationKind: "activity_semantic_intake",
-    localeCode: input.locale,
-    timeZone: input.timeZone,
-    inputText: sourceText,
-    metadata: {
-      contract: ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1,
-      activityEventId: activity.id,
-      signalId: input.signalId,
-      modelTierPolicy: "nano_only_basic_intake",
-      providerCallCountExpected: 1,
-      candidateCount: candidates.length,
-      observationObjectCatalogSent: false,
-      impactProfilesSent: false,
-      factsWritten: false,
-      automaticTemplateBinding: false,
-    },
-  });
-
+  let analysisExecutionId: string | null = null;
   let usageEventId: string | null = null;
   let manifestId: string | null = null;
 
   try {
+    analysisExecutionId = await createAiAnalysisExecution({
+      appUserId: input.appUserId,
+      actorId: input.actorId,
+      externalOperationId: operationId,
+      surfaceCode: "activity_semantic_review",
+      operationKind: "activity_semantic_intake",
+      localeCode: input.locale,
+      timeZone: input.timeZone,
+      inputText: sourceText,
+      metadata: {
+        contract: ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1,
+        activityEventId: activity.id,
+        signalId: input.signalId,
+        modelTierPolicy: "nano_only_basic_intake",
+        providerCallCountExpected: 1,
+        candidateCount: candidates.length,
+        candidateLoadWarning,
+        observationObjectCatalogSent: false,
+        impactProfilesSent: false,
+        factsWritten: false,
+        automaticTemplateBinding: false,
+      },
+    });
+
     const estimatedInputTokens = estimateBudgetInputTokens({ system, user, schema });
     const reservation = await reserveBudget({
       userId: input.appUserId,
@@ -909,20 +1093,14 @@ Hard rules:
       usage: response.usage,
     });
 
-    const measurements = validateMeasurements(
-      response.parsed.measurements,
-      sourceText,
+    const measurements = mergeMeasurements(
+      validateMeasurements(response.parsed.measurements, sourceText),
+      deterministicMeasurements,
     );
     const templateCandidates = validateTemplateMatches(
       response.parsed.templateMatches,
       candidates,
     );
-
-    const activityMetadata = asRecord(activity.metadata_json);
-    const temporalDirection =
-      text(activityMetadata.temporalDirection) ||
-      text(activityMetadata.quickCaptureTemporalDirection) ||
-      (activity.activity_role_code === "planned" ? "future" : "past");
 
     const analysis = {
       contract: ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1,
@@ -940,6 +1118,9 @@ Hard rules:
       templateCandidates,
       noSuitableTypicalActivity: templateCandidates.length === 0,
       typicalActivitiesHref: "/activity-templates",
+      analysisMode: "nano_model",
+      providerAvailable: true,
+      candidateLoadWarning,
       modelTier: model.tierCode,
       modelName: model.modelName,
       providerCalls: 1,
@@ -972,24 +1153,7 @@ Hard rules:
   } catch (error) {
     if (usageEventId) await markUsageFailed(usageEventId);
     if (manifestId) await markAiContextManifestFailed(manifestId, error);
-    await failAiAnalysisExecution(analysisExecutionId, error);
-
-    const message = error instanceof Error ? error.message : String(error);
-    await writeAnalysisState({
-      signalId: input.signalId,
-      appUserId: input.appUserId,
-      normalizedPreview,
-      analysis: {
-        contract: ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1,
-        status: "failed",
-        activityEventId: input.activityEventId,
-        failedAt: new Date().toISOString(),
-        errorCode: message.slice(0, 220),
-        factsWritten: 0,
-        automaticTemplateBinding: false,
-      },
-    }).catch(() => null);
-
-    throw error;
+    if (analysisExecutionId) await failAiAnalysisExecution(analysisExecutionId, error);
+    return fallbackAnalysis(error);
   }
 }

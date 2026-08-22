@@ -1,0 +1,29 @@
+{
+  "evidence_id": "ARCTOR_ACTIVITY_ANALYSIS_WORKSPACE_V1",
+  "created_at": "2026-08-22",
+  "baseline": "10149d098a6fbd9f5808002fb52f29573444c199",
+  "db_schema_change": false,
+  "production_supabase_used_for_analysis": false,
+  "decisions": [
+    "activity-ai-lab becomes the workspace for an already saved activity",
+    "right rail remains the only fast activity entry point",
+    "journal activity title links to the analysis workspace",
+    "journal removes Open, Container and Edit buttons for activity rows",
+    "workspace implements only source activity plus basic analysis in this stage",
+    "no save-links or additional-analysis actions are implemented",
+    "Nano remains the primary parameter and typical-activity matcher",
+    "invalid individual provider items are dropped instead of failing the whole analysis",
+    "server-safe extraction covers obvious repetitions, distance, duration and mass",
+    "server fallback numeric patterns use Unicode-safe trailing boundaries; Russian and Polish sample phrases were locally exercised",
+    "provider failure degrades to safe_server_fallback instead of losing the whole basic result",
+    "fallback typical-activity suggestions require candidateScore >= 0.98",
+    "no observation objects, impact profiles or facts are auto-applied",
+    "existing failed analyses are not auto-retried on page open to avoid hidden AI spend"
+  ],
+  "baseline_blobs": {
+    "src/app/activity-today/page.tsx": "ca8fa34eb74b24bff44aae1b171c8e3f7082cc5a",
+    "src/app/activity-ai-lab/page.tsx": "c7ca405b72615106796a7254ef81575e03e20c5d",
+    "src/lib/activity/activity-basic-intake-analysis.server.ts": "903da1baf1e445ff4f7fb1d693322af8153428db",
+    "src/components/activity/activity-basic-intake-analysis-card.tsx": "b17c45c0556c90cb2f1e6a48508b6bf44a8b021a"
+  }
+}

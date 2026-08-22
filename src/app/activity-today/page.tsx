@@ -9,7 +9,6 @@ import {
   type MutualLinksApiResponse,
 } from "@/lib/activity/mutualLinks";
 import {
-  ActivityBasicIntakeAnalysisCard,
   ActivityLifecycleBadge,
   useActivityBasicIntakeAnalyses,
 } from "@/components/activity/activity-basic-intake-analysis-card";
@@ -384,6 +383,21 @@ function formatDateTime(value: string | null, locale: Locale) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function getBasicAnalysisStatusText(locale: Locale, status: string | undefined) {
+  const copy: Record<Locale, { ready: string; pending: string; failed: string }> = {
+    ru: { ready: "Базовый анализ готов", pending: "Базовый анализ выполняется…", failed: "Базовый анализ требует повторной попытки" },
+    en: { ready: "Basic analysis ready", pending: "Basic analysis is running…", failed: "Basic analysis needs another attempt" },
+    pl: { ready: "Analiza podstawowa gotowa", pending: "Trwa analiza podstawowa…", failed: "Analiza podstawowa wymaga ponowienia" },
+    uk: { ready: "Базовий аналіз готовий", pending: "Виконується базовий аналіз…", failed: "Базовий аналіз потребує повторної спроби" },
+    de: { ready: "Basisanalyse fertig", pending: "Basisanalyse läuft…", failed: "Basisanalyse muss erneut versucht werden" },
+    es: { ready: "Análisis básico listo", pending: "El análisis básico está en curso…", failed: "El análisis básico debe volver a intentarse" },
+    cs: { ready: "Základní analýza je hotová", pending: "Probíhá základní analýza…", failed: "Základní analýzu je třeba zopakovat" },
+  };
+  if (status === "completed") return copy[locale].ready;
+  if (status === "failed") return copy[locale].failed;
+  return copy[locale].pending;
 }
 
 function formatDatetimeLocal(value: string | null) {
@@ -1072,13 +1086,25 @@ export default function ActivityTodayPage() {
                       </div>
                       <div className="mt-1 text-sm font-semibold leading-relaxed text-[#1a1d2e]">
                         {item.actorName} {item.action}{" "}
-                        <button
-                          type="button"
-                          onClick={() => openItem(item)}
-                          className="font-bold text-[#3b6ef8] underline-offset-4 hover:underline"
-                        >
-                          “{item.title}”
-                        </button>
+                        {item.kind === "activity" && item.sourceId ? (
+                          <Link
+                            href={`/activity-ai-lab?${new URLSearchParams({
+                              locale,
+                              activityEventId: item.sourceId,
+                            }).toString()}`}
+                            className="font-bold text-[#3b6ef8] underline-offset-4 hover:underline"
+                          >
+                            “{item.title}”
+                          </Link>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => openItem(item)}
+                            className="font-bold text-[#3b6ef8] underline-offset-4 hover:underline"
+                          >
+                            “{item.title}”
+                          </button>
+                        )}
                       </div>
                       {item.eventTime ? (
                         <div className="mt-1 text-xs font-medium text-[#7c8099]">
@@ -1097,10 +1123,12 @@ export default function ActivityTodayPage() {
                         </div>
                       ) : null}
                       {item.kind === "activity" && item.sourceId ? (
-                        <ActivityBasicIntakeAnalysisCard
-                          analysis={basicIntakeAnalysesByActivityId[item.sourceId] ?? null}
-                          locale={locale}
-                        />
+                        <div className="mt-2 text-xs font-bold text-[#667091]">
+                          {getBasicAnalysisStatusText(
+                            locale,
+                            basicIntakeAnalysesByActivityId[item.sourceId]?.status,
+                          )}
+                        </div>
                       ) : null}
                       {item.kind === "activity" && item.sourceId ? (
                         <ActivityMutualPreview
@@ -1112,32 +1140,6 @@ export default function ActivityTodayPage() {
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openItem(item)}
-                        className="rounded-lg border border-[#d8deef] bg-white px-3 py-1.5 text-xs font-bold text-[#667091]"
-                      >
-                        {ui.open}
-                      </button>
-
-                      <Link
-                        href={item.containerHref}
-                        className="rounded-lg border border-[#d8deef] bg-white px-3 py-1.5 text-xs font-bold text-[#667091]"
-                      >
-                        {ui.container}
-                      </Link>
-
-                      {item.canEdit ? (
-                        <button
-                          type="button"
-                          onClick={() => openItem(item, true)}
-                          disabled={isSaving}
-                          className="rounded-lg bg-[#3b6ef8] px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
-                        >
-                          {ui.edit}
-                        </button>
-                      ) : null}
-
                       {item.canCancel ? (
                         <button
                           type="button"

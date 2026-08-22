@@ -40,6 +40,8 @@ type IntakeAnalysis = {
   templateCandidates?: TemplateCandidate[];
   noSuitableTypicalActivity?: boolean;
   typicalActivitiesHref?: string;
+  analysisMode?: string;
+  providerAvailable?: boolean;
 };
 
 type IntakeAnalysisResponse = {
@@ -60,6 +62,7 @@ const COPY: Record<Locale, {
   start: string;
   end: string;
   duration: string;
+  fallback: string;
 }> = {
   ru: {
     completed: "Завершенная активность",
@@ -74,6 +77,7 @@ const COPY: Record<Locale, {
     start: "Начало",
     end: "Завершение",
     duration: "Длительность",
+    fallback: "Базовая модель временно недоступна. Показаны только безопасно извлечённые сервером параметры и очевидные совпадения.",
   },
   en: {
     completed: "Completed activity",
@@ -88,6 +92,7 @@ const COPY: Record<Locale, {
     start: "Start",
     end: "End",
     duration: "Duration",
+    fallback: "The basic model is temporarily unavailable. Only server-safe parameters and obvious matches are shown.",
   },
   pl: {
     completed: "Zakończona aktywność",
@@ -102,6 +107,7 @@ const COPY: Record<Locale, {
     start: "Początek",
     end: "Koniec",
     duration: "Czas trwania",
+    fallback: "Model podstawowy jest chwilowo niedostępny. Pokazano tylko bezpiecznie wyodrębnione parametry i oczywiste dopasowania.",
   },
   uk: {
     completed: "Завершена активність",
@@ -116,6 +122,7 @@ const COPY: Record<Locale, {
     start: "Початок",
     end: "Завершення",
     duration: "Тривалість",
+    fallback: "Базова модель тимчасово недоступна. Показано лише безпечно виділені сервером параметри та очевидні збіги.",
   },
   de: {
     completed: "Abgeschlossene Aktivität",
@@ -130,6 +137,7 @@ const COPY: Record<Locale, {
     start: "Start",
     end: "Ende",
     duration: "Dauer",
+    fallback: "Das Basismodell ist vorübergehend nicht verfügbar. Es werden nur serverseitig sicher erkannte Parameter und eindeutige Treffer angezeigt.",
   },
   es: {
     completed: "Actividad completada",
@@ -144,6 +152,7 @@ const COPY: Record<Locale, {
     start: "Inicio",
     end: "Fin",
     duration: "Duración",
+    fallback: "El modelo básico no está disponible temporalmente. Solo se muestran parámetros seguros y coincidencias evidentes detectados por el servidor.",
   },
   cs: {
     completed: "Dokončená aktivita",
@@ -158,6 +167,7 @@ const COPY: Record<Locale, {
     start: "Začátek",
     end: "Konec",
     duration: "Doba trvání",
+    fallback: "Základní model je dočasně nedostupný. Zobrazeny jsou pouze bezpečně zjištěné parametry a zjevné shody.",
   },
 };
 
@@ -331,6 +341,11 @@ export function ActivityBasicIntakeAnalysisCard({
 
   return (
     <div className="mt-3 rounded-xl border border-[#dbe3f6] bg-white p-3 shadow-[0_1px_2px_rgba(32,45,80,0.04)]">
+      {analysis.analysisMode === "safe_server_fallback" ? (
+        <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-relaxed text-amber-800">
+          {ui.fallback}
+        </div>
+      ) : null}
       <div className="text-[11px] font-black uppercase tracking-[0.12em] text-[#3b6ef8]">
         {ui.parameters}
       </div>
