@@ -6,6 +6,9 @@ import {
   type RunAiJsonUsageMetadata,
 } from "../../../lib/ai/openaiClient";
 import {
+  getNavigatorModelDefinition,
+} from "../../../lib/ai/navigatorModelCatalog";
+import {
   completeAiAnalysisExecution,
   createAiAnalysisExecution,
   createAiContextManifest,
@@ -23,6 +26,7 @@ const MODEL_TIER = "nano";
 const MAX_ACTIVE_TEMPLATES = 5000;
 const TEMPLATE_PAGE_SIZE = 500;
 const MAX_CANDIDATES_SENT = 24;
+const MAX_CANDIDATES_PREFILTERED = 96;
 const MAX_TEMPLATE_MATCHES = 5;
 const MAX_MEASUREMENTS = 24;
 const MAX_OUTPUT_TOKENS = 900;
@@ -249,7 +253,7 @@ async function loadCandidateTemplates(input: {
     if (page.length < requestedRows) break;
   }
 
-  return templates
+  const rankedCandidates = templates
     .map((template) => ({
       ...template,
       score: candidateScore(input.sourceText, template),
@@ -258,6 +262,59 @@ async function loadCandidateTemplates(input: {
       (left, right) =>
         right.score - left.score || left.title.localeCompare(right.title),
     )
+    .slice(0, MAX_CANDIDATES_PREFILTERED);
+
+  if (rankedCandidates.length === 0) {
+    return [];
+  }
+
+  const templateIds = rankedCandidates.map((candidate) => candidate.id);
+  const { data: profileRowsRaw, error: profileRowsError } = await supabase
+    .from("activity_template_impact_profiles_v1")
+    .select("id,template_id")
+    .eq("owner_user_id", input.appUserId)
+    .eq("owner_actor_id", input.actorId)
+    .eq("status", "active")
+    .in("template_id", templateIds);
+
+  if (profileRowsError) {
+    throw new Error(
+      `BASIC_INTAKE_PROFILE_ELIGIBILITY_READ_FAILED:${profileRowsError.message}`,
+    );
+  }
+
+  const profileRows = (profileRowsRaw ?? []) as Array<{
+    id: string;
+    template_id: string;
+  }>;
+
+  if (profileRows.length === 0) {
+    return [];
+  }
+
+  const profileIds = profileRows.map((profile) => profile.id);
+  const { data: linkRowsRaw, error: linkRowsError } = await supabase
+    .from("activity_template_profile_object_links_v1")
+    .select("profile_id")
+    .in("profile_id", profileIds);
+
+  if (linkRowsError) {
+    throw new Error(
+      `BASIC_INTAKE_PROFILE_LINK_READ_FAILED:${linkRowsError.message}`,
+    );
+  }
+
+  const linkedProfileIds = new Set(
+    (linkRowsRaw ?? []).map((row) => String(row.profile_id)),
+  );
+  const eligibleTemplateIds = new Set(
+    profileRows
+      .filter((profile) => linkedProfileIds.has(profile.id))
+      .map((profile) => profile.template_id),
+  );
+
+  return rankedCandidates
+    .filter((candidate) => eligibleTemplateIds.has(candidate.id))
     .slice(0, MAX_CANDIDATES_SENT);
 }
 
@@ -555,23 +612,16 @@ function estimateBudgetInputTokens(input: {
 }
 
 async function resolveNanoModel() {
-  const { data, error } = await supabase
-    .from("ai_model_tiers")
-    .select("tier_code,default_model_name,enabled")
-    .eq("tier_code", MODEL_TIER)
-    .maybeSingle();
+  const definition = getNavigatorModelDefinition(MODEL_TIER);
+  const modelName = text(definition?.modelName);
 
-  if (error) {
-    throw new Error(`BASIC_INTAKE_MODEL_READ_FAILED:${error.message}`);
-  }
-
-  if (!data || data.enabled !== true || !text(data.default_model_name)) {
-    throw new Error("BASIC_INTAKE_NANO_MODEL_UNAVAILABLE");
+  if (!definition || definition.tierCode !== MODEL_TIER || !modelName) {
+    throw new Error("BASIC_INTAKE_NANO_CATALOG_UNAVAILABLE");
   }
 
   return {
-    tierCode: MODEL_TIER,
-    modelName: text(data.default_model_name),
+    tierCode: definition.tierCode,
+    modelName,
   };
 }
 

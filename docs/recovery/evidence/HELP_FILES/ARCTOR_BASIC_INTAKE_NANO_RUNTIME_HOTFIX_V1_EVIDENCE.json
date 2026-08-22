@@ -1,0 +1,21 @@
+{
+  "release": "ARCTOR_BASIC_INTAKE_NANO_RUNTIME_HOTFIX_V1",
+  "date": "2026-08-22",
+  "baselineHead": "35fe99e40b19e4364dba875aee8ead78f1b5dd2b",
+  "dbSchemaChange": false,
+  "productionSupabaseRead": false,
+  "runtimeChanges": {
+    "nanoModelSource": "server_approved_navigator_model_catalog",
+    "candidateRequiresActiveImpactProfile": true,
+    "candidateRequiresObservationObjectLink": true,
+    "maxLexicalPrefilter": 96,
+    "maxCandidateNamesSentToNano": 24,
+    "observationObjectCatalogSentToModel": false,
+    "impactProfilesSentToModel": false,
+    "factsWritten": false,
+    "automaticTemplateBinding": false,
+    "automaticRetries": 0,
+    "safeFallbackRetained": true
+  },
+  "scope": "source-only runtime hotfix"
+}
