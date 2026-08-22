@@ -1,0 +1,57 @@
+{
+  "release": "ARCTOR_VO_MIND_MAP_V1_1_CONTROLLED_REPARENT",
+  "date": "2026-08-22",
+  "baseline": "b3fab10e35fbbf80282d486de022ab7b224314fb",
+  "dbSchemaChange": false,
+  "runtimeEvidencePending": true,
+  "v1Runtime": {
+    "status": "PASS",
+    "commit": "b3fab10e35fbbf80282d486de022ab7b224314fb",
+    "report": "ARCTOR_VO_MIND_MAP_V1_AUTHORING_20260822_183616_REPORT.txt"
+  },
+  "orientation": {
+    "direction": "top-to-bottom",
+    "targetHandle": "top",
+    "sourceHandle": "bottom",
+    "persistCoordinates": false
+  },
+  "reparent": {
+    "gesture": "drag-drop",
+    "sourceRoles": [
+      "intermediate",
+      "leaf"
+    ],
+    "previewApi": "/api/value-objects/{id}/tree-restructure/preview",
+    "applyApi": "/api/value-objects/{id}/tree-restructure/apply",
+    "previewHashRequired": true,
+    "idempotencyKeyRequired": true,
+    "directParentUpdate": false,
+    "rootReparent": false,
+    "historicalRecalculation": false,
+    "targetRolesBySource": {
+      "intermediate": [
+        "root",
+        "intermediate"
+      ],
+      "leaf": [
+        "intermediate"
+      ]
+    }
+  },
+  "releaseCandidateV1": {
+    "status": "FAIL_BEFORE_COMMIT",
+    "report": "ARCTOR_VO_MIND_MAP_V1_1_CONTROLLED_REPARENT_20260822_203015_REPORT.txt",
+    "stage": "FULL_NEXT_BUILD_TYPESCRIPT",
+    "error": "optional targetObject.id passed to buildLocalizedPath(string)",
+    "rollback": "PASS",
+    "commitCreated": false,
+    "pushPerformed": false
+  },
+  "revisionFix": {
+    "revision": "V2_TARGET_ID_NARROWING",
+    "targetIdSource": "targetNode.id",
+    "sourceIdSource": "node.id",
+    "behaviorChange": false,
+    "dbSchemaChange": false
+  }
+}

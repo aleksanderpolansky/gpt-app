@@ -94,3 +94,20 @@ Launcher обязан до commit выполнить:
 ## Следующая точка
 
 После runtime PASS V1 следующий этап — **Mind Map V1.1 controlled reparent**. Drag должен быть только UX gesture поверх существующего `tree-restructure preview → apply` контракта. Прямой update `parent_value_object_id` из React Flow запрещён. До preview система также должна соблюдать уже принятые правила исторического пересчёта и его budget confirmation.
+
+## Runtime closure V1
+
+22.08.2026 пользователь подтвердил runtime на production UI после релиза `vo-mind-map-v1-authoring`.
+
+Подтверждено скриншотами:
+
+- локализованная карта продолжает отображать реальные ветви;
+- `+` на intermediate открывает локализованное меню `Intermediate / Leaf`;
+- guarded Delete открывает локализованное подтверждение и не выполняет удаление без отдельного confirm;
+- визуальная структура V0 не деградировала.
+
+Release report `ARCTOR_VO_MIND_MAP_V1_AUTHORING_20260822_183616_REPORT.txt` зафиксировал: release validator 52/52, regressions 33/33 + 68/68 + 47/47 + 32/32, ESLint PASS, полный Next build PASS, оба `git diff --check` PASS, commit/push/remote verification PASS. Итоговый commit: `b3fab10e35fbbf80282d486de022ab7b224314fb`.
+
+Статус V1: **CLOSED / PASS**.
+
+Разрушающее удаление реального контрольного ЦО специально не выполнялось: runtime-проверка требовала доказать guarded confirmation flow, а не создавать тестовый мусор и затем удалять его.

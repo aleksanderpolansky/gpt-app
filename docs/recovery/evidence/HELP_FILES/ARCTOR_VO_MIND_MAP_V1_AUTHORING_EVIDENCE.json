@@ -3,8 +3,8 @@
   "date": "2026-08-22",
   "baseline": "911d8c0f0dbb658f07fc47328cac5db760c26ed7",
   "dbSchemaChange": false,
-  "sourceEvidenceOnly": true,
-  "runtimeEvidencePending": true,
+  "sourceEvidenceOnly": false,
+  "runtimeEvidencePending": false,
   "v0Runtime": {
     "status": "PASS",
     "commit": "911d8c0f0dbb658f07fc47328cac5db760c26ed7",
@@ -23,5 +23,13 @@
     "serverDeleteGuardRetained": true,
     "directParentUpdate": false
   },
-  "next": "ARCTOR_VO_MIND_MAP_V1_1_CONTROLLED_REPARENT"
+  "next": "ARCTOR_VO_MIND_MAP_V1_1_CONTROLLED_REPARENT",
+  "runtime": {
+    "status": "PASS",
+    "commit": "b3fab10e35fbbf80282d486de022ab7b224314fb",
+    "report": "ARCTOR_VO_MIND_MAP_V1_AUTHORING_20260822_183616_REPORT.txt",
+    "createMenu": "PASS",
+    "guardedDeleteDialog": "PASS",
+    "destructiveDeleteExecuted": false
+  }
 }

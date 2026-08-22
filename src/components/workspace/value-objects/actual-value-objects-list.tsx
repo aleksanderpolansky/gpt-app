@@ -961,6 +961,15 @@ export function ActualValueObjectsList() {
                 current.filter((valueObject) => valueObject.id !== deletedId),
               );
             }}
+            onValueObjectReparented={(movedId, newParentId) => {
+              setValueObjects((current) =>
+                current.map((valueObject) =>
+                  valueObject.id === movedId
+                    ? { ...valueObject, parent_value_object_id: newParentId }
+                    : valueObject,
+                ),
+              );
+            }}
           >
             <div className="grid gap-3 xl:grid-cols-2">
               {filteredObjects.map((valueObject) => {

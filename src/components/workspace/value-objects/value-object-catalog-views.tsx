@@ -391,6 +391,7 @@ type ValueObjectCatalogViewsProps = {
   sortMode: SortMode;
   children: ReactNode;
   onValueObjectDeleted?: (deletedId: string) => void;
+  onValueObjectReparented?: (movedId: string, newParentId: string) => void;
 };
 
 export function ValueObjectCatalogViews({
@@ -401,6 +402,7 @@ export function ValueObjectCatalogViews({
   sortMode,
   children,
   onValueObjectDeleted,
+  onValueObjectReparented,
 }: ValueObjectCatalogViewsProps) {
   const copy = COPY[locale] ?? COPY.en;
   const [viewMode, setViewMode] = useState<ViewMode>("tree");
@@ -842,6 +844,7 @@ export function ValueObjectCatalogViews({
           )}
           locale={locale}
           onValueObjectDeleted={onValueObjectDeleted}
+          onValueObjectReparented={onValueObjectReparented}
         />
       ) : null}
 
