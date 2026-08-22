@@ -9,8 +9,9 @@ import {
   Leaf,
   ListTree,
   Network,
+  Plus,
 } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
+import { Fragment, type ReactNode, useMemo, useState } from "react";
 
 type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 type RoleFilter = "all" | "root" | "intermediate" | "leaf" | "draft";
@@ -63,6 +64,7 @@ type CatalogCopy = {
   matches: string;
   objects: string;
   noDescription: string;
+  addChild: string;
 };
 
 const COPY: Record<LocaleCode, CatalogCopy> = {
@@ -91,6 +93,7 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     matches: "matches",
     objects: "objects",
     noDescription: "No description yet.",
+    addChild: "Add child object",
   },
   pl: {
     tree: "Drzewo",
@@ -117,6 +120,7 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     matches: "pasuje",
     objects: "obiektów",
     noDescription: "Nie dodano jeszcze opisu.",
+    addChild: "Dodaj obiekt podrzędny",
   },
   ru: {
     tree: "Дерево",
@@ -143,6 +147,7 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     matches: "совпадений",
     objects: "объектов",
     noDescription: "Описание пока не добавлено.",
+    addChild: "Добавить дочерний объект",
   },
   uk: {
     tree: "Дерево",
@@ -169,6 +174,7 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     matches: "збігів",
     objects: "об’єктів",
     noDescription: "Опис ще не додано.",
+    addChild: "Додати дочірній об’єкт",
   },
   de: {
     tree: "Baum",
@@ -195,6 +201,7 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     matches: "Treffer",
     objects: "Objekte",
     noDescription: "Noch keine Beschreibung.",
+    addChild: "Untergeordnetes Objekt hinzufügen",
   },
   es: {
     tree: "Árbol",
@@ -221,6 +228,7 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     matches: "coincidencias",
     objects: "objetos",
     noDescription: "Todavía no hay descripción.",
+    addChild: "Añadir objeto hijo",
   },
   cs: {
     tree: "Strom",
@@ -247,6 +255,7 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     matches: "shod",
     objects: "objektů",
     noDescription: "Popis zatím nebyl přidán.",
+    addChild: "Přidat podřízený objekt",
   },
 };
 
@@ -382,6 +391,7 @@ export function ValueObjectCatalogViews({
   const copy = COPY[locale] ?? COPY.en;
   const [viewMode, setViewMode] = useState<ViewMode>("tree");
   const [expandedIds, setExpandedIds] = useState<Set<string> | null>(null);
+  const [insertParentId, setInsertParentId] = useState<string | null>(null);
 
   const objectsById = useMemo(() => {
     const map = new Map<string, ValueObjectPayload>();
@@ -590,12 +600,8 @@ export function ValueObjectCatalogViews({
       walk(root, 0);
     }
 
-    for (const valueObject of sortObjects(valueObjects, sortMode, locale)) {
-      if (valueObject.id && !visited.has(valueObject.id)) {
-        walk(valueObject, 0);
-      }
-    }
-
+    // Do not re-walk descendants hidden by a collapsed ancestor as standalone roots.
+    // Unknown-parent objects are already included in `roots`; structural cycles fail closed.
     return result;
   }, [
     childrenByParent,
@@ -606,7 +612,6 @@ export function ValueObjectCatalogViews({
     locale,
     roots,
     sortMode,
-    valueObjects,
     visibleIds,
   ]);
 
@@ -625,6 +630,72 @@ export function ValueObjectCatalogViews({
 
   function collapseAll() {
     setExpandedIds(new Set());
+  }
+
+  function renderInsertControl(row: TreeRow, mobile: boolean) {
+    const valueObject = row.valueObject;
+    if (!valueObject.id) return null;
+
+    const role = getSemanticRole(valueObject);
+    if (role === "leaf") return null;
+
+    const opened = insertParentId === valueObject.id;
+    const padding = mobile
+      ? Math.min((row.depth + 1) * 14 + 38, 92)
+      : (row.depth + 1) * 26 + 38;
+    const intermediateHref = buildLocaleAwareHref(
+      `/value-objects/${valueObject.id}/new-intermediate`,
+      locale,
+    );
+    const leafHref = buildLocaleAwareHref(
+      `/value-objects/${valueObject.id}/new-leaf`,
+      locale,
+    );
+
+    return (
+      <div
+        className={[
+          "relative flex min-h-6 items-center",
+          mobile ? "py-1" : "py-0.5",
+        ].join(" ")}
+        style={{ paddingLeft: padding }}
+      >
+        <div className="h-px w-4 bg-[#dfe3f1]" aria-hidden="true" />
+        <button
+          type="button"
+          onClick={() =>
+            setInsertParentId((current) =>
+              current === valueObject.id ? null : valueObject.id ?? null,
+            )
+          }
+          aria-label={copy.addChild}
+          title={copy.addChild}
+          className="mx-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#c9d5ff] bg-white text-[#3b6ef8] shadow-sm transition hover:border-[#3b6ef8] hover:bg-[#eef2ff]"
+        >
+          <Plus size={11} strokeWidth={2.2} />
+        </button>
+        <div className="h-px flex-1 bg-[#edf0f7]" aria-hidden="true" />
+
+        {opened ? (
+          <div className="absolute left-0 top-6 z-30 flex flex-wrap gap-1.5 rounded-xl border border-[#dfe3f1] bg-white p-1.5 shadow-lg" style={{ marginLeft: padding }}>
+            <Link
+              href={intermediateHref}
+              className="rounded-lg bg-[#eef2ff] px-2.5 py-1.5 text-[10px] font-bold text-[#3b6ef8] hover:bg-[#dfe4ff]"
+            >
+              + {copy.intermediate}
+            </Link>
+            {role === "intermediate" ? (
+              <Link
+                href={leafHref}
+                className="rounded-lg bg-emerald-50 px-2.5 py-1.5 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100"
+              >
+                + {copy.leaf}
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    );
   }
 
   function renderTreeObject(row: TreeRow, mobile: boolean) {
@@ -773,54 +844,62 @@ export function ValueObjectCatalogViews({
                     const role = getSemanticRole(valueObject);
                     const title = valueObject.title?.trim() || "—";
                     return (
-                      <tr
-                        key={valueObject.id ?? `${title}-${row.depth}`}
-                        className={[
-                          "border-b border-[#f0f2f7] transition last:border-b-0 hover:bg-[#fafbff]",
-                          role === "root" ? "bg-[#fcfdff]" : "bg-white",
-                        ].join(" ")}
-                      >
-                        <td className="px-4 py-3">{renderTreeObject(row, false)}</td>
-                        <td className="px-3 py-3">
-                          <span
-                            className={[
-                              "inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold",
-                              roleBadgeClass(role),
-                            ].join(" ")}
-                          >
-                            {getRoleLabel(role, copy)}
-                          </span>
-                        </td>
-                        <td className="px-3 py-3 text-center text-[13px] font-bold text-[#334155]">
-                          {row.directChildren}
-                        </td>
-                        <td className="px-3 py-3 text-center text-[13px] font-bold text-[#334155]">
-                          {row.descendants}
-                        </td>
-                        <td className="px-3 py-3 text-center text-[13px] font-bold text-[#334155]">
-                          {row.descendantLeaves}
-                        </td>
-                        <td className="px-3 py-3">
-                          <span
-                            className={[
-                              "inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold",
-                              statusBadgeClass(valueObject.status),
-                            ].join(" ")}
-                          >
-                            {getStatusLabel(valueObject.status, copy)}
-                          </span>
-                        </td>
-                        <td className="px-3 py-3 text-right">
-                          {valueObject.id ? (
-                            <Link
-                              href={buildLocaleAwareHref(`/value-objects/${valueObject.id}`, locale)}
-                              className="text-[12px] font-bold text-[#3b6ef8] hover:underline"
+                      <Fragment key={valueObject.id ?? `${title}-${row.depth}`}>
+                        <tr
+                          className={[
+                            "border-b border-[#f0f2f7] transition hover:bg-[#fafbff]",
+                            role === "root" ? "bg-[#fcfdff]" : "bg-white",
+                          ].join(" ")}
+                        >
+                          <td className="px-4 py-3">{renderTreeObject(row, false)}</td>
+                          <td className="px-3 py-3">
+                            <span
+                              className={[
+                                "inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold",
+                                roleBadgeClass(role),
+                              ].join(" ")}
                             >
-                              {copy.open}
-                            </Link>
-                          ) : null}
-                        </td>
-                      </tr>
+                              {getRoleLabel(role, copy)}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 text-center text-[13px] font-bold text-[#334155]">
+                            {row.directChildren}
+                          </td>
+                          <td className="px-3 py-3 text-center text-[13px] font-bold text-[#334155]">
+                            {row.descendants}
+                          </td>
+                          <td className="px-3 py-3 text-center text-[13px] font-bold text-[#334155]">
+                            {row.descendantLeaves}
+                          </td>
+                          <td className="px-3 py-3">
+                            <span
+                              className={[
+                                "inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold",
+                                statusBadgeClass(valueObject.status),
+                              ].join(" ")}
+                            >
+                              {getStatusLabel(valueObject.status, copy)}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 text-right">
+                            {valueObject.id ? (
+                              <Link
+                                href={buildLocaleAwareHref(`/value-objects/${valueObject.id}`, locale)}
+                                className="text-[12px] font-bold text-[#3b6ef8] hover:underline"
+                              >
+                                {copy.open}
+                              </Link>
+                            ) : null}
+                          </td>
+                        </tr>
+                        {role !== "leaf" ? (
+                          <tr className="bg-white">
+                            <td colSpan={7} className="px-4 py-0">
+                              {renderInsertControl(row, false)}
+                            </td>
+                          </tr>
+                        ) : null}
+                      </Fragment>
                     );
                   })}
                 </tbody>
@@ -834,41 +913,43 @@ export function ValueObjectCatalogViews({
               const role = getSemanticRole(valueObject);
               const title = valueObject.title?.trim() || "—";
               return (
-                <article
-                  key={valueObject.id ?? `${title}-${row.depth}`}
-                  className="rounded-[18px] border border-[#dfe3f1] bg-white p-3 shadow-sm"
-                >
-                  {renderTreeObject(row, true)}
-                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#edf0f7] pt-3">
-                    <span
-                      className={[
-                        "rounded-full border px-2 py-1 text-[9px] font-bold",
-                        roleBadgeClass(role),
-                      ].join(" ")}
-                    >
-                      {getRoleLabel(role, copy)}
-                    </span>
-                    <span
-                      className={[
-                        "rounded-full border px-2 py-1 text-[9px] font-bold",
-                        statusBadgeClass(valueObject.status),
-                      ].join(" ")}
-                    >
-                      {getStatusLabel(valueObject.status, copy)}
-                    </span>
-                    <span className="text-[10px] font-semibold text-[#7c8099]">
-                      {copy.directChildren}: {row.directChildren} · {copy.descendants}: {row.descendants} · {copy.leaves}: {row.descendantLeaves}
-                    </span>
-                    {valueObject.id ? (
-                      <Link
-                        href={buildLocaleAwareHref(`/value-objects/${valueObject.id}`, locale)}
-                        className="ml-auto text-[11px] font-bold text-[#3b6ef8] hover:underline"
+                <Fragment key={valueObject.id ?? `${title}-${row.depth}`}>
+                  <article
+                    className="rounded-[18px] border border-[#dfe3f1] bg-white p-3 shadow-sm"
+                  >
+                    {renderTreeObject(row, true)}
+                    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#edf0f7] pt-3">
+                      <span
+                        className={[
+                          "rounded-full border px-2 py-1 text-[9px] font-bold",
+                          roleBadgeClass(role),
+                        ].join(" ")}
                       >
-                        {copy.open}
-                      </Link>
-                    ) : null}
-                  </div>
-                </article>
+                        {getRoleLabel(role, copy)}
+                      </span>
+                      <span
+                        className={[
+                          "rounded-full border px-2 py-1 text-[9px] font-bold",
+                          statusBadgeClass(valueObject.status),
+                        ].join(" ")}
+                      >
+                        {getStatusLabel(valueObject.status, copy)}
+                      </span>
+                      <span className="text-[10px] font-semibold text-[#7c8099]">
+                        {copy.directChildren}: {row.directChildren} · {copy.descendants}: {row.descendants} · {copy.leaves}: {row.descendantLeaves}
+                      </span>
+                      {valueObject.id ? (
+                        <Link
+                          href={buildLocaleAwareHref(`/value-objects/${valueObject.id}`, locale)}
+                          className="ml-auto text-[11px] font-bold text-[#3b6ef8] hover:underline"
+                        >
+                          {copy.open}
+                        </Link>
+                      ) : null}
+                    </div>
+                  </article>
+                  {role !== "leaf" ? renderInsertControl(row, true) : null}
+                </Fragment>
               );
             })}
           </div>

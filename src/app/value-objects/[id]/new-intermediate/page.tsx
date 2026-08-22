@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { resolveLocalizedContentField } from "@/lib/localization/contentLocalization";
 import { isValueObjectStructuralKindV2 } from "@/types/reality-core/reality-core-contracts-v2";
 import {
   ActorContextError,
@@ -29,6 +30,7 @@ type StructuralParentRow = {
   root_value_object_id: string | null;
   parent_value_object_id: string | null;
   status: string;
+  metadata_json: Record<string, unknown> | null;
 };
 
 function normalizeLocale(value: string | string[] | undefined): LocaleCode {
@@ -84,7 +86,8 @@ export default async function IntermediateCreatePage({
       branch_type_code,
       root_value_object_id,
       parent_value_object_id,
-      status
+      status,
+      metadata_json
     `,
     )
     .eq("id", id)
@@ -121,13 +124,21 @@ export default async function IntermediateCreatePage({
     notFound();
   }
 
+  const localizedParentTitle =
+    resolveLocalizedContentField({
+      metadata: parent.metadata_json,
+      locale,
+      fieldCode: "title",
+      fallback: parent.title,
+    }) ?? parent.title;
+
   return (
     <IntermediateCreateForm
       locale={locale}
       activeProfileName={actorContext.profile.displayName}
       parent={{
         id: parent.id,
-        title: parent.title,
+        title: localizedParentTitle,
         branchTypeCode,
         objectKind,
         rootValueObjectId,

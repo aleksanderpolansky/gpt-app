@@ -6,6 +6,11 @@ import {
 } from "../../../../lib/actor-context";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
+import {
+  readLocalizedContentEnvelope,
+  resolveLocalizedContentFields,
+} from "@/lib/localization/contentLocalization";
+import { localizeEntityContent } from "@/lib/localization/contentLocalization.server";
 import { localizeGlobalSystemValueObject } from "@/lib/reality-core/global-system-value-object-localization";
 import {
   isValueObjectLeafKindV2,
@@ -280,6 +285,62 @@ function buildValueObjectDetailUrl(id: string, locale: string | null) {
   return `${pathname}?locale=${encodeURIComponent(locale)}`;
 }
 
+async function localizeCreatedObservationObject(input: {
+  appUser: AppUserRow;
+  personActor: ActorRow;
+  valueObjectId: string;
+  locale: string | null;
+  title: string;
+  description: string;
+}) {
+  try {
+    return await localizeEntityContent({
+      userId: input.appUser.id,
+      actorId: input.personActor.id,
+      operationId: randomUUID(),
+      table: "value_objects",
+      entityId: input.valueObjectId,
+      sourceLocaleHint: input.locale ?? "en",
+      fields: {
+        title: input.title,
+        description: input.description,
+      },
+    });
+  } catch (error) {
+    return {
+      ok: true as const,
+      manualPersisted: false as const,
+      aiLocalized: false as const,
+      locale: input.locale ?? "en",
+      warning:
+        error instanceof Error
+          ? error.message
+          : "VALUE_OBJECT_CONTENT_LOCALIZATION_FAILED",
+    };
+  }
+}
+
+function localizeActorOwnedObservationObject(
+  valueObject: Record<string, unknown>,
+  locale: string,
+) {
+  const title =
+    typeof valueObject.title === "string" ? valueObject.title : null;
+  const description =
+    typeof valueObject.description === "string" ? valueObject.description : null;
+  const localized = resolveLocalizedContentFields({
+    metadata: valueObject.metadata_json,
+    locale,
+    fallback: { title, description },
+  });
+
+  return {
+    ...valueObject,
+    title: localized.title ?? title,
+    description: localized.description ?? description,
+  };
+}
+
 function getDraftDefaults(usageScope: UsageScope) {
   if (usageScope === "commercial") {
     return {
@@ -462,12 +523,20 @@ export async function GET(request: Request) {
     (valueObject) =>
       valueObject.scope_code === "global"
         ? localizeGlobalSystemValueObject(valueObject, locale)
-        : valueObject,
+        : localizeActorOwnedObservationObject(valueObject, locale),
+  );
+
+  const localizationBackfillNeeded = observationValueObjects.some(
+    (valueObject) =>
+      valueObject.scope_code !== "global" &&
+      valueObject.usage_scope !== "commercial" &&
+      readLocalizedContentEnvelope(valueObject.metadata_json) === null,
   );
 
   return NextResponse.json({
     ok: true,
     valueObjects: localizedObservationValueObjects,
+    localizationBackfillNeeded,
     counts: {
       total: observationValueObjects.length,
       global: observationValueObjects.filter(
@@ -800,11 +869,21 @@ async function createRootDraftValueObject(
     );
   }
 
+  const contentLocalization = await localizeCreatedObservationObject({
+    appUser,
+    personActor,
+    valueObjectId: created.valueObjectId,
+    locale,
+    title,
+    description: description ?? title,
+  });
+
   return NextResponse.json({
     ok: true,
     mode: branchActiveRequested ? "root_branch_active_v4" : "root_draft_v3",
     valueObject: created.card.valueObject,
     ontologyCard: created.card,
+    contentLocalization,
     redirectUrl: buildValueObjectDetailUrl(created.valueObjectId, locale),
   });
 }
@@ -1013,6 +1092,15 @@ async function createIntermediateDraftValueObject(
     );
   }
 
+  const contentLocalization = await localizeCreatedObservationObject({
+    appUser,
+    personActor,
+    valueObjectId: created.valueObjectId,
+    locale,
+    title,
+    description: description ?? title,
+  });
+
   return NextResponse.json({
     ok: true,
     mode: branchActiveRequested
@@ -1020,6 +1108,7 @@ async function createIntermediateDraftValueObject(
       : "intermediate_draft_v3",
     valueObject: created.card.valueObject,
     ontologyCard: created.card,
+    contentLocalization,
     parent: {
       id: parent.id,
       title: parent.title,
@@ -1167,11 +1256,21 @@ async function createLeafDraftValueObject(
     );
   }
 
+  const contentLocalization = await localizeCreatedObservationObject({
+    appUser,
+    personActor,
+    valueObjectId: created.valueObjectId,
+    locale,
+    title,
+    description: description ?? title,
+  });
+
   return NextResponse.json({
     ok: true,
     mode: branchActiveRequested ? "leaf_branch_active_v4" : "leaf_draft_v3",
     valueObject: created.card.valueObject,
     ontologyCard: created.card,
+    contentLocalization,
     parent: {
       id: parent.id,
       title: parent.title,

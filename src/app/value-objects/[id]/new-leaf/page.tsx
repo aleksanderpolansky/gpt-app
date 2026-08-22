@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { resolveLocalizedContentField } from "@/lib/localization/contentLocalization";
 import {
   ActorContextError,
   resolveActiveActorContext,
@@ -23,6 +24,7 @@ type ParentRow = {
   canonical_key: string | null;
   ontology_node_role_code: string | null;
   scope_code: string | null;
+  metadata_json: Record<string, unknown> | null;
 };
 
 function normalizeLocale(value: string | string[] | undefined): LocaleCode {
@@ -68,7 +70,7 @@ export default async function NewLeafPage({
   const { data, error } = await supabase
     .from("value_objects")
     .select(
-      "id,title,root_value_object_id,status,canonical_key,ontology_node_role_code,scope_code",
+      "id,title,root_value_object_id,status,canonical_key,ontology_node_role_code,scope_code,metadata_json",
     )
     .eq("id", id)
     .eq("owner_user_id", actorContext.appUserId)
@@ -96,13 +98,21 @@ export default async function NewLeafPage({
     notFound();
   }
 
+  const localizedParentTitle =
+    resolveLocalizedContentField({
+      metadata: parent.metadata_json,
+      locale,
+      fieldCode: "title",
+      fallback: parent.title,
+    }) ?? parent.title;
+
   return (
     <LeafCreateForm
       locale={locale}
       activeProfileName={actorContext.profile.displayName}
       parent={{
         id: parent.id,
-        title: parent.title,
+        title: localizedParentTitle,
         rootValueObjectId,
         status: parent.status,
         ontologyNodeRoleCode: "intermediate",

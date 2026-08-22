@@ -1,0 +1,39 @@
+{
+  "release": "ARCTOR_VO_TREE_MOBILE_L10_INSERT_V1",
+  "date": "2026-08-22",
+  "baselineHead": "fb4e1150407e568e15818a16e458a6f7ac6ea146",
+  "dbSchemaChange": false,
+  "sourceOnly": true,
+  "mobileCollapseFix": true,
+  "mobileRootCause": "collapsed descendants were re-walked as depth-0 standalone roots by a fallback traversal",
+  "valueObjectLocalization": true,
+  "supportedLocales": ["en", "pl", "ru", "uk", "de", "es", "cs"],
+  "localizationContract": "ARCTOR_CONTENT_LOCALIZATION_V1 / localizedContent schema v2",
+  "localizationBehavior": {
+    "actorOwnedListResolver": true,
+    "createTimeRootIntermediateLeaf": true,
+    "legacyMissingEnvelopeBackfill": true,
+    "batchSize": 5,
+    "humanSourceLocaleProtected": true,
+    "detailSurfaceResolver": true,
+    "fallbackToOriginal": true
+  },
+  "commercialSafety": {
+    "globalExcludedFromBackfill": true,
+    "commercialExcludedFromBackfill": true,
+    "productsServicesHiddenBranchExcluded": true
+  },
+  "inlineTreeInsert": true,
+  "insertRoutes": [
+    "/value-objects/{id}/new-intermediate",
+    "/value-objects/{id}/new-leaf"
+  ],
+  "leafStructuralInsertDisabled": true,
+  "corporateStylePreserved": {
+    "primary": "#3b6ef8",
+    "softPrimary": "#eef2ff",
+    "background": "#f5f6fb"
+  },
+  "reactFlowAdded": false,
+  "next": "ARCTor VO Mind Map V0 / React Flow Free"
+}

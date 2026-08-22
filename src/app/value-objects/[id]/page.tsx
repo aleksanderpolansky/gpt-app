@@ -8,6 +8,7 @@ import {
 } from "../../../../lib/actor-context";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
+import { resolveLocalizedContentFields } from "@/lib/localization/contentLocalization";
 import { localizeGlobalSystemValueObject } from "@/lib/reality-core/global-system-value-object-localization";
 import {
   ValueObjectProfileTopGrid,
@@ -86,6 +87,7 @@ type TreeNodeRow = {
   parent_value_object_id: string | null;
   status: string;
   created_at: string | null;
+  metadata_json: Record<string, unknown> | null;
 };
 
 type CriterionRow = {
@@ -1140,6 +1142,21 @@ export default async function ValueObjectDetailPage({
     valueObject.origin_type_code === "system_model";
   if (isGlobalSystemObject) {
     valueObject = localizeGlobalSystemValueObject(valueObject, locale);
+  } else {
+    const localizedFields = resolveLocalizedContentFields({
+      metadata: valueObject.metadata_json,
+      locale,
+      fallback: {
+        title: valueObject.title,
+        description: valueObject.description,
+      },
+    });
+    valueObject = {
+      ...valueObject,
+      title: localizedFields.title ?? valueObject.title,
+      description:
+        localizedFields.description ?? valueObject.description,
+    };
   }
   const isOwnedByActiveActor =
     valueObject.owner_user_id === actorContext.appUserId &&
@@ -1185,7 +1202,8 @@ export default async function ValueObjectDetailPage({
       root_value_object_id,
       parent_value_object_id,
       status,
-      created_at
+      created_at,
+      metadata_json
     `,
     )
     .eq("root_value_object_id", rootValueObjectId);
@@ -1226,7 +1244,17 @@ export default async function ValueObjectDetailPage({
   const rawTreeNodes = (treeData ?? []) as TreeNodeRow[];
   const treeNodes = isGlobalSystemObject
     ? rawTreeNodes.map((node) => localizeGlobalSystemValueObject(node, locale))
-    : rawTreeNodes;
+    : rawTreeNodes.map((node) => {
+        const localized = resolveLocalizedContentFields({
+          metadata: node.metadata_json,
+          locale,
+          fallback: { title: node.title },
+        });
+        return {
+          ...node,
+          title: localized.title ?? node.title,
+        };
+      });
   const nodesById = new Map(
     treeNodes.map((node) => [node.id, node] as const),
   );

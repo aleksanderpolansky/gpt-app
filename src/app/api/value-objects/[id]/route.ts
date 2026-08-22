@@ -5,6 +5,7 @@ import {
 } from "../../../../../lib/actor-context";
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
+import { resolveLocalizedContentFields } from "@/lib/localization/contentLocalization";
 import { localizeEntityContent } from "@/lib/localization/contentLocalization.server";
 
 export const dynamic = "force-dynamic";
@@ -889,7 +890,7 @@ function buildDraftPatch(
   };
 }
 
-export async function GET(_request: Request, context: ValueObjectRouteContext) {
+export async function GET(request: Request, context: ValueObjectRouteContext) {
   const { id: rawId } = await context.params;
   const valueObjectId = normalizeValueObjectId(rawId);
 
@@ -916,10 +917,25 @@ export async function GET(_request: Request, context: ValueObjectRouteContext) {
     return valueObjectReadErrorResponse;
   }
 
+  const locale = new URL(request.url).searchParams.get("locale");
+  const localizedFields = resolveLocalizedContentFields({
+    metadata: valueObject.metadata_json,
+    locale,
+    fallback: {
+      title: valueObject.title ?? null,
+      description: valueObject.description ?? null,
+    },
+  });
+
   return NextResponse.json({
     ok: true,
     mode: "draft_read",
-    valueObject,
+    valueObject: {
+      ...valueObject,
+      title: localizedFields.title ?? valueObject.title ?? null,
+      description:
+        localizedFields.description ?? valueObject.description ?? null,
+    },
     editContract: buildEditContract(),
   });
 }
