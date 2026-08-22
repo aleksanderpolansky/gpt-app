@@ -8,16 +8,19 @@ import {
   LayoutGrid,
   Leaf,
   ListTree,
+  Map as MapIcon,
   Network,
   Plus,
 } from "lucide-react";
 import { Fragment, type ReactNode, useMemo, useState } from "react";
 
+import { ValueObjectMindMap } from "./value-object-mind-map";
+
 type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 type RoleFilter = "all" | "root" | "intermediate" | "leaf" | "draft";
 type SortMode = "newest" | "title" | "structure";
 type SemanticRole = "root" | "intermediate" | "leaf";
-type ViewMode = "tree" | "cards";
+type ViewMode = "tree" | "cards" | "map";
 
 type OrganizationPayload = {
   organization_name?: string | null;
@@ -42,6 +45,7 @@ type ValueObjectPayload = {
 type CatalogCopy = {
   tree: string;
   cards: string;
+  map: string;
   expandAll: string;
   collapseAll: string;
   object: string;
@@ -71,6 +75,7 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
   en: {
     tree: "Tree",
     cards: "Cards",
+    map: "Map",
     expandAll: "Expand all",
     collapseAll: "Collapse all",
     object: "Observation object",
@@ -98,6 +103,7 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
   pl: {
     tree: "Drzewo",
     cards: "Karty",
+    map: "Mapa",
     expandAll: "Rozwiń wszystko",
     collapseAll: "Zwiń wszystko",
     object: "Obiekt obserwacji",
@@ -125,6 +131,7 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
   ru: {
     tree: "Дерево",
     cards: "Карточки",
+    map: "Карта",
     expandAll: "Развернуть все",
     collapseAll: "Свернуть все",
     object: "Объект наблюдения",
@@ -152,6 +159,7 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
   uk: {
     tree: "Дерево",
     cards: "Картки",
+    map: "Мапа",
     expandAll: "Розгорнути все",
     collapseAll: "Згорнути все",
     object: "Об’єкт спостереження",
@@ -179,6 +187,7 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
   de: {
     tree: "Baum",
     cards: "Karten",
+    map: "Karte",
     expandAll: "Alle aufklappen",
     collapseAll: "Alle zuklappen",
     object: "Beobachtungsobjekt",
@@ -206,6 +215,7 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
   es: {
     tree: "Árbol",
     cards: "Tarjetas",
+    map: "Mapa",
     expandAll: "Expandir todo",
     collapseAll: "Contraer todo",
     object: "Objeto de observación",
@@ -233,6 +243,7 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
   cs: {
     tree: "Strom",
     cards: "Karty",
+    map: "Mapa",
     expandAll: "Rozbalit vše",
     collapseAll: "Sbalit vše",
     object: "Objekt pozorování",
@@ -781,6 +792,19 @@ export function ValueObjectCatalogViews({
             <LayoutGrid size={15} />
             {copy.cards}
           </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("map")}
+            className={[
+              "inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-semibold transition",
+              viewMode === "map"
+                ? "bg-white text-[#3b6ef8] shadow-sm"
+                : "text-[#7c8099] hover:text-[#1a1d2e]",
+            ].join(" ")}
+          >
+            <MapIcon size={15} />
+            {copy.map}
+          </button>
         </div>
 
         {viewMode === "tree" ? (
@@ -807,6 +831,15 @@ export function ValueObjectCatalogViews({
       </div>
 
       {viewMode === "cards" ? children : null}
+
+      {viewMode === "map" ? (
+        <ValueObjectMindMap
+          valueObjects={valueObjects.filter(
+            (valueObject) => valueObject.id && visibleIds.has(valueObject.id),
+          )}
+          locale={locale}
+        />
+      ) : null}
 
       {viewMode === "tree" ? (
         <>

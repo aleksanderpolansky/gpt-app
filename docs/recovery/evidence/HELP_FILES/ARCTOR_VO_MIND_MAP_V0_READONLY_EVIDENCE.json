@@ -1,0 +1,39 @@
+{
+  "release": "ARCTOR_VO_MIND_MAP_V0_READONLY",
+  "date": "2026-08-22",
+  "baselineHead": "c15d831201b8e3814b2320a94075c765917c345f",
+  "dbSchemaChange": false,
+  "productionDataRead": false,
+  "reactFlowPackage": "@xyflow/react",
+  "reactFlowVersion": "12.11.3",
+  "license": "MIT",
+  "attributionHidden": false,
+  "scope": [
+    "Tree/Cards/Map toggle",
+    "read-only structural graph",
+    "parent-child edges from parent_value_object_id",
+    "deterministic layout",
+    "zoom-pan-fit",
+    "collapse-expand",
+    "localized existing card link",
+    "desktop-mobile"
+  ],
+  "excluded": [
+    "database writes",
+    "drag reparent",
+    "map create",
+    "map delete",
+    "React Flow Pro",
+    "Dagre",
+    "ELK"
+  ],
+  "evidencePolicy": "source-and-runtime-validation-only",
+  "launcherRevision": "V2_COPY_LOCALE_CONTRACT_FIX",
+  "v1PrecommitFailure": {
+    "stage": "FULL_NEXT_BUILD_TYPECHECK",
+    "cause": "catalog COPY: duplicate pl.map and missing cs.map",
+    "rollback": "PASS",
+    "commitPush": false
+  },
+  "addedV2Guard": "exactly one catalog map label per en/pl/ru/uk/de/es/cs locale block before mutation and in release validator"
+}
