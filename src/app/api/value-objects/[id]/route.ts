@@ -1038,3 +1038,108 @@ export async function PATCH(request: Request, context: ValueObjectRouteContext) 
     editContract: buildEditContract(),
   });
 }
+
+type SafeDeleteRpcResult = {
+  ok?: boolean;
+  error?: string;
+  errorCode?: string;
+  deletedId?: string;
+  deletedTitle?: string;
+  parentValueObjectId?: string | null;
+  blocker?: {
+    table?: string | null;
+    column?: string | null;
+    count?: number | null;
+  } | null;
+};
+
+function mapSafeDeleteRpcErrorStatus(error: {
+  readonly code?: string | null;
+}) {
+  if (error.code === "42501") return 403;
+  if (error.code === "P0002") return 404;
+  if (error.code === "22023") return 400;
+  if (error.code === "23514" || error.code === "55000") return 409;
+  if (error.code === "40001") return 409;
+  return 500;
+}
+
+export async function DELETE(
+  _request: Request,
+  context: ValueObjectRouteContext,
+) {
+  const { id: rawId } = await context.params;
+  const valueObjectId = normalizeValueObjectId(rawId);
+
+  if (!valueObjectId) {
+    return NextResponse.json(
+      { error: "Valid Value Object id is required" },
+      { status: 400 },
+    );
+  }
+
+  const { appUser, personActor, errorResponse } =
+    await getCurrentUserContext();
+
+  if (errorResponse) {
+    return errorResponse;
+  }
+
+  const {
+    valueObject,
+    errorResponse: valueObjectReadErrorResponse,
+  } = await readOwnedValueObject(valueObjectId, appUser, personActor);
+
+  if (valueObjectReadErrorResponse) {
+    return valueObjectReadErrorResponse;
+  }
+
+  const { data, error } = await supabase.rpc(
+    "delete_value_object_safe_v1",
+    {
+      p_owner_user_id: appUser.id,
+      p_owner_actor_id: personActor.id,
+      p_value_object_id: valueObject.id,
+    },
+  );
+
+  if (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error.message,
+        errorCode: error.code ?? "VALUE_OBJECT_SAFE_DELETE_FAILED",
+      },
+      { status: mapSafeDeleteRpcErrorStatus(error) },
+    );
+  }
+
+  const result = data as SafeDeleteRpcResult | null;
+
+  if (!result?.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: result?.error || "This observation object cannot be deleted safely.",
+        errorCode:
+          result?.errorCode || "VALUE_OBJECT_DELETE_BLOCKED_DEPENDENCY",
+        blocker: result?.blocker ?? null,
+      },
+      { status: 409 },
+    );
+  }
+
+  const parentValueObjectId =
+    typeof result.parentValueObjectId === "string"
+      ? result.parentValueObjectId
+      : null;
+
+  return NextResponse.json({
+    ...result,
+    ok: true,
+    parentValueObjectId,
+    redirectUrl: parentValueObjectId
+      ? `/value-objects/${encodeURIComponent(parentValueObjectId)}`
+      : "/value-objects",
+  });
+}

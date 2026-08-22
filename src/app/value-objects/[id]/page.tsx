@@ -17,6 +17,7 @@ import {
 } from "@/components/workspace/value-objects/value-object-profile-top-grid";
 import { ValueObjectSemanticRelationsManager } from "@/components/workspace/value-objects/value-object-semantic-relations-manager";
 import { ValueObjectFullCardPanel } from "@/components/workspace/value-objects/value-object-full-card-panel";
+import { ValueObjectDeleteAction } from "@/components/workspace/value-objects/value-object-delete-action";
 import { ValueObjectAnalyticsProfileManager } from "@/components/workspace/value-objects/value-object-analytics-profile-manager";
 import { ActivityScheduleDisplay } from "./activity-schedule-display";
 import { ActivityMutualLinksPanel } from "@/components/activity/p5b/activity-mutual-links-panel";
@@ -1299,6 +1300,18 @@ export default async function ValueObjectDetailPage({
         valueObject.status === "active" ||
         valueObject.status === "inactive"
       : valueObject.status === "draft");
+  const canDelete =
+    canEdit &&
+    isOwnedByActiveActor &&
+    valueObject.scope_code === "actor" &&
+    valueObject.origin_type_code === "user_declared" &&
+    valueObject.source === "manual" &&
+    valueObject.branch_type_code === "ontology_v1" &&
+    valueObject.usage_scope === "private" &&
+    valueObject.organization_id === null &&
+    valueObject.definition_version === 1 &&
+    (valueObject.status === "draft" || valueObject.status === "active") &&
+    !isProductOrService;
   const viewHref = buildValueObjectModeHref(valueObject.id, locale, "view");
   const editHref = buildValueObjectModeHref(valueObject.id, locale, "edit");
 
@@ -1572,6 +1585,14 @@ export default async function ValueObjectDetailPage({
             >
               {copy.restructure}
             </Link>
+          ) : null}
+
+          {editMode && canDelete ? (
+            <ValueObjectDeleteAction
+              locale={locale}
+              valueObjectId={valueObject.id}
+              title={valueObject.title}
+            />
           ) : null}
 
           {isLeaf ? (

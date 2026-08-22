@@ -4,6 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import {
+  ValueObjectCreateSuccessCard,
+  getValueObjectCreatedLabel,
+} from "@/components/workspace/value-objects/value-object-create-success-card";
+
 type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
 type LeafCreateFormProps = {
@@ -173,8 +178,13 @@ export function LeafCreateForm({
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [createdUrl, setCreatedUrl] = useState<string | null>(null);
 
   async function submit() {
+    if (busy || createdUrl) {
+      return;
+    }
+
     const normalizedTitle = title.trim();
 
     if (!normalizedTitle) {
@@ -210,7 +220,8 @@ export function LeafCreateForm({
         );
       }
 
-      router.push(payload.redirectUrl);
+      setCreatedUrl(payload.redirectUrl);
+      router.prefetch(payload.redirectUrl);
     } catch (caught) {
       setError(
         caught instanceof Error ? caught.message : "Leaf creation failed.",
@@ -264,6 +275,7 @@ export function LeafCreateForm({
             <label className="text-[13px] font-bold text-[#343854]">
               {copy.name}
               <input
+                disabled={busy || Boolean(createdUrl)}
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 maxLength={180}
@@ -274,6 +286,7 @@ export function LeafCreateForm({
             <label className="text-[13px] font-bold text-[#343854]">
               {copy.description}
               <textarea
+                disabled={busy || Boolean(createdUrl)}
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 maxLength={4000}
@@ -290,13 +303,29 @@ export function LeafCreateForm({
             </div>
           ) : null}
 
+          {createdUrl ? (
+            <ValueObjectCreateSuccessCard
+              locale={locale}
+              title={title.trim()}
+              role="leaf"
+              parentTitle={parent.title}
+              objectHref={createdUrl}
+              backHref={localeHref(`/value-objects/${parent.id}`, locale)}
+              backLabel={copy.back}
+            />
+          ) : null}
+
           <button
             type="button"
-            disabled={busy}
+            disabled={busy || Boolean(createdUrl)}
             onClick={() => void submit()}
             className="mt-6 w-full rounded-xl bg-[#3b6ef8] px-4 py-3 text-[14px] font-bold text-white disabled:opacity-50"
           >
-            {busy ? copy.busy : copy.submit}
+            {createdUrl
+              ? getValueObjectCreatedLabel(locale)
+              : busy
+                ? copy.busy
+                : copy.submit}
           </button>
         </section>
       </div>

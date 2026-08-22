@@ -1,0 +1,40 @@
+{
+  "release": "ARCTOR_VO_CREATE_DELETE_UX_V1",
+  "date": "2026-08-22",
+  "baselineHead": "11cf254e75504cfcae32f1aa94d93d3147ac1e60",
+  "productionSupabaseRead": false,
+  "databaseApplyMode": "manual_supabase_sql_editor",
+  "databasePostcheckRequired": true,
+  "databasePostcheckExpected": {
+    "total": 12,
+    "passed": 12,
+    "allPass": true
+  },
+  "userConfirmedProductionStateBeforeRelease": {
+    "totalValueObjects": 15,
+    "protectedCommercialRoots": 4,
+    "protectedCommercialObjects": 15,
+    "noncommercialObjectsRemaining": 0,
+    "productServiceLeafs": 11,
+    "visibleValueObjectsInCatalog": 0,
+    "giftCertificateSmokeTest": "PASS_BY_USER_SCREENSHOTS",
+    "offerProductServiceSelectionSmokeTest": "PASS_BY_USER_SCREENSHOTS"
+  },
+  "sourceIntent": {
+    "persistentCreateSuccessState": true,
+    "directCreatedObjectLink": true,
+    "doubleSubmitGuard": true,
+    "safeDeleteUnusedOnly": true,
+    "commercialDeleteBlocked": true,
+    "globalDeleteBlocked": true,
+    "usedObjectDeleteBlocked": true,
+    "dynamicForeignKeyGuard": true,
+    "nonForeignKeyReferenceGuard": true,
+    "mindMapNext": true
+  },
+  "localVerificationLimits": [
+    "No production Supabase credentials were available in the build container.",
+    "Windows PowerShell 5.1 runtime is not installed in the build container.",
+    "The user's exact installed node_modules are not available in the build container."
+  ]
+}

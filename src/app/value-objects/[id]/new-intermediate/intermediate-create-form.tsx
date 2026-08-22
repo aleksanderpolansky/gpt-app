@@ -4,6 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import {
+  ValueObjectCreateSuccessCard,
+  getValueObjectCreatedLabel,
+} from "@/components/workspace/value-objects/value-object-create-success-card";
+
 type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
 type IntermediateCreateFormProps = {
@@ -228,8 +233,13 @@ export function IntermediateCreateForm({
   const [description, setDescription] = useState("");
   const [pending, setPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [createdUrl, setCreatedUrl] = useState<string | null>(null);
 
   async function submit() {
+    if (pending || createdUrl) {
+      return;
+    }
+
     setErrorMessage("");
 
     const normalizedTitle = title.trim();
@@ -263,7 +273,8 @@ export function IntermediateCreateForm({
         throw new Error(data.error || `HTTP ${response.status}`);
       }
 
-      router.push(data.redirectUrl);
+      setCreatedUrl(data.redirectUrl);
+      router.prefetch(data.redirectUrl);
     } catch (error) {
       setErrorMessage(
         `${copy.errorPrefix} ${
@@ -331,6 +342,7 @@ export function IntermediateCreateForm({
                 {copy.objectTitle}
               </span>
               <input
+                disabled={pending || Boolean(createdUrl)}
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 maxLength={180}
@@ -345,6 +357,7 @@ export function IntermediateCreateForm({
                 {copy.objectDescription}
               </span>
               <textarea
+                disabled={pending || Boolean(createdUrl)}
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 maxLength={4000}
@@ -371,6 +384,18 @@ export function IntermediateCreateForm({
             </div>
           )}
 
+          {createdUrl ? (
+            <ValueObjectCreateSuccessCard
+              locale={locale}
+              title={title.trim()}
+              role="intermediate"
+              parentTitle={parent.title}
+              objectHref={createdUrl}
+              backHref={buildLocaleHref(`/value-objects/${parent.id}`, locale)}
+              backLabel={copy.back}
+            />
+          ) : null}
+
           <div className="mt-6 flex flex-wrap justify-end gap-3">
             <Link
               href={buildLocaleHref(`/value-objects/${parent.id}`, locale)}
@@ -381,11 +406,15 @@ export function IntermediateCreateForm({
 
             <button
               type="button"
-              disabled={pending}
+              disabled={pending || Boolean(createdUrl)}
               onClick={() => void submit()}
               className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#3b6ef8] px-6 py-3 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(59,110,248,0.24)] transition hover:bg-[#315fd8] disabled:cursor-wait disabled:opacity-60"
             >
-              {pending ? copy.creating : copy.create}
+              {createdUrl
+                ? getValueObjectCreatedLabel(locale)
+                : pending
+                  ? copy.creating
+                  : copy.create}
             </button>
           </div>
         </section>
