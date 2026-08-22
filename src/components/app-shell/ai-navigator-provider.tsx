@@ -11,8 +11,6 @@ import {
   type ReactNode,
 } from "react";
 
-import { useRouter } from "next/navigation";
-
 import { getLocaleMessage, normalizeLocale, type LocaleCode, type LocaleMessageMap } from "@/i18n";
 import { useUserSessionClient } from "../auth/user-session-client";
 
@@ -183,6 +181,15 @@ const AI_RAIL_PROVIDER_COPY = {
     cs: "Plán byl uložen. AI už analyzuje zprávu a přílohy na pozadí. Otevřete kalendář; při otevření aktivity se hotová analýza použije okamžitě, pokud už skončila.",
   },
   futureAction: { ru: "Открыть календарь", pl: "Otwórz kalendarz", en: "Open calendar", es: "Abrir calendario", uk: "Відкрити календар", de: "Kalender öffnen", cs: "Otevřít kalendář" },
+  activityCaptured: {
+    ru: "Активность зафиксирована. Активность доступна для анализа в Журнале активностей.",
+    pl: "Aktywność została zarejestrowana. Jest dostępna do analizy w Dzienniku aktywności.",
+    en: "Activity recorded. The activity is available for analysis in the Activity journal.",
+    es: "Actividad registrada. La actividad está disponible para su análisis en el Diario de actividades.",
+    uk: "Активність зафіксовано. Активність доступна для аналізу в Журналі активностей.",
+    de: "Aktivität erfasst. Die Aktivität steht im Aktivitätsjournal zur Analyse bereit.",
+    cs: "Aktivita byla zaznamenána. Aktivita je k dispozici pro analýzu v Deníku aktivit.",
+  },
   genericError: {
     ru: "Не удалось выполнить запрос. Попробуйте ещё раз.",
     pl: "Nie udało się wykonać żądania. Spróbuj ponownie.",
@@ -200,11 +207,10 @@ function providerCopy(key: keyof typeof AI_RAIL_PROVIDER_COPY) {
   return getLocaleMessage(AI_RAIL_PROVIDER_COPY[key], getNavigatorLocale(), undefined, { fallbackLocale: "en" });
 }
 
-function getActivitySavedCopy(mode: Exclude<AiNavigatorMode, "chat">) {
-  return mode === "past"
-    ? { text: providerCopy("pastSaved"), label: providerCopy("pastAction") }
-    : { text: providerCopy("futureSaved"), label: providerCopy("futureAction") };
+function getActivitySavedCopy() {
+  return providerCopy("activityCaptured");
 }
+
 
 function friendlyAiError(code: string | undefined) {
   if (code === "insufficient_ai_balance") return providerCopy("insufficientBalance");
@@ -2922,7 +2928,6 @@ export function AiNavigatorProvider({
   readonly children: ReactNode;
 }) {
   const session = useUserSessionClient();
-  const router = useRouter();
   const storageKey = safeStorageKey(session.email);
   const storageReadyRef = useRef(false);
 
@@ -3067,13 +3072,13 @@ export function AiNavigatorProvider({
 
       try {
         if (navigatorMode === "past" || navigatorMode === "future") {
-          const result = await submitAiRailActivity(
+          await submitAiRailActivity(
             trimmedInput,
             navigatorMode,
             activityRequestId,
             image,
           );
-          const savedCopy = getActivitySavedCopy(navigatorMode);
+          const savedCopy = getActivitySavedCopy();
 
           setMessages((previousMessages) =>
             previousMessages.map((messageItem) =>
@@ -3081,15 +3086,14 @@ export function AiNavigatorProvider({
                 ? {
                     ...messageItem,
                     role: "ai",
-                    text: savedCopy.text,
-                    action: { href: result.href, label: savedCopy.label },
+                    text: savedCopy,
+                    action: undefined,
                     createdAt: new Date().toISOString(),
                   }
                 : messageItem,
             ),
           );
 
-          router.push(result.href);
           return;
         }
 
@@ -3135,7 +3139,7 @@ export function AiNavigatorProvider({
         setIsSending(false);
       }
     },
-    [input, isSending, navigatorMode, router, selectedTier],
+    [input, isSending, navigatorMode, selectedTier],
   );
 
   useEffect(() => {
@@ -3226,6 +3230,3 @@ export function useAiNavigator() {
 
   return context;
 }
-
-
-

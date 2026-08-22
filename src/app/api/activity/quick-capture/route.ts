@@ -21,8 +21,10 @@ import {
 } from "@/lib/activity/aiLabDirectSave";
 import type { ActivityTimingLocalePp1 } from "@/lib/activity/pp1/activityTiming";
 import { normalizeQuickCaptureTemporalMode } from "@/lib/activity/quickCaptureTemporalMode";
-import { analyzeActivityForSemanticReviewA31 } from "@/lib/ai/activitySemanticReviewA31.server";
-import { matchActivityToTypicalTemplateV1 } from "@/lib/activity/typical-activity-template-matcher.server";
+import {
+  analyzeBasicActivityIntakeV1,
+  markBasicActivityIntakeFailureV1,
+} from "@/lib/activity/activity-basic-intake-analysis.server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -335,7 +337,7 @@ async function markReceiptProcessed(input: {
   locale: string;
   temporalDirection: "past" | "future";
 }) {
-  const reviewHref = "/activity-review";
+  const reviewHref = "/activity-today";
 
   const result = {
     contractVersion: CONTRACT,
@@ -380,7 +382,8 @@ async function markReceiptProcessed(input: {
         ...currentMetadata,
         contract: CONTRACT,
         durableContract: CONTRACT,
-        requiresHumanReview: true,
+        requiresHumanReview: false,
+        basicIntakeAnalysisScheduled: true,
         factsWrittenAtCapture: 0,
         aiCallsAtCapture: 0,
       },
@@ -420,69 +423,38 @@ async function readReviewFirstReceipt(signalId: string, userId: string) {
   };
 }
 
-function scheduleBackgroundSemanticReview(input: {
+function scheduleBackgroundBasicIntakeAnalysis(input: {
   appUserId: string;
   actorId: string;
+  signalId: string;
   activityEventId: string;
   locale: ActivityTimingLocalePp1;
   timeZone: string;
 }) {
   after(async () => {
     try {
-      await analyzeActivityForSemanticReviewA31({
+      await analyzeBasicActivityIntakeV1({
         appUserId: input.appUserId,
         actorId: input.actorId,
+        signalId: input.signalId,
         activityEventId: input.activityEventId,
         locale: input.locale,
         timeZone: input.timeZone,
       });
     } catch (error) {
+      await markBasicActivityIntakeFailureV1({
+        appUserId: input.appUserId,
+        signalId: input.signalId,
+        activityEventId: input.activityEventId,
+        error,
+      });
       console.error(
-        "AI_RIGHT_RAIL_BACKGROUND_SEMANTIC_REVIEW_FAILED",
+        "AI_RIGHT_RAIL_BASIC_INTAKE_ANALYSIS_FAILED",
         input.activityEventId,
         error,
       );
     }
   });
-}
-
-async function resolveTypicalTemplateReviewPlan(input: {
-  appUserId: string;
-  actorId: string;
-  activityEventId: string;
-  locale: ActivityTimingLocalePp1;
-  timeZone: string;
-}) {
-  try {
-    const templateResolution = await matchActivityToTypicalTemplateV1({
-      appUserId: input.appUserId,
-      actorId: input.actorId,
-      activityEventId: input.activityEventId,
-      locale: input.locale,
-      timeZone: input.timeZone,
-    });
-
-    const templateMatched =
-      templateResolution.disposition === "matched" ||
-      templateResolution.disposition === "already_matched";
-
-    return {
-      templateResolution,
-      shouldScheduleSemanticReview:
-        !templateMatched || templateResolution.residualReviewRequired,
-    };
-  } catch (error) {
-    console.error(
-      "AI_RIGHT_RAIL_TYPICAL_TEMPLATE_MATCH_FAILED_FALLING_BACK",
-      input.activityEventId,
-      error,
-    );
-
-    return {
-      templateResolution: null,
-      shouldScheduleSemanticReview: true,
-    };
-  }
 }
 
 export async function POST(request: Request) {
@@ -573,31 +545,16 @@ export async function POST(request: Request) {
     const existing = await readReviewFirstReceipt(signal.id, appUser.id);
     if (existing?.result) {
       const existingActivityEventId = existing.primaryActivityEventId;
-      let backgroundSemanticReview = "not_scheduled";
-      let responseResult = existing.result;
 
       if (existingActivityEventId) {
-        const reviewPlan = await resolveTypicalTemplateReviewPlan({
+        scheduleBackgroundBasicIntakeAnalysis({
           appUserId: appUser.id,
           actorId: personActor.id,
+          signalId: signal.id,
           activityEventId: existingActivityEventId,
           locale,
           timeZone,
         });
-
-        if (reviewPlan.shouldScheduleSemanticReview) {
-          scheduleBackgroundSemanticReview({
-            appUserId: appUser.id,
-            actorId: personActor.id,
-            activityEventId: existingActivityEventId,
-            locale,
-            timeZone,
-          });
-          backgroundSemanticReview = "scheduled";
-        }
-
-        const refreshedReceipt = await readReviewFirstReceipt(signal.id, appUser.id);
-        responseResult = refreshedReceipt?.result ?? existing.result;
       }
 
       return NextResponse.json({
@@ -606,12 +563,11 @@ export async function POST(request: Request) {
         duplicate: true,
         signalId: signal.id,
         processingStatus: "processed",
-        backgroundSemanticReview,
-        result: responseResult,
-        note:
-          backgroundSemanticReview === "scheduled"
-            ? "Activity was already captured. Semantic review is scheduled only for unmatched or residual explicit facts."
-            : "Activity was already captured and matched to a typical activity; no residual fact review is required.",
+        backgroundBasicIntakeAnalysis: existingActivityEventId
+          ? "scheduled"
+          : "not_scheduled",
+        result: existing.result,
+        note: "Activity was already captured. Basic intake analysis is scheduled in the background.",
       });
     }
   }
@@ -744,7 +700,8 @@ export async function POST(request: Request) {
         sourceSurface: "activity_ai_lab",
         directSaveContract: CONTRACT,
         quickCaptureContract: CONTRACT,
-        quickCaptureReviewRequired: true,
+        quickCaptureReviewRequired: false,
+        basicIntakeAnalysisContract: "ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1",
         quickCaptureReviewStatus: "pending",
         quickCaptureSourceMessageText: inputText || null,
         quickCaptureSourceTextKind: inputText ? "user_text" : "system_image_placeholder",
@@ -774,28 +731,14 @@ export async function POST(request: Request) {
       temporalDirection,
     });
 
-    const reviewPlan = await resolveTypicalTemplateReviewPlan({
+    scheduleBackgroundBasicIntakeAnalysis({
       appUserId: appUser.id,
       actorId: personActor.id,
+      signalId: signal.id,
       activityEventId: createdEvent.activityEventId,
       locale,
       timeZone,
     });
-
-    let backgroundSemanticReview = "not_scheduled";
-    if (reviewPlan.shouldScheduleSemanticReview) {
-      scheduleBackgroundSemanticReview({
-        appUserId: appUser.id,
-        actorId: personActor.id,
-        activityEventId: createdEvent.activityEventId,
-        locale,
-        timeZone,
-      });
-      backgroundSemanticReview = "scheduled";
-    }
-
-    const refreshedReceipt = await readReviewFirstReceipt(signal.id, appUser.id);
-    const responseResult = refreshedReceipt?.result ?? result;
 
     return NextResponse.json({
       ok: true,
@@ -803,13 +746,10 @@ export async function POST(request: Request) {
       duplicate: false,
       signalId: signal.id,
       processingStatus: "processed",
-      backgroundSemanticReview,
-      result: responseResult,
+      backgroundBasicIntakeAnalysis: "scheduled",
+      result,
       calendarEventId: createdEvent.calendarEventId,
-      note:
-        backgroundSemanticReview === "scheduled"
-          ? "Activity is saved. Standard semantic review is scheduled only for unmatched or residual explicit facts. Facts written now: 0."
-          : "Activity is saved and matched to a typical activity. Its profile and server parameter rules apply without a broad semantic review.",
+      note: "Activity is saved. Basic intake analysis is scheduled in the background. No template or facts are applied automatically.",
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

@@ -701,8 +701,9 @@ export function GlobalSidebar({
     currentPathname === "/activity-today" ||
     currentPathname === "/activity-log";
   const isActivityReviewActive = currentPathname === "/activity-review";
+  const isActivityTemplatesActive = currentPathname === "/activity-templates";
   const isActivityJournalActive =
-    isActivityJournalCurrent || isActivityReviewActive;
+    isActivityJournalCurrent || isActivityTemplatesActive || isActivityReviewActive;
   const isFactsActive = currentPathname.startsWith("/activity-facts");
 
   const isPurchasesActive = currentPathname === "/my-purchase-confirmations";
@@ -846,6 +847,12 @@ export function GlobalSidebar({
           current={isActivityJournalCurrent}
           defaultOpen
         >
+          <TreeItem
+            label={t("navigation.typicalActivities")}
+            depth={1}
+            href={localeHref("/activity-templates")}
+            active={isActivityTemplatesActive}
+          />
           <TreeItem
             label={t("navigation.requiresReview")}
             depth={1}

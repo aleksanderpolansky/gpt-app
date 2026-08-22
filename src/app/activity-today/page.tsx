@@ -1,13 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   formatMutualMetricValue,
   type MutualLinkActivity,
   type MutualLinksApiResponse,
 } from "@/lib/activity/mutualLinks";
+import {
+  ActivityBasicIntakeAnalysisCard,
+  ActivityLifecycleBadge,
+  useActivityBasicIntakeAnalyses,
+} from "@/components/activity/activity-basic-intake-analysis-card";
 
 type Locale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
@@ -660,7 +665,8 @@ export default function ActivityTodayPage() {
   const [calendarLogs, setCalendarLogs] = useState<CalendarLogSummary[]>([]);
   const [mutualLinksByActivityId, setMutualLinksByActivityId] = useState<Record<string, MutualLinkActivity>>({});
   const [selectedItem, setSelectedItem] = useState<JournalItem | null>(null);
-  const [autoOpenHandled, setAutoOpenHandled] = useState(false);
+  // ARCTOR_ACTIVITY_TODAY_LINT_SAFE_AUTO_OPEN_REF_V1
+  const autoOpenHandledRef = useRef(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editDraft, setEditDraft] = useState<EditDraft>({
     description: "",
@@ -673,12 +679,37 @@ export default function ActivityTodayPage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const basicIntakeActivityEventIds = useMemo(
+    () => activityEvents
+      .map((event) => event.id)
+      .filter((id): id is string => Boolean(id)),
+    [activityEvents],
+  );
+  const basicIntakeAnalysesByActivityId = useActivityBasicIntakeAnalyses(
+    basicIntakeActivityEventIds,
+  );
+
+  // ARCTOR_ACTIVITY_TODAY_LINT_SAFE_LOCALE_SYNC_V1
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
 
-    setLocale(normalizeLocale(new URLSearchParams(window.location.search).get("locale")));
+    const updateLocale = () => {
+      setLocale(
+        normalizeLocale(
+          new URLSearchParams(window.location.search).get("locale"),
+        ),
+      );
+    };
+
+    const timer = window.setTimeout(updateLocale, 0);
+    window.addEventListener("popstate", updateLocale);
+
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("popstate", updateLocale);
+    };
   }, []);
 
   useEffect(() => {
@@ -751,8 +782,8 @@ export default function ActivityTodayPage() {
       .map((event) => event.id)
       .filter((id): id is string => Boolean(id));
 
+    // ARCTOR_ACTIVITY_TODAY_LINT_SAFE_MUTUAL_LINK_EMPTY_V1
     if (activityIds.length === 0) {
-      setMutualLinksByActivityId({});
       return;
     }
 
@@ -802,20 +833,21 @@ export default function ActivityTodayPage() {
     [activityEvents, calendarLogs, locale]
   );
 
+  // ARCTOR_ACTIVITY_TODAY_LINT_SAFE_AUTO_OPEN_EFFECT_V1
   useEffect(() => {
-    if (autoOpenHandled || typeof window === "undefined") return;
+    if (autoOpenHandledRef.current || typeof window === "undefined") return;
     const requestedId = new URLSearchParams(window.location.search).get("activityEventId");
     if (!requestedId) {
-      setAutoOpenHandled(true);
+      autoOpenHandledRef.current = true;
       return;
     }
     const item = journalItems.find(
       (candidate) => candidate.kind === "activity" && candidate.sourceId === requestedId,
     );
     if (!item) return;
-    setAutoOpenHandled(true);
+    autoOpenHandledRef.current = true;
     openItem(item);
-  }, [autoOpenHandled, journalItems]);
+  }, [journalItems]);
 
   function openItem(item: JournalItem, edit = false) {
     setSelectedItem(item);
@@ -1052,6 +1084,23 @@ export default function ActivityTodayPage() {
                         <div className="mt-1 text-xs font-medium text-[#7c8099]">
                           {ui.eventTime}: {item.eventTime}
                         </div>
+                      ) : null}
+                      {item.kind === "activity" ? (
+                        <div className="mt-2">
+                          <ActivityLifecycleBadge
+                            locale={locale}
+                            planned={
+                              (item.raw as ActivityEventSummary).activityRoleCode === "planned" ||
+                              (item.raw as ActivityEventSummary).temporalDirection === "future"
+                            }
+                          />
+                        </div>
+                      ) : null}
+                      {item.kind === "activity" && item.sourceId ? (
+                        <ActivityBasicIntakeAnalysisCard
+                          analysis={basicIntakeAnalysesByActivityId[item.sourceId] ?? null}
+                          locale={locale}
+                        />
                       ) : null}
                       {item.kind === "activity" && item.sourceId ? (
                         <ActivityMutualPreview

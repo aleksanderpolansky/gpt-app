@@ -1,0 +1,57 @@
+{
+  "evidence_id": "ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1",
+  "created_at": "2026-08-22",
+  "baseline": "4cb845401809eafbb4586e5f1045b7f2f3205e7b",
+  "production_supabase_used_for_analysis": false,
+  "db_schema_change": false,
+  "decisions": [
+    "right rail returns only a short capture acknowledgement and does not emit analysis-ready notifications",
+    "activity event is persisted before AI analysis",
+    "one nano background call extracts explicit primitive measurements and identifies only clearly matching existing typical activities",
+    "no weak typical-activity candidates are displayed; server display threshold is 0.90",
+    "no observation-object catalog or impact-profile data is sent to the basic model",
+    "quick capture does not auto-assign activity_template_id",
+    "quick capture does not auto-run A3.1 standard semantic review",
+    "no activity_object_facts are written by this stage",
+    "journal reads basic analysis once in a batch without polling",
+    "future save-links and additional-analysis actions are intentionally not implemented",
+    "semantic clean-start deletion is deferred to a later dedicated reset step"
+  ],
+  "navigation": {
+    "parent": "activity journal",
+    "child_added": "typical activities",
+    "order": "before requires review"
+  },
+  "runtime": {
+    "analysis_store": "raw_activity_signals.normalized_preview_json.basicIntakeAnalysisV1",
+    "provider_tier": "nano",
+    "max_candidate_names_sent": 24,
+    "max_displayed_matches": 5,
+    "template_confidence_threshold": 0.9,
+    "provider_store": false,
+    "retries": 0,
+    "automatic_template_binding": false,
+    "automatic_standard_review": false,
+    "fact_writes": false
+  },
+  "package_revision": "V2",
+  "failed_attempts": [
+    {
+      "revision": "V1",
+      "stage": "ESLINT_CHANGED",
+      "errors": 3,
+      "rule": "react-hooks/set-state-in-effect",
+      "file": "src/app/activity-today/page.tsx",
+      "commit_created": false,
+      "push_executed": false,
+      "rollback": "PASS",
+      "baseline_restored": "4cb845401809eafbb4586e5f1045b7f2f3205e7b"
+    }
+  ],
+  "v2_lint_hygiene": {
+    "journal_locale_state": "async callback from timer/popstate",
+    "empty_mutual_links": "no synchronous state clear in effect",
+    "auto_open_gate": "useRef instead of render state",
+    "pre_mutation_project_eslint": "patch tool lintText against repo ESLint for 8 future TS/TSX files"
+  }
+}
