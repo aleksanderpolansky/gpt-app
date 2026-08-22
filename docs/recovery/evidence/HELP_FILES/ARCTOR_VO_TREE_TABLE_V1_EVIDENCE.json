@@ -1,0 +1,29 @@
+{
+  "release": "ARCTOR_VO_TREE_TABLE_V1",
+  "date": "2026-08-22",
+  "baselineHead": "16687ab28aa41224459e0dabee8d04619be41028",
+  "dbSchemaChange": false,
+  "sourceOnly": true,
+  "designReference": "High-Fidelity Dashboard Design(20260822-141957).zip",
+  "views": ["tree", "cards"],
+  "defaultView": "tree",
+  "treeUses": "parent_value_object_id",
+  "treeFeatures": [
+    "depth indentation",
+    "collapse expand",
+    "direct child count",
+    "descendant count",
+    "descendant leaf count",
+    "search/filter ancestor context",
+    "desktop table",
+    "mobile compact tree",
+    "open object link"
+  ],
+  "corporateStyle": {
+    "primary": "#3b6ef8",
+    "softPrimary": "#eef2ff",
+    "background": "#f5f6fb"
+  },
+  "reactFlowAdded": false,
+  "next": "ARCTor VO Mind Map V0 / React Flow Free"
+}

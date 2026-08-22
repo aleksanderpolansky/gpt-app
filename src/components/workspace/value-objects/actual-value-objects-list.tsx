@@ -16,6 +16,8 @@ import {
   type ValueObjectsMessageKey,
 } from "@/i18n";
 
+import { ValueObjectCatalogViews } from "@/components/workspace/value-objects/value-object-catalog-views";
+
 type OrganizationPayload = {
   id?: string;
   organization_name?: string | null;
@@ -910,8 +912,15 @@ export function ActualValueObjectsList() {
 
       {status === "success" && valueObjects.length > 0 ? (
         <>
-          <div className="grid gap-3 xl:grid-cols-2">
-            {filteredObjects.map((valueObject) => {
+          <ValueObjectCatalogViews
+            valueObjects={valueObjects}
+            locale={locale}
+            query={query}
+            roleFilter={roleFilter}
+            sortMode={sortMode}
+          >
+            <div className="grid gap-3 xl:grid-cols-2">
+              {filteredObjects.map((valueObject) => {
               const title =
                 valueObject.title?.trim() || t("valueObjects.actual.noTitle");
               const role = getSemanticRole(valueObject);
@@ -1044,7 +1053,8 @@ export function ActualValueObjectsList() {
                 </article>
               );
             })}
-          </div>
+            </div>
+          </ValueObjectCatalogViews>
 
           <div className="rounded-[18px] border border-black/[0.07] bg-white px-4 py-3 text-[12px] text-[#7c8099] shadow-sm">
             {copy.shown} {filteredObjects.length} {copy.of} {valueObjects.length}
