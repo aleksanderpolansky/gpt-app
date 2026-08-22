@@ -956,6 +956,11 @@ export function ActualValueObjectsList() {
             query={query}
             roleFilter={roleFilter}
             sortMode={sortMode}
+            onValueObjectDeleted={(deletedId) => {
+              setValueObjects((current) =>
+                current.filter((valueObject) => valueObject.id !== deletedId),
+              );
+            }}
           >
             <div className="grid gap-3 xl:grid-cols-2">
               {filteredObjects.map((valueObject) => {

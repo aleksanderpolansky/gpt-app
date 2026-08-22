@@ -1,0 +1,27 @@
+{
+  "release": "ARCTOR_VO_MIND_MAP_V1_AUTHORING",
+  "date": "2026-08-22",
+  "baseline": "911d8c0f0dbb658f07fc47328cac5db760c26ed7",
+  "dbSchemaChange": false,
+  "sourceEvidenceOnly": true,
+  "runtimeEvidencePending": true,
+  "v0Runtime": {
+    "status": "PASS",
+    "commit": "911d8c0f0dbb658f07fc47328cac5db760c26ed7",
+    "report": "ARCTOR_VO_MIND_MAP_V0_READONLY_20260822_181622_REPORT.txt"
+  },
+  "authoring": {
+    "createIntermediate": "existing /value-objects/{id}/new-intermediate",
+    "createLeaf": "existing /value-objects/{id}/new-leaf",
+    "delete": "existing DELETE /api/value-objects/{id}",
+    "dragReparent": false
+  },
+  "safety": {
+    "globalDeleteControl": false,
+    "commercialDeleteControl": false,
+    "systemDeleteControl": false,
+    "serverDeleteGuardRetained": true,
+    "directParentUpdate": false
+  },
+  "next": "ARCTOR_VO_MIND_MAP_V1_1_CONTROLLED_REPARENT"
+}

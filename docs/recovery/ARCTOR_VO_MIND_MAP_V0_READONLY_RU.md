@@ -126,3 +126,13 @@ Launcher обязан до commit выполнить:
 Первая упаковка `V1_READONLY_REAL_TREE` дошла до полного `next build`: компиляция завершилась успешно, но TypeScript semantic check остановил релиз до commit. Причина была в словаре `COPY` каталога: польский блок содержал два одинаковых поля `map`, а чешский блок не содержал `map` вообще. Launcher выполнил `ROLLBACK_PRECOMMIT` и вернул HEAD к baseline `c15d831201b8e3814b2320a94075c765917c345f`; commit/push не выполнялись.
 
 В `V2_COPY_LOCALE_CONTRACT_FIX` исправлены оба дефекта и усилен fail-fast preflight: payload теперь до mutation проверяет, что каждый из семи locale-блоков каталога имеет ровно одно поле `map`. Release validator повторяет тот же контракт. Это фиксируется как обязательный урок для следующих локализованных UI-расширений: `transpileModule` недостаточен для semantic ошибок object literal, поэтому структурные контракты словарей должны иметь отдельную проверку.
+
+## Runtime closure V0
+
+Релиз `vo-mind-map-v0-readonly` успешно установлен commit `911d8c0f0dbb658f07fc47328cac5db760c26ed7`. Launcher V3 прошёл полный release contour: основной validator 53/53, Tree regression 33/33, Mobile/L10 regression 68/68, create/delete regression 47/47, branch-authoring regression 32/32, ESLint, полный Next.js build, `git diff --check`, cached diff check, commit/push и remote HEAD verification.
+
+Runtime-скриншот пользователя подтверждает реальную карту на `/value-objects?locale=pl`: обе контрольные ветви отображаются как structural parent-child graph, польская локализация применяется к названиям/описаниям, corporate ARCTor styling сохранён. V0 считается CLOSED/PASS.
+
+Precommit lesson V2 → V3: после полностью успешного build V2 был остановлен только `git diff --cached --check` из-за blank line at EOF recovery markdown. V3 добавил fail-fast payload whitespace/EOF guard до source mutation. Этот guard обязателен для следующих release packages.
+
+Следующая точка восстановления: `ARCTOR_VO_MIND_MAP_V1_AUTHORING` — controlled `+ Intermediate`, `+ Leaf` и guarded Delete на карте; drag/reparent остаётся отдельным V1.1.

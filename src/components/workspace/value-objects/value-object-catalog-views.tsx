@@ -40,6 +40,7 @@ type ValueObjectPayload = {
   ontology_node_role_code?: string | null;
   scope_code?: string | null;
   origin_type_code?: string | null;
+  definition_version?: number | null;
 };
 
 type CatalogCopy = {
@@ -389,6 +390,7 @@ type ValueObjectCatalogViewsProps = {
   roleFilter: RoleFilter;
   sortMode: SortMode;
   children: ReactNode;
+  onValueObjectDeleted?: (deletedId: string) => void;
 };
 
 export function ValueObjectCatalogViews({
@@ -398,6 +400,7 @@ export function ValueObjectCatalogViews({
   roleFilter,
   sortMode,
   children,
+  onValueObjectDeleted,
 }: ValueObjectCatalogViewsProps) {
   const copy = COPY[locale] ?? COPY.en;
   const [viewMode, setViewMode] = useState<ViewMode>("tree");
@@ -838,6 +841,7 @@ export function ValueObjectCatalogViews({
             (valueObject) => valueObject.id && visibleIds.has(valueObject.id),
           )}
           locale={locale}
+          onValueObjectDeleted={onValueObjectDeleted}
         />
       ) : null}
 
