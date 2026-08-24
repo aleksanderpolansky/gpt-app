@@ -144,21 +144,18 @@ async function buildFactDurationByRootResponse(input: {
   const queryFromKey = shiftDateKey(firstKey, -1);
   const queryFromIso = queryFromKey + "T00:00:00.000Z";
 
-  const factRowsRaw: Row[] = [];
+  const ownedFactRows: Row[] = [];
   const factPageSize = 1000;
   const factHardLimit = 50000;
 
   for (let offset = 0; offset < factHardLimit; offset += factPageSize) {
     const { data, error } = await supabase
       .from("activity_object_facts")
-      .select(
-        "id,activity_event_id,value_object_id,value_numeric,unit,period_start,created_at,fact_status,measure_type",
-      )
+      .select("id,period_start,created_at,fact_status,measure_type")
       .eq("user_id", input.appUserId)
       .eq("acting_as_actor_id", input.actorId)
       .eq("fact_status", "confirmed")
       .eq("measure_type", "duration")
-      .not("value_object_id", "is", null)
       .or("period_start.gte." + queryFromIso + ",created_at.gte." + queryFromIso)
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
@@ -169,10 +166,10 @@ async function buildFactDurationByRootResponse(input: {
     }
 
     const page = Array.isArray(data) ? (data as Row[]) : [];
-    factRowsRaw.push(...page);
+    ownedFactRows.push(...page);
     if (page.length < factPageSize) break;
 
-    if (factRowsRaw.length >= factHardLimit) {
+    if (ownedFactRows.length >= factHardLimit) {
       return NextResponse.json(
         { ok: false, error: "DASHBOARD_ROOT_TIME_FACT_HARD_LIMIT_REACHED" },
         { status: 409 },
@@ -180,23 +177,47 @@ async function buildFactDurationByRootResponse(input: {
     }
   }
 
-  const eligibleFactRows = factRowsRaw
-    .map((row) => row as Row)
-    .filter((row) => {
-      const date = factDateKey(row, input.timeZone);
-      return Boolean(date && date >= firstKey && date <= todayKey);
-    });
+  const eligibleBaseFacts = ownedFactRows.filter((row) => {
+    const date = factDateKey(row, input.timeZone);
+    return Boolean(date && date >= firstKey && date <= todayKey);
+  });
+
+  const eligibleFactIds = eligibleBaseFacts
+    .map((row) => asString(row.id))
+    .filter((value): value is string => Boolean(value));
+
+  const analyticsRows: Row[] = [];
+  for (const ids of chunkStrings(eligibleFactIds)) {
+    const { data, error } = await supabase
+      .from("activity_fact_analytics_inputs_v1")
+      .select(
+        "fact_id,activity_event_id,value_object_id,metric_value_numeric,unit,occurred_at,created_at,measure_type",
+      )
+      .in("fact_id", ids);
+
+    if (error) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    }
+
+    analyticsRows.push(...(Array.isArray(data) ? (data as Row[]) : []));
+  }
+
+  const durationProjectionRows = analyticsRows.filter(
+    (row) =>
+      asString(row.measure_type) === "duration" &&
+      Boolean(asString(row.value_object_id)),
+  );
 
   const leafIds = Array.from(
     new Set(
-      eligibleFactRows
+      durationProjectionRows
         .map((row) => asString(row.value_object_id))
         .filter((value): value is string => Boolean(value)),
     ),
   );
   const activityEventIds = Array.from(
     new Set(
-      eligibleFactRows
+      durationProjectionRows
         .map((row) => asString(row.activity_event_id))
         .filter((value): value is string => Boolean(value)),
     ),
@@ -245,10 +266,10 @@ async function buildFactDurationByRootResponse(input: {
   }
 
   const aggregation = aggregateRootTime({
-    facts: eligibleFactRows.flatMap((row) => {
+    facts: durationProjectionRows.flatMap((row) => {
       const activityEventId = asString(row.activity_event_id);
       const valueObjectId = asString(row.value_object_id);
-      const valueNumeric = asNumber(row.value_numeric);
+      const valueNumeric = asNumber(row.metric_value_numeric);
       const unit = asString(row.unit);
       return activityEventId && valueObjectId && valueNumeric !== null && unit
         ? [{ activityEventId, valueObjectId, valueNumeric, unit }]
@@ -329,9 +350,12 @@ async function buildFactDurationByRootResponse(input: {
     uniqueActivityMinutes: aggregation.uniqueActivityMinutes,
     overlapDetected: aggregation.overlapDetected,
     skippedFactCount: aggregation.skippedFacts,
-    sourceFactCount: eligibleFactRows.length,
+    sourceFactCount: eligibleBaseFacts.length,
+    sourceProjectionCount: durationProjectionRows.length,
     aggregationPolicy:
-      "confirmed duration facts -> leaf root; once per activity/root; canonical activity duration preferred",
+      "owned confirmed duration facts -> final fact tags -> canonical measure values -> leaf root; once per activity/root; canonical activity duration preferred",
+    schemaMode:
+      "activity_fact_analytics_inputs_v1 (final tags + activity_event_measures value source)",
     rootBreakdown,
   });
 }

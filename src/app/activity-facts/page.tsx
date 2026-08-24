@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { ActivityFactTaggingPanel } from "./activity-fact-tagging-panel";
 
 type Locale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
@@ -818,7 +819,10 @@ function ActivityFactsPageContent() {
     });
   }, [limit, semanticObjectKey, valueObjectId, activityEventId, factStatus]);
 
-  const facts = state.response?.facts ?? [];
+  const facts = useMemo<ActivityFact[]>(
+    () => state.response?.facts ?? [],
+    [state.response],
+  );
   const groupedFacts = useMemo(() => groupFacts(facts), [facts]);
   const selectedFact =
     facts.find((fact) => fact.factId === selectedFactId) ?? facts[0] ?? null;
@@ -890,7 +894,11 @@ function ActivityFactsPageContent() {
   }
 
   useEffect(() => {
-    void loadFacts();
+    const timer = window.setTimeout(() => {
+      void loadFacts();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [loadFacts]);
 
   return (
@@ -1186,6 +1194,12 @@ function ActivityFactsPageContent() {
                   )}
                 </div>
               </div>
+
+              <ActivityFactTaggingPanel
+                fact={selectedFact}
+                locale={locale}
+                onSaved={loadFacts}
+              />
             </div>
           ) : (
             <p className="mt-4 text-sm font-bold text-slate-500">{copy.selectedHint}</p>
