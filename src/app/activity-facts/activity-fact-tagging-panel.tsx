@@ -94,9 +94,9 @@ const COPY: Record<string, Copy> = {
     remove: "Remove",
     error: "Could not update fact tags.",
     sourceLabels: {
-      template_profile: "template",
-      semantic_analysis: "semantic review",
-      manual_user: "manual",
+      template: "template",
+      semantic_review: "semantic review",
+      manual: "manual",
       legacy_fact: "legacy bridge",
       correction: "correction",
     },
@@ -126,9 +126,9 @@ const COPY: Record<string, Copy> = {
     remove: "Убрать",
     error: "Не удалось обновить связи факта.",
     sourceLabels: {
-      template_profile: "шаблон",
-      semantic_analysis: "смысловой разбор",
-      manual_user: "вручную",
+      template: "шаблон",
+      semantic_review: "смысловой разбор",
+      manual: "вручную",
       legacy_fact: "legacy-мост",
       correction: "коррекция",
     },
@@ -158,9 +158,9 @@ const COPY: Record<string, Copy> = {
     remove: "Usuń",
     error: "Nie udało się zaktualizować powiązań faktu.",
     sourceLabels: {
-      template_profile: "szablon",
-      semantic_analysis: "analiza semantyczna",
-      manual_user: "ręcznie",
+      template: "szablon",
+      semantic_review: "analiza semantyczna",
+      manual: "ręcznie",
       legacy_fact: "most legacy",
       correction: "korekta",
     },
@@ -190,9 +190,9 @@ const COPY: Record<string, Copy> = {
     remove: "Прибрати",
     error: "Не вдалося оновити зв’язки факту.",
     sourceLabels: {
-      template_profile: "шаблон",
-      semantic_analysis: "смисловий розбір",
-      manual_user: "вручну",
+      template: "шаблон",
+      semantic_review: "смисловий розбір",
+      manual: "вручну",
       legacy_fact: "legacy-міст",
       correction: "корекція",
     },
@@ -222,9 +222,9 @@ const COPY: Record<string, Copy> = {
     remove: "Entfernen",
     error: "Fakt-Zuordnungen konnten nicht aktualisiert werden.",
     sourceLabels: {
-      template_profile: "Vorlage",
-      semantic_analysis: "semantische Prüfung",
-      manual_user: "manuell",
+      template: "Vorlage",
+      semantic_review: "semantische Prüfung",
+      manual: "manuell",
       legacy_fact: "Legacy-Brücke",
       correction: "Korrektur",
     },
@@ -254,9 +254,9 @@ const COPY: Record<string, Copy> = {
     remove: "Quitar",
     error: "No se pudieron actualizar los vínculos del hecho.",
     sourceLabels: {
-      template_profile: "plantilla",
-      semantic_analysis: "revisión semántica",
-      manual_user: "manual",
+      template: "plantilla",
+      semantic_review: "revisión semántica",
+      manual: "manual",
       legacy_fact: "puente legacy",
       correction: "corrección",
     },
@@ -286,9 +286,9 @@ const COPY: Record<string, Copy> = {
     remove: "Odebrat",
     error: "Vazby faktu se nepodařilo aktualizovat.",
     sourceLabels: {
-      template_profile: "šablona",
-      semantic_analysis: "sémantická kontrola",
-      manual_user: "ručně",
+      template: "šablona",
+      semantic_review: "sémantická kontrola",
+      manual: "ručně",
       legacy_fact: "legacy most",
       correction: "oprava",
     },
@@ -560,7 +560,7 @@ export function ActivityFactTaggingPanel({
       valueObjectId: candidate.valueObjectId,
       title: candidate.title,
       canonicalKey: candidate.canonicalKey,
-      sourceCode: "semantic_analysis",
+      sourceCode: "semantic_review",
       sourceTemplateProfileId: null,
       confidence: null,
       isMaterialized: false,
@@ -581,7 +581,7 @@ export function ActivityFactTaggingPanel({
       valueObjectId: item.id,
       title: item.title,
       canonicalKey: item.canonicalKey,
-      sourceCode: "manual_user",
+      sourceCode: "manual",
       sourceTemplateProfileId: null,
       confidence: null,
       isMaterialized: false,
@@ -597,12 +597,13 @@ export function ActivityFactTaggingPanel({
     const links = draftLinks.map((link) => ({
       valueObjectId: link.valueObjectId,
       sourceCode:
-        link.sourceCode === "legacy_fact" ? "correction" : link.sourceCode,
+        link.sourceCode === "legacy_fact" || link.sourceCode === "system" || link.sourceCode === "import"
+          ? "manual"
+          : link.sourceCode,
       sourceTemplateProfileId:
-        link.sourceCode === "template_profile"
+        link.sourceCode === "template"
           ? link.sourceTemplateProfileId
           : null,
-      confidence: link.confidence,
     }));
 
     try {
@@ -837,7 +838,7 @@ export function ActivityFactTaggingPanel({
         <button
           type="button"
           onClick={save}
-          disabled={!isDirty || status === "saving" || status === "loading"}
+          disabled={!isDirty || draftLinks.length === 0 || status === "saving" || status === "loading"}
           className="min-h-11 rounded-2xl bg-blue-700 px-5 text-sm font-black text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-40"
         >
           {status === "saving" ? copy.saving : copy.save}

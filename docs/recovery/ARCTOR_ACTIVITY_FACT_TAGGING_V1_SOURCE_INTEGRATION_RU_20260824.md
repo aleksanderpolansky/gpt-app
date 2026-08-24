@@ -75,3 +75,39 @@ DB Foundation `ARCTOR_ACTIVITY_FACT_TAGGING_V1_DB_FOUNDATION_POSTCHECK_V1` пр�
 4. проверить повторное чтение `/activity-facts`;
 5. проверить, что dashboard использует только финальные теги и не создаёт новых business rows;
 6. только после этого закрывать Activity Fact Tagging V1 целиком и переходить к следующему слою routing/runtime.
+## Runtime contract hotfix V1 — 2026-08-24
+
+Production runtime proof immediately after Source Integration V1 exposed a source/DB contract mismatch before any fact-tag write:
+
+- source attempted to select `confidence` from `activity_fact_value_object_links_effective_v1`, but the installed view intentionally has no such column;
+- source used draft names `template_profile`, `semantic_analysis`, `manual_user`, `correction` instead of the installed DB vocabulary `template`, `semantic_review`, `manual`, `system`, `import`;
+- source called `replace_activity_fact_value_object_links_v1` with draft argument names `p_user_id` / `p_actor_id` instead of the installed `p_owner_user_id` / `p_owner_actor_id`.
+
+Hotfix decision:
+
+1. DB Foundation remains unchanged; its 27/27 production postcheck remains authoritative.
+2. `confidence` stays fact-level / transient candidate metadata and is not persisted on final fact→leaf links in V1.
+3. Semantic-review suggestions persist as `semantic_review`; manual additions persist as `manual`.
+4. `template` provenance may only be preserved when the same materialized template link already exists with the same profile version.
+5. Explicitly saving a legacy/system/import bridge from this user review surface materializes it as `manual` user confirmation; the browser cannot mint system/import provenance.
+6. The RPC named-argument contract is exactly `p_owner_user_id`, `p_owner_actor_id`, `p_fact_id`, `p_links`.
+7. No schema change, no historical backfill, no fact-value rewrite.
+
+Evidence of the hotfix gate:
+
+- launcher timestamp: 2026-08-24T15:04:51+02:00
+- baseline local/remote: $Baseline
+- package SHA256: $packageSha
+- patcher self-test: PASS
+- patcher dry-run: PASS
+- exact baseline blob guards: PASS
+- runtime source/DB contract verification: PASS
+- changed-path allowlist: PASS
+- git diff --check: PASS
+- npx tsc --noEmit: PASS
+- ESLint changed paths with --max-warnings=0: PASS
+- npm run build: PASS
+- warning-token hits captured in command output before commit: $script:WarningHitCount
+- final commit SHA and remote verification: see release REPORT in Downloads.
+
+Continuation point: reload `/activity-facts`, confirm facts are readable, then perform one controlled semantic review/save/reload proof and verify Dashboard analytics reads the final tags.

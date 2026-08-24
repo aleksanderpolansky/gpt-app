@@ -11,10 +11,9 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const WRITABLE_SOURCE_CODES = new Set([
-  "template_profile",
-  "semantic_analysis",
-  "manual_user",
-  "correction",
+  "template",
+  "semantic_review",
+  "manual",
 ]);
 
 type RouteContext = {
@@ -29,7 +28,6 @@ type NormalizedLink = {
   valueObjectId: string;
   sourceCode: string;
   sourceTemplateProfileId: string | null;
-  confidence: number | null;
 };
 
 function asRecord(value: unknown): Row {
@@ -42,12 +40,6 @@ function asString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0
     ? value.trim()
     : null;
-}
-
-function asNumber(value: unknown): number | null {
-  if (value === null || value === undefined || value === "") return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function asBoolean(value: unknown): boolean {
@@ -104,7 +96,7 @@ async function loadEffectiveLinks(factId: string) {
   const { data, error } = await supabase
     .from("activity_fact_value_object_links_effective_v1")
     .select(
-      "link_id,fact_id,value_object_id,source_code,source_template_profile_id,confidence,created_at,is_materialized",
+      "link_id,fact_id,value_object_id,source_code,source_template_profile_id,created_at,is_materialized",
     )
     .eq("fact_id", factId)
     .order("created_at", { ascending: true });
@@ -159,7 +151,7 @@ async function enrichLinks(rows: Row[]) {
         canonicalKey: asString(valueObject.canonical_key),
         sourceCode: asString(row.source_code) ?? "unknown",
         sourceTemplateProfileId: asString(row.source_template_profile_id),
-        confidence: asNumber(row.confidence),
+        confidence: null,
         isMaterialized: asBoolean(row.is_materialized),
       },
     ];
@@ -185,7 +177,6 @@ function normalizeRequestedLinks(value: unknown):
     const valueObjectId = asString(row.valueObjectId);
     const sourceCode = asString(row.sourceCode);
     const sourceTemplateProfileId = asString(row.sourceTemplateProfileId);
-    const confidence = asNumber(row.confidence);
 
     if (!valueObjectId || !UUID_RE.test(valueObjectId)) {
       return { ok: false, error: "Every valueObjectId must be a UUID" };
@@ -201,32 +192,22 @@ function normalizeRequestedLinks(value: unknown):
     seen.add(valueObjectId);
 
     if (
-      confidence !== null &&
-      (confidence < 0 || confidence > 1)
-    ) {
-      return {
-        ok: false,
-        error: `confidence must be between 0 and 1 for ${valueObjectId}`,
-      };
-    }
-
-    if (
-      sourceCode !== "template_profile" &&
+      sourceCode !== "template" &&
       sourceTemplateProfileId !== null
     ) {
       return {
         ok: false,
-        error: `sourceTemplateProfileId is only valid for template_profile links`,
+        error: `sourceTemplateProfileId is only valid for template links`,
       };
     }
 
     if (
-      sourceCode === "template_profile" &&
+      sourceCode === "template" &&
       (!sourceTemplateProfileId || !UUID_RE.test(sourceTemplateProfileId))
     ) {
       return {
         ok: false,
-        error: `template_profile requires a UUID sourceTemplateProfileId`,
+        error: `template requires a UUID sourceTemplateProfileId`,
       };
     }
 
@@ -234,7 +215,6 @@ function normalizeRequestedLinks(value: unknown):
       valueObjectId,
       sourceCode,
       sourceTemplateProfileId,
-      confidence,
     });
   }
 
@@ -343,7 +323,7 @@ export async function PUT(request: Request, routeContext: RouteContext) {
   }
 
   for (const link of normalized.links) {
-    if (link.sourceCode !== "template_profile") continue;
+    if (link.sourceCode !== "template") continue;
 
     const current = currentByValueObjectId.get(link.valueObjectId);
     const currentSource = current ? asString(current.source_code) : null;
@@ -356,12 +336,12 @@ export async function PUT(request: Request, routeContext: RouteContext) {
 
     if (
       !current ||
-      currentSource !== "template_profile" ||
+      currentSource !== "template" ||
       !currentMaterialized ||
       currentProfile !== link.sourceTemplateProfileId
     ) {
       return invalid(
-        "template_profile provenance can only be preserved from an existing materialized link",
+        "template provenance can only be preserved from an existing materialized link",
         409,
       );
     }
@@ -423,15 +403,14 @@ export async function PUT(request: Request, routeContext: RouteContext) {
     valueObjectId: link.valueObjectId,
     sourceCode: link.sourceCode,
     sourceTemplateProfileId: link.sourceTemplateProfileId,
-    confidence: link.confidence,
   }));
 
   const { data: replaceResult, error: replaceError } = await supabase.rpc(
     "replace_activity_fact_value_object_links_v1",
     {
       p_fact_id: factId,
-      p_actor_id: personActor.id,
-      p_user_id: appUser.id,
+      p_owner_actor_id: personActor.id,
+      p_owner_user_id: appUser.id,
       p_links: rpcLinks,
     },
   );

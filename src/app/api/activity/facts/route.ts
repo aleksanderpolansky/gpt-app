@@ -446,7 +446,7 @@ export async function GET(request: Request) {
     const { data: linkData, error: linkError } = await supabase
       .from("activity_fact_value_object_links_effective_v1")
       .select(
-        "fact_id,value_object_id,source_code,source_template_profile_id,confidence,is_materialized",
+        "fact_id,value_object_id,source_code,source_template_profile_id,is_materialized",
       )
       .in("fact_id", ids);
 
@@ -491,7 +491,7 @@ export async function GET(request: Request) {
       valueObjectId: linkedValueObjectId,
       sourceCode: asString(row.source_code),
       sourceTemplateProfileId: asString(row.source_template_profile_id),
-      confidence: asNumber(row.confidence),
+      confidence: null,
       isMaterialized: asBoolean(row.is_materialized),
     });
     effectiveLinksByFactId.set(factId, current);
