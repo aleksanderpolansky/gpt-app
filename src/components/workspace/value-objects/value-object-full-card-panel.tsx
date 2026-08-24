@@ -888,9 +888,13 @@ export function ValueObjectFullCardPanel({
                 valueObjectId,
               )}/aliases?locale=${encodeURIComponent(locale)}`,
             ),
-            readJson(
-              `/api/value-objects/${encodeURIComponent(valueObjectId)}/standards`,
-            ),
+            initialNodeRoleCode === "leaf"
+              ? readJson(
+                  `/api/value-objects/${encodeURIComponent(
+                    valueObjectId,
+                  )}/standards`,
+                )
+              : Promise.resolve(null),
             readJson(
               `/api/value-objects/${encodeURIComponent(
                 valueObjectId,
@@ -931,17 +935,21 @@ export function ValueObjectFullCardPanel({
           );
         }
 
-        const standardsPayload =
-          standardsResult.payload as P72B1ValueObjectTargetReadResponse;
-        if (
-          standardsResult.response.ok ||
-          (standardsPayload &&
-            typeof standardsPayload === "object" &&
-            "ok" in standardsPayload)
-        ) {
-          setStandards(standardsPayload);
+        if (standardsResult) {
+          const standardsPayload =
+            standardsResult.payload as P72B1ValueObjectTargetReadResponse;
+          if (
+            standardsResult.response.ok ||
+            (standardsPayload &&
+              typeof standardsPayload === "object" &&
+              "ok" in standardsPayload)
+          ) {
+            setStandards(standardsPayload);
+          } else {
+            nextErrors.push(`standards: ${standardsResult.response.status}`);
+          }
         } else {
-          nextErrors.push(`standards: ${standardsResult.response.status}`);
+          setStandards(null);
         }
 
         const relationPayload =
@@ -968,7 +976,7 @@ export function ValueObjectFullCardPanel({
     })();
 
     return () => controller.abort();
-  }, [valueObjectId, locale]);
+  }, [valueObjectId, locale, initialNodeRoleCode]);
 
   const activeAliases = useMemo(
     () => (aliases?.aliases ?? []).filter((alias) => alias.recognitionActive),

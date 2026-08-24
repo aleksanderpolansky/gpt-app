@@ -274,6 +274,7 @@ export function ValueObjectSemanticDefinitionEditor({
     try {
       await sendEdit(valueObjectId, {
         editKind: "rename",
+        locale,
         patch: {
           title: title.trim(),
         },
@@ -316,6 +317,7 @@ export function ValueObjectSemanticDefinitionEditor({
 
       await sendEdit(valueObjectId, {
         editKind: "semantic_definition",
+        locale,
         patch,
         idempotencyKey: newIdempotencyKey("definition"),
       });

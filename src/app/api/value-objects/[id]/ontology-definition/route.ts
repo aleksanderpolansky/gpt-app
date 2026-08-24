@@ -34,6 +34,8 @@ const PRIVACY_CODES = new Set([
   "restricted",
 ]);
 
+const CONTENT_LOCALES = new Set(["en", "pl", "ru", "uk", "de", "es", "cs"]);
+
 function normalizeValueObjectId(value: unknown): string | null {
   if (typeof value !== "string") {
     return null;
@@ -279,6 +281,7 @@ function requestHash(
   valueObjectId: string,
   editKind: EditKind,
   patch: Record<string, unknown>,
+  locale: string,
 ) {
   return createHash("sha256")
     .update(
@@ -286,6 +289,7 @@ function requestHash(
         valueObjectId,
         editKind,
         patch,
+        locale,
       }),
       "utf8",
     )
@@ -429,6 +433,18 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
+  const locale =
+    isRecord(rawBody) && typeof rawBody.locale === "string"
+      ? rawBody.locale.trim().toLowerCase()
+      : "";
+
+  if (!CONTENT_LOCALES.has(locale)) {
+    return NextResponse.json(
+      { ok: false, error: "P2C_LOCALE_INVALID" },
+      { status: 400 },
+    );
+  }
+
   const normalized = normalizeEditRequest(rawBody);
 
   if (
@@ -447,10 +463,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     valueObjectId,
     normalized.editKind,
     normalized.patch,
+    locale,
   );
 
   const { data, error } = await supabase.rpc(
-    "edit_value_object_ontology_definition_v1",
+    "edit_value_object_localized_definition_v1",
     {
       p_owner_user_id: actorContext.appUserId,
       p_owner_actor_id: actorContext.actorId,
@@ -460,6 +477,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       p_patch: normalized.patch,
       p_idempotency_key: normalized.idempotencyKey,
       p_request_hash: hash,
+      p_locale: locale,
     },
   );
 

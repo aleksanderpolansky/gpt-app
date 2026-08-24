@@ -6,11 +6,7 @@ import {
 } from "../../../../lib/actor-context";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
-import {
-  readLocalizedContentEnvelope,
-  resolveLocalizedContentFields,
-} from "@/lib/localization/contentLocalization";
-import { localizeEntityContent } from "@/lib/localization/contentLocalization.server";
+import { persistHumanLocalizedEntityContent } from "@/lib/localization/contentLocalization.server";
 import { localizeGlobalSystemValueObject } from "@/lib/reality-core/global-system-value-object-localization";
 import {
   isValueObjectLeafKindV2,
@@ -294,10 +290,7 @@ async function localizeCreatedObservationObject(input: {
   description: string;
 }) {
   try {
-    return await localizeEntityContent({
-      userId: input.appUser.id,
-      actorId: input.personActor.id,
-      operationId: randomUUID(),
+    return await persistHumanLocalizedEntityContent({
       table: "value_objects",
       entityId: input.valueObjectId,
       sourceLocaleHint: input.locale ?? "en",
@@ -318,27 +311,6 @@ async function localizeCreatedObservationObject(input: {
           : "VALUE_OBJECT_CONTENT_LOCALIZATION_FAILED",
     };
   }
-}
-
-function localizeActorOwnedObservationObject(
-  valueObject: Record<string, unknown>,
-  locale: string,
-) {
-  const title =
-    typeof valueObject.title === "string" ? valueObject.title : null;
-  const description =
-    typeof valueObject.description === "string" ? valueObject.description : null;
-  const localized = resolveLocalizedContentFields({
-    metadata: valueObject.metadata_json,
-    locale,
-    fallback: { title, description },
-  });
-
-  return {
-    ...valueObject,
-    title: localized.title ?? title,
-    description: localized.description ?? description,
-  };
 }
 
 function getDraftDefaults(usageScope: UsageScope) {
@@ -441,7 +413,8 @@ async function verifyOrganizationAccess(
 }
 
 export async function GET(request: Request) {
-  const locale = normalizeLocale(new URL(request.url).searchParams.get("locale")) ?? "en";
+  const locale =
+    normalizeLocale(new URL(request.url).searchParams.get("locale")) ?? "en";
   const { appUser, personActor, errorResponse } =
     await getCurrentUserContext();
 
@@ -449,8 +422,30 @@ export async function GET(request: Request) {
     return errorResponse;
   }
 
-  const selectShape = `
-      *,
+  const globalSelectShape = `
+      id,
+      organization_id,
+      usage_scope,
+      title,
+      description,
+      status,
+      created_at,
+      updated_at,
+      object_kind,
+      node_role_code,
+      root_value_object_id,
+      parent_value_object_id,
+      canonical_key,
+      facet_code,
+      object_kind_code,
+      ontology_node_role_code,
+      scope_code,
+      origin_type_code,
+      definition_version,
+      visibility_code,
+      privacy_class_code,
+      branch_type_code,
+      metadata_json,
       organizations (
         id,
         organization_name,
@@ -460,15 +455,14 @@ export async function GET(request: Request) {
     `;
 
   const [ownedResult, globalResult] = await Promise.all([
+    supabase.rpc("read_actor_value_object_catalog_localized_v1", {
+      p_owner_user_id: appUser.id,
+      p_owner_actor_id: personActor.id,
+      p_locale: locale,
+    }),
     supabase
       .from("value_objects")
-      .select(selectShape)
-      .eq("owner_user_id", appUser.id)
-      .eq("owner_actor_id", personActor.id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("value_objects")
-      .select(selectShape)
+      .select(globalSelectShape)
       .eq("scope_code", "global")
       .order("created_at", { ascending: false }),
   ]);
@@ -487,23 +481,37 @@ export async function GET(request: Request) {
     );
   }
 
-  const mergedById = new Map<string, Record<string, unknown>>();
+  const ownedValueObjects = (ownedResult.data ?? []).map((row: Record<string, unknown>) => {
+    const organizationName =
+      typeof row.organization_name === "string" &&
+      row.organization_name.trim()
+        ? row.organization_name.trim()
+        : null;
+    const publicImageUrl =
+      typeof row.public_image_url === "string" &&
+      row.public_image_url.trim()
+        ? row.public_image_url.trim()
+        : null;
 
-  for (const valueObject of [
-    ...(globalResult.data ?? []),
-    ...(ownedResult.data ?? []),
-  ]) {
-    if (
-      valueObject &&
-      typeof valueObject === "object" &&
-      typeof valueObject.id === "string"
-    ) {
-      mergedById.set(valueObject.id, valueObject as Record<string, unknown>);
-    }
-  }
+    return {
+      ...row,
+      organizations: organizationName
+        ? {
+            organization_name: organizationName,
+          }
+        : null,
+      metadata_json: publicImageUrl
+        ? {
+            public_profile: {
+              image_url: publicImageUrl,
+            },
+          }
+        : null,
+    } as Record<string, unknown>;
+  });
 
-  const observationValueObjects = [...mergedById.values()].filter(
-    (valueObject) => {
+  const globalValueObjects = (globalResult.data ?? [])
+    .filter((valueObject) => {
       const rawMetadata = valueObject.metadata_json;
       const metadata =
         rawMetadata &&
@@ -516,35 +524,35 @@ export async function GET(request: Request) {
         metadata?.system_hidden_from_observation_ui !== true &&
         metadata?.system_root_code !== "products_services"
       );
-    },
-  );
+    })
+    .map((valueObject) =>
+      localizeGlobalSystemValueObject(
+        valueObject as Record<string, unknown>,
+        locale,
+      ),
+    );
 
-  const localizedObservationValueObjects = observationValueObjects.map(
-    (valueObject) =>
-      valueObject.scope_code === "global"
-        ? localizeGlobalSystemValueObject(valueObject, locale)
-        : localizeActorOwnedObservationObject(valueObject, locale),
-  );
+  const mergedById = new Map<string, Record<string, unknown>>();
 
-  const localizationBackfillNeeded = observationValueObjects.some(
-    (valueObject) =>
-      valueObject.scope_code !== "global" &&
-      valueObject.usage_scope !== "commercial" &&
-      readLocalizedContentEnvelope(valueObject.metadata_json) === null,
-  );
+  for (const valueObject of [...globalValueObjects, ...ownedValueObjects]) {
+    if (
+      valueObject &&
+      typeof valueObject === "object" &&
+      typeof valueObject.id === "string"
+    ) {
+      mergedById.set(valueObject.id, valueObject);
+    }
+  }
+
+  const observationValueObjects = [...mergedById.values()];
 
   return NextResponse.json({
     ok: true,
-    valueObjects: localizedObservationValueObjects,
-    localizationBackfillNeeded,
+    valueObjects: observationValueObjects,
     counts: {
       total: observationValueObjects.length,
-      global: observationValueObjects.filter(
-        (valueObject) => valueObject.scope_code === "global",
-      ).length,
-      actorOwned: observationValueObjects.filter(
-        (valueObject) => valueObject.scope_code !== "global",
-      ).length,
+      global: globalValueObjects.length,
+      actorOwned: ownedValueObjects.length,
     },
   });
 }

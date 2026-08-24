@@ -56,7 +56,6 @@ type ActualValueObjectsResponse = {
   ok?: boolean;
   error?: string;
   valueObjects?: ActualValueObjectPayload[];
-  localizationBackfillNeeded?: boolean;
 };
 
 type ActualListStatus =
@@ -602,42 +601,6 @@ export function ActualValueObjectsList() {
         setValueObjects(Array.isArray(data.valueObjects) ? data.valueObjects : []);
         setStatus("success");
 
-        if (data.localizationBackfillNeeded && !abortController.signal.aborted) {
-          const backfillResponse = await fetch(
-            "/api/value-objects/localization/backfill",
-            {
-              method: "POST",
-              credentials: "same-origin",
-              headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-              },
-              body: JSON.stringify({ locale }),
-              cache: "no-store",
-              signal: abortController.signal,
-            },
-          );
-
-          if (backfillResponse.ok && !abortController.signal.aborted) {
-            const refreshedResponse = await fetch(valueObjectsUrl.toString(), {
-              method: "GET",
-              headers: { Accept: "application/json" },
-              cache: "no-store",
-              signal: abortController.signal,
-            });
-            const refreshedData = (await refreshedResponse
-              .json()
-              .catch(() => ({}))) as ActualValueObjectsResponse;
-
-            if (refreshedResponse.ok && refreshedData.ok) {
-              setValueObjects(
-                Array.isArray(refreshedData.valueObjects)
-                  ? refreshedData.valueObjects
-                  : [],
-              );
-            }
-          }
-        }
       } catch (error) {
         if (abortController.signal.aborted) {
           return;
@@ -1054,6 +1017,7 @@ export function ActualValueObjectsList() {
                         </div>
 
                         <Link
+                          prefetch={false}
                           href={buildLocaleAwareHref(getObjectDetailHref(valueObject), locale)}
                           className="shrink-0 text-[12px] font-bold text-[#3b6ef8] hover:underline"
                         >

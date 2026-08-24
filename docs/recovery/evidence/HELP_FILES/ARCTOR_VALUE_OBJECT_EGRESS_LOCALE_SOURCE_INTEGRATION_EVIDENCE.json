@@ -1,0 +1,152 @@
+{
+  "release": "ARCTOR_VALUE_OBJECT_EGRESS_LOCALE_SOURCE_INTEGRATION_V1",
+  "baseline": "7d56b66ba989eccaabc07ba86ed1616919629d08",
+  "dbFoundation": {
+    "release": "ARCTOR_VALUE_OBJECT_EGRESS_LOCALE_DB_FOUNDATION_POSTCHECK_V1",
+    "total": 25,
+    "passed": 25,
+    "failed": 0,
+    "allPass": true
+  },
+  "noBusinessDataBackfill": true,
+  "currentLocaleOnlyActorReads": true,
+  "automaticCatalogBackfillRemoved": true,
+  "eagerSevenLocaleAiCreationRemoved": true,
+  "packageRevision": "V5_UNRELATED_REGRESSION_GATE_FIX",
+  "previousAttemptV1": {
+    "timestampLocal": "2026-08-24T17:38:35+02:00",
+    "releaseValidator": {
+      "total": 30,
+      "passed": 27,
+      "failed": 3,
+      "failedChecks": [
+        12,
+        16,
+        25
+      ]
+    },
+    "commitCreated": false,
+    "pushAttempted": false,
+    "rollback": "PASS",
+    "finalHead": "7d56b66ba989eccaabc07ba86ed1616919629d08",
+    "finalGitStatus": "CLEAN",
+    "diagnosis": "validator false negatives: CRLF-sensitive checks 12/16 and over-broad check 25"
+  },
+  "previousAttemptV2": {
+    "timestampLocal": "2026-08-24T17:45:39+02:00",
+    "releaseValidator": {
+      "total": 30,
+      "passed": 30,
+      "failed": 0,
+      "allPass": true
+    },
+    "typescript": {
+      "passed": false,
+      "errors": [
+        "src/app/api/value-objects/route.ts TS7006 row implicitly has any",
+        "src/app/value-objects/[id]/page.tsx TS2451 duplicate criteria declaration"
+      ]
+    },
+    "eslintReached": false,
+    "buildReached": false,
+    "commitCreated": false,
+    "pushAttempted": false,
+    "rollback": "PASS",
+    "finalHead": "7d56b66ba989eccaabc07ba86ed1616919629d08",
+    "finalGitStatus": "CLEAN"
+  },
+  "v3Fixes": [
+    "explicit Record<string, unknown> type for owned actor catalog RPC row",
+    "remove duplicate criteria declaration while retaining existing canonical declaration",
+    "validator check 31 for TS7006 regression",
+    "validator check 32 for duplicate criteria regression"
+  ],
+  "previousAttemptV3": {
+    "timestampLocal": "2026-08-24T17:58:47+02:00",
+    "releaseValidator": {
+      "total": 32,
+      "passed": 32,
+      "failed": 0,
+      "allPass": true
+    },
+    "typescript": {
+      "passed": true
+    },
+    "eslint": {
+      "passed": false,
+      "warnings": [
+        "readLocalizedContentEnvelope defined but never used",
+        "localizeActorOwnedObservationObject defined but never used",
+        "React Hook useEffect missing dependency initialNodeRoleCode"
+      ],
+      "maxWarnings": 0
+    },
+    "buildReached": false,
+    "commitCreated": false,
+    "pushAttempted": false,
+    "rollback": "PASS",
+    "finalHead": "7d56b66ba989eccaabc07ba86ed1616919629d08",
+    "finalGitStatus": "CLEAN"
+  },
+  "v4Fixes": [
+    "remove obsolete readLocalizedContentEnvelope/resolveLocalizedContentFields import from value-object catalog API",
+    "remove obsolete localizeActorOwnedObservationObject helper",
+    "add initialNodeRoleCode to full-card useEffect dependency array",
+    "validator checks 33-34 plus verify-applied guards"
+  ],
+  "previousAttemptV4": {
+    "timestampLocal": "2026-08-24T18:06:34+02:00",
+    "releaseValidator": {
+      "total": 34,
+      "passed": 34,
+      "failed": 0,
+      "allPass": true
+    },
+    "typescript": {
+      "passed": true
+    },
+    "eslint": {
+      "passed": true,
+      "maxWarnings": 0
+    },
+    "voMindMapRegression": {
+      "passed": true,
+      "total": 97
+    },
+    "branchDrivenLeafRegression": {
+      "passed": true,
+      "total": 32
+    },
+    "aiA31LegacyRegression": {
+      "passed": false,
+      "total": 125,
+      "failedCount": 6,
+      "failedChecks": [
+        "PAGE_REVIEW_FIRST_COMPONENT",
+        "PAGE_REVIEW_FIRST_MODE_SWITCH",
+        "PAGE_REVIEW_FIRST_DETAIL_GUARD",
+        "PAGE_LEGACY_REVIEW_FALLBACK_RETAINED",
+        "PAGE_CAPTURE_CONTRACT_BRANCH",
+        "PAGE_USER_ZERO_FACT_MESSAGE"
+      ],
+      "changedFileResponsible": false,
+      "reason": "all six failures are static checks against src/app/activity-ai-lab/page.tsx, which is outside this release allowlist"
+    },
+    "buildReached": false,
+    "commitCreated": false,
+    "pushAttempted": false,
+    "rollback": "PASS",
+    "finalHead": "7d56b66ba989eccaabc07ba86ed1616919629d08",
+    "finalGitStatus": "CLEAN"
+  },
+  "v5GatePolicy": {
+    "blockingRegressions": [
+      "scripts/validate-vo-mind-map-v1-2-fast-authoring.mjs",
+      "scripts/validate-vo-branch-driven-leaf-authoring-v1.mjs"
+    ],
+    "diagnosticOnlyRegressions": [
+      "scripts/validate-ai-a3-1-review-first-semantic-fact-pipeline-v1.mjs"
+    ],
+    "rationale": "AI A3 validator targets an unchanged file and already disagrees with the locked baseline; it cannot prove a regression introduced by this release"
+  }
+}

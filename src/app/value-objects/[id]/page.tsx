@@ -1169,63 +1169,64 @@ export default async function ValueObjectDetailPage({
   const publicProfileMetadata = parsePublicProfileMetadata(
     valueObject.metadata_json,
   );
-  const [ownerPresentation, organizationLocation] = await Promise.all([
-    isGlobalSystemObject
-      ? Promise.resolve<ValueObjectOwnerPresentation>({
-          displayName: "ARCTor Global System",
-          kindLabel: "System",
-          imageUrl: null,
-          href: null,
-        })
-      : resolveOwnerPresentation(valueObject, locale),
-    resolveOrganizationLocation(valueObject.organization_id),
-  ]);
-  const hasOwnLocation = hasLocationData(publicProfileMetadata.location);
-  const effectiveLocation =
-    publicProfileMetadata.location ?? organizationLocation ?? emptyPublicLocation();
-
   const rootValueObjectId =
     valueObject.root_value_object_id ?? valueObject.id;
 
-  const treeQueryBase = supabase
-    .from("value_objects")
-    .select(
-      `
-      id,
-      title,
-      canonical_key,
-      node_role_code,
-      object_kind,
-      object_kind_code,
-      ontology_node_role_code,
-      branch_type_code,
-      root_value_object_id,
-      parent_value_object_id,
-      status,
-      created_at,
-      metadata_json
-    `,
-    )
-    .eq("root_value_object_id", rootValueObjectId);
+  async function readTreeNodes(): Promise<TreeNodeRow[]> {
+    if (isGlobalSystemObject) {
+      const { data, error } = await supabase
+        .from("value_objects")
+        .select(
+          `
+          id,
+          title,
+          canonical_key,
+          node_role_code,
+          object_kind,
+          object_kind_code,
+          ontology_node_role_code,
+          branch_type_code,
+          root_value_object_id,
+          parent_value_object_id,
+          status,
+          created_at
+        `,
+        )
+        .eq("root_value_object_id", rootValueObjectId)
+        .eq("scope_code", "global")
+        .order("created_at", { ascending: true });
 
-  const treeQuery = isGlobalSystemObject
-    ? treeQueryBase.eq("scope_code", "global")
-    : treeQueryBase
-        .eq("owner_user_id", actorContext.appUserId)
-        .eq("owner_actor_id", actorContext.actorId);
+      if (error) {
+        throw new Error(error.message);
+      }
 
-  const { data: treeData, error: treeError } = await treeQuery.order(
-    "created_at",
-    { ascending: true },
-  );
+      return ((data ?? []) as TreeNodeRow[]).map((node) =>
+        localizeGlobalSystemValueObject(node, locale),
+      );
+    }
 
-  if (treeError) {
-    throw new Error(treeError.message);
+    const { data, error } = await supabase.rpc(
+      "read_actor_value_object_tree_localized_v1",
+      {
+        p_owner_user_id: actorContext.appUserId,
+        p_owner_actor_id: actorContext.actorId,
+        p_root_value_object_id: rootValueObjectId,
+        p_locale: locale,
+      },
+    );
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return (data ?? []) as TreeNodeRow[];
   }
 
-  let criteriaData: CriterionRow[] = [];
+  async function readCriteria(): Promise<CriterionRow[]> {
+    if (isGlobalSystemObject) {
+      return [];
+    }
 
-  if (!isGlobalSystemObject) {
     const { data, error } = await supabase
       .from("value_object_outcome_criteria")
       .select("id, criterion_type_code, title, status")
@@ -1238,23 +1239,30 @@ export default async function ValueObjectDetailPage({
       throw new Error(error.message);
     }
 
-    criteriaData = (data ?? []) as CriterionRow[];
+    return (data ?? []) as CriterionRow[];
   }
 
-  const rawTreeNodes = (treeData ?? []) as TreeNodeRow[];
-  const treeNodes = isGlobalSystemObject
-    ? rawTreeNodes.map((node) => localizeGlobalSystemValueObject(node, locale))
-    : rawTreeNodes.map((node) => {
-        const localized = resolveLocalizedContentFields({
-          metadata: node.metadata_json,
-          locale,
-          fallback: { title: node.title },
-        });
-        return {
-          ...node,
-          title: localized.title ?? node.title,
-        };
-      });
+  const [ownerPresentation, organizationLocation, treeNodes, criteriaData] =
+    await Promise.all([
+      isGlobalSystemObject
+        ? Promise.resolve<ValueObjectOwnerPresentation>({
+            displayName: "ARCTor Global System",
+            kindLabel: "System",
+            imageUrl: null,
+            href: null,
+          })
+        : resolveOwnerPresentation(valueObject, locale),
+      resolveOrganizationLocation(valueObject.organization_id),
+      readTreeNodes(),
+      readCriteria(),
+    ]);
+
+  const hasOwnLocation = hasLocationData(publicProfileMetadata.location);
+  const effectiveLocation =
+    publicProfileMetadata.location ??
+    organizationLocation ??
+    emptyPublicLocation();
+
   const nodesById = new Map(
     treeNodes.map((node) => [node.id, node] as const),
   );
@@ -1542,6 +1550,7 @@ export default async function ValueObjectDetailPage({
         style={{ marginLeft: `${Math.min(depth, 12) * 18}px` }}
       >
         <Link
+          prefetch={false}
           href={buildLocaleHref(
             `/value-objects/${child.id}`,
             locale,
@@ -1571,6 +1580,7 @@ export default async function ValueObjectDetailPage({
         <div className="flex flex-wrap items-center gap-2">
           {!editMode ? (
             <Link
+          prefetch={false}
               href={buildLocaleHref("/value-objects", locale)}
               className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] transition hover:bg-gray-50"
             >
@@ -1580,6 +1590,7 @@ export default async function ValueObjectDetailPage({
 
           {editMode ? (
             <Link
+          prefetch={false}
               href={viewHref}
               className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"
             >
@@ -1587,6 +1598,7 @@ export default async function ValueObjectDetailPage({
             </Link>
           ) : canEdit ? (
             <Link
+          prefetch={false}
               href={editHref}
               className="w-fit rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"
             >
@@ -1605,6 +1617,7 @@ export default async function ValueObjectDetailPage({
 
           {!isGlobalSystemObject ? (
             <Link
+          prefetch={false}
               href={buildLocaleHref(
                 `/value-objects/${valueObject.id}/restructure`,
                 locale,
@@ -1625,6 +1638,7 @@ export default async function ValueObjectDetailPage({
 
           {isLeaf ? (
             <Link
+          prefetch={false}
               href={buildLocaleHref(
                 `/value-objects/${valueObject.id}/standards`,
                 locale,
@@ -1668,6 +1682,7 @@ export default async function ValueObjectDetailPage({
                         <span>{node.title}</span>
                       ) : (
                         <Link
+          prefetch={false}
                           href={buildLocaleHref(
                             `/value-objects/${node.id}`,
                             locale,
@@ -1770,6 +1785,7 @@ export default async function ValueObjectDetailPage({
 
                   {isProductOrService ? (
                     <Link
+          prefetch={false}
                       href={buildOfferWizardHref(valueObject.id, locale)}
                       className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#dfe4ff] bg-[#eef2ff] px-4 py-2 text-[13px] font-bold text-[#3b6ef8] transition hover:border-[#aebfff] hover:bg-[#e8edff]"
                     >
@@ -1795,6 +1811,7 @@ export default async function ValueObjectDetailPage({
                   <div className="mt-5 grid gap-3">
                     {plannedActivities.map((activity) => (
                       <Link
+          prefetch={false}
                         key={activity.id}
                         href={buildActivityHref(
                           activity.id,
@@ -1858,6 +1875,7 @@ export default async function ValueObjectDetailPage({
                     {isStructural ? (
                       <>
                         <Link
+          prefetch={false}
                           href={buildLocaleHref(
                             `/value-objects/${valueObject.id}/new-intermediate`,
                             locale,
@@ -1868,6 +1886,7 @@ export default async function ValueObjectDetailPage({
                         </Link>
                         {isIntermediate ? (
                           <Link
+          prefetch={false}
                             href={buildLocaleHref(
                               `/value-objects/${valueObject.id}/new-leaf`,
                               locale,
