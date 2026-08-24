@@ -970,6 +970,19 @@ export function ActualValueObjectsList() {
                 ),
               );
             }}
+            onValueObjectCreated={(createdValueObject) => {
+              setValueObjects((current) =>
+                current.some(
+                  (valueObject) => valueObject.id === createdValueObject.id,
+                )
+                  ? current.map((valueObject) =>
+                      valueObject.id === createdValueObject.id
+                        ? { ...valueObject, ...createdValueObject }
+                        : valueObject,
+                    )
+                  : [...current, createdValueObject],
+              );
+            }}
           >
             <div className="grid gap-3 xl:grid-cols-2">
               {filteredObjects.map((valueObject) => {

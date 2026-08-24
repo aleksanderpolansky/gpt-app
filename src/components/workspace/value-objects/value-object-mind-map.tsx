@@ -265,6 +265,164 @@ const COPY: Record<LocaleCode, Copy> = {
   },
 };
 
+type FastCreateRole = "intermediate" | "leaf";
+
+type FastCreateCopy = {
+  title: string;
+  hint: string;
+  parent: string;
+  type: string;
+  name: string;
+  description: string;
+  namePlaceholder: string;
+  descriptionPlaceholder: string;
+  create: string;
+  creating: string;
+  created: string;
+  createdMessage: string;
+  cancel: string;
+  close: string;
+  openObject: string;
+  createFailed: string;
+  nameRequired: string;
+};
+
+const FAST_CREATE_COPY: Record<LocaleCode, FastCreateCopy> = {
+  en: {
+    title: "Add observation object",
+    hint: "Create the next structural node without leaving the map. The existing controlled Value Object creation contract is used unchanged.",
+    parent: "Parent",
+    type: "Type",
+    name: "Name",
+    description: "Description",
+    namePlaceholder: "Enter the observation object name",
+    descriptionPlaceholder: "Briefly describe what this object means or groups",
+    create: "Create",
+    creating: "Creating…",
+    created: "Observation object created",
+    createdMessage: "The new object was added to the current map.",
+    cancel: "Cancel",
+    close: "Continue on map",
+    openObject: "Open object",
+    createFailed: "Could not create the observation object.",
+    nameRequired: "Enter a name before creating the object.",
+  },
+  pl: {
+    title: "Dodaj obiekt obserwacji",
+    hint: "Utwórz kolejny węzeł strukturalny bez opuszczania mapy. Używany jest istniejący kontrolowany kontrakt tworzenia obiektów.",
+    parent: "Rodzic",
+    type: "Typ",
+    name: "Nazwa",
+    description: "Opis",
+    namePlaceholder: "Wpisz nazwę obiektu obserwacji",
+    descriptionPlaceholder: "Krótko opisz znaczenie obiektu lub to, co grupuje",
+    create: "Utwórz",
+    creating: "Tworzenie…",
+    created: "Obiekt obserwacji utworzony",
+    createdMessage: "Nowy obiekt został dodany do bieżącej mapy.",
+    cancel: "Anuluj",
+    close: "Kontynuuj na mapie",
+    openObject: "Otwórz obiekt",
+    createFailed: "Nie udało się utworzyć obiektu obserwacji.",
+    nameRequired: "Wpisz nazwę przed utworzeniem obiektu.",
+  },
+  ru: {
+    title: "Добавить объект наблюдения",
+    hint: "Создайте следующий структурный узел, не покидая карту. Используется существующий контролируемый контракт создания объектов.",
+    parent: "Родитель",
+    type: "Тип",
+    name: "Название",
+    description: "Описание",
+    namePlaceholder: "Введите название объекта наблюдения",
+    descriptionPlaceholder: "Кратко опишите смысл объекта или что он объединяет",
+    create: "Создать",
+    creating: "Создание…",
+    created: "Объект наблюдения создан",
+    createdMessage: "Новый объект добавлен на текущую карту.",
+    cancel: "Отмена",
+    close: "Продолжить на карте",
+    openObject: "Открыть объект",
+    createFailed: "Не удалось создать объект наблюдения.",
+    nameRequired: "Введите название перед созданием объекта.",
+  },
+  uk: {
+    title: "Додати об’єкт спостереження",
+    hint: "Створіть наступний структурний вузол, не залишаючи мапу. Використовується наявний контрольований контракт створення об’єктів.",
+    parent: "Батьківський об’єкт",
+    type: "Тип",
+    name: "Назва",
+    description: "Опис",
+    namePlaceholder: "Введіть назву об’єкта спостереження",
+    descriptionPlaceholder: "Коротко опишіть зміст об’єкта або те, що він групує",
+    create: "Створити",
+    creating: "Створення…",
+    created: "Об’єкт спостереження створено",
+    createdMessage: "Новий об’єкт додано до поточної мапи.",
+    cancel: "Скасувати",
+    close: "Продовжити на мапі",
+    openObject: "Відкрити об’єкт",
+    createFailed: "Не вдалося створити об’єкт спостереження.",
+    nameRequired: "Введіть назву перед створенням об’єкта.",
+  },
+  de: {
+    title: "Beobachtungsobjekt hinzufügen",
+    hint: "Erstellen Sie den nächsten Strukturknoten, ohne die Karte zu verlassen. Der bestehende kontrollierte Erstellungsvertrag wird unverändert verwendet.",
+    parent: "Übergeordnetes Objekt",
+    type: "Typ",
+    name: "Name",
+    description: "Beschreibung",
+    namePlaceholder: "Name des Beobachtungsobjekts eingeben",
+    descriptionPlaceholder: "Bedeutung oder Gruppierungszweck kurz beschreiben",
+    create: "Erstellen",
+    creating: "Wird erstellt…",
+    created: "Beobachtungsobjekt erstellt",
+    createdMessage: "Das neue Objekt wurde der aktuellen Karte hinzugefügt.",
+    cancel: "Abbrechen",
+    close: "Auf der Karte fortfahren",
+    openObject: "Objekt öffnen",
+    createFailed: "Das Beobachtungsobjekt konnte nicht erstellt werden.",
+    nameRequired: "Geben Sie vor dem Erstellen einen Namen ein.",
+  },
+  es: {
+    title: "Añadir objeto de observación",
+    hint: "Cree el siguiente nodo estructural sin salir del mapa. Se reutiliza sin cambios el contrato de creación controlado existente.",
+    parent: "Padre",
+    type: "Tipo",
+    name: "Nombre",
+    description: "Descripción",
+    namePlaceholder: "Introduzca el nombre del objeto de observación",
+    descriptionPlaceholder: "Describa brevemente su significado o qué agrupa",
+    create: "Crear",
+    creating: "Creando…",
+    created: "Objeto de observación creado",
+    createdMessage: "El nuevo objeto se añadió al mapa actual.",
+    cancel: "Cancelar",
+    close: "Continuar en el mapa",
+    openObject: "Abrir objeto",
+    createFailed: "No se pudo crear el objeto de observación.",
+    nameRequired: "Introduzca un nombre antes de crear el objeto.",
+  },
+  cs: {
+    title: "Přidat objekt pozorování",
+    hint: "Vytvořte další strukturální uzel bez opuštění mapy. Beze změny se používá stávající řízený kontrakt vytváření objektů.",
+    parent: "Nadřazený objekt",
+    type: "Typ",
+    name: "Název",
+    description: "Popis",
+    namePlaceholder: "Zadejte název objektu pozorování",
+    descriptionPlaceholder: "Stručně popište význam objektu nebo co seskupuje",
+    create: "Vytvořit",
+    creating: "Vytváření…",
+    created: "Objekt pozorování vytvořen",
+    createdMessage: "Nový objekt byl přidán do aktuální mapy.",
+    cancel: "Zrušit",
+    close: "Pokračovat na mapě",
+    openObject: "Otevřít objekt",
+    createFailed: "Objekt pozorování se nepodařilo vytvořit.",
+    nameRequired: "Před vytvořením zadejte název.",
+  },
+};
+
 type ReparentCopy = {
   move: string;
   moveTitle: string;
@@ -502,9 +660,13 @@ type MindMapNodeData = Record<string, unknown> & {
   canRequestDelete: boolean;
   canReparent: boolean;
   moveLabel: string;
-  intermediateHref: string;
-  leafHref: string;
   onToggle: (id: string) => void;
+  onCreateRequest: (
+    parentId: string,
+    parentTitle: string,
+    parentRole: SemanticRole,
+    role: FastCreateRole,
+  ) => void;
   onDeleteRequest: (id: string, title: string) => void;
 };
 
@@ -644,20 +806,28 @@ function ObservationObjectMapNode({ id, data }: NodeProps<MindMapNode>) {
                   onClick={(event) => event.stopPropagation()}
                 >
                   {data.canAddIntermediate ? (
-                    <Link
-                      href={data.intermediateHref}
-                      className="rounded-lg bg-[#eef2ff] px-2.5 py-2 text-[10px] font-bold text-[#3b6ef8] hover:bg-[#dfe4ff]"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAddMenuOpen(false);
+                        data.onCreateRequest(id, data.title, data.role, "intermediate");
+                      }}
+                      className="rounded-lg bg-[#eef2ff] px-2.5 py-2 text-left text-[10px] font-bold text-[#3b6ef8] hover:bg-[#dfe4ff]"
                     >
                       + {data.addIntermediateLabel}
-                    </Link>
+                    </button>
                   ) : null}
                   {data.canAddLeaf ? (
-                    <Link
-                      href={data.leafHref}
-                      className="rounded-lg bg-emerald-50 px-2.5 py-2 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAddMenuOpen(false);
+                        data.onCreateRequest(id, data.title, data.role, "leaf");
+                      }}
+                      className="rounded-lg bg-emerald-50 px-2.5 py-2 text-left text-[10px] font-bold text-emerald-700 hover:bg-emerald-100"
                     >
                       + {data.addLeafLabel}
-                    </Link>
+                    </button>
                   ) : null}
                 </div>
               ) : null}
@@ -735,6 +905,12 @@ function buildGraph(input: {
   copy: Copy;
   reparentCopy: ReparentCopy;
   onToggle: (id: string) => void;
+  onCreateRequest: (
+    parentId: string,
+    parentTitle: string,
+    parentRole: SemanticRole,
+    role: FastCreateRole,
+  ) => void;
   onDeleteRequest: (id: string, title: string) => void;
 }): GraphBuildResult {
   const {
@@ -744,6 +920,7 @@ function buildGraph(input: {
     copy,
     reparentCopy,
     onToggle,
+    onCreateRequest,
     onDeleteRequest,
   } = input;
   const byId = new Map<string, MindMapValueObject>();
@@ -837,12 +1014,8 @@ function buildGraph(input: {
         canRequestDelete: canRequestDelete(valueObject),
         canReparent: canReparent(valueObject),
         moveLabel: reparentCopy.move,
-        intermediateHref: buildLocaleAwareHref(
-          `/value-objects/${id}/new-intermediate`,
-          locale,
-        ),
-        leafHref: buildLocaleAwareHref(`/value-objects/${id}/new-leaf`, locale),
         onToggle,
+        onCreateRequest,
         onDeleteRequest,
       },
     });
@@ -874,6 +1047,21 @@ function buildGraph(input: {
   // are intentionally not promoted to fake roots on the map.
   return { nodes, edges };
 }
+
+type FastCreateTarget = {
+  parentId: string;
+  parentTitle: string;
+  parentRole: SemanticRole;
+  role: FastCreateRole;
+};
+
+type FastCreateResponse = {
+  ok?: boolean;
+  error?: string;
+  errorCode?: string;
+  redirectUrl?: string;
+  valueObject?: MindMapValueObject | null;
+};
 
 type ReparentTarget = {
   sourceId: string;
@@ -932,19 +1120,29 @@ function MindMapCanvas({
   locale,
   onValueObjectDeleted,
   onValueObjectReparented,
+  onValueObjectCreated,
 }: {
   valueObjects: MindMapValueObject[];
   locale: LocaleCode;
   onValueObjectDeleted?: (deletedId: string) => void;
   onValueObjectReparented?: (movedId: string, newParentId: string) => void;
+  onValueObjectCreated?: (createdValueObject: MindMapValueObject) => void;
 }) {
   const copy = COPY[locale] ?? COPY.en;
   const reparentCopy = REPARENT_COPY[locale] ?? REPARENT_COPY.en;
+  const fastCreateCopy = FAST_CREATE_COPY[locale] ?? FAST_CREATE_COPY.en;
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [deletePending, setDeletePending] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [deleteResult, setDeleteResult] = useState<DeleteResponse | null>(null);
+  const [createTarget, setCreateTarget] = useState<FastCreateTarget | null>(null);
+  const [createTitle, setCreateTitle] = useState("");
+  const [createDescription, setCreateDescription] = useState("");
+  const [createPending, setCreatePending] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [createResult, setCreateResult] = useState<FastCreateResponse | null>(null);
+  const [createRequestKey, setCreateRequestKey] = useState("");
   const [reparentTarget, setReparentTarget] = useState<ReparentTarget | null>(null);
   const [reparentPreview, setReparentPreview] =
     useState<ValueObjectTreeRestructurePreview | null>(null);
@@ -977,6 +1175,107 @@ function MindMapCanvas({
     setDeleteError("");
     setDeleteResult(null);
   }, []);
+
+  const requestCreate = useCallback((
+    parentId: string,
+    parentTitle: string,
+    parentRole: SemanticRole,
+    role: FastCreateRole,
+  ) => {
+    if (role === "leaf" && parentRole !== "intermediate") return;
+    setCreateTarget({ parentId, parentTitle, parentRole, role });
+    setCreateTitle("");
+    setCreateDescription("");
+    setCreateError("");
+    setCreateResult(null);
+    setCreateRequestKey(createIdempotencyKey("mind-map-fast-create"));
+  }, []);
+
+  const selectCreateRole = useCallback((role: FastCreateRole) => {
+    setCreateTarget((current) => {
+      if (!current || createPending || createResult?.ok) return current;
+      if (role === "leaf" && current.parentRole !== "intermediate") return current;
+      return { ...current, role };
+    });
+    setCreateError("");
+    setCreateRequestKey(createIdempotencyKey("mind-map-fast-create"));
+  }, [createPending, createResult?.ok]);
+
+  const createObject = useCallback(async () => {
+    if (!createTarget || createPending || createResult?.ok) return;
+    const normalizedTitle = createTitle.trim();
+    const normalizedDescription = createDescription.trim();
+    if (!normalizedTitle) {
+      setCreateError(fastCreateCopy.nameRequired);
+      return;
+    }
+
+    setCreatePending(true);
+    setCreateError("");
+    try {
+      const response = await fetch("/api/value-objects", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          creationMode:
+            createTarget.role === "intermediate"
+              ? "intermediate_branch_active_v4"
+              : "leaf_branch_active_v4",
+          parentValueObjectId: createTarget.parentId,
+          title: normalizedTitle,
+          description: normalizedDescription || null,
+          locale,
+          idempotencyKey:
+            createRequestKey || createIdempotencyKey("mind-map-fast-create"),
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as FastCreateResponse | null;
+      const createdId = payload?.valueObject?.id;
+      if (!response.ok || payload?.ok !== true || !payload.redirectUrl || !createdId) {
+        throw new Error(payload?.error || payload?.errorCode || fastCreateCopy.createFailed);
+      }
+
+      const createdValueObject: MindMapValueObject = {
+        ...(payload.valueObject ?? {}),
+        id: createdId,
+        title: normalizedTitle,
+        description: normalizedDescription || normalizedTitle,
+        status: payload.valueObject?.status ?? "active",
+        parent_value_object_id: createTarget.parentId,
+        ontology_node_role_code: createTarget.role,
+        scope_code: payload.valueObject?.scope_code ?? "actor",
+        usage_scope: payload.valueObject?.usage_scope ?? "private",
+        origin_type_code: payload.valueObject?.origin_type_code ?? "user_declared",
+        definition_version: payload.valueObject?.definition_version ?? 1,
+      };
+
+      setCreateResult(payload);
+      setCollapsedIds((current) => {
+        const next = new Set(current);
+        next.delete(createTarget.parentId);
+        return next;
+      });
+      onValueObjectCreated?.(createdValueObject);
+    } catch (caught) {
+      setCreateError(
+        caught instanceof Error ? caught.message : fastCreateCopy.createFailed,
+      );
+    } finally {
+      setCreatePending(false);
+    }
+  }, [
+    createDescription,
+    createPending,
+    createRequestKey,
+    createResult?.ok,
+    createTarget,
+    createTitle,
+    fastCreateCopy.createFailed,
+    fastCreateCopy.nameRequired,
+    locale,
+    onValueObjectCreated,
+  ]);
 
   const deleteObject = useCallback(async () => {
     if (!deleteTarget || deletePending || deleteResult?.ok) return;
@@ -1033,6 +1332,7 @@ function MindMapCanvas({
         copy,
         reparentCopy,
         onToggle: toggleCollapsed,
+        onCreateRequest: requestCreate,
         onDeleteRequest: requestDelete,
       }),
     [
@@ -1040,6 +1340,7 @@ function MindMapCanvas({
       copy,
       locale,
       reparentCopy,
+      requestCreate,
       requestDelete,
       toggleCollapsed,
       valueObjects,
@@ -1227,6 +1528,165 @@ function MindMapCanvas({
         className="!overflow-hidden !rounded-xl !border !border-[#dfe3f1] !bg-white !shadow-sm"
       />
       </ReactFlow>
+
+      {createTarget ? (
+        <div
+          className="fixed inset-0 z-[130] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[2px]"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mind-map-fast-create-title"
+        >
+          <div className="w-full max-w-[600px] rounded-[26px] border border-black/[0.08] bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 id="mind-map-fast-create-title" className="text-[20px] font-bold text-[#111827]">
+                  {createResult?.ok ? fastCreateCopy.created : fastCreateCopy.title}
+                </h2>
+                <p className="mt-2 text-[12px] leading-5 text-[#5a5f7a]">
+                  {createResult?.ok ? fastCreateCopy.createdMessage : fastCreateCopy.hint}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={createPending}
+                onClick={() => setCreateTarget(null)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#dfe3f1] bg-white text-[#6b7280] hover:bg-[#f8fafc] disabled:opacity-50"
+                aria-label={fastCreateCopy.close}
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-[#edf0f7] bg-[#f8fafc] p-3">
+              <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#7c8099]">
+                {fastCreateCopy.parent}
+              </div>
+              <div className="mt-1 text-[13px] font-bold text-[#111827]">
+                {createTarget.parentTitle}
+              </div>
+            </div>
+
+            {!createResult?.ok ? (
+              <>
+                <div className="mt-4">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#7c8099]">
+                    {fastCreateCopy.type}
+                  </div>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      disabled={createPending}
+                      onClick={() => selectCreateRole("intermediate")}
+                      className={[
+                        "rounded-xl border px-3 py-2.5 text-[12px] font-bold transition",
+                        createTarget.role === "intermediate"
+                          ? "border-[#b8c8ff] bg-[#eef2ff] text-[#3b6ef8]"
+                          : "border-[#dfe3f1] bg-white text-[#4a4f6a] hover:bg-[#f8fafc]",
+                      ].join(" ")}
+                    >
+                      {copy.intermediate}
+                    </button>
+                    {createTarget.parentRole === "intermediate" ? (
+                      <button
+                        type="button"
+                        disabled={createPending}
+                        onClick={() => selectCreateRole("leaf")}
+                        className={[
+                          "rounded-xl border px-3 py-2.5 text-[12px] font-bold transition",
+                          createTarget.role === "leaf"
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : "border-[#dfe3f1] bg-white text-[#4a4f6a] hover:bg-[#f8fafc]",
+                        ].join(" ")}
+                      >
+                        {copy.leaf}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+
+                <label className="mt-4 grid gap-2 text-[12px] font-bold text-[#343854]">
+                  {fastCreateCopy.name}
+                  <input
+                    autoFocus
+                    disabled={createPending}
+                    value={createTitle}
+                    onChange={(event) => setCreateTitle(event.target.value)}
+                    maxLength={180}
+                    placeholder={fastCreateCopy.namePlaceholder}
+                    className="min-h-11 rounded-xl border border-[#dfe3f1] bg-white px-3 py-2.5 text-[13px] font-semibold outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
+                  />
+                </label>
+
+                <label className="mt-4 grid gap-2 text-[12px] font-bold text-[#343854]">
+                  {fastCreateCopy.description}
+                  <textarea
+                    disabled={createPending}
+                    value={createDescription}
+                    onChange={(event) => setCreateDescription(event.target.value)}
+                    maxLength={4000}
+                    rows={4}
+                    placeholder={fastCreateCopy.descriptionPlaceholder}
+                    className="resize-y rounded-xl border border-[#dfe3f1] bg-white px-3 py-2.5 text-[13px] outline-none transition focus:border-[#3b6ef8] focus:ring-4 focus:ring-[#3b6ef8]/10"
+                  />
+                </label>
+
+                {createError ? (
+                  <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-[12px] font-semibold text-red-800">
+                    {createError}
+                  </div>
+                ) : null}
+
+                <div className="mt-6 flex flex-wrap justify-end gap-2">
+                  <button
+                    type="button"
+                    disabled={createPending}
+                    onClick={() => setCreateTarget(null)}
+                    className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-2.5 text-[12px] font-bold text-[#4a4f6a] hover:bg-[#f8fafc] disabled:opacity-50"
+                  >
+                    {fastCreateCopy.cancel}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={createPending || !createTitle.trim()}
+                    onClick={() => void createObject()}
+                    className="rounded-xl bg-[#3b6ef8] px-4 py-2.5 text-[12px] font-bold text-white hover:bg-[#315fd8] disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {createPending ? fastCreateCopy.creating : fastCreateCopy.create}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div role="status" aria-live="polite" className="mt-4">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                  <div className="text-[14px] font-bold text-emerald-950">
+                    {createTitle.trim()}
+                  </div>
+                  <div className="mt-1 text-[11px] font-semibold text-emerald-800">
+                    {createTarget.role === "intermediate" ? copy.intermediate : copy.leaf}
+                  </div>
+                </div>
+                <div className="mt-6 flex flex-wrap justify-end gap-2">
+                  {createResult.redirectUrl ? (
+                    <Link
+                      href={createResult.redirectUrl}
+                      className="rounded-xl border border-[#c9d5ff] bg-white px-4 py-2.5 text-[12px] font-bold text-[#3b6ef8] hover:bg-[#eef2ff]"
+                    >
+                      {fastCreateCopy.openObject}
+                    </Link>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setCreateTarget(null)}
+                    className="rounded-xl bg-[#3b6ef8] px-4 py-2.5 text-[12px] font-bold text-white hover:bg-[#315fd8]"
+                  >
+                    {fastCreateCopy.close}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
 
       {reparentTarget ? (
         <div
@@ -1429,11 +1889,13 @@ export function ValueObjectMindMap({
   locale,
   onValueObjectDeleted,
   onValueObjectReparented,
+  onValueObjectCreated,
 }: {
   valueObjects: MindMapValueObject[];
   locale: LocaleCode;
   onValueObjectDeleted?: (deletedId: string) => void;
   onValueObjectReparented?: (movedId: string, newParentId: string) => void;
+  onValueObjectCreated?: (createdValueObject: MindMapValueObject) => void;
 }) {
   const copy = COPY[locale] ?? COPY.en;
   const reparentCopy = REPARENT_COPY[locale] ?? REPARENT_COPY.en;
@@ -1464,6 +1926,7 @@ export function ValueObjectMindMap({
             locale={locale}
             onValueObjectDeleted={onValueObjectDeleted}
             onValueObjectReparented={onValueObjectReparented}
+            onValueObjectCreated={onValueObjectCreated}
           />
         </ReactFlowProvider>
       </div>

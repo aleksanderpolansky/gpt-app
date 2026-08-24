@@ -3,7 +3,7 @@
   "date": "2026-08-22",
   "baseline": "b3fab10e35fbbf80282d486de022ab7b224314fb",
   "dbSchemaChange": false,
-  "runtimeEvidencePending": true,
+  "runtimeEvidencePending": false,
   "v1Runtime": {
     "status": "PASS",
     "commit": "b3fab10e35fbbf80282d486de022ab7b224314fb",
@@ -53,5 +53,17 @@
     "sourceIdSource": "node.id",
     "behaviorChange": false,
     "dbSchemaChange": false
-  }
+  },
+  "runtimeClosure": {
+    "status": "PASS",
+    "commit": "1670e9067b3c46a4ae37da44c11a3862aa19590d",
+    "report": "ARCTOR_VO_MIND_MAP_V1_1_CONTROLLED_REPARENT_20260822_204217_REPORT.txt",
+    "verticalLayout": true,
+    "previewCancelNoWrite": true,
+    "forwardApply": true,
+    "reverseApply": true,
+    "finalStructureRestored": true,
+    "historicalRecalculationTriggered": false
+  },
+  "next": "ARCTOR_VO_MIND_MAP_V1_2_FAST_AUTHORING"
 }

@@ -113,8 +113,32 @@ check("APPLY_PREVIEW_HASH_REQUIRED", apply.includes("previewHash and idempotency
 check("REPARENT_TYPE_RETAINED", types.includes("export type ReparentTreePayload"));
 check("REPARENT_TYPE_PARENT_FIELD", types.includes("newParentValueObjectId: string | null"));
 
-check("CREATE_INTERMEDIATE_RETAINED", map.includes("/value-objects/${id}/new-intermediate"));
-check("CREATE_LEAF_RETAINED", map.includes("/value-objects/${id}/new-leaf"));
+const legacyIntermediateCreateSurface = map.includes(
+  "/value-objects/${id}/new-intermediate",
+);
+const legacyLeafCreateSurface = map.includes("/value-objects/${id}/new-leaf");
+const inlineIntermediateCreateSurface =
+  map.includes('fetch("/api/value-objects"') &&
+  map.includes('"intermediate_branch_active_v4"') &&
+  map.includes(
+    'data.onCreateRequest(id, data.title, data.role, "intermediate")',
+  ) &&
+  map.includes("onValueObjectCreated?.(createdValueObject)");
+const inlineLeafCreateSurface =
+  map.includes('fetch("/api/value-objects"') &&
+  map.includes('"leaf_branch_active_v4"') &&
+  map.includes('data.onCreateRequest(id, data.title, data.role, "leaf")') &&
+  map.includes('role === "leaf" && parentRole !== "intermediate"') &&
+  map.includes("onValueObjectCreated?.(createdValueObject)");
+
+check(
+  "CREATE_INTERMEDIATE_RETAINED",
+  legacyIntermediateCreateSurface || inlineIntermediateCreateSurface,
+);
+check(
+  "CREATE_LEAF_RETAINED",
+  legacyLeafCreateSurface || inlineLeafCreateSurface,
+);
 check("DELETE_RETAINED", map.includes('method: "DELETE"'));
 check("DELETE_SERVER_BLOCKER_RETAINED", map.includes("payload?.blocker?.table"));
 check("COLLAPSE_RETAINED", map.includes("toggleCollapsed"));

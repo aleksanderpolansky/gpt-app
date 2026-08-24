@@ -1,0 +1,75 @@
+{
+  "release": "ARCTOR_VO_MIND_MAP_V1_2_FAST_AUTHORING",
+  "date": "2026-08-24",
+  "baseline": "1670e9067b3c46a4ae37da44c11a3862aa19590d",
+  "dbSchemaChange": false,
+  "runtimeEvidencePending": true,
+  "v11Runtime": {
+    "status": "PASS",
+    "commit": "1670e9067b3c46a4ae37da44c11a3862aa19590d",
+    "report": "ARCTOR_VO_MIND_MAP_V1_1_CONTROLLED_REPARENT_20260822_204217_REPORT.txt",
+    "previewCancelNoWrite": true,
+    "forwardApply": true,
+    "reverseApply": true,
+    "finalStructureRestored": true
+  },
+  "fastAuthoring": {
+    "surface": "map-modal",
+    "newWriteApi": false,
+    "postApi": "/api/value-objects",
+    "intermediateMode": "intermediate_branch_active_v4",
+    "leafMode": "leaf_branch_active_v4",
+    "rootCanCreateLeaf": false,
+    "intermediateCanCreateLeaf": true,
+    "idempotencyKey": true,
+    "immediateSharedClientState": true,
+    "pageNavigationRequired": false,
+    "locales": [
+      "en",
+      "pl",
+      "ru",
+      "uk",
+      "de",
+      "es",
+      "cs"
+    ]
+  },
+  "safety": {
+    "directSupabaseWriteFromMap": false,
+    "dbSchemaChange": false,
+    "serverCreateGuardsRetained": true,
+    "serverLocalizationRetained": true,
+    "reparentContractRetained": true,
+    "guardedDeleteRetained": true
+  },
+  "next": "REAL_BRANCH_AUTHORING_RUNTIME",
+  "releaseCandidateV1": {
+    "status": "FAIL_BEFORE_COMMIT",
+    "report": "ARCTOR_VO_MIND_MAP_V1_2_FAST_AUTHORING_20260824_073249_REPORT.txt",
+    "releaseValidator": {
+      "passed": 95,
+      "failed": 0
+    },
+    "v11Regression": {
+      "passed": 95,
+      "failed": 2,
+      "failedChecks": [
+        "CREATE_INTERMEDIATE_RETAINED",
+        "CREATE_LEAF_RETAINED"
+      ]
+    },
+    "cause": "historical V1.1 validator pinned create-retention to legacy map route strings removed by V1.2 inline authoring",
+    "rollback": "PASS",
+    "commitCreated": false,
+    "pushPerformed": false
+  },
+  "revisionFix": {
+    "revision": "V2_FORWARD_COMPAT_REGRESSION_VALIDATOR",
+    "historicalValidatorUpdated": true,
+    "legacyCreateSurfaceAccepted": true,
+    "inlineCreateSurfaceAcceptedOnlyWithExistingPostModeRequestAndSharedStateCallback": true,
+    "fakeLegacyRouteMarkersAdded": false,
+    "behaviorChange": false,
+    "dbSchemaChange": false
+  }
+}

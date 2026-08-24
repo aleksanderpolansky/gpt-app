@@ -118,17 +118,26 @@ Launcher обязан до commit выполнить:
 
 V2 исправляет это без изменения поведения: после успешного lookup target используется обязательный `const targetId = targetNode.id`; этот id применяется для current-parent noop guard, path preview и `newParentId`. `sourceId` аналогично берётся из обязательного `node.id`. Patcher и release-validator теперь fail-closed запрещают возврат к optional `targetObject.id` в этих string-only местах.
 
-## Runtime PASS
+## Runtime closure V1.1
 
-Для закрытия V1.1 достаточно безопасного сценария с реальным объектом, который затем можно вернуть обратно вторым controlled move:
+V1.1 CLOSED/PASS на production runtime. Release commit: `1670e9067b3c46a4ae37da44c11a3862aa19590d`; release report: `ARCTOR_VO_MIND_MAP_V1_1_CONTROLLED_REPARENT_20260822_204217_REPORT.txt`.
 
-1. убедиться, что карта top-to-bottom;
-2. перетащить leaf/intermediate на другой structural parent;
-3. увидеть preview `old parent → proposed parent`;
-4. подтвердить;
-5. убедиться, что Tree и Map перестроились;
-6. при необходимости тем же controlled flow вернуть объект исходному parent.
+Доказан полный безопасный цикл на реальном leaf `Narrow-grip pull-up` / `Podciąganie wąskim chwytem`:
+
+1. карта отображается top-to-bottom;
+2. drag с `Pull-ups` на `Physical activity` показал preview старого и нового parent/path;
+3. Cancel вернул node в каноническую auto-layout позицию и не изменил БД;
+4. повторный preview + Confirm применил перенос и немедленно перестроил Map;
+5. leaf стал sibling для `Pull-ups` под `Physical activity`;
+6. вторым controlled move leaf возвращён обратно под `Pull-ups`;
+7. исходная правильная ветвь полностью восстановлена.
+
+Финальная контрольная структура после теста:
+
+`Activity → Physical activity → Pull-ups → Narrow-grip pull-up`.
+
+Автоматический исторический пересчёт во время forward/reverse runtime test не запускался.
 
 ## Следующая точка
 
-После runtime PASS V1.1 следующий слой — улучшение map authoring ergonomics: подсветка drop targets, rollback/recent operation shortcut на карте и только затем оценка необходимости более сложного auto-layout/undo UX. Семантические relations остаются отдельным слоем, а не structural edges.
+Следующий этап — **ARCTOR_VO_MIND_MAP_V1_2_FAST_AUTHORING**: создание intermediate/leaf в компактном локализованном modal прямо на Map без перехода на отдельную страницу. Новый write contract не создаётся: переиспользуется существующий `POST /api/value-objects` с `intermediate_branch_active_v4` / `leaf_branch_active_v4`, а созданный объект сразу добавляется в общий client-state Tree/Cards/Map. Семантические relations остаются отдельным слоем, а не structural edges.
