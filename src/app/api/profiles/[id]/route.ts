@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { auth0 } from "../../../../../lib/auth0";
+import { persistMediaImageValue } from "../../../../../lib/media-storage";
 import {
   ProfileOwnerContextError,
   resolveProfileOwnerContext,
@@ -23,21 +24,21 @@ function parseText(value: unknown, maximumLength: number) {
   return trimmed ? trimmed.slice(0, maximumLength) : null;
 }
 
-function parseImage(value: unknown) {
-  const parsed = parseText(value, 3_000_000);
-
-  if (!parsed) {
-    return null;
+async function persistProfileImage(
+  value: unknown,
+  ownerUserId: string,
+  currentValue: string | null,
+) {
+  if (typeof value === "string" && value === currentValue) {
+    return currentValue;
   }
 
-  if (
-    /^https?:\/\//i.test(parsed) ||
-    /^data:image\/(?:png|jpe?g|webp|gif);base64,/i.test(parsed)
-  ) {
-    return parsed;
-  }
-
-  throw new Error("Unsupported profile image format.");
+  return persistMediaImageValue({
+    value,
+    visibility: "private",
+    namespace: `profiles/${ownerUserId}`,
+    maxBytes: 256 * 1024,
+  });
 }
 
 function ownerContextErrorResponse(error: unknown) {
@@ -100,23 +101,32 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     );
   }
 
-  let imageUrl: string | null;
-
-  try {
-    imageUrl = parseImage(body.imageUrl);
-  } catch (error) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "INVALID_PROFILE_IMAGE",
-        errorMessage:
-          error instanceof Error ? error.message : "Invalid profile image.",
-      },
-      { status: 400 },
-    );
-  }
-
   const profile = ownerContext.profile;
+  const imageWasSubmitted = Object.prototype.hasOwnProperty.call(
+    body,
+    "imageUrl",
+  );
+  let imageUrl = profile.imageUrl;
+
+  if (imageWasSubmitted) {
+    try {
+      imageUrl = await persistProfileImage(
+        body.imageUrl,
+        ownerContext.appUserId,
+        profile.imageUrl,
+      );
+    } catch (error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "INVALID_PROFILE_IMAGE",
+          errorMessage:
+            error instanceof Error ? error.message : "Invalid profile image.",
+        },
+        { status: 400 },
+      );
+    }
+  }
   const now = new Date().toISOString();
   const { data: updatedData, error: updateError } = await supabase
     .from("actor_public_profiles")

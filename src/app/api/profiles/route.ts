@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { auth0 } from "../../../../lib/auth0";
+import { persistMediaImageValue } from "../../../../lib/media-storage";
 import { supabase } from "../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -42,21 +43,13 @@ function parseText(value: unknown, maximumLength: number) {
   return trimmed ? trimmed.slice(0, maximumLength) : null;
 }
 
-function parseImage(value: unknown) {
-  const parsed = parseText(value, 3_000_000);
-
-  if (!parsed) {
-    return null;
-  }
-
-  if (
-    /^https?:\/\//i.test(parsed) ||
-    /^data:image\/(?:png|jpe?g|webp|gif);base64,/i.test(parsed)
-  ) {
-    return parsed;
-  }
-
-  throw new Error("Unsupported profile image format.");
+async function persistProfileImage(value: unknown, ownerUserId: string) {
+  return persistMediaImageValue({
+    value,
+    visibility: "private",
+    namespace: `profiles/${ownerUserId}`,
+    maxBytes: 256 * 1024,
+  });
 }
 
 export async function POST(request: Request) {
@@ -92,20 +85,6 @@ export async function POST(request: Request) {
     );
   }
 
-  let imageUrl: string | null;
-
-  try {
-    imageUrl = parseImage(body.imageUrl);
-  } catch (error) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: error instanceof Error ? error.message : "Invalid profile image.",
-      },
-      { status: 400 },
-    );
-  }
-
   const { data: appUserData, error: appUserError } = await supabase
     .from("app_users")
     .select("id, access_status")
@@ -129,6 +108,20 @@ export async function POST(request: Request) {
         errorMessage: "This account has been blocked by a platform administrator.",
       },
       { status: 403 },
+    );
+  }
+
+  let imageUrl: string | null;
+
+  try {
+    imageUrl = await persistProfileImage(body.imageUrl, appUser.id);
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : "Invalid profile image.",
+      },
+      { status: 400 },
     );
   }
 

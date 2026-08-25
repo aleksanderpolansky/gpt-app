@@ -1,3 +1,4 @@
+import { toMediaDeliveryUrl } from "../../../lib/media-egress";
 import { supabase } from "../../../lib/supabase";
 import {
   normalizeContentLocale,
@@ -116,11 +117,13 @@ type OrganizationLocationRow = {
 };
 
 type ActorPublicProfileRow = {
+  id: string;
   actor_id: string;
   public_slug: string;
   display_name: string;
   image_url: string | null;
   is_public: boolean;
+  updated_at: string;
 };
 
 type ReputationRow = {
@@ -448,7 +451,7 @@ async function hydrateTerms(
       .eq("status", "active"),
     supabase
       .from("actor_public_profiles")
-      .select("actor_id,public_slug,display_name,image_url,is_public")
+      .select("id,actor_id,public_slug,display_name,image_url,is_public,updated_at")
       .in("actor_id", actorIds),
     supabase
       .from("actor_reputation_accounts")
@@ -652,7 +655,14 @@ async function hydrateTerms(
               ? `/people/${encodeURIComponent(providerPublicProfile.public_slug)}`
               : null,
         providerImageUrl:
-          organization?.logo_url ?? providerPublicProfile?.image_url ?? null,
+          organization?.logo_url ??
+          (providerPublicProfile
+            ? toMediaDeliveryUrl(
+                providerPublicProfile.image_url,
+                `/api/profiles/${encodeURIComponent(providerPublicProfile.id)}/image`,
+                providerPublicProfile.updated_at,
+              )
+            : null),
         productImageUrl,
         providerLocation: sanitizeProviderLocation(organizationLocation),
         providerReputation: reputationByActorId.get(terms.provider_actor_id) ?? 0,

@@ -58,6 +58,92 @@ type EditValues = {
   messengerUrl: string;
 };
 
+const PROFILE_ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+// This is only a local browser input ceiling. The original file never leaves the device.
+const PROFILE_MAX_SOURCE_FILE_BYTES = 10 * 1024 * 1024;
+const PROFILE_MAX_DATA_URL_LENGTH = 300_000;
+const PROFILE_MAX_IMAGE_DIMENSION = 1024;
+
+function readProfileFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () =>
+      typeof reader.result === "string"
+        ? resolve(reader.result)
+        : reject(new Error("PROFILE_IMAGE_READ_FAILED"));
+    reader.onerror = () => reject(new Error("PROFILE_IMAGE_READ_FAILED"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadProfileImage(dataUrl: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("PROFILE_IMAGE_DECODE_FAILED"));
+    image.src = dataUrl;
+  });
+}
+
+async function optimizeProfileImage(file: File) {
+  // Read/decode/resize/re-encode entirely in the browser; only the optimized WebP data URL is later submitted.
+  const source = await readProfileFileAsDataUrl(file);
+  const image = await loadProfileImage(source);
+  const initialScale = Math.min(
+    1,
+    PROFILE_MAX_IMAGE_DIMENSION /
+      Math.max(image.naturalWidth, image.naturalHeight),
+  );
+
+  let smallestCandidate = "";
+
+  for (const dimensionFactor of [1, 0.85, 0.7, 0.55]) {
+    const scale = initialScale * dimensionFactor;
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      throw new Error("PROFILE_IMAGE_CANVAS_UNAVAILABLE");
+    }
+
+    context.drawImage(image, 0, 0, width, height);
+
+    for (const quality of [0.84, 0.74, 0.64, 0.54, 0.44]) {
+      const candidate = canvas.toDataURL("image/webp", quality);
+
+      if (!smallestCandidate || candidate.length < smallestCandidate.length) {
+        smallestCandidate = candidate;
+      }
+
+      if (candidate.length <= PROFILE_MAX_DATA_URL_LENGTH) {
+        return candidate;
+      }
+    }
+  }
+
+  throw new Error(
+    smallestCandidate
+      ? "PROFILE_IMAGE_TOO_LARGE_AFTER_OPTIMIZATION"
+      : "PROFILE_IMAGE_OPTIMIZATION_FAILED",
+  );
+}
+
+function profileImageSrc(profileId: string, value: string) {
+  if (value.startsWith("arctor-private-media:")) {
+    return `/api/profiles/${encodeURIComponent(profileId)}/image`;
+  }
+
+  return value;
+}
+
 function appendLocale(pathname: string, locale: string) {
   return locale === "en" ? pathname : `${pathname}?locale=${encodeURIComponent(locale)}`;
 }
@@ -171,21 +257,27 @@ export default function PersonalProfileEditor({
     setErrorMessage(null);
   }
 
-  function handleImage(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.currentTarget.files?.[0];
+  async function handleImage(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    input.value = "";
 
     if (!file) return;
-    if (!file.type.startsWith("image/") || file.size > 2 * 1024 * 1024) {
+
+    if (
+      !PROFILE_ALLOWED_IMAGE_TYPES.has(file.type) ||
+      file.size > PROFILE_MAX_SOURCE_FILE_BYTES
+    ) {
       setErrorMessage(messages.imageTooLarge);
-      event.currentTarget.value = "";
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") setField("imageUrl", reader.result);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const optimized = await optimizeProfileImage(file);
+      setField("imageUrl", optimized);
+    } catch {
+      setErrorMessage(messages.imageTooLarge);
+    }
   }
 
   async function save() {
@@ -338,7 +430,7 @@ export default function PersonalProfileEditor({
               className="group relative mx-auto flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden rounded-2xl border border-[#dfe4ff] bg-[#eef2ff] text-[46px] font-bold text-[#3b6ef8]"
             >
               {values.imageUrl ? (
-                <img src={values.imageUrl} alt="" className="h-full w-full object-cover" />
+                <img src={profileImageSrc(initialData.profile.id, values.imageUrl)} alt="" className="h-full w-full object-cover" />
               ) : values.displayName.trim() ? (
                 initials(values.displayName)
               ) : (
@@ -346,7 +438,7 @@ export default function PersonalProfileEditor({
               )}
               <span className="absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-[#3b6ef8] shadow-lg"><Camera size={18} /></span>
             </button>
-            <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImage} />
+            <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImage} />
             <div className="mt-3 text-[13px] font-semibold text-[#1a1d2e]">{values.displayName}</div>
             <div className="mt-1 min-h-4 text-[11px] text-[#9ca3b8]">{initialData.profile.categoryLabel ?? ""}</div>
           </TopCard>

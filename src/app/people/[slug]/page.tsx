@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { auth0 } from "../../../../lib/auth0";
+import { toMediaDeliveryUrl } from "../../../../lib/media-egress";
 import { supabase } from "../../../../lib/supabase";
 import ProfileSwitcher, {
   type OwnedProfileSwitchOption,
@@ -42,6 +43,7 @@ type PublicProfileRow = {
   website_url: string | null;
   messenger_url: string | null;
   is_public: boolean;
+  updated_at: string;
 };
 
 type AppUserRow = {
@@ -232,7 +234,7 @@ export default async function PublicPersonalProfilePage({
   const [{ data, error }, currentAppUser] = await Promise.all([
     supabase
       .from("actor_public_profiles")
-      .select("id, owner_user_id, actor_id, profile_kind, public_slug, display_name, bio, image_url, category_label, public_phone, website_url, messenger_url, is_public")
+      .select("id, owner_user_id, actor_id, profile_kind, public_slug, display_name, bio, image_url, category_label, public_phone, website_url, messenger_url, is_public, updated_at")
       .eq("public_slug", resolvedParams.slug)
       .limit(1),
     getCurrentAppUser(),
@@ -280,6 +282,11 @@ export default async function PublicPersonalProfilePage({
   const messengerHref = normalizeExternalHref(profile.messenger_url);
   const profileTypeLabel =
     profile.profile_kind === "avatar" ? messages.avatar : messages.personalProfile;
+  const profileImageUrl = toMediaDeliveryUrl(
+    profile.image_url,
+    `/api/profiles/${encodeURIComponent(profile.id)}/image`,
+    profile.updated_at,
+  );
 
   return (
     <main className="min-h-full bg-[#f5f6fb] text-[#1a1d2e]">
@@ -323,8 +330,8 @@ export default async function PublicPersonalProfilePage({
           <TopCard label={messages.profileImage} accent="#3b6ef8" icon={Star} footerIconOnly>
             <div className="flex h-full min-h-0 flex-col gap-3">
               <div className="flex min-h-0 w-full flex-1 basis-0 items-center justify-center overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#eef2ff] text-[46px] font-bold text-[#3b6ef8]">
-                {profile.image_url ? (
-                  <img src={profile.image_url} alt="" className="h-full w-full object-cover" />
+                {profileImageUrl ? (
+                  <img src={profileImageUrl} alt="" className="h-full w-full object-cover" />
                 ) : (
                   getInitials(profile.display_name)
                 )}

@@ -1,3 +1,4 @@
+import { toMediaDeliveryUrl } from "../../../lib/media-egress";
 import { supabase } from "../../../lib/supabase";
 
 import { getLocaleSearchParam } from "@/i18n";
@@ -43,7 +44,7 @@ export default async function PeopleAndAvatarsPage({
   const { data, error } = await supabase
     .from("actor_public_profiles")
     .select(
-      "id, public_slug, display_name, bio, image_url, category_label, profile_kind, published_at, created_at",
+      "id, public_slug, display_name, bio, image_url, category_label, profile_kind, published_at, created_at, updated_at",
     )
     .eq("is_public", true)
     .order("published_at", { ascending: false })
@@ -53,10 +54,19 @@ export default async function PeopleAndAvatarsPage({
     throw new Error(error.message);
   }
 
+  const profiles = (data ?? []).map((row) => ({
+    ...row,
+    image_url: toMediaDeliveryUrl(
+      row.image_url,
+      `/api/profiles/${encodeURIComponent(String(row.id))}/image`,
+      typeof row.updated_at === "string" ? row.updated_at : null,
+    ),
+  })) as PeopleDirectoryProfile[];
+
   return (
     <PeopleDirectoryDashboardContent
       initialLocale={getLocaleSearchParam(localeSearchParams)}
-      profiles={(data ?? []) as PeopleDirectoryProfile[]}
+      profiles={profiles}
     />
   );
 }

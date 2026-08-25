@@ -37,3 +37,29 @@ Baseline: `main @ 8a99f1e829b8c0cdf60d111bfdc85c656d18776d`
 ## Следующий шаг
 
 V1B: deduplicated migration 9 unique Base64 payloads to privacy-appropriate Storage + postcheck `data:image` references = 0.
+
+## V1B1 — new-write Storage + client optimization
+
+Статус после применения launcher: кодовый слой готовит переход новых пользовательских изображений с inline Base64 на Storage без миграции исторических строк.
+
+Изменения V1B1:
+
+- лимит 10 MiB относится только к файлу, выбранному локально в браузере; исходник не сохраняется и не отправляется в ARCTor. До сети уходит только browser-optimized WebP: profile/avatar максимум 1024 px и целевой payload около 220 KiB;
+- profile image после server validation сохраняется в private bucket \`arctor-private-media\`; в \`actor_public_profiles.image_url\` сохраняется короткий token, а не Base64;
+- endpoint \`/api/profiles/[id]/image\` читает private Storage: публичный профиль доступен посетителю, скрытый профиль — только владельцу; legacy data URL остаётся читаемым;
+- directory People, public profile и gift-certificate provider image преобразуют private token в versioned media delivery URL;
+- enterprise logo при новом inline upload записывается в public bucket \`arctor-public-media\`, content-addressed по SHA-256; в БД сохраняется URL Storage;
+- Value Object image ограничен новым client target \`MAX_DATA_URL_LENGTH = 600000\` (~450 KiB payload), затем server сохраняет его в public Storage и заменяет metadata image на URL;
+- одинаковые payload внутри одного namespace используют один SHA-256 object path; повторная запись идемпотентна;
+- server hard limits: profile 256 KiB, enterprise/value-object 512 KiB; Storage bucket new-write ceiling также 512 KiB. Оригиналы ARCTor не архивирует;
+- SQL/schema/RLS не меняются;
+- существующие Base64 rows не мигрируются в V1B1 и остаются задачей V1B2.
+
+Acceptance V1B1:
+
+1. \`node scripts/validate-media-storage-optimization-v1b1.mjs\` = PASS.
+2. ESLint full-repo baseline/delta: total errors/warnings и touched-file errors/warnings не увеличиваются.
+3. \`npm run build\` = PASS.
+4. \`git diff --check\` и staged \`git diff --cached --check\` = PASS.
+5. Commit/push разрешены только после всех gates.
+6. После production deployment повторить Vercel Fast Data Transfer probe и затем выполнять V1B2 migration исторических 9 unique payloads.

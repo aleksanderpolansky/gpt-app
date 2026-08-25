@@ -4,6 +4,7 @@ import {
   resolveActiveActorContext,
 } from "../../../../../lib/actor-context";
 import { auth0 } from "../../../../../lib/auth0";
+import { persistMediaImageValue } from "../../../../../lib/media-storage";
 import { supabase } from "../../../../../lib/supabase";
 import { resolveLocalizedContentFields } from "@/lib/localization/contentLocalization";
 import { localizeEntityContent } from "@/lib/localization/contentLocalization.server";
@@ -890,6 +891,36 @@ function buildDraftPatch(
   };
 }
 
+async function persistDraftPublicProfileImage(
+  patch: Record<string, unknown> | null,
+  valueObjectId: string,
+) {
+  if (!patch || !isRecord(patch.metadata_json)) {
+    return;
+  }
+
+  const publicProfile = isRecord(patch.metadata_json.public_profile)
+    ? patch.metadata_json.public_profile
+    : null;
+
+  if (!publicProfile || typeof publicProfile.image_url !== "string") {
+    return;
+  }
+
+  const imageUrl = publicProfile.image_url.trim();
+
+  if (!/^data:image\/(?:jpeg|png|webp);base64,/i.test(imageUrl)) {
+    return;
+  }
+
+  publicProfile.image_url = await persistMediaImageValue({
+    value: imageUrl,
+    visibility: "public",
+    namespace: `value-objects/${valueObjectId}/public-image`,
+    maxBytes: 512 * 1024,
+  });
+}
+
 export async function GET(request: Request, context: ValueObjectRouteContext) {
   const { id: rawId } = await context.params;
   const valueObjectId = normalizeValueObjectId(rawId);
@@ -1000,6 +1031,20 @@ export async function PATCH(request: Request, context: ValueObjectRouteContext) 
 
   if (patchErrorResponse) {
     return patchErrorResponse;
+  }
+
+  try {
+    await persistDraftPublicProfileImage(patch, valueObject.id);
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Value Object image is invalid.",
+      },
+      { status: 400 },
+    );
   }
 
   const { data: updatedValueObjectData, error: updateError } = await supabase

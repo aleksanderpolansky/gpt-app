@@ -706,44 +706,55 @@ function text(value: string | null | undefined) {
   return value?.trim() ?? "";
 }
 
-const MAX_ORGANIZATION_LOGO_EDGE_PX = 960;
-const MAX_ORGANIZATION_LOGO_DATA_URL_CHARS = 350_000;
+const MAX_ORGANIZATION_LOGO_EDGE_PX = 1200;
+const MAX_ORGANIZATION_LOGO_DATA_URL_CHARS = 400_000;
 
 async function compressOrganizationLogoDataUrl(value: string) {
-  if (!value.startsWith("data:image/") || value.length <= MAX_ORGANIZATION_LOGO_DATA_URL_CHARS) {
+  if (!value.startsWith("data:image/")) {
     return value;
   }
 
-  try {
-    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const nextImage = new Image();
-      nextImage.onload = () => resolve(nextImage);
-      nextImage.onerror = () => reject(new Error("Could not decode organization image."));
-      nextImage.src = value;
-    });
-
-    const maxSide = Math.max(image.naturalWidth, image.naturalHeight);
-    const scale = maxSide > MAX_ORGANIZATION_LOGO_EDGE_PX
+  // Any newly selected inline image is re-encoded locally before network submission.
+  // If browser-side optimization cannot produce the target payload, save is blocked;
+  // the original data URL is never used as a fallback upload.
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const nextImage = new Image();
+    nextImage.onload = () => resolve(nextImage);
+    nextImage.onerror = () =>
+      reject(new Error("ORGANIZATION_IMAGE_DECODE_FAILED"));
+    nextImage.src = value;
+  });
+  const maxSide = Math.max(image.naturalWidth, image.naturalHeight);
+  const initialScale =
+    maxSide > MAX_ORGANIZATION_LOGO_EDGE_PX
       ? MAX_ORGANIZATION_LOGO_EDGE_PX / maxSide
       : 1;
+
+  for (const dimensionFactor of [1, 0.85, 0.7, 0.55, 0.4]) {
+    const scale = initialScale * dimensionFactor;
     const width = Math.max(1, Math.round(image.naturalWidth * scale));
     const height = Math.max(1, Math.round(image.naturalHeight * scale));
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
-
     const context = canvas.getContext("2d");
+
     if (!context) {
-      return value;
+      throw new Error("ORGANIZATION_IMAGE_CANVAS_UNAVAILABLE");
     }
 
     context.drawImage(image, 0, 0, width, height);
-    const compressed = canvas.toDataURL("image/webp", 0.82);
 
-    return compressed.length < value.length ? compressed : value;
-  } catch {
-    return value;
+    for (const quality of [0.84, 0.74, 0.64, 0.54, 0.44]) {
+      const compressed = canvas.toDataURL("image/webp", quality);
+
+      if (compressed.length <= MAX_ORGANIZATION_LOGO_DATA_URL_CHARS) {
+        return compressed;
+      }
+    }
   }
+
+  throw new Error("ORGANIZATION_IMAGE_TOO_LARGE_AFTER_OPTIMIZATION");
 }
 
 function getInitialValues(data: OrganizationPublicProfileEditInitialData): EditValues {
@@ -1706,6 +1717,9 @@ export default function OrganizationPublicProfileEditClient({
         | {
             ok?: boolean;
             error?: string;
+            organization?: {
+              logo_url?: string | null;
+            } | null;
             primaryLocation?: {
               country_code?: string | null;
               city?: string | null;
@@ -1724,9 +1738,15 @@ export default function OrganizationPublicProfileEditClient({
         throw new Error(messages.saveError);
       }
 
+      const persistedValues: EditValues = {
+        ...valuesAfterLogoNormalization,
+        logoUrl:
+          payload.organization?.logo_url ??
+          valuesAfterLogoNormalization.logoUrl,
+      };
       const nextValues: EditValues = payload.primaryLocation
         ? {
-            ...valuesAfterLogoNormalization,
+            ...persistedValues,
             countryCode:
               payload.primaryLocation.country_code ?? values.countryCode,
             city: payload.primaryLocation.city ?? values.city,
@@ -1750,7 +1770,7 @@ export default function OrganizationPublicProfileEditClient({
               payload.primaryLocation.address_visibility ??
               values.addressVisibility,
           }
-        : valuesAfterLogoNormalization;
+        : persistedValues;
 
       setValues(nextValues);
       setSavedValues(nextValues);

@@ -25,6 +25,7 @@ import {
   EntityPageTopGrid,
 } from "@/components/entity-pages/entity-page-top-grid";
 import OrganizationLocationMapPreview from "@/components/commercial/OrganizationLocationMapPreview";
+import { readValueObjectPublicImageUrl } from "@/lib/value-object-public-image";
 
 type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
@@ -359,7 +360,7 @@ type EditableLocation = {
 };
 
 const MAX_SOURCE_FILE_BYTES = 10 * 1024 * 1024;
-const MAX_DATA_URL_LENGTH = 1_450_000;
+const MAX_DATA_URL_LENGTH = 600_000;
 const MAX_IMAGE_DIMENSION = 1200;
 
 function toEditableLocation(location: ValueObjectPublicLocation): EditableLocation {
@@ -618,7 +619,7 @@ export function ValueObjectProfileTopGrid({
           },
           body: JSON.stringify({
             publicProfile: {
-              imageUrl: imageUrl || null,
+              imageUrl: imageUrl === savedImageUrl ? undefined : imageUrl || null,
               location: {
                 label: location.label.trim() || null,
                 countryCode: location.countryCode.trim().toUpperCase() || null,
@@ -639,13 +640,20 @@ export function ValueObjectProfileTopGrid({
       const payload = (await response.json().catch(() => ({}))) as {
         readonly ok?: boolean;
         readonly error?: string;
+        readonly valueObject?: {
+          readonly metadata_json?: unknown;
+        };
       };
 
       if (!response.ok || !payload.ok) {
         throw new Error(payload.error ?? `HTTP ${response.status}`);
       }
 
-      setSavedImageUrl(imageUrl);
+      const persistedImageUrl =
+        readValueObjectPublicImageUrl(payload.valueObject?.metadata_json) ??
+        imageUrl;
+      setImageUrl(persistedImageUrl);
+      setSavedImageUrl(persistedImageUrl);
       setSavedLocation(location);
       setSaveState("saved");
       router.refresh();

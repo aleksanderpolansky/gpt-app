@@ -1,15 +1,16 @@
+
 import { NextResponse } from "next/server";
 
+import { auth0 } from "../../../../../../lib/auth0";
+import {
+  readPrivateMediaObject,
+} from "../../../../../../lib/media-storage";
 import {
   decodeInlineImageDataUrl,
   getMediaCacheControl,
   toResponseBody,
 } from "../../../../../../lib/media-egress";
-import {
-  ProfileOwnerContextError,
-  resolveProfileOwnerContext,
-} from "../../../../../../lib/profile-owner-context";
-import { auth0 } from "../../../../../../lib/auth0";
+import { supabase } from "../../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -18,23 +19,76 @@ type RouteProps = {
   params: Promise<{ id: string }>;
 };
 
-export async function GET(request: Request, { params }: RouteProps) {
+type ProfileImageRow = {
+  owner_user_id: string;
+  image_url: string | null;
+  is_public: boolean;
+};
+
+async function getCurrentAppUserId() {
   const session = await auth0.getSession();
 
   if (!session?.user?.sub) {
-    return NextResponse.json({ ok: false, error: "NOT_AUTHENTICATED" }, { status: 401 });
+    return null;
   }
 
+  const { data, error } = await supabase
+    .from("app_users")
+    .select("id")
+    .eq("auth0_sub", session.user.sub)
+    .maybeSingle();
+
+  if (error || !data || typeof data.id !== "string") {
+    return null;
+  }
+
+  return data.id;
+}
+
+export async function GET(request: Request, { params }: RouteProps) {
   const { id } = await params;
 
   try {
-    const ownerContext = await resolveProfileOwnerContext(session.user.sub, id);
-    const imageUrl = ownerContext.profile.imageUrl?.trim() ?? "";
-    const cacheControl = getMediaCacheControl(request.url, "private");
+    const { data, error } = await supabase
+      .from("actor_public_profiles")
+      .select("owner_user_id,image_url,is_public")
+      .eq("id", id)
+      .maybeSingle();
 
-    if (!imageUrl) {
-      return NextResponse.json({ ok: false, error: "PROFILE_IMAGE_NOT_FOUND" }, { status: 404 });
+    if (error) {
+      throw new Error(error.message);
     }
+
+    const row = data as ProfileImageRow | null;
+
+    if (!row?.image_url) {
+      return NextResponse.json(
+        { ok: false, error: "PROFILE_IMAGE_NOT_FOUND" },
+        { status: 404 },
+      );
+    }
+
+    if (!row.is_public) {
+      const appUserId = await getCurrentAppUserId();
+
+      if (!appUserId) {
+        return NextResponse.json(
+          { ok: false, error: "NOT_AUTHENTICATED" },
+          { status: 401 },
+        );
+      }
+
+      if (appUserId !== row.owner_user_id) {
+        return NextResponse.json(
+          { ok: false, error: "PROFILE_IMAGE_NOT_FOUND" },
+          { status: 404 },
+        );
+      }
+    }
+
+    const imageUrl = row.image_url.trim();
+    const visibility = row.is_public ? "public" : "private";
+    const cacheControl = getMediaCacheControl(request.url, visibility);
 
     if (/^https?:\/\//i.test(imageUrl)) {
       const response = NextResponse.redirect(imageUrl, 307);
@@ -42,10 +96,26 @@ export async function GET(request: Request, { params }: RouteProps) {
       return response;
     }
 
+    const storedPrivateMedia = await readPrivateMediaObject(imageUrl);
+
+    if (storedPrivateMedia) {
+      return new NextResponse(toResponseBody(storedPrivateMedia.bytes), {
+        status: 200,
+        headers: {
+          "Content-Type": storedPrivateMedia.contentType,
+          "Content-Length": String(storedPrivateMedia.bytes.byteLength),
+          "Cache-Control": cacheControl,
+        },
+      });
+    }
+
     const decoded = decodeInlineImageDataUrl(imageUrl);
 
     if (!decoded) {
-      return NextResponse.json({ ok: false, error: "PROFILE_IMAGE_INVALID" }, { status: 422 });
+      return NextResponse.json(
+        { ok: false, error: "PROFILE_IMAGE_INVALID" },
+        { status: 422 },
+      );
     }
 
     return new NextResponse(toResponseBody(decoded.bytes), {
@@ -56,14 +126,10 @@ export async function GET(request: Request, { params }: RouteProps) {
         "Cache-Control": cacheControl,
       },
     });
-  } catch (error) {
-    if (error instanceof ProfileOwnerContextError) {
-      return NextResponse.json(
-        { ok: false, error: error.code },
-        { status: error.status },
-      );
-    }
-
-    return NextResponse.json({ ok: false, error: "PROFILE_IMAGE_FAILED" }, { status: 500 });
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: "PROFILE_IMAGE_FAILED" },
+      { status: 500 },
+    );
   }
 }

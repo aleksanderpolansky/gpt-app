@@ -15,6 +15,7 @@ import {
   resolveActiveActorContext,
 } from "../../../../../../lib/actor-context";
 import { auth0 } from "../../../../../../lib/auth0";
+import { persistMediaImageValue } from "../../../../../../lib/media-storage";
 import { supabase } from "../../../../../../lib/supabase";
 import { persistHumanLocalizedEntityContent } from "@/lib/localization/contentLocalization.server";
 import {
@@ -383,9 +384,29 @@ export async function PATCH(request: Request, { params }: RouteProps) {
   }
 
   const logoUrlWasSubmitted = Object.prototype.hasOwnProperty.call(body, "logoUrl");
-  const logoUrl = logoUrlWasSubmitted
-    ? parseNullableText(body.logoUrl)
-    : organization.logo_url;
+  let logoUrl = organization.logo_url;
+
+  if (logoUrlWasSubmitted) {
+    try {
+      logoUrl = await persistMediaImageValue({
+        value: body.logoUrl,
+        visibility: "public",
+        namespace: `organizations/${organizationId}/logo`,
+        maxBytes: 512 * 1024,
+      });
+    } catch (error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Organization image is invalid.",
+        },
+        { status: 400 },
+      );
+    }
+  }
   const locationPayload =
     body.location && typeof body.location === "object"
       ? (body.location as LocationPayload)

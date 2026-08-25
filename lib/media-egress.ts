@@ -25,7 +25,9 @@ export function toMediaDeliveryUrl(
     return normalized;
   }
 
-  if (!isInlineImageDataUrl(normalized)) {
+  const isPrivateMediaToken = normalized.startsWith("arctor-private-media:");
+
+  if (!isPrivateMediaToken && !isInlineImageDataUrl(normalized)) {
     return null;
   }
 
