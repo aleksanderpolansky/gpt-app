@@ -932,7 +932,7 @@ function mapDirectoryOrganization(
     websiteUrl: row.website_url,
     bookingUrl: row.booking_url,
     logoUrl: row.public_slug
-      ? `/api/directory/organizations/${encodeURIComponent(row.public_slug)}/logo`
+      ? `/api/directory/organizations/${encodeURIComponent(row.public_slug)}/logo?v=${encodeURIComponent(row.updated_at ?? row.created_at)}`
       : null,
     coverImageUrl: null,
     socialLinks: row.social_links_json ?? {},

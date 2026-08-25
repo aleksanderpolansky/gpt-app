@@ -10,6 +10,10 @@ import {
 } from "react";
 import Image from "next/image";
 import {
+  loadActorContextClient,
+  type ActorContextClientOption,
+} from "@/lib/actor-context-client";
+import {
   Activity,
   ArrowLeftRight,
   Building2,
@@ -38,19 +42,7 @@ import { InterfaceLanguageSwitcher } from "./interface-language-switcher";
 
 type IconComponent = ElementType;
 
-type SidebarProfile = {
-  profileId: string;
-  profileKind: "personal" | "avatar";
-  displayName: string;
-  imageUrl: string | null;
-};
-
-type SidebarProfilesResponse = {
-  ok?: boolean;
-  error?: string;
-  errorMessage?: string;
-  profiles?: SidebarProfile[];
-};
+type SidebarProfile = ActorContextClientOption;
 
 type AdminNavigationResponse = {
   ok?: boolean;
@@ -600,22 +592,7 @@ export function GlobalSidebar({
       setProfilesError(null);
 
       try {
-        const response = await fetch("/api/actor-context", {
-          method: "GET",
-          cache: "no-store",
-        });
-        const data = (await response.json()) as SidebarProfilesResponse;
-
-        if (!response.ok || !data.ok) {
-          if (isMounted) {
-            setProfilesError(
-              data.errorMessage ??
-                data.error ??
-                t("navigation.profilesLoadError"),
-            );
-          }
-          return;
-        }
+        const data = await loadActorContextClient();
 
         if (isMounted) {
           setProfiles(Array.isArray(data.profiles) ? data.profiles : []);
@@ -623,9 +600,7 @@ export function GlobalSidebar({
       } catch (error) {
         if (isMounted) {
           setProfilesError(
-            error instanceof Error
-              ? error.message
-              : t("navigation.profilesLoadError"),
+            error instanceof Error ? error.message : "PROFILE_LOAD_FAILED",
           );
         }
       } finally {
@@ -640,7 +615,7 @@ export function GlobalSidebar({
     return () => {
       isMounted = false;
     };
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;

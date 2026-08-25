@@ -4,6 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, LogOut, Plus } from "lucide-react";
 
 import {
+  loadActorContextClient,
+  resetActorContextClientCache,
+  type ActorContextClientOption,
+  type ActorContextClientResponse,
+} from "@/lib/actor-context-client";
+
+import {
   getLocaleSearchParam,
   getNavigationMessage,
   type LocaleCode,
@@ -50,20 +57,8 @@ type SyncUserApiResponse = {
   error?: string;
 };
 
-type ActorContextOption = {
-  profileId: string;
-  profileKind: "personal" | "avatar";
-  displayName: string;
-  imageUrl: string | null;
-};
-
-type ActorContextApiResponse = {
-  ok?: boolean;
-  activeProfile?: ActorContextOption | null;
-  profiles?: ActorContextOption[];
-  error?: string;
-  errorMessage?: string;
-};
+type ActorContextOption = ActorContextClientOption;
+type ActorContextApiResponse = ActorContextClientResponse;
 
 type ActorContextLabels = {
   actingAs: string;
@@ -219,21 +214,7 @@ function ActorContextSwitcher({
     let mounted = true;
     setIsLoading(true);
 
-    fetch("/api/actor-context", {
-      method: "GET",
-      cache: "no-store",
-    })
-      .then(async (response) => {
-        const data = (await response.json()) as ActorContextApiResponse;
-
-        if (!response.ok || !data.ok) {
-          throw new Error(
-            data.errorMessage || data.error || "Could not load actor context.",
-          );
-        }
-
-        return data;
-      })
+    loadActorContextClient()
       .then((data) => {
         if (!mounted) {
           return;
@@ -324,6 +305,7 @@ function ActorContextSwitcher({
 
       setActiveProfile(data.activeProfile);
       setProfiles(data.profiles ?? profiles);
+      resetActorContextClientCache();
       window.location.reload();
     } catch (updateError) {
       setError(

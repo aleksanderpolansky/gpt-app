@@ -7,6 +7,7 @@ import {
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import { readValueObjectPublicImageUrl } from "@/lib/value-object-public-image";
+import { toMediaDeliveryUrl } from "../../../../lib/media-egress";
 import { getOrganizationCurrency } from "@/lib/commercial/currency";
 import {
   SuperOfferWizard,
@@ -34,6 +35,7 @@ type ProfileRow = {
   display_name: string;
   image_url: string | null;
   created_at: string;
+  updated_at: string;
 };
 
 type ActorRow = {
@@ -50,6 +52,7 @@ type OrganizationRow = {
   default_currency: string | null;
   logo_url: string | null;
   status: string;
+  updated_at: string;
 };
 
 type ValueObjectRow = {
@@ -65,6 +68,7 @@ type ValueObjectRow = {
   status: string;
   metadata_json: unknown;
   created_at: string;
+  updated_at: string;
 };
 
 function normalizeLocale(value: string | string[] | undefined): LocaleCode {
@@ -133,7 +137,7 @@ export default async function SuperOfferWizardPage({
   const { data: profileData, error: profileError } = await supabase
     .from("actor_public_profiles")
     .select(
-      "id, actor_id, profile_kind, display_name, image_url, created_at",
+      "id, actor_id, profile_kind, display_name, image_url, created_at, updated_at",
     )
     .eq("owner_user_id", actorContext.appUserId)
     .in("profile_kind", ["personal", "avatar"])
@@ -178,7 +182,7 @@ export default async function SuperOfferWizardPage({
       ? supabase
           .from("organizations")
           .select(
-            "id, organization_name, owner_actor_id, country_code, default_currency, logo_url, status",
+            "id, organization_name, owner_actor_id, country_code, default_currency, logo_url, status, updated_at",
           )
           .in("owner_actor_id", actorIds)
           .eq("status", "active")
@@ -200,7 +204,8 @@ export default async function SuperOfferWizardPage({
             default_duration_minutes,
             status,
             metadata_json,
-            created_at
+            created_at,
+            updated_at
           `,
           )
           .eq("owner_user_id", actorContext.appUserId)
@@ -239,7 +244,11 @@ export default async function SuperOfferWizardPage({
       organizationId: null,
       kind: profile.profile_kind,
       displayName: profile.display_name,
-      imageUrl: profile.image_url,
+      imageUrl: toMediaDeliveryUrl(
+        profile.image_url,
+        `/api/profiles/${encodeURIComponent(profile.id)}/image`,
+        profile.updated_at,
+      ),
       currency: "EUR",
     });
   }
@@ -258,7 +267,11 @@ export default async function SuperOfferWizardPage({
       organizationId: organization.id,
       kind: "organization",
       displayName: organization.organization_name,
-      imageUrl: organization.logo_url,
+      imageUrl: toMediaDeliveryUrl(
+        organization.logo_url,
+        `/api/organizations/${encodeURIComponent(organization.id)}/logo`,
+        organization.updated_at,
+      ),
       currency: getOrganizationCurrency(organization),
     });
   }
@@ -302,7 +315,11 @@ export default async function SuperOfferWizardPage({
         currency: normalizeCurrency(item.default_currency),
         ordinaryDurationMinutes: item.default_duration_minutes,
         status: item.status,
-        imageUrl: readValueObjectPublicImageUrl(item.metadata_json),
+        imageUrl: toMediaDeliveryUrl(
+          readValueObjectPublicImageUrl(item.metadata_json),
+          `/api/value-objects/${encodeURIComponent(item.id)}/public-image`,
+          item.updated_at,
+        ),
       },
     ];
   });

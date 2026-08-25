@@ -12,7 +12,7 @@ type PersonalProfileSeed = {
 async function ensurePersonalPublicProfile(seed: PersonalProfileSeed) {
   const { data: existingProfile, error: existingProfileError } = await supabase
     .from("actor_public_profiles")
-    .select("*")
+    .select("id, public_slug, display_name, profile_kind, is_public")
     .eq("actor_id", seed.actorId)
     .maybeSingle();
 
@@ -36,7 +36,7 @@ async function ensurePersonalPublicProfile(seed: PersonalProfileSeed) {
       image_source: "auth",
       is_public: false,
     })
-    .select("*")
+    .select("id, public_slug, display_name, profile_kind, is_public")
     .single();
 
   if (!createdProfileError && createdProfile) {
@@ -48,7 +48,7 @@ async function ensurePersonalPublicProfile(seed: PersonalProfileSeed) {
   if (createdProfileError?.code === "23505") {
     const { data: racedProfile, error: racedProfileError } = await supabase
       .from("actor_public_profiles")
-      .select("*")
+      .select("id, public_slug, display_name, profile_kind, is_public")
       .eq("actor_id", seed.actorId)
       .single();
 
@@ -391,17 +391,16 @@ export async function POST() {
 
   return NextResponse.json({
     ok: true,
-    user: appUser,
-    person,
-    actor,
+    person: {
+      id: person.id,
+      full_name: person.full_name ?? null,
+      short_name: person.short_name ?? null,
+    },
+    actor: {
+      id: actor.id,
+      actor_type: actor.actor_type,
+      display_name: actor.display_name,
+    },
     publicProfile,
-    spaces: {
-      personal: personalSpace,
-      marketplace: marketplaceSpace,
-    },
-    roles: {
-      self: selfRole,
-      buyer: buyerRole,
-    },
   });
 }

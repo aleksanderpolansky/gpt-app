@@ -7,6 +7,7 @@ import {
   resolveActiveActorContext,
 } from "../../../../lib/actor-context";
 import { auth0 } from "../../../../lib/auth0";
+import { toMediaDeliveryUrl } from "../../../../lib/media-egress";
 import { supabase } from "../../../../lib/supabase";
 import { resolveLocalizedContentFields } from "@/lib/localization/contentLocalization";
 import { ensureActorValueObjectLocalizationsV1 } from "@/lib/localization/valueObjectOnDemandLocalization.server";
@@ -1756,7 +1757,11 @@ export default async function ValueObjectDetailPage({
                     ? copy.leafEyebrow
                     : copy.genericEyebrow
           }
-          imageUrl={publicProfileMetadata.imageUrl}
+          imageUrl={toMediaDeliveryUrl(
+            publicProfileMetadata.imageUrl,
+            `/api/value-objects/${encodeURIComponent(valueObject.id)}/public-image`,
+            valueObject.updated_at,
+          )}
           location={effectiveLocation}
           locationIsInherited={!hasOwnLocation && Boolean(organizationLocation)}
           showLocationCard={

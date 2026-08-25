@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getMediaCacheControl } from "../../../../../../../lib/media-egress";
 import { supabase } from "../../../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -15,10 +16,9 @@ type OrganizationMediaRow = {
   cover_image_url: string | null;
 };
 
-const CACHE_CONTROL = "private, no-store, max-age=0";
 const DATA_URL_RE = /^data:(image\/[a-zA-Z0-9.+-]+);base64,([a-zA-Z0-9+/=\r\n]+)$/;
 
-function placeholderResponse() {
+function placeholderResponse(cacheControl: string) {
   const svg =
     '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">' +
     '<rect width="512" height="512" rx="48" fill="#eef2ff"/>' +
@@ -29,13 +29,14 @@ function placeholderResponse() {
     status: 200,
     headers: {
       "Content-Type": "image/svg+xml; charset=utf-8",
-      "Cache-Control": CACHE_CONTROL,
+      "Cache-Control": cacheControl,
     },
   });
 }
 
-export async function GET(_request: Request, { params }: RouteProps) {
+export async function GET(request: Request, { params }: RouteProps) {
   const { slug } = await params;
+  const cacheControl = getMediaCacheControl(request.url, "public");
 
   const { data, error } = await supabase
     .from("organizations")
@@ -58,19 +59,19 @@ export async function GET(_request: Request, { params }: RouteProps) {
   const mediaUrl = row?.logo_url?.trim() || row?.cover_image_url?.trim() || "";
 
   if (!mediaUrl) {
-    return placeholderResponse();
+    return placeholderResponse(cacheControl);
   }
 
   if (/^https?:\/\//i.test(mediaUrl)) {
     const response = NextResponse.redirect(mediaUrl, 307);
-    response.headers.set("Cache-Control", CACHE_CONTROL);
+    response.headers.set("Cache-Control", cacheControl);
     return response;
   }
 
   const match = DATA_URL_RE.exec(mediaUrl);
 
   if (!match) {
-    return placeholderResponse();
+    return placeholderResponse(cacheControl);
   }
 
   try {
@@ -82,10 +83,10 @@ export async function GET(_request: Request, { params }: RouteProps) {
       headers: {
         "Content-Type": contentType,
         "Content-Length": String(bytes.byteLength),
-        "Cache-Control": CACHE_CONTROL,
+        "Cache-Control": cacheControl,
       },
     });
   } catch {
-    return placeholderResponse();
+    return placeholderResponse(cacheControl);
   }
 }

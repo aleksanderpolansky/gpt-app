@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 
 import { supabase } from "./supabase";
+import { toMediaDeliveryUrl } from "./media-egress";
 
 export const ACTIVE_PROFILE_COOKIE_NAME = "arctor_active_profile";
 
@@ -19,6 +20,7 @@ type OwnedProfileRow = {
   display_name: string;
   image_url: string | null;
   created_at: string;
+  updated_at: string;
 };
 
 type ActorRow = {
@@ -67,7 +69,8 @@ function isOwnedProfileRow(value: unknown): value is OwnedProfileRow {
     typeof row.actor_id === "string" &&
     (row.profile_kind === "personal" || row.profile_kind === "avatar") &&
     typeof row.display_name === "string" &&
-    typeof row.created_at === "string"
+    typeof row.created_at === "string" &&
+    typeof row.updated_at === "string"
   );
 }
 
@@ -91,7 +94,11 @@ function toPublicOption(profile: OwnedProfileRow): ActorContextOption {
     profileId: profile.id,
     profileKind: profile.profile_kind,
     displayName: profile.display_name,
-    imageUrl: profile.image_url,
+    imageUrl: toMediaDeliveryUrl(
+      profile.image_url,
+      `/api/profiles/${encodeURIComponent(profile.id)}/image`,
+      profile.updated_at,
+    ),
   };
 }
 
@@ -146,7 +153,9 @@ export async function resolveActorContext(
 
   const { data: profileData, error: profileError } = await supabase
     .from("actor_public_profiles")
-    .select("id, actor_id, profile_kind, display_name, image_url, created_at")
+    .select(
+      "id, actor_id, profile_kind, display_name, image_url, created_at, updated_at",
+    )
     .eq("owner_user_id", appUser.id)
     .in("profile_kind", ["personal", "avatar"])
     .order("created_at", { ascending: true });
