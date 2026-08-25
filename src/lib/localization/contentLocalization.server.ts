@@ -111,9 +111,9 @@ function normalizeInputFields(fields: LocalizedContentFieldMap) {
   return Object.fromEntries(entries) as LocalizedContentFieldMap;
 }
 
-function translationSchema() {
+function translationSchema(targetLocales: readonly ArctorContentLocale[]) {
   const variantProperties = Object.fromEntries(
-    ARCTOR_CONTENT_LOCALES.map((locale) => [locale, { type: ["string", "null"] }]),
+    targetLocales.map((locale) => [locale, { type: ["string", "null"] }]),
   );
   return {
     type: "object",
@@ -147,7 +147,7 @@ function translationSchema() {
                   variants: {
                     type: "object",
                     additionalProperties: false,
-                    required: [...ARCTOR_CONTENT_LOCALES],
+                    required: [...targetLocales],
                     properties: variantProperties,
                   },
                 },
@@ -328,6 +328,7 @@ function sanitizeTranslatedItem(input: {
   raw: TranslationOutputItem;
   source: TranslationInput;
   sourceLocaleHint: ArctorContentLocale;
+  targetLocales: readonly ArctorContentLocale[];
 }) {
   const detectedSourceLocale = normalizeContentLocale(input.raw.detectedSourceLocale);
   const fieldsRaw = Array.isArray(input.raw.fields)
@@ -346,7 +347,7 @@ function sanitizeTranslatedItem(input: {
     }
     seen.add(fieldCode);
     const rawVariants = asRecord(rawField.variants);
-    for (const locale of ARCTOR_CONTENT_LOCALES) {
+    for (const locale of input.targetLocales) {
       const value = rawVariants[locale];
       variants[locale][fieldCode] =
         value === null ? null : typeof value === "string" && value.trim() ? value.trim() : null;
@@ -369,9 +370,19 @@ export async function generateLocalizedContentBatch(input: {
   analysisExecutionId?: string | null;
   operationId: string;
   sourceLocaleHint: unknown;
+  targetLocales?: ArctorContentLocale[];
   items: TranslationInput[];
 }) {
   const sourceLocaleHint = normalizeContentLocale(input.sourceLocaleHint);
+  const targetLocales = Array.from(
+    new Set(input.targetLocales ?? ARCTOR_CONTENT_LOCALES),
+  );
+  if (
+    targetLocales.length < 1 ||
+    targetLocales.some((locale) => !ARCTOR_CONTENT_LOCALES.includes(locale))
+  ) {
+    throw new Error("CONTENT_LOCALIZATION_TARGET_LOCALES_INVALID");
+  }
   const items = input.items.map((item) => ({
     key: item.key.trim(),
     fields: normalizeInputFields(item.fields),
@@ -395,10 +406,10 @@ export async function generateLocalizedContentBatch(input: {
   const user = {
     runtime: ARCTOR_CONTENT_LOCALIZATION_RUNTIME,
     sourceLocaleHint,
-    targetLocales: ARCTOR_CONTENT_LOCALES,
+    targetLocales,
     items,
   };
-  const schema = translationSchema();
+  const schema = translationSchema(targetLocales);
   const model = await getNanoModel();
   const localizationInputText = JSON.stringify({
     sourceLocaleHint,
@@ -573,7 +584,12 @@ export async function generateLocalizedContentBatch(input: {
     for (const source of items) {
       const raw = byKey.get(source.key);
       if (!raw) throw new Error(`CONTENT_LOCALIZATION_OUTPUT_KEY_MISSING:${source.key}`);
-      const sanitized = sanitizeTranslatedItem({ raw, source, sourceLocaleHint });
+      const sanitized = sanitizeTranslatedItem({
+        raw,
+        source,
+        sourceLocaleHint,
+        targetLocales,
+      });
       envelopes.set(source.key, {
         schemaVersion: ARCTOR_LOCALIZED_CONTENT_SCHEMA_VERSION,
         detectedSourceLocale: sanitized.detectedSourceLocale,

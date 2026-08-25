@@ -7,6 +7,7 @@ import {
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import { persistHumanLocalizedEntityContent } from "@/lib/localization/contentLocalization.server";
+import { ensureActorValueObjectLocalizationsV1 } from "@/lib/localization/valueObjectOnDemandLocalization.server";
 import { localizeGlobalSystemValueObject } from "@/lib/reality-core/global-system-value-object-localization";
 import {
   isValueObjectLeafKindV2,
@@ -481,7 +482,22 @@ export async function GET(request: Request) {
     );
   }
 
-  const ownedValueObjects = (ownedResult.data ?? []).map((row: Record<string, unknown>) => {
+  const ownedRows = (ownedResult.data ?? []) as Array<Record<string, unknown>>;
+  const ownedLocalization = await ensureActorValueObjectLocalizationsV1({
+    appUserId: appUser.id,
+    actorId: personActor.id,
+    entityKeys: ownedRows
+      .map((row) => (typeof row.id === "string" ? row.id : ""))
+      .filter(Boolean),
+    targetLocale: locale,
+    fieldCodes: ["title", "description"],
+  });
+
+  const ownedValueObjects = ownedRows.map((row: Record<string, unknown>) => {
+    const localizedFields =
+      typeof row.id === "string"
+        ? ownedLocalization.fieldsById.get(row.id)
+        : undefined;
     const organizationName =
       typeof row.organization_name === "string" &&
       row.organization_name.trim()
@@ -495,6 +511,8 @@ export async function GET(request: Request) {
 
     return {
       ...row,
+      title: localizedFields?.title ?? row.title,
+      description: localizedFields?.description ?? row.description,
       organizations: organizationName
         ? {
             organization_name: organizationName,

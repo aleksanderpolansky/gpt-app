@@ -9,6 +9,7 @@ import {
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import { resolveLocalizedContentFields } from "@/lib/localization/contentLocalization";
+import { ensureActorValueObjectLocalizationsV1 } from "@/lib/localization/valueObjectOnDemandLocalization.server";
 import { localizeGlobalSystemValueObject } from "@/lib/reality-core/global-system-value-object-localization";
 import {
   ValueObjectProfileTopGrid,
@@ -1136,10 +1137,28 @@ export default async function ValueObjectDetailPage({
     notFound();
   }
 
-  let valueObject = rawValueObject;
   const isGlobalSystemObject =
-    valueObject.scope_code === "global" &&
-    valueObject.origin_type_code === "system_model";
+    rawValueObject.scope_code === "global" &&
+    rawValueObject.origin_type_code === "system_model";
+  const isOwnedByActiveActor =
+    rawValueObject.owner_user_id === actorContext.appUserId &&
+    rawValueObject.owner_actor_id === actorContext.actorId;
+
+  if (!isGlobalSystemObject && !isOwnedByActiveActor) {
+    notFound();
+  }
+
+  const onDemandLocalization = isGlobalSystemObject
+    ? null
+    : await ensureActorValueObjectLocalizationsV1({
+        appUserId: actorContext.appUserId,
+        actorId: actorContext.actorId,
+        entityKeys: [rawValueObject.id],
+        targetLocale: locale,
+        fieldCodes: ["title", "description"],
+      });
+
+  let valueObject = rawValueObject;
   if (isGlobalSystemObject) {
     valueObject = localizeGlobalSystemValueObject(valueObject, locale);
   } else {
@@ -1151,19 +1170,19 @@ export default async function ValueObjectDetailPage({
         description: valueObject.description,
       },
     });
+    const onDemandFields =
+      onDemandLocalization?.fieldsById.get(rawValueObject.id);
     valueObject = {
       ...valueObject,
-      title: localizedFields.title ?? valueObject.title,
+      title:
+        onDemandFields?.title ??
+        localizedFields.title ??
+        valueObject.title,
       description:
-        localizedFields.description ?? valueObject.description,
+        onDemandFields?.description ??
+        localizedFields.description ??
+        valueObject.description,
     };
-  }
-  const isOwnedByActiveActor =
-    valueObject.owner_user_id === actorContext.appUserId &&
-    valueObject.owner_actor_id === actorContext.actorId;
-
-  if (!isGlobalSystemObject && !isOwnedByActiveActor) {
-    notFound();
   }
 
   const publicProfileMetadata = parsePublicProfileMetadata(
@@ -1219,7 +1238,21 @@ export default async function ValueObjectDetailPage({
       throw new Error(error.message);
     }
 
-    return (data ?? []) as TreeNodeRow[];
+    const treeNodes = (data ?? []) as TreeNodeRow[];
+    const treeLocalization = await ensureActorValueObjectLocalizationsV1({
+      appUserId: actorContext.appUserId,
+      actorId: actorContext.actorId,
+      entityKeys: treeNodes.map((node) => node.id),
+      targetLocale: locale,
+      fieldCodes: ["title"],
+    });
+
+    return treeNodes.map((node) => ({
+      ...node,
+      title:
+        treeLocalization.fieldsById.get(node.id)?.title ??
+        node.title,
+    }));
   }
 
   async function readCriteria(): Promise<CriterionRow[]> {
