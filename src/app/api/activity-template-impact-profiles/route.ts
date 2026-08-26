@@ -2,10 +2,21 @@ import { NextResponse } from "next/server";
 
 import { getActivityUserContext } from "../../../../lib/activity/activityUserContext";
 import { supabase } from "../../../../lib/supabase";
-import { normalizeActivityTemplateImpactProfileInput } from "@/lib/activity-template-impact-profile-contract";
+import { saveActivityTemplateAuthoringV2 } from "@/lib/activity/activity-template-authoring-v2.server";
+import { normalizeActivityTemplateAuthoringV2Input } from "@/lib/activity-template-impact-profile-contract";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+type ProfileRow = {
+  id: string;
+  template_id: string;
+  version_no: number;
+  status: string;
+  notes: string | null;
+  updated_at: string;
+  routing_contract_code: string;
+};
 
 function countByProfile(rows: Array<{ profile_id: string }>) {
   const result = new Map<string, number>();
@@ -16,17 +27,24 @@ function countByProfile(rows: Array<{ profile_id: string }>) {
 }
 
 export async function GET() {
-  const { appUser, personActor, errorResponse } = await getActivityUserContext();
+  const { appUser, personActor, errorResponse } =
+    await getActivityUserContext();
+
   if (errorResponse) {
     return errorResponse;
   }
   if (!appUser || !personActor) {
-    return NextResponse.json({ ok: false, error: "Active actor context not found" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "Active actor context not found" },
+      { status: 500 },
+    );
   }
 
   const { data: templatesData, error: templatesError } = await supabase
     .from("activity_templates")
-    .select("id,title,description,template_group,default_duration_minutes,status,is_active,updated_at")
+    .select(
+      "id,title,description,template_group,default_duration_minutes,status,is_active,updated_at",
+    )
     .eq("template_scope", "user")
     .eq("owner_user_id", appUser.id)
     .eq("owner_actor_id", personActor.id)
@@ -35,69 +53,107 @@ export async function GET() {
     .limit(500);
 
   if (templatesError) {
-    return NextResponse.json({ ok: false, error: templatesError.message }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: templatesError.message },
+      { status: 500 },
+    );
   }
 
   const templateIds = (templatesData ?? []).map((row) => row.id as string);
   if (templateIds.length === 0) {
-    return NextResponse.json({ ok: true, templates: [] }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(
+      { ok: true, templates: [] },
+      { headers: { "Cache-Control": "private, no-store, max-age=0" } },
+    );
   }
 
   const { data: profilesData, error: profilesError } = await supabase
     .from("activity_template_impact_profiles_v1")
-    .select("id,template_id,version_no,status,notes,updated_at")
+    .select(
+      "id,template_id,version_no,status,notes,updated_at,routing_contract_code",
+    )
     .eq("owner_user_id", appUser.id)
     .eq("owner_actor_id", personActor.id)
     .eq("status", "active")
     .in("template_id", templateIds);
 
   if (profilesError) {
-    return NextResponse.json({ ok: false, error: profilesError.message }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: profilesError.message },
+      { status: 500 },
+    );
   }
 
-  const profileIds = (profilesData ?? []).map((row) => row.id as string);
-  let parameterRows: Array<{ profile_id: string }> = [];
-  let linkRows: Array<{ profile_id: string }> = [];
+  const profiles = (profilesData ?? []) as ProfileRow[];
+  const v2ProfileIds = profiles
+    .filter((profile) => profile.routing_contract_code === "parameter_registry_v2")
+    .map((profile) => profile.id);
+  const legacyProfileIds = profiles
+    .filter((profile) => profile.routing_contract_code !== "parameter_registry_v2")
+    .map((profile) => profile.id);
+  const profileIds = profiles.map((profile) => profile.id);
 
-  if (profileIds.length > 0) {
-    const [parameterResult, linkResult] = await Promise.all([
-      supabase
-        .from("activity_template_profile_parameters_v1")
-        .select("profile_id")
-        .in("profile_id", profileIds),
-      supabase
-        .from("activity_template_profile_object_links_v1")
-        .select("profile_id")
-        .in("profile_id", profileIds),
-    ]);
+  const v2ParameterResult =
+    v2ProfileIds.length > 0
+      ? await supabase
+          .from("activity_template_profile_parameters_v2")
+          .select("profile_id")
+          .in("profile_id", v2ProfileIds)
+      : { data: [], error: null };
 
-    if (parameterResult.error) {
-      return NextResponse.json({ ok: false, error: parameterResult.error.message }, { status: 500 });
-    }
-    if (linkResult.error) {
-      return NextResponse.json({ ok: false, error: linkResult.error.message }, { status: 500 });
-    }
+  const legacyParameterResult =
+    legacyProfileIds.length > 0
+      ? await supabase
+          .from("activity_template_profile_parameters_v1")
+          .select("profile_id")
+          .in("profile_id", legacyProfileIds)
+      : { data: [], error: null };
 
-    parameterRows = (parameterResult.data ?? []) as Array<{ profile_id: string }>;
-    linkRows = (linkResult.data ?? []) as Array<{ profile_id: string }>;
+  const linksResult =
+    profileIds.length > 0
+      ? await supabase
+          .from("activity_template_profile_object_links_v1")
+          .select("profile_id")
+          .in("profile_id", profileIds)
+      : { data: [], error: null };
+
+  if (v2ParameterResult.error) {
+    return NextResponse.json(
+      { ok: false, error: v2ParameterResult.error.message },
+      { status: 500 },
+    );
+  }
+  if (legacyParameterResult.error) {
+    return NextResponse.json(
+      { ok: false, error: legacyParameterResult.error.message },
+      { status: 500 },
+    );
+  }
+  if (linksResult.error) {
+    return NextResponse.json(
+      { ok: false, error: linksResult.error.message },
+      { status: 500 },
+    );
   }
 
-  const profileByTemplate = new Map(
-    (profilesData ?? []).map((row) => [row.template_id as string, row]),
+  const parameterCount = countByProfile([
+    ...((v2ParameterResult.data ?? []) as Array<{ profile_id: string }>),
+    ...((legacyParameterResult.data ?? []) as Array<{ profile_id: string }>),
+  ]);
+  const linkCount = countByProfile(
+    (linksResult.data ?? []) as Array<{ profile_id: string }>,
   );
-  const parameterCount = countByProfile(parameterRows);
-  const linkCount = countByProfile(linkRows);
+  const profileByTemplate = new Map(
+    profiles.map((profile) => [profile.template_id, profile]),
+  );
 
   const templates = (templatesData ?? []).map((template) => {
-    const profile = profileByTemplate.get(template.id as string) as
-      | { id: string; version_no: number; status: string; notes: string | null; updated_at: string }
-      | undefined;
+    const profile = profileByTemplate.get(template.id as string);
 
     return {
       id: template.id,
       title: template.title,
       description: template.description,
-      templateGroup: template.template_group,
       defaultDurationMinutes: template.default_duration_minutes,
       status: template.status,
       isActive: template.is_active,
@@ -107,6 +163,7 @@ export async function GET() {
             id: profile.id,
             versionNo: profile.version_no,
             notes: profile.notes,
+            routingContractCode: profile.routing_contract_code,
             parameterCount: parameterCount.get(profile.id) ?? 0,
             objectCount: linkCount.get(profile.id) ?? 0,
             updatedAt: profile.updated_at,
@@ -117,42 +174,43 @@ export async function GET() {
 
   return NextResponse.json(
     { ok: true, templates },
-    { headers: { "Cache-Control": "no-store" } },
+    { headers: { "Cache-Control": "private, no-store, max-age=0" } },
   );
 }
 
 export async function POST(request: Request) {
-  const { appUser, personActor, errorResponse } = await getActivityUserContext();
+  const { appUser, personActor, errorResponse } =
+    await getActivityUserContext();
+
   if (errorResponse) {
     return errorResponse;
   }
   if (!appUser || !personActor) {
-    return NextResponse.json({ ok: false, error: "Active actor context not found" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "Active actor context not found" },
+      { status: 500 },
+    );
   }
 
   try {
-    const body = normalizeActivityTemplateImpactProfileInput(await request.json());
-    const { data, error } = await supabase.rpc("save_activity_template_impact_profile_v1", {
-      p_owner_user_id: appUser.id,
-      p_owner_actor_id: personActor.id,
-      p_template_id: null,
-      p_title: body.title,
-      p_description: body.description || null,
-      p_template_group: body.templateGroup,
-      p_default_duration_minutes: body.defaultDurationMinutes,
-      p_notes: body.notes || null,
-      p_parameters: body.parameters,
-      p_links: body.links,
+    const body = normalizeActivityTemplateAuthoringV2Input(
+      await request.json(),
+    );
+    const result = await saveActivityTemplateAuthoringV2({
+      ownerUserId: appUser.id,
+      ownerActorId: personActor.id,
+      templateId: null,
+      body,
     });
 
-    if (error) {
-      return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
-    }
-
-    return NextResponse.json({ ok: true, result: data }, { status: 201 });
+    return NextResponse.json({ ok: true, result }, { status: 201 });
   } catch (error) {
     return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : "Invalid profile payload" },
+      {
+        ok: false,
+        error:
+          error instanceof Error ? error.message : "Invalid profile payload",
+      },
       { status: 400 },
     );
   }
