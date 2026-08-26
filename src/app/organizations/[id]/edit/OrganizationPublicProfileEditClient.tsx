@@ -188,7 +188,7 @@ const EDIT_MESSAGES: Record<EditLocaleKey, EditMessages> = {
     viewOffers: "View offers",
     details: "Details",
     publicOffers: "Public offers",
-    publicActions: "Public actions",
+    publicActions: "Updates",
     publicInformation: "Public information",
     flow: "Public profile",
     offers: "Offers",
@@ -228,7 +228,7 @@ const EDIT_MESSAGES: Record<EditLocaleKey, EditMessages> = {
     viewOffers: "Zobacz oferty",
     details: "Szczeg\u00f3\u0142y",
     publicOffers: "Publiczne oferty",
-    publicActions: "Dzia\u0142ania publiczne",
+    publicActions: "Aktualno\u015bci",
     publicInformation: "Informacje publiczne",
     flow: "Profil publiczny",
     offers: "Oferty",
@@ -268,7 +268,7 @@ const EDIT_MESSAGES: Record<EditLocaleKey, EditMessages> = {
     viewOffers: "\u041f\u0435\u0440\u0435\u0433\u043b\u044f\u043d\u0443\u0442\u0438 \u043f\u0440\u043e\u043f\u043e\u0437\u0438\u0446\u0456\u0457",
     details: "\u0414\u043e\u043a\u043b\u0430\u0434\u043d\u0456\u0448\u0435",
     publicOffers: "\u041f\u0443\u0431\u043b\u0456\u0447\u043d\u0456 \u043f\u0440\u043e\u043f\u043e\u0437\u0438\u0446\u0456\u0457",
-    publicActions: "\u041f\u0443\u0431\u043b\u0456\u0447\u043d\u0456 \u0434\u0456\u0457",
+    publicActions: "\u041d\u043e\u0432\u0438\u043d\u0438 \u0442\u0430 \u043f\u0443\u0431\u043b\u0456\u043a\u0430\u0446\u0456\u0457",
     publicInformation: "\u041f\u0443\u0431\u043b\u0456\u0447\u043d\u0430 \u0456\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0456\u044f",
     flow: "\u041f\u0443\u0431\u043b\u0456\u0447\u043d\u0438\u0439 \u043f\u0440\u043e\u0444\u0456\u043b\u044c",
     offers: "\u041f\u0440\u043e\u043f\u043e\u0437\u0438\u0446\u0456\u0457",
@@ -308,7 +308,7 @@ const EDIT_MESSAGES: Record<EditLocaleKey, EditMessages> = {
     viewOffers: "\u041f\u043e\u0441\u043c\u043e\u0442\u0440\u0435\u0442\u044c \u043e\u0444\u0444\u0435\u0440\u044b",
     details: "\u041f\u043e\u0434\u0440\u043e\u0431\u043d\u0435\u0435",
     publicOffers: "\u041f\u0443\u0431\u043b\u0438\u0447\u043d\u044b\u0435 \u043e\u0444\u0444\u0435\u0440\u044b",
-    publicActions: "\u041f\u0443\u0431\u043b\u0438\u0447\u043d\u044b\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f",
+    publicActions: "\u041d\u043e\u0432\u043e\u0441\u0442\u0438 \u0438 \u043f\u0443\u0431\u043b\u0438\u043a\u0430\u0446\u0438\u0438",
     publicInformation: "\u041f\u0443\u0431\u043b\u0438\u0447\u043d\u0430\u044f \u0438\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044f",
     flow: "\u041f\u0443\u0431\u043b\u0438\u0447\u043d\u044b\u0439 \u043f\u0440\u043e\u0444\u0438\u043b\u044c",
     offers: "\u041e\u0444\u0444\u0435\u0440\u044b",
@@ -348,7 +348,7 @@ const EDIT_MESSAGES: Record<EditLocaleKey, EditMessages> = {
     viewOffers: "Angebote ansehen",
     details: "Details",
     publicOffers: "\u00d6ffentliche Angebote",
-    publicActions: "\u00d6ffentliche Aktionen",
+    publicActions: "Neuigkeiten",
     publicInformation: "\u00d6ffentliche Informationen",
     flow: "\u00d6ffentliches Profil",
     offers: "Angebote",
@@ -388,7 +388,7 @@ const EDIT_MESSAGES: Record<EditLocaleKey, EditMessages> = {
     viewOffers: "Ver ofertas",
     details: "Detalles",
     publicOffers: "Ofertas p\u00fablicas",
-    publicActions: "Acciones p\u00fablicas",
+    publicActions: "Novedades",
     publicInformation: "Informaci\u00f3n p\u00fablica",
     flow: "Perfil p\u00fablico",
     offers: "Ofertas",
@@ -428,7 +428,7 @@ const EDIT_MESSAGES: Record<EditLocaleKey, EditMessages> = {
     viewOffers: "Zobrazit nab\u00eddky",
     details: "Podrobnosti",
     publicOffers: "Ve\u0159ejn\u00e9 nab\u00eddky",
-    publicActions: "Ve\u0159ejn\u00e9 akce",
+    publicActions: "Aktuality",
     publicInformation: "Ve\u0159ejn\u00e9 informace",
     flow: "Ve\u0159ejn\u00fd profil",
     offers: "Nab\u00eddky",
@@ -2268,7 +2268,7 @@ export default function OrganizationPublicProfileEditClient({
             </EditableShell>
           </BigCard>
 
-          <BigCard title={messages.publicOffers} detailLabel={messages.details}>
+          <BigCard title={messages.publicActions} detailLabel={messages.details}>
             <PlaceholderPanel label={messages.publicInformation} />
           </BigCard>
 
@@ -2276,7 +2276,7 @@ export default function OrganizationPublicProfileEditClient({
             <PlaceholderPanel label={messages.publicInformation} />
           </BigCard>
 
-          <BigCard title={messages.publicActions} detailLabel={messages.details}>
+          <BigCard title={messages.publicOffers} detailLabel={messages.details}>
             <PlaceholderPanel label={messages.publicInformation} />
           </BigCard>
         </section>

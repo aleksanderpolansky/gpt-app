@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase";
+import { ensurePublicMessageObjectLocalizationsV1 } from "./messageObjectOnDemandLocalization.server";
 
 type OrganizationActorRow = {
   id: string;
@@ -6,9 +7,12 @@ type OrganizationActorRow = {
 
 type MessageObjectRow = {
   id: string;
+  owner_user_id: string | null;
+  created_by_actor_id: string | null;
   title: string | null;
   content_text: string | null;
   language_code: string | null;
+  metadata_json: Record<string, unknown> | null;
   activated_at: string | null;
   created_at: string;
 };
@@ -50,6 +54,7 @@ async function getActiveOrganizationActorId(organizationId: string) {
 
 export async function getPublicEnterpriseMessages(input: {
   organizationId: string;
+  locale?: string;
   limit?: number;
 }): Promise<PublicEnterpriseMessagesResult> {
   const limit = Math.min(Math.max(input.limit ?? 12, 1), 50);
@@ -69,7 +74,7 @@ export async function getPublicEnterpriseMessages(input: {
     const { data: messageRows, error: messageError } = await supabase
       .from("message_objects")
       .select(
-        "id,title,content_text,language_code,activated_at,created_at",
+        "id,owner_user_id,created_by_actor_id,title,content_text,language_code,metadata_json,activated_at,created_at",
       )
       .eq("author_actor_id", organizationActorId)
       .eq("audience_scope_code", "public")
@@ -114,17 +119,38 @@ export async function getPublicEnterpriseMessages(input: {
       ),
     );
 
+    const distributedRows = rows
+      .filter((row) => distributedIds.has(row.id))
+      .slice(0, limit);
+
+    const localization = await ensurePublicMessageObjectLocalizationsV1({
+      targetLocale: input.locale,
+      messages: distributedRows.map((row) => ({
+        id: row.id,
+        ownerUserId: row.owner_user_id,
+        createdByActorId: row.created_by_actor_id,
+        sourceLocaleHint: row.language_code,
+        contentText: row.content_text,
+        metadataJson: row.metadata_json,
+      })),
+    });
+
+    if (localization.warnings.length > 0) {
+      console.warn(
+        "Enterprise public message localization warnings",
+        localization.warnings,
+      );
+    }
+
     return {
-      messages: rows
-        .filter((row) => distributedIds.has(row.id))
-        .slice(0, limit)
-        .map((row) => ({
-          id: row.id,
-          title: row.title,
-          contentText: row.content_text,
-          languageCode: row.language_code,
-          publishedAt: row.activated_at ?? row.created_at,
-        })),
+      messages: distributedRows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        contentText:
+          localization.contentTextById.get(row.id) ?? row.content_text,
+        languageCode: row.language_code,
+        publishedAt: row.activated_at ?? row.created_at,
+      })),
       errorMessage: null,
     };
   } catch (error) {
