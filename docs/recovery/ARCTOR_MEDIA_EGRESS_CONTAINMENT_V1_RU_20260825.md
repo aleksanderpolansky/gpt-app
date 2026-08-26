@@ -63,3 +63,20 @@ Acceptance V1B1:
 4. \`git diff --check\` и staged \`git diff --cached --check\` = PASS.
 5. Commit/push разрешены только после всех gates.
 6. После production deployment повторить Vercel Fast Data Transfer probe и затем выполнять V1B2 migration исторических 9 unique payloads.
+
+## V1B2 — legacy Base64 migration
+
+Дата выполнения: 26.08.2026
+
+Production migration закрыла исторический inline-media backlog после V1B1.
+
+- baseline перед миграцией: 10 Base64 references, 8 unique payloads, 7502913 referenced bytes;
+- migrated references: 10; optimized Storage assets: 8; newly uploaded objects in this run: 8;
+- legacy изображения читались в память локального migration process, оптимизировались через Sharp и записывались как WebP; raw Base64/original bytes не архивировались в ARCTor и не попадали в REPORT/PACKAGE;
+- personal/avatar media migrated в private bucket `arctor-private-media` и заменены short private token;
+- organization / Value Object / gift-certificate media migrated в public bucket `arctor-public-media` как content-addressed objects;
+- одинаковые legacy payloads для Value Object и gift-certificate snapshot используют общий immutable content-addressed object;
+- DB writes выполнялись optimistic-CAS по `id + updated_at`; при apply failure launcher migration выполняет best-effort rollback уже изменённых строк;
+- postcheck после migration: `data:image` references в контролируемых profile / organization / Value Object / gift-certificate полях = 0.
+
+Следующий шаг: V1B3 — удалить legacy Base64 fallback-код и перевести private profile media delivery с binary Vercel proxy на authorization + direct/signed Storage delivery, чтобы убрать оставшийся media egress через Vercel.
