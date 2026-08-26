@@ -1,0 +1,10 @@
+ARCTOR_MESSAGE_OBJECTS_CORE_F1_DB_ACCEPTANCE_20260826
+DATE=2026-08-26
+SOURCE=Supabase SQL Editor production result supplied after manual execution
+MANUAL_SQL=supabase/manual-applied/20260826_message_objects_core_f1_db_foundation_v1.sql
+MANUAL_SQL_SHA256=f42cfa9746f46507050822c4a4a6313c37353f83725b61218a2b1c6fe7030b3d
+
+status,message_objects,audience_actors,relations,distributions,media,message_objects_rls,anon_read_blocked,authenticated_read_blocked,service_create_rpc,legacy_chat_messages_preserved
+PASS,true,true,true,true,true,true,true,true,true,true
+
+The checkpoint launcher additionally performs one read-only PostgREST OpenAPI GET before commit/push.
