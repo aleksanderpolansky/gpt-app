@@ -1,0 +1,32 @@
+ARCTOR_MESSAGE_OBJECTS_F2_PRODUCTION_SMOKE_20260826
+
+DATE=2026-08-26
+ORGANIZATION_ID=303c4744-7f37-47bd-b27d-d28d9a39e144
+SOURCE=Manual production browser smoke supplied by project owner
+
+OWNER_PL:
+- Aktualności card visible
+- card positioned top-right next to Opis
+- publication form visible to owner
+- first locale render showed: Tłumaczenie na język polski…
+- publication rendered after localization
+
+GUEST_PL:
+- public publication visible
+- publication composer/form absent
+
+GUEST_EN:
+- Updates heading visible
+- first locale render showed: Translating into English…
+- final localized text: ARCTor test publication
+- after F5 localized text appeared immediately
+- no repeated Translating into English… state observed
+
+CACHE_RESULT=PASS
+PUBLIC_READ_RESULT=PASS
+OWNER_ONLY_COMPOSER_RESULT=PASS
+PER_BLOCK_TRANSLATION_FALLBACK_RESULT=PASS
+LAYOUT_RESULT=PASS
+
+This file records human-observed production evidence.
+The closure launcher also performs a separate read-only DB evidence check and stores that JSON in its PACKAGE.
