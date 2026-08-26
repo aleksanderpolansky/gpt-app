@@ -47,6 +47,12 @@ type CatalogCopy = {
   tree: string;
   cards: string;
   map: string;
+  rootFilter: string;
+  insideFilter: string;
+  allRoots: string;
+  allChildren: string;
+  resetHierarchy: string;
+  selectedBranch: string;
   expandAll: string;
   collapseAll: string;
   object: string;
@@ -77,6 +83,12 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     tree: "Tree",
     cards: "Cards",
     map: "Map",
+    rootFilter: "Root object",
+    insideFilter: "Inside “{parent}”",
+    allRoots: "All root objects",
+    allChildren: "All child objects",
+    resetHierarchy: "Reset",
+    selectedBranch: "Selected branch",
     expandAll: "Expand all",
     collapseAll: "Collapse all",
     object: "Observation object",
@@ -105,6 +117,12 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     tree: "Drzewo",
     cards: "Karty",
     map: "Mapa",
+    rootFilter: "Obiekt główny",
+    insideFilter: "Wewnątrz „{parent}”",
+    allRoots: "Wszystkie obiekty główne",
+    allChildren: "Wszystkie obiekty podrzędne",
+    resetHierarchy: "Wyczyść",
+    selectedBranch: "Wybrana gałąź",
     expandAll: "Rozwiń wszystko",
     collapseAll: "Zwiń wszystko",
     object: "Obiekt obserwacji",
@@ -133,6 +151,12 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     tree: "Дерево",
     cards: "Карточки",
     map: "Карта",
+    rootFilter: "Корневой объект",
+    insideFilter: "Внутри «{parent}»",
+    allRoots: "Все корневые объекты",
+    allChildren: "Все дочерние объекты",
+    resetHierarchy: "Сбросить",
+    selectedBranch: "Выбранная ветвь",
     expandAll: "Развернуть все",
     collapseAll: "Свернуть все",
     object: "Объект наблюдения",
@@ -161,6 +185,12 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     tree: "Дерево",
     cards: "Картки",
     map: "Мапа",
+    rootFilter: "Кореневий об’єкт",
+    insideFilter: "Усередині «{parent}»",
+    allRoots: "Усі кореневі об’єкти",
+    allChildren: "Усі дочірні об’єкти",
+    resetHierarchy: "Скинути",
+    selectedBranch: "Вибрана гілка",
     expandAll: "Розгорнути все",
     collapseAll: "Згорнути все",
     object: "Об’єкт спостереження",
@@ -189,6 +219,12 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     tree: "Baum",
     cards: "Karten",
     map: "Karte",
+    rootFilter: "Wurzelobjekt",
+    insideFilter: "Innerhalb „{parent}“",
+    allRoots: "Alle Wurzelobjekte",
+    allChildren: "Alle untergeordneten Objekte",
+    resetHierarchy: "Zurücksetzen",
+    selectedBranch: "Ausgewählter Zweig",
     expandAll: "Alle aufklappen",
     collapseAll: "Alle zuklappen",
     object: "Beobachtungsobjekt",
@@ -217,6 +253,12 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     tree: "Árbol",
     cards: "Tarjetas",
     map: "Mapa",
+    rootFilter: "Objeto raíz",
+    insideFilter: "Dentro de «{parent}»",
+    allRoots: "Todos los objetos raíz",
+    allChildren: "Todos los objetos hijos",
+    resetHierarchy: "Restablecer",
+    selectedBranch: "Rama seleccionada",
     expandAll: "Expandir todo",
     collapseAll: "Contraer todo",
     object: "Objeto de observación",
@@ -245,6 +287,12 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     tree: "Strom",
     cards: "Karty",
     map: "Mapa",
+    rootFilter: "Kořenový objekt",
+    insideFilter: "Uvnitř „{parent}“",
+    allRoots: "Všechny kořenové objekty",
+    allChildren: "Všechny podřízené objekty",
+    resetHierarchy: "Obnovit",
+    selectedBranch: "Vybraná větev",
     expandAll: "Rozbalit vše",
     collapseAll: "Sbalit vše",
     object: "Objekt pozorování",
@@ -389,6 +437,8 @@ type ValueObjectCatalogViewsProps = {
   query: string;
   roleFilter: RoleFilter;
   sortMode: SortMode;
+  hierarchyPathIds: readonly string[];
+  onHierarchyPathChange: (pathIds: string[]) => void;
   children: ReactNode;
   onValueObjectDeleted?: (deletedId: string) => void;
   onValueObjectReparented?: (movedId: string, newParentId: string) => void;
@@ -401,6 +451,8 @@ export function ValueObjectCatalogViews({
   query,
   roleFilter,
   sortMode,
+  hierarchyPathIds,
+  onHierarchyPathChange,
   children,
   onValueObjectDeleted,
   onValueObjectReparented,
@@ -439,6 +491,71 @@ export function ValueObjectCatalogViews({
       }),
     [objectsById, valueObjects],
   );
+
+  const hierarchyRoots = useMemo(
+    () =>
+      sortObjects(
+        roots.filter((valueObject) => getSemanticRole(valueObject) === "root"),
+        "title",
+        locale,
+      ),
+    [locale, roots],
+  );
+
+  const hierarchyPathObjects = useMemo(() => {
+    const result: Array<ValueObjectPayload & { id: string }> = [];
+    let expectedParentId: string | null = null;
+
+    for (const pathId of hierarchyPathIds) {
+      const valueObject = objectsById.get(pathId);
+      if (!valueObject?.id) {
+        break;
+      }
+
+      if (result.length === 0) {
+        if (getSemanticRole(valueObject) !== "root") {
+          break;
+        }
+      } else if (valueObject.parent_value_object_id !== expectedParentId) {
+        break;
+      }
+
+      result.push(valueObject as ValueObjectPayload & { id: string });
+      expectedParentId = valueObject.id;
+    }
+
+    return result;
+  }, [hierarchyPathIds, objectsById]);
+
+  const selectedHierarchyId =
+    hierarchyPathObjects.length > 0
+      ? hierarchyPathObjects[hierarchyPathObjects.length - 1].id
+      : null;
+
+  const hierarchySubtreeIds = useMemo(() => {
+    if (!selectedHierarchyId) {
+      return null;
+    }
+
+    const subtree = new Set<string>();
+    const stack = [selectedHierarchyId];
+
+    while (stack.length > 0) {
+      const currentId = stack.pop();
+      if (!currentId || subtree.has(currentId)) {
+        continue;
+      }
+
+      subtree.add(currentId);
+      for (const child of childrenByParent.get(currentId) ?? []) {
+        if (child.id && !subtree.has(child.id)) {
+          stack.push(child.id);
+        }
+      }
+    }
+
+    return subtree;
+  }, [childrenByParent, selectedHierarchyId]);
 
   const branchIds = useMemo(
     () =>
@@ -530,12 +647,18 @@ export function ValueObjectCatalogViews({
   }, [childrenByParent, valueObjects]);
 
   const normalizedQuery = query.trim().toLocaleLowerCase(locale);
-  const filterActive = Boolean(normalizedQuery) || roleFilter !== "all";
+  const searchRoleFilterActive =
+    Boolean(normalizedQuery) || roleFilter !== "all";
+  const hierarchyFilterActive = Boolean(selectedHierarchyId);
+  const filterActive = searchRoleFilterActive || hierarchyFilterActive;
 
   const matchingIds = useMemo(() => {
     const matches = new Set<string>();
     for (const valueObject of valueObjects) {
       if (!valueObject.id) continue;
+      if (hierarchySubtreeIds && !hierarchySubtreeIds.has(valueObject.id)) {
+        continue;
+      }
       const role = getSemanticRole(valueObject);
       if (roleFilter === "root" && role !== "root") continue;
       if (roleFilter === "intermediate" && role !== "intermediate") continue;
@@ -556,9 +679,20 @@ export function ValueObjectCatalogViews({
       matches.add(valueObject.id);
     }
     return matches;
-  }, [locale, normalizedQuery, pathById, roleFilter, valueObjects]);
+  }, [
+    hierarchySubtreeIds,
+    locale,
+    normalizedQuery,
+    pathById,
+    roleFilter,
+    valueObjects,
+  ]);
 
   const visibleIds = useMemo(() => {
+    if (hierarchySubtreeIds && !searchRoleFilterActive) {
+      return new Set(hierarchySubtreeIds);
+    }
+
     if (!filterActive) {
       return new Set(
         valueObjects
@@ -574,13 +708,35 @@ export function ValueObjectCatalogViews({
       while (cursor?.id && !visited.has(cursor.id)) {
         visited.add(cursor.id);
         visible.add(cursor.id);
+
+        if (selectedHierarchyId && cursor.id === selectedHierarchyId) {
+          break;
+        }
+
         const parentId = cursor.parent_value_object_id;
         if (!parentId) break;
         cursor = objectsById.get(parentId);
       }
     }
     return visible;
-  }, [filterActive, matchingIds, objectsById, valueObjects]);
+  }, [
+    filterActive,
+    hierarchySubtreeIds,
+    matchingIds,
+    objectsById,
+    searchRoleFilterActive,
+    selectedHierarchyId,
+    valueObjects,
+  ]);
+
+  const treeRoots = useMemo(() => {
+    if (!selectedHierarchyId) {
+      return roots;
+    }
+
+    const selected = objectsById.get(selectedHierarchyId);
+    return selected ? [selected] : [];
+  }, [objectsById, roots, selectedHierarchyId]);
 
   const rows = useMemo(() => {
     const result: TreeRow[] = [];
@@ -614,7 +770,7 @@ export function ValueObjectCatalogViews({
       }
     }
 
-    for (const root of sortObjects(roots, sortMode, locale)) {
+    for (const root of sortObjects(treeRoots, sortMode, locale)) {
       walk(root, 0);
     }
 
@@ -628,10 +784,86 @@ export function ValueObjectCatalogViews({
     activeExpandedIds,
     filterActive,
     locale,
-    roots,
+    treeRoots,
     sortMode,
     visibleIds,
   ]);
+
+  function updateHierarchyLevel(levelIndex: number, nextId: string) {
+    const basePath = hierarchyPathObjects
+      .slice(0, levelIndex)
+      .map((valueObject) => valueObject.id);
+
+    onHierarchyPathChange(nextId ? [...basePath, nextId] : basePath);
+  }
+
+  function renderHierarchyFilters() {
+    const controls: ReactNode[] = [];
+
+    controls.push(
+      <label key="root" className="grid min-w-0 gap-1 lg:w-[220px] xl:w-[240px]">
+        <span className="truncate px-1 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#7c8099]">
+          {copy.rootFilter}
+        </span>
+        <select
+          value={hierarchyPathObjects[0]?.id ?? ""}
+          onChange={(event) => updateHierarchyLevel(0, event.target.value)}
+          className="min-h-9 w-full rounded-xl border border-[#dfe3f1] bg-white px-3 text-[11px] font-semibold text-[#4a4f6a] outline-none transition focus:border-[#9db3ff] focus:ring-2 focus:ring-[#e7edff]"
+        >
+          <option value="">{copy.allRoots}</option>
+          {hierarchyRoots.map((valueObject) => (
+            <option key={valueObject.id} value={valueObject.id ?? ""}>
+              {valueObject.title?.trim() || "—"}
+            </option>
+          ))}
+        </select>
+      </label>,
+    );
+
+    hierarchyPathObjects.forEach((parent, parentIndex) => {
+      const options = sortObjects(
+        childrenByParent.get(parent.id) ?? [],
+        "title",
+        locale,
+      ).filter((valueObject) => Boolean(valueObject.id));
+
+      if (options.length === 0) {
+        return;
+      }
+
+      const levelIndex = parentIndex + 1;
+      const parentTitle = parent.title?.trim() || "—";
+      const label = copy.insideFilter.replace("{parent}", parentTitle);
+
+      controls.push(
+        <label
+          key={`child-${parent.id}`}
+          className="grid min-w-0 gap-1 lg:w-[220px] xl:w-[240px]"
+          title={label}
+        >
+          <span className="truncate px-1 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#7c8099]">
+            {label}
+          </span>
+          <select
+            value={hierarchyPathObjects[levelIndex]?.id ?? ""}
+            onChange={(event) =>
+              updateHierarchyLevel(levelIndex, event.target.value)
+            }
+            className="min-h-9 w-full rounded-xl border border-[#dfe3f1] bg-white px-3 text-[11px] font-semibold text-[#4a4f6a] outline-none transition focus:border-[#9db3ff] focus:ring-2 focus:ring-[#e7edff]"
+          >
+            <option value="">{copy.allChildren}</option>
+            {options.map((valueObject) => (
+              <option key={valueObject.id} value={valueObject.id ?? ""}>
+                {valueObject.title?.trim() || "—"}
+              </option>
+            ))}
+          </select>
+        </label>,
+      );
+    });
+
+    return controls;
+  }
 
   function toggleExpanded(id: string) {
     setExpandedIds((current) => {
@@ -771,67 +1003,95 @@ export function ValueObjectCatalogViews({
 
   return (
     <div className="grid gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-black/[0.07] bg-white p-2.5 shadow-sm">
-        <div className="inline-flex rounded-xl bg-[#f5f6fb] p-1">
-          <button
-            type="button"
-            onClick={() => setViewMode("tree")}
-            className={[
-              "inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-semibold transition",
-              viewMode === "tree"
-                ? "bg-white text-[#3b6ef8] shadow-sm"
-                : "text-[#7c8099] hover:text-[#1a1d2e]",
-            ].join(" ")}
-          >
-            <ListTree size={15} />
-            {copy.tree}
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("cards")}
-            className={[
-              "inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-semibold transition",
-              viewMode === "cards"
-                ? "bg-white text-[#3b6ef8] shadow-sm"
-                : "text-[#7c8099] hover:text-[#1a1d2e]",
-            ].join(" ")}
-          >
-            <LayoutGrid size={15} />
-            {copy.cards}
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("map")}
-            className={[
-              "inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-semibold transition",
-              viewMode === "map"
-                ? "bg-white text-[#3b6ef8] shadow-sm"
-                : "text-[#7c8099] hover:text-[#1a1d2e]",
-            ].join(" ")}
-          >
-            <MapIcon size={15} />
-            {copy.map}
-          </button>
-        </div>
-
-        {viewMode === "tree" ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="hidden text-[11px] font-semibold text-[#7c8099] sm:inline">
-              {filterActive ? `${matchingIds.size} ${copy.matches}` : `${valueObjects.length} ${copy.objects}`}
-            </span>
+      <div className="grid gap-2 rounded-[18px] border border-black/[0.07] bg-white p-2.5 shadow-sm">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-end">
+          <div className="inline-flex self-start rounded-xl bg-[#f5f6fb] p-1">
             <button
               type="button"
-              onClick={expandAll}
-              className="rounded-xl border border-[#dfe3f1] bg-white px-3 py-2 text-[11px] font-semibold text-[#4a4f6a] transition hover:bg-[#f8fafc]"
+              onClick={() => setViewMode("tree")}
+              className={[
+                "inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-semibold transition",
+                viewMode === "tree"
+                  ? "bg-white text-[#3b6ef8] shadow-sm"
+                  : "text-[#7c8099] hover:text-[#1a1d2e]",
+              ].join(" ")}
             >
-              {copy.expandAll}
+              <ListTree size={15} />
+              {copy.tree}
             </button>
             <button
               type="button"
-              onClick={collapseAll}
-              className="rounded-xl border border-[#dfe3f1] bg-white px-3 py-2 text-[11px] font-semibold text-[#4a4f6a] transition hover:bg-[#f8fafc]"
+              onClick={() => setViewMode("cards")}
+              className={[
+                "inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-semibold transition",
+                viewMode === "cards"
+                  ? "bg-white text-[#3b6ef8] shadow-sm"
+                  : "text-[#7c8099] hover:text-[#1a1d2e]",
+              ].join(" ")}
             >
-              {copy.collapseAll}
+              <LayoutGrid size={15} />
+              {copy.cards}
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("map")}
+              className={[
+                "inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-semibold transition",
+                viewMode === "map"
+                  ? "bg-white text-[#3b6ef8] shadow-sm"
+                  : "text-[#7c8099] hover:text-[#1a1d2e]",
+              ].join(" ")}
+            >
+              <MapIcon size={15} />
+              {copy.map}
+            </button>
+          </div>
+
+          <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:ml-1 lg:flex lg:min-w-0 lg:flex-1 lg:flex-wrap lg:justify-start">
+            {renderHierarchyFilters()}
+          </div>
+
+          {viewMode === "tree" ? (
+            <div className="flex flex-wrap items-center gap-2 lg:shrink-0">
+              <span className="hidden text-[11px] font-semibold text-[#7c8099] xl:inline">
+                {filterActive
+                  ? `${matchingIds.size} ${copy.matches}`
+                  : `${valueObjects.length} ${copy.objects}`}
+              </span>
+              <button
+                type="button"
+                onClick={expandAll}
+                className="rounded-xl border border-[#dfe3f1] bg-white px-3 py-2 text-[11px] font-semibold text-[#4a4f6a] transition hover:bg-[#f8fafc]"
+              >
+                {copy.expandAll}
+              </button>
+              <button
+                type="button"
+                onClick={collapseAll}
+                className="rounded-xl border border-[#dfe3f1] bg-white px-3 py-2 text-[11px] font-semibold text-[#4a4f6a] transition hover:bg-[#f8fafc]"
+              >
+                {copy.collapseAll}
+              </button>
+            </div>
+          ) : null}
+        </div>
+
+        {hierarchyPathObjects.length > 0 ? (
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 border-t border-[#edf0f7] px-1 pt-2 text-[10px] text-[#7c8099]">
+            <span className="font-semibold uppercase tracking-[0.08em]">
+              {copy.selectedBranch}
+            </span>
+            <span className="min-w-0 flex-1 truncate font-semibold text-[#4a4f6a]">
+              {hierarchyPathObjects
+                .map((valueObject) => valueObject.title?.trim() || "—")
+                .join(" › ")}
+            </span>
+            <button
+              type="button"
+              onClick={() => onHierarchyPathChange([])}
+              className="shrink-0 rounded-lg px-2 py-1 font-semibold text-[#3b6ef8] transition hover:bg-[#eef2ff]"
+            >
+              {copy.resetHierarchy}
             </button>
           </div>
         ) : null}

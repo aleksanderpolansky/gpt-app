@@ -566,6 +566,7 @@ export function ActualValueObjectsList() {
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [sortMode, setSortMode] = useState<SortMode>("newest");
   const [query, setQuery] = useState("");
+  const [hierarchyPathIds, setHierarchyPathIds] = useState<string[]>([]);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -649,6 +650,37 @@ export function ActualValueObjectsList() {
 
     return map;
   }, [valueObjects]);
+
+  const hierarchyVisibleIds = useMemo(() => {
+    const selectedId =
+      hierarchyPathIds.length > 0
+        ? hierarchyPathIds[hierarchyPathIds.length - 1]
+        : null;
+
+    if (!selectedId || !objectsById.has(selectedId)) {
+      return null;
+    }
+
+    const visible = new Set<string>();
+    const stack = [selectedId];
+
+    while (stack.length > 0) {
+      const currentId = stack.pop();
+      if (!currentId || visible.has(currentId)) {
+        continue;
+      }
+
+      visible.add(currentId);
+
+      for (const child of childrenByParent.get(currentId) ?? []) {
+        if (child.id && !visible.has(child.id)) {
+          stack.push(child.id);
+        }
+      }
+    }
+
+    return visible;
+  }, [childrenByParent, hierarchyPathIds, objectsById]);
 
   const pathById = useMemo(() => {
     const map = new Map<string, string>();
@@ -770,6 +802,13 @@ export function ActualValueObjectsList() {
         return false;
       }
 
+      if (
+        hierarchyVisibleIds &&
+        (!valueObject.id || !hierarchyVisibleIds.has(valueObject.id))
+      ) {
+        return false;
+      }
+
       if (!normalizedQuery) {
         return true;
       }
@@ -806,7 +845,15 @@ export function ActualValueObjectsList() {
       const timeB = Date.parse(b.created_at ?? "") || 0;
       return timeB - timeA;
     });
-  }, [locale, pathById, query, roleFilter, sortMode, valueObjects]);
+  }, [
+    hierarchyVisibleIds,
+    locale,
+    pathById,
+    query,
+    roleFilter,
+    sortMode,
+    valueObjects,
+  ]);
 
   const filters: Array<{
     value: RoleFilter;
@@ -919,9 +966,14 @@ export function ActualValueObjectsList() {
             query={query}
             roleFilter={roleFilter}
             sortMode={sortMode}
+            hierarchyPathIds={hierarchyPathIds}
+            onHierarchyPathChange={setHierarchyPathIds}
             onValueObjectDeleted={(deletedId) => {
               setValueObjects((current) =>
                 current.filter((valueObject) => valueObject.id !== deletedId),
+              );
+              setHierarchyPathIds((current) =>
+                current.includes(deletedId) ? [] : current,
               );
             }}
             onValueObjectReparented={(movedId, newParentId) => {
@@ -931,6 +983,9 @@ export function ActualValueObjectsList() {
                     ? { ...valueObject, parent_value_object_id: newParentId }
                     : valueObject,
                 ),
+              );
+              setHierarchyPathIds((current) =>
+                current.includes(movedId) ? [] : current,
               );
             }}
             onValueObjectCreated={(createdValueObject) => {
