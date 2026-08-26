@@ -1,14 +1,13 @@
-
 import { NextResponse } from "next/server";
 
 import { auth0 } from "../../../../../../lib/auth0";
 import {
-  readPrivateMediaObject,
+  createPrivateMediaSignedUrl,
+  isPrivateMediaToken,
 } from "../../../../../../lib/media-storage";
 import {
-  decodeInlineImageDataUrl,
   getMediaCacheControl,
-  toResponseBody,
+  getSignedMediaRedirectCacheControl,
 } from "../../../../../../lib/media-egress";
 import { supabase } from "../../../../../../lib/supabase";
 
@@ -88,44 +87,42 @@ export async function GET(request: Request, { params }: RouteProps) {
 
     const imageUrl = row.image_url.trim();
     const visibility = row.is_public ? "public" : "private";
-    const cacheControl = getMediaCacheControl(request.url, visibility);
 
     if (/^https?:\/\//i.test(imageUrl)) {
       const response = NextResponse.redirect(imageUrl, 307);
-      response.headers.set("Cache-Control", cacheControl);
+      response.headers.set(
+        "Cache-Control",
+        getMediaCacheControl(request.url, visibility),
+      );
       return response;
     }
 
-    const storedPrivateMedia = await readPrivateMediaObject(imageUrl);
-
-    if (storedPrivateMedia) {
-      return new NextResponse(toResponseBody(storedPrivateMedia.bytes), {
-        status: 200,
-        headers: {
-          "Content-Type": storedPrivateMedia.contentType,
-          "Content-Length": String(storedPrivateMedia.bytes.byteLength),
-          "Cache-Control": cacheControl,
-        },
-      });
-    }
-
-    const decoded = decodeInlineImageDataUrl(imageUrl);
-
-    if (!decoded) {
+    if (!isPrivateMediaToken(imageUrl)) {
       return NextResponse.json(
         { ok: false, error: "PROFILE_IMAGE_INVALID" },
         { status: 422 },
       );
     }
 
-    return new NextResponse(toResponseBody(decoded.bytes), {
-      status: 200,
-      headers: {
-        "Content-Type": decoded.contentType,
-        "Content-Length": String(decoded.bytes.byteLength),
-        "Cache-Control": cacheControl,
-      },
-    });
+    const signedUrl = await createPrivateMediaSignedUrl(imageUrl, 60);
+
+    if (!signedUrl) {
+      return NextResponse.json(
+        { ok: false, error: "PROFILE_IMAGE_INVALID" },
+        { status: 422 },
+      );
+    }
+
+    const response = NextResponse.redirect(signedUrl, 307);
+    response.headers.set(
+      "Cache-Control",
+      getSignedMediaRedirectCacheControl(),
+    );
+    response.headers.set(
+      "X-ARCTor-Media-Delivery",
+      "supabase-signed-redirect",
+    );
+    return response;
   } catch {
     return NextResponse.json(
       { ok: false, error: "PROFILE_IMAGE_FAILED" },

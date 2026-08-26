@@ -1,14 +1,4 @@
-export type DecodedImageDataUrl = {
-  contentType: string;
-  bytes: Uint8Array;
-};
-
-const DATA_URL_RE =
-  /^data:(image\/(?:jpeg|png|webp));base64,([a-zA-Z0-9+/=\r\n]+)$/i;
-
-export function isInlineImageDataUrl(value: unknown): value is string {
-  return typeof value === "string" && DATA_URL_RE.test(value.trim());
-}
+const PRIVATE_MEDIA_TOKEN_PREFIX = "arctor-private-media:";
 
 export function toMediaDeliveryUrl(
   rawImageUrl: string | null | undefined,
@@ -25,9 +15,7 @@ export function toMediaDeliveryUrl(
     return normalized;
   }
 
-  const isPrivateMediaToken = normalized.startsWith("arctor-private-media:");
-
-  if (!isPrivateMediaToken && !isInlineImageDataUrl(normalized)) {
+  if (!normalized.startsWith(PRIVATE_MEDIA_TOKEN_PREFIX)) {
     return null;
   }
 
@@ -39,36 +27,6 @@ export function toMediaDeliveryUrl(
 
   const separator = deliveryPath.includes("?") ? "&" : "?";
   return `${deliveryPath}${separator}v=${encodeURIComponent(normalizedVersion)}`;
-}
-
-export function decodeInlineImageDataUrl(
-  value: string | null | undefined,
-): DecodedImageDataUrl | null {
-  const normalized = value?.trim() ?? "";
-  const match = DATA_URL_RE.exec(normalized);
-
-  if (!match) {
-    return null;
-  }
-
-  try {
-    const bytes = new Uint8Array(
-      Buffer.from(match[2].replace(/\s+/g, ""), "base64"),
-    );
-
-    return {
-      contentType: match[1].toLowerCase(),
-      bytes,
-    };
-  } catch {
-    return null;
-  }
-}
-
-export function toResponseBody(bytes: Uint8Array): ArrayBuffer {
-  const body = new ArrayBuffer(bytes.byteLength);
-  new Uint8Array(body).set(bytes);
-  return body;
 }
 
 export function getMediaCacheControl(
@@ -86,4 +44,10 @@ export function getMediaCacheControl(
   return visibility === "public"
     ? "public, max-age=300, stale-while-revalidate=3600"
     : "private, max-age=300";
+}
+
+export function getSignedMediaRedirectCacheControl(): string {
+  // A signed Storage URL expires quickly. Never cache the redirect itself,
+  // otherwise a browser/CDN could retain a Location header beyond its TTL.
+  return "private, no-store, max-age=0";
 }

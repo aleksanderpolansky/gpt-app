@@ -16,8 +16,6 @@ type OrganizationMediaRow = {
   cover_image_url: string | null;
 };
 
-const DATA_URL_RE = /^data:(image\/[a-zA-Z0-9.+-]+);base64,([a-zA-Z0-9+/=\r\n]+)$/;
-
 function placeholderResponse(cacheControl: string) {
   const svg =
     '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">' +
@@ -50,43 +48,28 @@ export async function GET(request: Request, { params }: RouteProps) {
 
   if (error) {
     return NextResponse.json(
-      { ok: false, error: "Organization media is temporarily unavailable." },
+      {
+        ok: false,
+        error: "Organization media is temporarily unavailable.",
+      },
       { status: 503 },
     );
   }
 
-  const row = ((data ?? [])[0] as OrganizationMediaRow | undefined) ?? null;
-  const mediaUrl = row?.logo_url?.trim() || row?.cover_image_url?.trim() || "";
+  const row =
+    ((data ?? [])[0] as OrganizationMediaRow | undefined) ?? null;
+  const mediaUrl =
+    row?.logo_url?.trim() || row?.cover_image_url?.trim() || "";
 
   if (!mediaUrl) {
     return placeholderResponse(cacheControl);
   }
 
-  if (/^https?:\/\//i.test(mediaUrl)) {
-    const response = NextResponse.redirect(mediaUrl, 307);
-    response.headers.set("Cache-Control", cacheControl);
-    return response;
-  }
-
-  const match = DATA_URL_RE.exec(mediaUrl);
-
-  if (!match) {
+  if (!/^https?:\/\//i.test(mediaUrl)) {
     return placeholderResponse(cacheControl);
   }
 
-  try {
-    const contentType = match[1];
-    const bytes = new Uint8Array(Buffer.from(match[2].replace(/\s+/g, ""), "base64"));
-
-    return new NextResponse(bytes, {
-      status: 200,
-      headers: {
-        "Content-Type": contentType,
-        "Content-Length": String(bytes.byteLength),
-        "Cache-Control": cacheControl,
-      },
-    });
-  } catch {
-    return placeholderResponse(cacheControl);
-  }
+  const response = NextResponse.redirect(mediaUrl, 307);
+  response.headers.set("Cache-Control", cacheControl);
+  return response;
 }

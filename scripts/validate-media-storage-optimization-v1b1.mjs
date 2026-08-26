@@ -9,7 +9,7 @@ const checks = [
       'PRIVATE_MEDIA_TOKEN_PREFIX = "arctor-private-media:"',
       "createHash",
       "upsert: true",
-      "readPrivateMediaObject",
+      "createPrivateMediaSignedUrl",
       "MAX_BUCKET_FILE_BYTES = 512 * 1024",
       "Raw user originals are never persisted",
     ],
@@ -43,7 +43,7 @@ const checks = [
   [
     "src/app/api/profiles/[id]/image/route.ts",
     [
-      "readPrivateMediaObject",
+      "createPrivateMediaSignedUrl",
       "row.is_public",
       "getCurrentAppUserId",
     ],
@@ -139,12 +139,16 @@ if (
   ) ||
   /catch\s*\{\s*return value;\s*\}/s.test(organizationEditor)
 ) {
-  console.error("FAIL organization editor can submit an unoptimized original data URL");
+  console.error(
+    "FAIL organization editor can submit an unoptimized original data URL",
+  );
   failures += 1;
 }
 
 if (failures > 0) {
-  console.error(`ARCTOR_MEDIA_STORAGE_OPTIMIZATION_V1B1=FAIL checks=${failures}`);
+  console.error(
+    `ARCTOR_MEDIA_STORAGE_OPTIMIZATION_V1B1=FAIL checks=${failures}`,
+  );
   process.exit(1);
 }
 

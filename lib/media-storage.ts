@@ -110,6 +110,29 @@ export function isPrivateMediaToken(value: unknown): value is string {
   );
 }
 
+function getPrivateMediaObjectPath(
+  value: string | null | undefined,
+): string | null {
+  const normalized = value?.trim() ?? "";
+
+  if (!isPrivateMediaToken(normalized)) {
+    return null;
+  }
+
+  const objectPath = normalized.slice(PRIVATE_MEDIA_TOKEN_PREFIX.length);
+
+  if (
+    !objectPath ||
+    objectPath.startsWith("/") ||
+    objectPath.includes("..") ||
+    objectPath.includes("\\")
+  ) {
+    throw new Error("PRIVATE_MEDIA_TOKEN_INVALID");
+  }
+
+  return objectPath;
+}
+
 export async function persistMediaImageValue(input: {
   value: unknown;
   visibility: MediaVisibility;
@@ -187,53 +210,37 @@ export async function persistMediaImageValue(input: {
   return publicUrl;
 }
 
-function inferContentType(objectPath: string) {
-  const lower = objectPath.toLowerCase();
-
-  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
-    return "image/jpeg";
-  }
-
-  if (lower.endsWith(".png")) {
-    return "image/png";
-  }
-
-  return "image/webp";
-}
-
-export async function readPrivateMediaObject(
+export async function createPrivateMediaSignedUrl(
   value: string | null | undefined,
-): Promise<{ bytes: Uint8Array; contentType: string } | null> {
-  const normalized = value?.trim() ?? "";
+  expiresInSeconds = 60,
+): Promise<string | null> {
+  const objectPath = getPrivateMediaObjectPath(value);
 
-  if (!isPrivateMediaToken(normalized)) {
+  if (!objectPath) {
     return null;
   }
 
-  const objectPath = normalized.slice(PRIVATE_MEDIA_TOKEN_PREFIX.length);
-
   if (
-    !objectPath ||
-    objectPath.startsWith("/") ||
-    objectPath.includes("..")
+    !Number.isInteger(expiresInSeconds) ||
+    expiresInSeconds < 15 ||
+    expiresInSeconds > 3600
   ) {
-    throw new Error("PRIVATE_MEDIA_TOKEN_INVALID");
+    throw new Error("PRIVATE_MEDIA_SIGNED_URL_TTL_INVALID");
   }
 
   const { data, error } = await supabase.storage
     .from(PRIVATE_MEDIA_BUCKET_ID)
-    .download(objectPath);
+    .createSignedUrl(objectPath, expiresInSeconds);
 
-  if (error || !data) {
-    throw new Error(
-      `PRIVATE_MEDIA_DOWNLOAD_FAILED:${error?.message ?? "missing blob"}`,
-    );
+  if (error) {
+    throw new Error(`PRIVATE_MEDIA_SIGNED_URL_FAILED:${error.message}`);
   }
 
-  const bytes = new Uint8Array(await data.arrayBuffer());
+  const signedUrl = data?.signedUrl?.trim() ?? "";
 
-  return {
-    bytes,
-    contentType: data.type || inferContentType(objectPath),
-  };
+  if (!signedUrl || !isHttpsOrHttpUrl(signedUrl)) {
+    throw new Error("PRIVATE_MEDIA_SIGNED_URL_MISSING");
+  }
+
+  return signedUrl;
 }

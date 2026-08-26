@@ -80,3 +80,31 @@ Production migration закрыла исторический inline-media backlo
 - postcheck после migration: `data:image` references в контролируемых profile / organization / Value Object / gift-certificate полях = 0.
 
 Следующий шаг: V1B3 — удалить legacy Base64 fallback-код и перевести private profile media delivery с binary Vercel proxy на authorization + direct/signed Storage delivery, чтобы убрать оставшийся media egress через Vercel.
+
+## V1B3 — signed private media delivery
+
+Дата: 26.08.2026
+
+После V1B2 исторические `data:image` references в контролируемых media-полях равны нулю. V1B3 удаляет только legacy delivery fallbacks и не меняет new-write optimization contract.
+
+- `/api/profiles/[id]/image` сохраняет проверку публичности/ownership, но больше не скачивает private Storage object через Vercel и не возвращает image bytes;
+- после authorization private token преобразуется в Supabase signed URL с коротким TTL, а endpoint возвращает только HTTP redirect; binary media идёт браузеру непосредственно из Supabase Storage/CDN;
+- signed redirect имеет `private, no-store, max-age=0`, поэтому истёкший signed URL не должен закрепляться в browser/CDN cache;
+- owner organization logo, Value Object public-image и directory logo delivery больше не содержат Base64 decode fallback; после V1B2 они принимают только Storage/public HTTP(S) URL;
+- `lib/media-egress.ts` больше не содержит runtime Base64 decoder / binary response helper;
+- `lib/media-storage.ts` по-прежнему декодирует только новый уже browser-optimized upload payload перед записью в Storage. Это ingestion transport, а не legacy persisted-media fallback;
+- SQL/schema/RLS и содержимое БД V1B3 не изменяет;
+- production acceptance после deploy: `/api/profiles/[id]/image` должен отдавать небольшой redirect вместо ~200–300 KiB image body, а Vercel Fast Data Transfer на этом route должен снизиться до уровня response headers/redirect.
+
+Acceptance V1B3:
+
+1. read-only signed URL infrastructure preflight = PASS;
+2. `node scripts/validate-media-egress-containment-v1.mjs` = PASS;
+3. `node scripts/validate-media-storage-optimization-v1b1.mjs` = PASS;
+4. `node scripts/validate-media-storage-delivery-v1b3.mjs` = PASS;
+5. full-repo ESLint baseline/delta без новых errors/warnings;
+6. `npm run build` = PASS;
+7. `git diff --check` и staged `git diff --cached --check` = PASS;
+8. commit/push разрешены только после всех gates.
+
+Следующий шаг после production Vercel probe: закрыть MEDIA EGRESS V1 как завершённый слой и вернуться к основной архитектурной дорожной карте ARCTor.
