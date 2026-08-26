@@ -30,6 +30,8 @@ import { resolveLocalizedContentFieldsStrict } from "@/lib/localization/contentL
 import { getPrimaryPublicOrganizationContactChannel } from "@/lib/commercial/organizationContactChannels";
 import { readOrganizationFeaturedContent } from "@/lib/commercial/organizationFeaturedContent";
 import { getPublicGiftCertificatePreviewForOrganization } from "@/app/certificates/gift-certificate-data";
+import EnterprisePublicActivityPanel from "./EnterprisePublicActivityPanel";
+import { getPublicEnterpriseMessages } from "@/lib/messages/enterpriseMessages.server";
 
 
 
@@ -1167,7 +1169,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     category: "Category",
     publicInfo: "Public information",
     serviceArea: "Service area",
-    publicActions: "Public actions",
+    publicActions: "Activity",
     notProvided: "Not provided",
     details: "Details",
     thisWeek: "this week",
@@ -1186,7 +1188,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     category: "Kategoria",
     publicInfo: "Informacje publiczne",
     serviceArea: "Obszar obs\u0142ugi",
-    publicActions: "Dzia\u0142ania publiczne",
+    publicActions: "Aktywno\u015b\u0107",
     notProvided: "Nie podano",
     details: "Szczeg\u00f3\u0142y",
     thisWeek: "w tym tygodniu",
@@ -1205,7 +1207,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     category: "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u044f",
     publicInfo: "\u041f\u0443\u0431\u043b\u0456\u0447\u043d\u0430 \u0456\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0456\u044f",
     serviceArea: "\u0417\u043e\u043d\u0430 \u043e\u0431\u0441\u043b\u0443\u0433\u043e\u0432\u0443\u0432\u0430\u043d\u043d\u044f",
-    publicActions: "\u041f\u0443\u0431\u043b\u0456\u0447\u043d\u0456 \u0434\u0456\u0457",
+    publicActions: "\u0410\u043a\u0442\u0438\u0432\u043d\u0456\u0441\u0442\u044c",
     notProvided: "\u041d\u0435 \u0432\u043a\u0430\u0437\u0430\u043d\u043e",
     details: "\u0414\u043e\u043a\u043b\u0430\u0434\u043d\u0456\u0448\u0435",
     thisWeek: "\u0446\u044c\u043e\u0433\u043e \u0442\u0438\u0436\u043d\u044f",
@@ -1224,7 +1226,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     category: "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u044f",
     publicInfo: "\u041f\u0443\u0431\u043b\u0438\u0447\u043d\u0430\u044f \u0438\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044f",
     serviceArea: "\u0417\u043e\u043d\u0430 \u043e\u0431\u0441\u043b\u0443\u0436\u0438\u0432\u0430\u043d\u0438\u044f",
-    publicActions: "\u041f\u0443\u0431\u043b\u0438\u0447\u043d\u044b\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f",
+    publicActions: "\u0410\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c",
     notProvided: "\u041d\u0435 \u0443\u043a\u0430\u0437\u0430\u043d\u043e",
     details: "\u041f\u043e\u0434\u0440\u043e\u0431\u043d\u0435\u0435",
     thisWeek: "\u043d\u0430 \u044d\u0442\u043e\u0439 \u043d\u0435\u0434\u0435\u043b\u0435",
@@ -1243,7 +1245,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     category: "Kategorie",
     publicInfo: "\u00d6ffentliche Informationen",
     serviceArea: "Servicegebiet",
-    publicActions: "\u00d6ffentliche Aktionen",
+    publicActions: "Aktivit\u00e4t",
     notProvided: "Nicht angegeben",
     details: "Details",
     thisWeek: "diese Woche",
@@ -1262,7 +1264,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     category: "Categor\u00eda",
     publicInfo: "Informaci\u00f3n p\u00fablica",
     serviceArea: "\u00c1rea de servicio",
-    publicActions: "Acciones p\u00fablicas",
+    publicActions: "Actividad",
     notProvided: "No indicado",
     details: "Detalles",
     thisWeek: "esta semana",
@@ -1281,7 +1283,7 @@ const PUBLIC_ORGANIZATION_DASHBOARD_LABELS: Record<
     category: "Kategorie",
     publicInfo: "Ve\u0159ejn\u00e9 informace",
     serviceArea: "Oblast slu\u017eeb",
-    publicActions: "Ve\u0159ejn\u00e9 akce",
+    publicActions: "Aktivita",
     notProvided: "Neuvedeno",
     details: "Podrobnosti",
     thisWeek: "tento t\u00fdden",
@@ -2115,6 +2117,22 @@ export default async function DirectoryOrganizationPage({
       })
     : Promise.resolve({ items: [], count: 0 });
 
+  const publicMessagesPromise = organization
+    ? getPublicEnterpriseMessages({
+        organizationId: organization.id,
+        limit: 12,
+      }).catch((error) => {
+        console.error("Organization public messages read failed", error);
+        return {
+          messages: [],
+          errorMessage:
+            error instanceof Error
+              ? error.message
+              : "Public activity could not be loaded.",
+        };
+      })
+    : Promise.resolve({ messages: [], errorMessage: null });
+
   const offersResult = organization
     ? await getDirectoryOrganizationOffers(organization.id, selectedLocale)
     : { offers: [], errorMessage: null };
@@ -2124,6 +2142,7 @@ export default async function DirectoryOrganizationPage({
     systemLabels,
   );
   const giftCardPreview = await giftCardPreviewPromise;
+  const publicMessagesResult = await publicMessagesPromise;
   const offersErrorMessage = offersResult.errorMessage;
 
   const firstOfferWithCertificate =
@@ -2478,11 +2497,13 @@ export default async function DirectoryOrganizationPage({
                 title={getPublicOrganizationDashboardLabel("publicActions", selectedLocale)}
                 detailsLabel={getPublicOrganizationDashboardLabel("details", selectedLocale)}
               >
-                <PublicDashboardPlaceholder
-                  label={getPublicOrganizationDashboardLabel(
-                    "publicInfo",
-                    selectedLocale,
-                  )}
+                <EnterprisePublicActivityPanel
+                  organizationId={organization.id}
+                  organizationName={organization.name}
+                  locale={selectedLocale}
+                  canPublish={isOrganizationOwner}
+                  messages={publicMessagesResult.messages}
+                  errorMessage={publicMessagesResult.errorMessage}
                 />
               </PublicDashboardAnalyticsCard>
             </div>

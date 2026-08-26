@@ -1,0 +1,139 @@
+import { supabase } from "../../../lib/supabase";
+
+type OrganizationActorRow = {
+  id: string;
+};
+
+type MessageObjectRow = {
+  id: string;
+  title: string | null;
+  content_text: string | null;
+  language_code: string | null;
+  activated_at: string | null;
+  created_at: string;
+};
+
+type DistributionRow = {
+  message_object_id: string;
+};
+
+export type PublicEnterpriseMessage = {
+  id: string;
+  title: string | null;
+  contentText: string | null;
+  languageCode: string | null;
+  publishedAt: string;
+};
+
+export type PublicEnterpriseMessagesResult = {
+  messages: PublicEnterpriseMessage[];
+  errorMessage: string | null;
+};
+
+async function getActiveOrganizationActorId(organizationId: string) {
+  const { data, error } = await supabase
+    .from("actors")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("actor_type", "organization")
+    .eq("status", "active")
+    .limit(1);
+
+  if (error) {
+    throw new Error(`ENTERPRISE_MESSAGE_ORGANIZATION_ACTOR_READ_FAILED:${error.message}`);
+  }
+
+  const row = ((data ?? [])[0] as OrganizationActorRow | undefined) ?? null;
+
+  return row?.id ?? null;
+}
+
+export async function getPublicEnterpriseMessages(input: {
+  organizationId: string;
+  limit?: number;
+}): Promise<PublicEnterpriseMessagesResult> {
+  const limit = Math.min(Math.max(input.limit ?? 12, 1), 50);
+
+  try {
+    const organizationActorId = await getActiveOrganizationActorId(
+      input.organizationId,
+    );
+
+    if (!organizationActorId) {
+      return {
+        messages: [],
+        errorMessage: null,
+      };
+    }
+
+    const { data: messageRows, error: messageError } = await supabase
+      .from("message_objects")
+      .select(
+        "id,title,content_text,language_code,activated_at,created_at",
+      )
+      .eq("author_actor_id", organizationActorId)
+      .eq("audience_scope_code", "public")
+      .eq("lifecycle_status", "active")
+      .order("activated_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(Math.min(limit * 3, 100));
+
+    if (messageError) {
+      throw new Error(
+        `ENTERPRISE_MESSAGE_PUBLIC_READ_FAILED:${messageError.message}`,
+      );
+    }
+
+    const rows = (messageRows ?? []) as MessageObjectRow[];
+
+    if (rows.length === 0) {
+      return {
+        messages: [],
+        errorMessage: null,
+      };
+    }
+
+    const messageIds = rows.map((row) => row.id);
+
+    const { data: distributionRows, error: distributionError } = await supabase
+      .from("message_object_distributions")
+      .select("message_object_id")
+      .in("message_object_id", messageIds)
+      .eq("channel_code", "arctor")
+      .eq("delivery_status", "succeeded");
+
+    if (distributionError) {
+      throw new Error(
+        `ENTERPRISE_MESSAGE_DISTRIBUTION_READ_FAILED:${distributionError.message}`,
+      );
+    }
+
+    const distributedIds = new Set(
+      ((distributionRows ?? []) as DistributionRow[]).map(
+        (row) => row.message_object_id,
+      ),
+    );
+
+    return {
+      messages: rows
+        .filter((row) => distributedIds.has(row.id))
+        .slice(0, limit)
+        .map((row) => ({
+          id: row.id,
+          title: row.title,
+          contentText: row.content_text,
+          languageCode: row.language_code,
+          publishedAt: row.activated_at ?? row.created_at,
+        })),
+      errorMessage: null,
+    };
+  } catch (error) {
+    return {
+      messages: [],
+      errorMessage:
+        error instanceof Error
+          ? error.message
+          : "Enterprise public activity could not be loaded.",
+    };
+  }
+}
