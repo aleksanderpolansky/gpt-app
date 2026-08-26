@@ -801,23 +801,21 @@ export function ValueObjectCatalogViews({
     const controls: ReactNode[] = [];
 
     controls.push(
-      <label key="root" className="grid min-w-0 gap-1 lg:w-[220px] xl:w-[240px]">
-        <span className="truncate px-1 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#7c8099]">
-          {copy.rootFilter}
-        </span>
-        <select
-          value={hierarchyPathObjects[0]?.id ?? ""}
-          onChange={(event) => updateHierarchyLevel(0, event.target.value)}
-          className="min-h-9 w-full rounded-xl border border-[#dfe3f1] bg-white px-3 text-[11px] font-semibold text-[#4a4f6a] outline-none transition focus:border-[#9db3ff] focus:ring-2 focus:ring-[#e7edff]"
-        >
-          <option value="">{copy.allRoots}</option>
-          {hierarchyRoots.map((valueObject) => (
-            <option key={valueObject.id} value={valueObject.id ?? ""}>
-              {valueObject.title?.trim() || "—"}
-            </option>
-          ))}
-        </select>
-      </label>,
+      <select
+        key="root"
+        aria-label={copy.rootFilter}
+        title={copy.rootFilter}
+        value={hierarchyPathObjects[0]?.id ?? ""}
+        onChange={(event) => updateHierarchyLevel(0, event.target.value)}
+        className="h-11 w-full rounded-xl border border-[#dfe3f1] bg-white px-3 text-[11px] font-semibold text-[#4a4f6a] outline-none transition focus:border-[#9db3ff] focus:ring-2 focus:ring-[#e7edff] lg:w-[220px] xl:w-[240px]"
+      >
+        <option value="">{copy.allRoots}</option>
+        {hierarchyRoots.map((valueObject) => (
+          <option key={valueObject.id} value={valueObject.id ?? ""}>
+            {valueObject.title?.trim() || "—"}
+          </option>
+        ))}
+      </select>,
     );
 
     hierarchyPathObjects.forEach((parent, parentIndex) => {
@@ -836,29 +834,23 @@ export function ValueObjectCatalogViews({
       const label = copy.insideFilter.replace("{parent}", parentTitle);
 
       controls.push(
-        <label
+        <select
           key={`child-${parent.id}`}
-          className="grid min-w-0 gap-1 lg:w-[220px] xl:w-[240px]"
+          aria-label={label}
           title={label}
+          value={hierarchyPathObjects[levelIndex]?.id ?? ""}
+          onChange={(event) =>
+            updateHierarchyLevel(levelIndex, event.target.value)
+          }
+          className="h-11 w-full rounded-xl border border-[#dfe3f1] bg-white px-3 text-[11px] font-semibold text-[#4a4f6a] outline-none transition focus:border-[#9db3ff] focus:ring-2 focus:ring-[#e7edff] lg:w-[220px] xl:w-[240px]"
         >
-          <span className="truncate px-1 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#7c8099]">
-            {label}
-          </span>
-          <select
-            value={hierarchyPathObjects[levelIndex]?.id ?? ""}
-            onChange={(event) =>
-              updateHierarchyLevel(levelIndex, event.target.value)
-            }
-            className="min-h-9 w-full rounded-xl border border-[#dfe3f1] bg-white px-3 text-[11px] font-semibold text-[#4a4f6a] outline-none transition focus:border-[#9db3ff] focus:ring-2 focus:ring-[#e7edff]"
-          >
-            <option value="">{copy.allChildren}</option>
-            {options.map((valueObject) => (
-              <option key={valueObject.id} value={valueObject.id ?? ""}>
-                {valueObject.title?.trim() || "—"}
-              </option>
-            ))}
-          </select>
-        </label>,
+          <option value="">{copy.allChildren}</option>
+          {options.map((valueObject) => (
+            <option key={valueObject.id} value={valueObject.id ?? ""}>
+              {valueObject.title?.trim() || "—"}
+            </option>
+          ))}
+        </select>,
       );
     });
 
@@ -1004,7 +996,7 @@ export function ValueObjectCatalogViews({
   return (
     <div className="grid gap-3">
       <div className="grid gap-2 rounded-[18px] border border-black/[0.07] bg-white p-2.5 shadow-sm">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-end">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
           <div className="inline-flex self-start rounded-xl bg-[#f5f6fb] p-1">
             <button
               type="button"
