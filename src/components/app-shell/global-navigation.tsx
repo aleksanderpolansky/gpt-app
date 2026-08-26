@@ -566,6 +566,7 @@ export function GlobalSidebar({
   const [currentPathname, setCurrentPathname] = useState("");
   const [currentSearch, setCurrentSearch] = useState("");
   const [showAdminNavigation, setShowAdminNavigation] = useState(false);
+  const [adminCanEdit, setAdminCanEdit] = useState(false);
 
   const t = useNavigationTranslator();
   const locale = useInterfaceLocale();
@@ -631,11 +632,14 @@ export function GlobalSidebar({
           | null;
 
         if (isMounted) {
-          setShowAdminNavigation(Boolean(response.ok && data?.ok));
+          const visible = Boolean(response.ok && data?.ok);
+          setShowAdminNavigation(visible);
+          setAdminCanEdit(Boolean(visible && data?.canEdit));
         }
       } catch {
         if (isMounted) {
           setShowAdminNavigation(false);
+          setAdminCanEdit(false);
         }
       }
     }
@@ -654,6 +658,7 @@ export function GlobalSidebar({
   const certificateScope = certificateSearch.get("scope");
 
   const isDashboardActive = currentPathname === "/";
+  const isActivityTemplatesActive = currentPathname === "/activity-templates";
   const isUserAiProcessingActive =
     currentPathname === "/settings/ai-processing";
   const isUploadedFilesActive = currentPathname === "/uploaded-files";
@@ -669,16 +674,16 @@ export function GlobalSidebar({
     isSystemAiInstructionsActive ||
     isAdminUsersActive ||
     isAdminAiBillingActive ||
-    isHelpSystemActive;
+    isHelpSystemActive ||
+    isActivityTemplatesActive;
   const isCalendarActive = currentPathname.startsWith("/calendar");
   const isObservationObjectsActive = currentPathname.startsWith("/value-objects");
   const isActivityJournalCurrent =
     currentPathname === "/activity-today" ||
     currentPathname === "/activity-log";
   const isActivityReviewActive = currentPathname === "/activity-review";
-  const isActivityTemplatesActive = currentPathname === "/activity-templates";
   const isActivityJournalActive =
-    isActivityJournalCurrent || isActivityTemplatesActive || isActivityReviewActive;
+    isActivityJournalCurrent || isActivityReviewActive;
   const isFactsActive = currentPathname.startsWith("/activity-facts");
 
   const isPurchasesActive = currentPathname === "/my-purchase-confirmations";
@@ -796,6 +801,14 @@ export function GlobalSidebar({
                 href={localeHref("/admin/help-system")}
                 active={isHelpSystemActive}
               />
+              {adminCanEdit ? (
+                <TreeItem
+                  label={t("navigation.typicalActivities")}
+                  depth={1}
+                  href={localeHref("/activity-templates")}
+                  active={isActivityTemplatesActive}
+                />
+              ) : null}
             </>
           ) : null}
         </ExpandableSidebarLinkItem>
@@ -822,12 +835,6 @@ export function GlobalSidebar({
           current={isActivityJournalCurrent}
           defaultOpen
         >
-          <TreeItem
-            label={t("navigation.typicalActivities")}
-            depth={1}
-            href={localeHref("/activity-templates")}
-            active={isActivityTemplatesActive}
-          />
           <TreeItem
             label={t("navigation.requiresReview")}
             depth={1}

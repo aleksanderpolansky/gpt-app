@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 
+import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
 import { supabase } from "../../../../../lib/supabase";
 import { saveActivityTemplateAuthoringV2 } from "@/lib/activity/activity-template-authoring-v2.server";
@@ -7,6 +11,8 @@ import { normalizeActivityTemplateAuthoringV2Input } from "@/lib/activity-templa
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+const ROUTE_MARKER = "activity-template-impact-profile-detail-admin-v2" as const;
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -49,6 +55,9 @@ export async function GET(
   _request: Request,
   context: RouteContext,
 ) {
+  const guard = await requirePlatformAdmin();
+  if (!guard.ok) return platformAdminErrorResponse(guard, ROUTE_MARKER);
+
   const { appUser, personActor, errorResponse } =
     await getActivityUserContext();
 
@@ -191,6 +200,9 @@ export async function PUT(
   request: Request,
   context: RouteContext,
 ) {
+  const guard = await requirePlatformAdmin();
+  if (!guard.ok) return platformAdminErrorResponse(guard, ROUTE_MARKER);
+
   const { appUser, personActor, errorResponse } =
     await getActivityUserContext();
 

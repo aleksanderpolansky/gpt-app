@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
 
+import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
 import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+const ROUTE_MARKER = "activity-template-parameter-catalog-admin-v2" as const;
 
 const SELECT_COLUMNS =
   "id,scope_code,parameter_code,title,description,dimension_code,value_type_code,canonical_unit_code,allowed_unit_codes,aggregation_method_code,default_window_code" as const;
@@ -44,6 +50,9 @@ function mapDefinition(row: DefinitionRow) {
 }
 
 export async function GET() {
+  const guard = await requirePlatformAdmin();
+  if (!guard.ok) return platformAdminErrorResponse(guard, ROUTE_MARKER);
+
   const { appUser, personActor, errorResponse } =
     await getActivityUserContext();
 

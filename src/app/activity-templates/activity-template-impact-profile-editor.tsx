@@ -2,6 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { ActivityParameterAdminCatalog } from "./activity-parameter-admin-catalog";
+import {
+  getActivityParameterPresentation,
+  getActivityUnitLabel,
+} from "@/lib/activity/activity-parameter-presentation";
+
 type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
 type TemplateListItem = {
@@ -34,6 +40,7 @@ type SelectorItem = {
   title: string;
   pathText: string;
   scopeCode: string | null;
+  level: "root" | "intermediate" | "leaf";
 };
 
 type GroupCode =
@@ -67,6 +74,8 @@ type Copy = {
   objectPlaceholder: string;
   typeMore: string;
   noObjects: string;
+  nonLeafOnly: string;
+  nodeRole: Record<"root" | "intermediate" | "leaf", string>;
   openInfo: string;
   fullCard: string;
   path: string;
@@ -110,6 +119,8 @@ const COPY: Record<LocaleCode, Copy> = {
     objectPlaceholder: "Начните вводить название ЦО/ОН…",
     typeMore: "Введите минимум 2 символа.",
     noObjects: "Ничего не найдено.",
+    nonLeafOnly: "Найдены только корневые или промежуточные объекты. Для прямой привязки параметров выберите листовой объект.",
+    nodeRole: { root: "корень", intermediate: "промежуточный", leaf: "лист" },
     openInfo: "Открыть",
     fullCard: "Полная карточка",
     path: "Маршрут",
@@ -160,6 +171,8 @@ const COPY: Record<LocaleCode, Copy> = {
     objectPlaceholder: "Почніть вводити назву ЦО/ОН…",
     typeMore: "Введіть щонайменше 2 символи.",
     noObjects: "Нічого не знайдено.",
+    nonLeafOnly: "Знайдено лише кореневі або проміжні об’єкти. Для прямої прив’язки параметрів виберіть листовий об’єкт.",
+    nodeRole: { root: "корінь", intermediate: "проміжний", leaf: "лист" },
     openInfo: "Відкрити",
     fullCard: "Повна картка",
     path: "Маршрут",
@@ -210,6 +223,8 @@ const COPY: Record<LocaleCode, Copy> = {
     objectPlaceholder: "Zacznij wpisywać nazwę obiektu…",
     typeMore: "Wpisz co najmniej 2 znaki.",
     noObjects: "Nic nie znaleziono.",
+    nonLeafOnly: "Znaleziono tylko obiekty główne lub pośrednie. Do bezpośredniego przypisania parametrów wybierz obiekt liściowy.",
+    nodeRole: { root: "korzeń", intermediate: "pośredni", leaf: "liść" },
     openInfo: "Otwórz",
     fullCard: "Pełna karta",
     path: "Ścieżka",
@@ -260,6 +275,8 @@ const COPY: Record<LocaleCode, Copy> = {
     objectPlaceholder: "Start typing an observation object…",
     typeMore: "Enter at least 2 characters.",
     noObjects: "No results.",
+    nonLeafOnly: "Only root or intermediate objects matched. Direct parameter links require a leaf object.",
+    nodeRole: { root: "root", intermediate: "intermediate", leaf: "leaf" },
     openInfo: "Open",
     fullCard: "Full card",
     path: "Path",
@@ -310,6 +327,8 @@ const COPY: Record<LocaleCode, Copy> = {
     objectPlaceholder: "Beobachtungsobjekt eingeben…",
     typeMore: "Mindestens 2 Zeichen eingeben.",
     noObjects: "Keine Ergebnisse.",
+    nonLeafOnly: "Es wurden nur Stamm- oder Zwischenobjekte gefunden. Direkte Parameterverknüpfungen benötigen ein Blattobjekt.",
+    nodeRole: { root: "Stamm", intermediate: "Zwischenobjekt", leaf: "Blatt" },
     openInfo: "Öffnen",
     fullCard: "Vollständige Karte",
     path: "Pfad",
@@ -360,6 +379,8 @@ const COPY: Record<LocaleCode, Copy> = {
     objectPlaceholder: "Empiece a escribir un objeto…",
     typeMore: "Escriba al menos 2 caracteres.",
     noObjects: "Sin resultados.",
+    nonLeafOnly: "Solo se encontraron objetos raíz o intermedios. Los enlaces directos de parámetros requieren un objeto hoja.",
+    nodeRole: { root: "raíz", intermediate: "intermedio", leaf: "hoja" },
     openInfo: "Abrir",
     fullCard: "Ficha completa",
     path: "Ruta",
@@ -410,6 +431,8 @@ const COPY: Record<LocaleCode, Copy> = {
     objectPlaceholder: "Začněte psát objekt…",
     typeMore: "Zadejte alespoň 2 znaky.",
     noObjects: "Nic nenalezeno.",
+    nonLeafOnly: "Byly nalezeny pouze kořenové nebo mezilehlé objekty. Přímé přiřazení parametrů vyžaduje listový objekt.",
+    nodeRole: { root: "kořen", intermediate: "mezilehlý", leaf: "list" },
     openInfo: "Otevřít",
     fullCard: "Úplná karta",
     path: "Cesta",
@@ -462,25 +485,6 @@ function groupCode(item: ParameterItem): GroupCode {
   return "other";
 }
 
-function compactUnit(unit: string) {
-  const map: Record<string, string> = {
-    minute: "min",
-    second: "s",
-    hour: "h",
-    meter: "m",
-    kilometer: "km",
-    kilogram: "kg",
-    gram: "g",
-    liter: "l",
-    milliliter: "ml",
-    repetition: "rep",
-    set: "set",
-    beat_per_minute: "bpm",
-    celsius: "°C",
-  };
-  return map[unit] ?? unit;
-}
-
 export function ActivityTemplateImpactProfileEditor({
   locale,
 }: {
@@ -500,6 +504,7 @@ export function ActivityTemplateImpactProfileEditor({
   const [parameterOpen, setParameterOpen] = useState(false);
   const [objectSearch, setObjectSearch] = useState("");
   const [objectResults, setObjectResults] = useState<SelectorItem[]>([]);
+  const [nonLeafResults, setNonLeafResults] = useState<SelectorItem[]>([]);
   const [objectInfo, setObjectInfo] = useState<SelectorItem | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [legacyProfile, setLegacyProfile] = useState(false);
@@ -519,6 +524,7 @@ export function ActivityTemplateImpactProfileEditor({
     setParameterOpen(false);
     setObjectSearch("");
     setObjectResults([]);
+    setNonLeafResults([]);
     setAdvancedOpen(false);
     setLegacyProfile(false);
     setMessage("");
@@ -548,8 +554,28 @@ export function ActivityTemplateImpactProfileEditor({
       throw new Error(payload?.error || "Parameter catalog load failed");
     }
 
-    setCatalog(payload.parameters ?? []);
-  }, []);
+    setCatalog(
+      ((payload.parameters ?? []) as ParameterItem[]).map((item) => {
+        const presentation = getActivityParameterPresentation(
+          item.parameterCode,
+          locale,
+          item.title,
+          item.description,
+        );
+        return { ...item, title: presentation.title, description: presentation.description };
+      }),
+    );
+  }, [locale]);
+
+  useEffect(() => {
+    const reload = () => {
+      void loadCatalog().catch((error) =>
+        setMessage(error instanceof Error ? error.message : "Parameter catalog load failed"),
+      );
+    };
+    window.addEventListener("arctor:activity-parameter-catalog-changed", reload);
+    return () => window.removeEventListener("arctor:activity-parameter-catalog-changed", reload);
+  }, [loadCatalog]);
 
   useEffect(() => {
     void (async () => {
@@ -572,33 +598,63 @@ export function ActivityTemplateImpactProfileEditor({
       return;
     }
 
+    const controller = new AbortController();
     const timer = window.setTimeout(() => {
       void (async () => {
-        const params = new URLSearchParams({
-          q: query,
-          level: "leaf",
-          includeGlobal: "1",
-          limit: "30",
-          locale,
-        });
-        const response = await fetch(
-          `/api/value-objects/selector?${params.toString()}`,
-          { cache: "no-store" },
-        );
-        const payload = await response.json();
-
-        if (response.ok && payload?.ok === true) {
-          const selected = new Set(objects.map((item) => item.id));
-          setObjectResults(
-            (payload.valueObjects ?? []).filter(
-              (item: SelectorItem) => !selected.has(item.id),
-            ),
+        try {
+          const leafParams = new URLSearchParams({
+            q: query,
+            level: "leaf",
+            includeGlobal: "1",
+            limit: "30",
+            locale,
+          });
+          const leafResponse = await fetch(
+            `/api/value-objects/selector?${leafParams.toString()}`,
+            { cache: "no-store", signal: controller.signal },
           );
+          const leafPayload = await leafResponse.json();
+          if (!leafResponse.ok || leafPayload?.ok !== true) return;
+
+          const selected = new Set(objects.map((item) => item.id));
+          const leaves = ((leafPayload.valueObjects ?? []) as SelectorItem[]).filter(
+            (item) => !selected.has(item.id),
+          );
+          setObjectResults(leaves);
+
+          if (leaves.length > 0) {
+            setNonLeafResults([]);
+            return;
+          }
+
+          const allParams = new URLSearchParams({
+            q: query,
+            level: "all",
+            includeGlobal: "1",
+            limit: "12",
+            locale,
+          });
+          const allResponse = await fetch(
+            `/api/value-objects/selector?${allParams.toString()}`,
+            { cache: "no-store", signal: controller.signal },
+          );
+          const allPayload = await allResponse.json();
+          if (!allResponse.ok || allPayload?.ok !== true) return;
+          setNonLeafResults(
+            ((allPayload.valueObjects ?? []) as SelectorItem[])
+              .filter((item) => item.level !== "leaf" && !selected.has(item.id))
+              .slice(0, 6),
+          );
+        } catch (error) {
+          if (error instanceof DOMException && error.name === "AbortError") return;
         }
       })();
     }, 250);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
   }, [locale, objectSearch, objects]);
 
   const selectedParameters = useMemo(() => {
@@ -681,6 +737,7 @@ export function ActivityTemplateImpactProfileEditor({
           title: id,
           pathText: "",
           scopeCode: null,
+          level: "leaf" as const,
         }
       );
     });
@@ -722,6 +779,7 @@ export function ActivityTemplateImpactProfileEditor({
       setParameterSearch("");
       setObjectSearch("");
       setObjectResults([]);
+      setNonLeafResults([]);
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Template load failed",
@@ -750,6 +808,7 @@ export function ActivityTemplateImpactProfileEditor({
     );
     setObjectSearch("");
     setObjectResults([]);
+    setNonLeafResults([]);
   }
 
   function removeObject(id: string) {
@@ -991,7 +1050,7 @@ export function ActivityTemplateImpactProfileEditor({
                                 ) : null}
                               </span>
                               <span className="shrink-0 text-[10px] text-slate-400">
-                                {compactUnit(parameter.canonicalUnitCode)}
+                                {getActivityUnitLabel(parameter.canonicalUnitCode, locale)}
                               </span>
                             </button>
                           ))}
@@ -1042,6 +1101,7 @@ export function ActivityTemplateImpactProfileEditor({
                     setObjectSearch(value);
                     if (value.trim().length < 2) {
                       setObjectResults([]);
+                      setNonLeafResults([]);
                     }
                   }}
                   placeholder={copy.objectPlaceholder}
@@ -1054,10 +1114,27 @@ export function ActivityTemplateImpactProfileEditor({
                       <p className="px-2 py-3 text-xs text-slate-500">
                         {copy.typeMore}
                       </p>
-                    ) : objectResults.length === 0 ? (
+                    ) : objectResults.length === 0 && nonLeafResults.length === 0 ? (
                       <p className="px-2 py-3 text-xs text-slate-500">
                         {copy.noObjects}
                       </p>
+                    ) : objectResults.length === 0 ? (
+                      <div className="px-1 py-1">
+                        <p className="px-2 py-2 text-xs leading-5 text-amber-700">
+                          {copy.nonLeafOnly}
+                        </p>
+                        {nonLeafResults.map((item) => (
+                          <div key={item.id} className="flex items-center gap-2 rounded-lg bg-amber-50/50">
+                            <div className="min-w-0 flex-1 px-2 py-2.5">
+                              <span className="block truncate text-[13px] font-medium text-slate-700">{item.title}</span>
+                              <span className="text-[10px] text-slate-400">{copy.nodeRole[item.level]}</span>
+                            </div>
+                            <button type="button" onClick={() => setObjectInfo(item)} className="mr-1 shrink-0 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-500">
+                              {copy.openInfo}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     ) : (
                       objectResults.map((item) => (
                         <div
@@ -1149,6 +1226,10 @@ export function ActivityTemplateImpactProfileEditor({
             </div>
           </div>
         </section>
+      </div>
+
+      <div className="mx-auto mt-4 w-full max-w-[1120px]">
+        <ActivityParameterAdminCatalog locale={locale} />
       </div>
 
       {objectInfo ? (
