@@ -13,17 +13,10 @@ import {
   PUBLIC_MEDIA_BUCKET_ID,
 } from "../../../../lib/media-storage";
 import { supabase } from "../../../../lib/supabase";
+import { getPublicationAuthorOptionForUser } from "@/lib/messages/publicationAuthors.server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-type PublicProfileRow = {
-  id: string;
-  actor_id: string;
-  public_slug: string;
-  display_name: string;
-  is_public: boolean;
-};
 
 type MessageObjectRow = {
   id: string;
@@ -50,6 +43,7 @@ type ParsedImage = {
 type ParsedPublicationInput = {
   contentText: string | null;
   languageCode: string | null;
+  authorActorId: string | null;
   image: ParsedImage | null;
 };
 
@@ -90,6 +84,18 @@ function parseLocale(value: unknown) {
   const locale = value.trim().toLowerCase();
 
   return SUPPORTED_LOCALES.has(locale) ? locale : null;
+}
+
+function parseActorId(value: unknown) {
+  if (typeof value !== "string") return null;
+
+  const actorId = value.trim();
+
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    actorId,
+  )
+    ? actorId
+    : null;
 }
 
 function readUint24LE(bytes: Buffer, offset: number) {
@@ -169,12 +175,14 @@ async function parsePublicationInput(request: Request) {
 
   const contentText = parseContentText(formData.get("contentText"));
   const languageCode = parseLocale(formData.get("locale"));
+  const authorActorId = parseActorId(formData.get("authorActorId"));
   const imageValue = formData.get("image");
 
   if (!imageValue || typeof imageValue === "string" || imageValue.size === 0) {
     return {
       contentText,
       languageCode,
+      authorActorId,
       image: null,
     } satisfies ParsedPublicationInput;
   }
@@ -208,6 +216,7 @@ async function parsePublicationInput(request: Request) {
   return {
     contentText,
     languageCode,
+    authorActorId,
     image: {
       widthPx: dimensions.width,
       heightPx: dimensions.height,
@@ -268,27 +277,6 @@ async function getCurrentActorContext() {
       ),
     };
   }
-}
-
-async function getPublicProfile(input: {
-  ownerUserId: string;
-  actorId: string;
-  profileId: string;
-}) {
-  const { data, error } = await supabase
-    .from("actor_public_profiles")
-    .select("id,actor_id,public_slug,display_name,is_public")
-    .eq("id", input.profileId)
-    .eq("owner_user_id", input.ownerUserId)
-    .eq("actor_id", input.actorId)
-    .eq("is_public", true)
-    .limit(1);
-
-  if (error) {
-    throw new Error(`USER_PUBLICATION_PROFILE_READ_FAILED:${error.message}`);
-  }
-
-  return ((data ?? [])[0] as PublicProfileRow | undefined) ?? null;
 }
 
 async function cleanupMessageObject(messageObjectId: string) {
@@ -355,22 +343,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const profile = await getPublicProfile({
-    ownerUserId: actorContext.appUserId,
-    actorId: actorContext.actorId,
-    profileId: actorContext.profile.profileId,
-  });
-
-  if (!profile?.public_slug) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "USER_PUBLICATION_PUBLIC_PROFILE_REQUIRED",
-      },
-      { status: 403 },
-    );
-  }
-
   let publicationInput: ParsedPublicationInput;
 
   try {
@@ -391,6 +363,7 @@ export async function POST(request: Request) {
 
   const contentText = publicationInput.contentText;
   const languageCode = publicationInput.languageCode;
+  const authorActorId = publicationInput.authorActorId;
   const image = publicationInput.image;
 
   if (!contentText) {
@@ -403,12 +376,31 @@ export async function POST(request: Request) {
     );
   }
 
+  if (!authorActorId) {
+    return NextResponse.json(
+      { ok: false, error: "PUBLICATION_AUTHOR_INVALID" },
+      { status: 400 },
+    );
+  }
+
+  const author = await getPublicationAuthorOptionForUser({
+    ownerUserId: actorContext.appUserId,
+    authorActorId,
+  });
+
+  if (!author) {
+    return NextResponse.json(
+      { ok: false, error: "PUBLICATION_AUTHOR_NOT_ALLOWED" },
+      { status: 403 },
+    );
+  }
+
   const { data: createData, error: createError } = await supabase.rpc(
     "create_message_object_v1",
     {
       p_owner_user_id: actorContext.appUserId,
       p_created_by_actor_id: actorContext.actorId,
-      p_author_actor_id: actorContext.actorId,
+      p_author_actor_id: author.actorId,
       p_title: null,
       p_content_text: contentText,
       p_content_json: {},
@@ -426,9 +418,11 @@ export async function POST(request: Request) {
       p_source_published_at: null,
       p_metadata_json: {
         source: image
-          ? "profile_publication_f9_media"
-          : "profile_publication_f9",
-        profile_id: profile.id,
+          ? "feed_publication_author_selector_f9_media"
+          : "feed_publication_author_selector_f9",
+        author_kind: author.kind,
+        profile_id: author.profileId,
+        organization_id: author.organizationId,
         surface: "feed",
       },
     },
@@ -486,7 +480,7 @@ export async function POST(request: Request) {
           sort_order: 0,
           alt_text: null,
           metadata_json: {
-            source: "profile_publication_f9_media",
+            source: "feed_publication_author_selector_f9_media",
             optimized_before_network: true,
             max_edge_px: MAX_IMAGE_EDGE_PX,
             preferred_payload_bytes: 400 * 1024,
@@ -525,11 +519,13 @@ export async function POST(request: Request) {
     .insert({
       message_object_id: createdMessage.id,
       channel_code: "arctor",
-      destination_ref: `people:${profile.public_slug}`,
+      destination_ref: author.destinationRef,
       delivery_status: "pending",
       metadata_json: {
         surface: "feed",
-        profile_id: profile.id,
+        author_kind: author.kind,
+        profile_id: author.profileId,
+        organization_id: author.organizationId,
       },
     })
     .select("id")
@@ -628,10 +624,16 @@ export async function POST(request: Request) {
         hasImage: Boolean(image),
       },
       author: {
+        actorId: author.actorId,
+        kind: author.kind,
+        profileId: author.profileId,
+        organizationId: author.organizationId,
+        publicSlug: author.publicSlug,
+        displayName: author.displayName,
+      },
+      createdBy: {
         actorId: actorContext.actorId,
-        profileId: profile.id,
-        publicSlug: profile.public_slug,
-        displayName: profile.display_name,
+        profileId: actorContext.profile.profileId,
       },
       distribution: {
         channelCode: "arctor",

@@ -46,18 +46,32 @@ function publicationImageErrorMessage(
   return error instanceof Error ? error.message : copy.imageServerRejected;
 }
 
+type PublicationAuthorOption = {
+  actorId: string;
+  kind: "personal" | "avatar" | "enterprise";
+  displayName: string;
+};
+
 export default function UserPublicationComposer({
   locale,
-  displayName,
+  authorOptions,
+  defaultAuthorActorId,
 }: {
   locale: LocaleCode;
-  displayName: string;
+  authorOptions: PublicationAuthorOption[];
+  defaultAuthorActorId: string;
 }) {
   const router = useRouter();
   const copy = getFeedInteractionCopy(locale);
   const previewUrlRef = useRef<string | null>(null);
   const photoButtonRef = useRef<HTMLButtonElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const initialAuthorActorId =
+    authorOptions.find((option) => option.actorId === defaultAuthorActorId)
+      ?.actorId ??
+    authorOptions[0]?.actorId ??
+    "";
+  const [authorActorId, setAuthorActorId] = useState(initialAuthorActorId);
   const [contentText, setContentText] = useState("");
   const [image, setImage] = useState<OptimizedPublicationImage | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -67,6 +81,12 @@ export default function UserPublicationComposer({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const trimmedText = contentText.trim();
+
+  function authorKindLabel(kind: PublicationAuthorOption["kind"]) {
+    if (kind === "personal") return copy.personalProfile;
+    if (kind === "avatar") return copy.avatar;
+    return copy.enterprise;
+  }
 
   useEffect(() => {
     return () => {
@@ -122,7 +142,7 @@ export default function UserPublicationComposer({
   async function publish(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!trimmedText || busy || optimizingImage) return;
+    if (!trimmedText || !authorActorId || busy || optimizingImage) return;
 
     setBusy(true);
     setErrorMessage(null);
@@ -132,6 +152,7 @@ export default function UserPublicationComposer({
       const formData = new FormData();
       formData.set("contentText", trimmedText);
       formData.set("locale", locale);
+      formData.set("authorActorId", authorActorId);
 
       if (image) {
         formData.set("image", image.blob, "publication.webp");
@@ -168,18 +189,31 @@ export default function UserPublicationComposer({
       className="mb-3 rounded-2xl border border-[#e2e6f0] bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.02)] sm:px-5"
     >
       <div className="mb-2 flex items-center justify-between gap-3">
-        <div>
-          <div className="text-[11px] font-semibold text-[#4a4f6a]">
-            {copy.newPublication}
-          </div>
-          <div className="mt-0.5 text-[10px] text-[#9ca3b8]">
-            {displayName}
-          </div>
+        <div className="text-[11px] font-semibold text-[#4a4f6a]">
+          {copy.newPublication}
         </div>
         <span className="text-[10px] text-[#9ca3b8]">
           {contentText.length}/5000
         </span>
       </div>
+
+      <label className="mb-2 block">
+        <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7c8099]">
+          {copy.author}
+        </span>
+        <select
+          value={authorActorId}
+          onChange={(event) => setAuthorActorId(event.target.value)}
+          disabled={busy || optimizingImage}
+          className="h-9 w-full rounded-xl border border-[#dfe3f1] bg-white px-3 text-[12px] text-[#33384f] outline-none transition focus:border-[#9db3ff] focus:ring-2 focus:ring-[#e7edff] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {authorOptions.map((option) => (
+            <option key={option.actorId} value={option.actorId}>
+              {authorKindLabel(option.kind)} · {option.displayName}
+            </option>
+          ))}
+        </select>
+      </label>
 
       <textarea
         value={contentText}
@@ -247,7 +281,7 @@ export default function UserPublicationComposer({
 
         <button
           type="submit"
-          disabled={!trimmedText || busy || optimizingImage}
+          disabled={!trimmedText || !authorActorId || busy || optimizingImage}
           className="inline-flex items-center gap-1.5 rounded-lg bg-[#3b6ef8] px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:bg-[#315fd8] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Send className="h-3.5 w-3.5" />

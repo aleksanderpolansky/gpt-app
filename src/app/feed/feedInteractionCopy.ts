@@ -2,6 +2,10 @@ import type { LocaleCode } from "@/i18n";
 
 export type FeedInteractionCopy = {
   newPublication: string;
+  author: string;
+  personalProfile: string;
+  avatar: string;
+  enterprise: string;
   publicationPlaceholder: string;
   publish: string;
   publishing: string;
@@ -25,6 +29,10 @@ export type FeedInteractionCopy = {
 
 const COPY: Record<LocaleCode, FeedInteractionCopy> = {
   en: {
+    author: "Author",
+    personalProfile: "Personal profile",
+    avatar: "Avatar",
+    enterprise: "Enterprise",
     newPublication: "New publication",
     publicationPlaceholder: "Share a public update…",
     publish: "Publish",
@@ -47,6 +55,10 @@ const COPY: Record<LocaleCode, FeedInteractionCopy> = {
     signInRequired: "Sign in to view hidden publications.",
   },
   pl: {
+    author: "Autor",
+    personalProfile: "Profil osobisty",
+    avatar: "Awatar",
+    enterprise: "Firma",
     newPublication: "Nowa publikacja",
     publicationPlaceholder: "Udostępnij publiczną aktualizację…",
     publish: "Opublikuj",
@@ -69,6 +81,10 @@ const COPY: Record<LocaleCode, FeedInteractionCopy> = {
     signInRequired: "Zaloguj się, aby zobaczyć ukryte publikacje.",
   },
   ru: {
+    author: "Автор",
+    personalProfile: "Личный профиль",
+    avatar: "Аватар",
+    enterprise: "Предприятие",
     newPublication: "Новая публикация",
     publicationPlaceholder: "Поделитесь публичным обновлением…",
     publish: "Опубликовать",
@@ -91,6 +107,10 @@ const COPY: Record<LocaleCode, FeedInteractionCopy> = {
     signInRequired: "Войдите, чтобы увидеть скрытые публикации.",
   },
   uk: {
+    author: "Автор",
+    personalProfile: "Особистий профіль",
+    avatar: "Аватар",
+    enterprise: "Підприємство",
     newPublication: "Нова публікація",
     publicationPlaceholder: "Поділіться публічним оновленням…",
     publish: "Опублікувати",
@@ -113,6 +133,10 @@ const COPY: Record<LocaleCode, FeedInteractionCopy> = {
     signInRequired: "Увійдіть, щоб переглянути приховані публікації.",
   },
   de: {
+    author: "Autor",
+    personalProfile: "Persönliches Profil",
+    avatar: "Avatar",
+    enterprise: "Unternehmen",
     newPublication: "Neue Veröffentlichung",
     publicationPlaceholder: "Teile ein öffentliches Update…",
     publish: "Veröffentlichen",
@@ -135,6 +159,10 @@ const COPY: Record<LocaleCode, FeedInteractionCopy> = {
     signInRequired: "Melde dich an, um ausgeblendete Veröffentlichungen zu sehen.",
   },
   es: {
+    author: "Autor",
+    personalProfile: "Perfil personal",
+    avatar: "Avatar",
+    enterprise: "Empresa",
     newPublication: "Nueva publicación",
     publicationPlaceholder: "Comparte una actualización pública…",
     publish: "Publicar",
@@ -157,6 +185,10 @@ const COPY: Record<LocaleCode, FeedInteractionCopy> = {
     signInRequired: "Inicia sesión para ver las publicaciones ocultas.",
   },
   cs: {
+    author: "Autor",
+    personalProfile: "Osobní profil",
+    avatar: "Avatar",
+    enterprise: "Podnik",
     newPublication: "Nová publikace",
     publicationPlaceholder: "Sdílejte veřejnou aktualizaci…",
     publish: "Publikovat",

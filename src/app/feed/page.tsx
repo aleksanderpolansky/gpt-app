@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import { normalizeLocale } from "@/i18n";
 import { getCurrentFeedViewerState } from "@/lib/messages/feedViewerPreferences.server";
+import { getPublicationAuthorOptionsForUser } from "@/lib/messages/publicationAuthors.server";
 import GlobalFeedContent from "./GlobalFeedContent";
 import UserPublicationComposer from "./UserPublicationComposer";
 import { getGlobalFeedCopy } from "./feedCopy";
@@ -32,6 +33,9 @@ export default async function GlobalFeedPage({
   );
   const copy = getGlobalFeedCopy(locale);
   const viewer = await getCurrentFeedViewerState();
+  const authorOptions = viewer
+    ? await getPublicationAuthorOptionsForUser(viewer.ownerUserId)
+    : [];
 
   return (
     <div className="min-h-full px-3 py-4 sm:px-5 sm:py-5">
@@ -45,10 +49,11 @@ export default async function GlobalFeedPage({
           </p>
         </header>
 
-        {viewer?.canPublishPublicly ? (
+        {viewer && authorOptions.length > 0 ? (
           <UserPublicationComposer
             locale={locale}
-            displayName={viewer.displayName}
+            authorOptions={authorOptions}
+            defaultAuthorActorId={viewer.actorId}
           />
         ) : null}
 
