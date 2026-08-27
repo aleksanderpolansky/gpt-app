@@ -97,6 +97,20 @@ function GlobalFeedItemCard({
               {contentText}
             </p>
           ) : null}
+
+          {item.image ? (
+            <div className="mt-3 flex justify-center overflow-hidden rounded-xl border border-[#e7eaf4] bg-[#f8f9fd]">
+              {/* Direct public Storage/CDN URL, not Next Image/Vercel proxy. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={item.image.url}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="max-h-[420px] w-full object-contain"
+              />
+            </div>
+          ) : null}
         </div>
       </div>
     </article>

@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase";
 import { resolveLocalizedContentFieldsStrict } from "../localization/contentLocalization";
+import { getPublicMessageImageMap, type PublicMessageImage } from "./messageMedia.server";
 import {
   ensurePublicMessageObjectLocalizationsV1,
   readCachedPublicMessageObjectLocalizationV1,
@@ -44,6 +45,7 @@ export type GlobalArctorFeedItem = {
   languageCode: string | null;
   publishedAt: string;
   localizationSource: MessageObjectLocalizationSource;
+  image: PublicMessageImage | null;
   author: {
     actorId: string;
     organizationId: string;
@@ -236,6 +238,10 @@ export async function getGlobalArctorFeed(input: {
       })
       .slice(0, limit);
 
+    const imageByMessageId = await getPublicMessageImageMap(
+      eligibleMessages.map((message) => message.id),
+    );
+
     const items = eligibleMessages.flatMap((message) => {
       const actor = actorById.get(message.author_actor_id);
 
@@ -275,6 +281,7 @@ export async function getGlobalArctorFeed(input: {
           languageCode: message.language_code,
           publishedAt: message.activated_at ?? message.created_at,
           localizationSource,
+          image: imageByMessageId.get(message.id) ?? null,
           author: {
             actorId: actor.id,
             organizationId: organization.id,

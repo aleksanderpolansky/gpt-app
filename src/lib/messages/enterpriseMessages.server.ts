@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase";
 import { ensurePublicMessageObjectLocalizationsV1 } from "./messageObjectOnDemandLocalization.server";
+import { getPublicMessageImageMap, type PublicMessageImage } from "./messageMedia.server";
 
 type OrganizationActorRow = {
   id: string;
@@ -27,6 +28,7 @@ export type PublicEnterpriseMessage = {
   contentText: string | null;
   languageCode: string | null;
   publishedAt: string;
+  image: PublicMessageImage | null;
 };
 
 export type PublicEnterpriseMessagesResult = {
@@ -123,17 +125,20 @@ export async function getPublicEnterpriseMessages(input: {
       .filter((row) => distributedIds.has(row.id))
       .slice(0, limit);
 
-    const localization = await ensurePublicMessageObjectLocalizationsV1({
-      targetLocale: input.locale,
-      messages: distributedRows.map((row) => ({
-        id: row.id,
-        ownerUserId: row.owner_user_id,
-        createdByActorId: row.created_by_actor_id,
-        sourceLocaleHint: row.language_code,
-        contentText: row.content_text,
-        metadataJson: row.metadata_json,
-      })),
-    });
+    const [localization, imageByMessageId] = await Promise.all([
+      ensurePublicMessageObjectLocalizationsV1({
+        targetLocale: input.locale,
+        messages: distributedRows.map((row) => ({
+          id: row.id,
+          ownerUserId: row.owner_user_id,
+          createdByActorId: row.created_by_actor_id,
+          sourceLocaleHint: row.language_code,
+          contentText: row.content_text,
+          metadataJson: row.metadata_json,
+        })),
+      }),
+      getPublicMessageImageMap(distributedRows.map((row) => row.id)),
+    ]);
 
     if (localization.warnings.length > 0) {
       console.warn(
@@ -150,6 +155,7 @@ export async function getPublicEnterpriseMessages(input: {
           localization.contentTextById.get(row.id) ?? row.content_text,
         languageCode: row.language_code,
         publishedAt: row.activated_at ?? row.created_at,
+        image: imageByMessageId.get(row.id) ?? null,
       })),
       errorMessage: null,
     };

@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ImagePlus, Send, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Send } from "lucide-react";
 
+import {
+  optimizePublicationImage,
+  type OptimizedPublicationImage,
+} from "@/lib/media/browserPublicationImage";
 import type { PublicEnterpriseMessage } from "@/lib/messages/enterpriseMessages.server";
 
 type LocaleKey = "en" | "pl" | "uk" | "ru" | "de" | "es" | "cs";
@@ -17,6 +21,13 @@ type Copy = {
   empty: string;
   loadError: string;
   sourceLabel: string;
+  photo: string;
+  removePhoto: string;
+  optimizingPhoto: string;
+  imageTypeUnsupported: string;
+  imageSourceTooLarge: string;
+  imageOptimizationFailed: string;
+  imageServerRejected: string;
 };
 
 const COPY: Record<LocaleKey, Copy> = {
@@ -29,6 +40,13 @@ const COPY: Record<LocaleKey, Copy> = {
     empty: "No public activity yet.",
     loadError: "Public activity could not be loaded.",
     sourceLabel: "ARCTor",
+    photo: "Photo",
+    removePhoto: "Remove photo",
+    optimizingPhoto: "Optimizing photo...",
+    imageTypeUnsupported: "Choose a JPEG, PNG or WebP image.",
+    imageSourceTooLarge: "The selected image is larger than 10 MiB.",
+    imageOptimizationFailed: "The photo could not be optimized for publication.",
+    imageServerRejected: "The optimized photo was rejected by the server.",
   },
   pl: {
     composerTitle: "Nowa publikacja",
@@ -39,6 +57,13 @@ const COPY: Record<LocaleKey, Copy> = {
     empty: "Brak publicznej aktywności.",
     loadError: "Nie udało się wczytać aktywności publicznej.",
     sourceLabel: "ARCTor",
+    photo: "Zdjęcie",
+    removePhoto: "Usuń zdjęcie",
+    optimizingPhoto: "Optymalizacja zdjęcia...",
+    imageTypeUnsupported: "Wybierz obraz JPEG, PNG lub WebP.",
+    imageSourceTooLarge: "Wybrany obraz jest większy niż 10 MiB.",
+    imageOptimizationFailed: "Nie udało się zoptymalizować zdjęcia do publikacji.",
+    imageServerRejected: "Serwer odrzucił zoptymalizowane zdjęcie.",
   },
   uk: {
     composerTitle: "Нова публікація",
@@ -49,6 +74,13 @@ const COPY: Record<LocaleKey, Copy> = {
     empty: "Публічної активності ще немає.",
     loadError: "Не вдалося завантажити публічну активність.",
     sourceLabel: "ARCTor",
+    photo: "Фото",
+    removePhoto: "Видалити фото",
+    optimizingPhoto: "Оптимізація фото...",
+    imageTypeUnsupported: "Виберіть JPEG, PNG або WebP.",
+    imageSourceTooLarge: "Вибране зображення перевищує 10 MiB.",
+    imageOptimizationFailed: "Не вдалося оптимізувати фото для публікації.",
+    imageServerRejected: "Сервер відхилив оптимізоване фото.",
   },
   ru: {
     composerTitle: "Новая публикация",
@@ -59,6 +91,13 @@ const COPY: Record<LocaleKey, Copy> = {
     empty: "Публичной активности пока нет.",
     loadError: "Не удалось загрузить публичную активность.",
     sourceLabel: "ARCTor",
+    photo: "Фото",
+    removePhoto: "Удалить фото",
+    optimizingPhoto: "Оптимизация фото...",
+    imageTypeUnsupported: "Выберите изображение JPEG, PNG или WebP.",
+    imageSourceTooLarge: "Выбранное изображение больше 10 MiB.",
+    imageOptimizationFailed: "Не удалось оптимизировать фото для публикации.",
+    imageServerRejected: "Сервер отклонил оптимизированное фото.",
   },
   de: {
     composerTitle: "Neue Veröffentlichung",
@@ -69,6 +108,13 @@ const COPY: Record<LocaleKey, Copy> = {
     empty: "Noch keine öffentliche Aktivität.",
     loadError: "Öffentliche Aktivität konnte nicht geladen werden.",
     sourceLabel: "ARCTor",
+    photo: "Foto",
+    removePhoto: "Foto entfernen",
+    optimizingPhoto: "Foto wird optimiert...",
+    imageTypeUnsupported: "Wählen Sie ein JPEG-, PNG- oder WebP-Bild.",
+    imageSourceTooLarge: "Das ausgewählte Bild ist größer als 10 MiB.",
+    imageOptimizationFailed: "Das Foto konnte nicht optimiert werden.",
+    imageServerRejected: "Der Server hat das optimierte Foto abgelehnt.",
   },
   es: {
     composerTitle: "Nueva publicación",
@@ -79,6 +125,13 @@ const COPY: Record<LocaleKey, Copy> = {
     empty: "Todavía no hay actividad pública.",
     loadError: "No se pudo cargar la actividad pública.",
     sourceLabel: "ARCTor",
+    photo: "Foto",
+    removePhoto: "Eliminar foto",
+    optimizingPhoto: "Optimizando foto...",
+    imageTypeUnsupported: "Elige una imagen JPEG, PNG o WebP.",
+    imageSourceTooLarge: "La imagen seleccionada supera los 10 MiB.",
+    imageOptimizationFailed: "No se pudo optimizar la foto para publicarla.",
+    imageServerRejected: "El servidor rechazó la foto optimizada.",
   },
   cs: {
     composerTitle: "Nová publikace",
@@ -89,6 +142,13 @@ const COPY: Record<LocaleKey, Copy> = {
     empty: "Zatím žádná veřejná aktivita.",
     loadError: "Veřejnou aktivitu se nepodařilo načíst.",
     sourceLabel: "ARCTor",
+    photo: "Fotografie",
+    removePhoto: "Odstranit fotografii",
+    optimizingPhoto: "Optimalizace fotografie...",
+    imageTypeUnsupported: "Vyberte obrázek JPEG, PNG nebo WebP.",
+    imageSourceTooLarge: "Vybraný obrázek je větší než 10 MiB.",
+    imageOptimizationFailed: "Fotografii se nepodařilo optimalizovat.",
+    imageServerRejected: "Server optimalizovanou fotografii odmítl.",
   },
 };
 
@@ -103,35 +163,53 @@ function getLocale(value: string | undefined): LocaleKey {
   ) {
     return value;
   }
-
   return "en";
 }
 
 function getIntlLocale(locale: LocaleKey) {
   const map: Record<LocaleKey, string> = {
-    en: "en-GB",
-    pl: "pl-PL",
-    uk: "uk-UA",
-    ru: "ru-RU",
-    de: "de-DE",
-    es: "es-ES",
-    cs: "cs-CZ",
+    en: "en-GB", pl: "pl-PL", uk: "uk-UA", ru: "ru-RU",
+    de: "de-DE", es: "es-ES", cs: "cs-CZ",
   };
-
   return map[locale];
 }
 
 function formatPublishedAt(value: string, locale: LocaleKey) {
   const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
+  if (Number.isNaN(date.getTime())) return value;
 
   return new Intl.DateTimeFormat(getIntlLocale(locale), {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function publicationImageErrorMessage(error: unknown, copy: Copy) {
+  const code = error instanceof Error ? error.message : "";
+
+  if (code === "PUBLICATION_IMAGE_TYPE_UNSUPPORTED") return copy.imageTypeUnsupported;
+  if (code === "PUBLICATION_IMAGE_SOURCE_TOO_LARGE") return copy.imageSourceTooLarge;
+
+  if (
+    code === "PUBLICATION_IMAGE_TOO_LARGE_AFTER_OPTIMIZATION" ||
+    code === "PUBLICATION_IMAGE_WEBP_ENCODE_FAILED" ||
+    code === "PUBLICATION_IMAGE_CANVAS_UNAVAILABLE" ||
+    code === "PUBLICATION_IMAGE_DECODE_FAILED" ||
+    code === "PUBLICATION_IMAGE_DIMENSIONS_INVALID" ||
+    code === "PUBLICATION_IMAGE_EMPTY"
+  ) {
+    return copy.imageOptimizationFailed;
+  }
+
+  if (
+    code.startsWith("PUBLICATION_IMAGE_") ||
+    code.startsWith("MESSAGE_MEDIA_") ||
+    code.startsWith("MEDIA_IMAGE_")
+  ) {
+    return copy.imageServerRejected;
+  }
+
+  return error instanceof Error ? error.message : copy.imageServerRejected;
 }
 
 type Props = {
@@ -155,44 +233,83 @@ export default function EnterprisePublicActivityPanel({
   const normalizedLocale = getLocale(locale);
   const copy = COPY[normalizedLocale];
 
+  const previewUrlRef = useRef<string | null>(null);
   const [contentText, setContentText] = useState("");
+  const [image, setImage] = useState<OptimizedPublicationImage | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [optimizingImage, setOptimizingImage] = useState(false);
   const [busy, setBusy] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const trimmedText = contentText.trim();
 
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+      }
+    };
+  }, []);
+
+  function clearSelectedImage() {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+    setImagePreviewUrl(null);
+    setImage(null);
+  }
+
+  async function selectImage(file: File | null) {
+    if (!file || busy || optimizingImage) return;
+
+    setOptimizingImage(true);
+    setSubmitError(null);
+    setNotice(null);
+
+    try {
+      const optimized = await optimizePublicationImage(file);
+      clearSelectedImage();
+      const previewUrl = URL.createObjectURL(optimized.blob);
+      previewUrlRef.current = previewUrl;
+      setImagePreviewUrl(previewUrl);
+      setImage(optimized);
+    } catch (error) {
+      setSubmitError(publicationImageErrorMessage(error, copy));
+    } finally {
+      setOptimizingImage(false);
+    }
+  }
+
   async function publish(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!trimmedText || busy) {
-      return;
-    }
+    if (!trimmedText || busy || optimizingImage) return;
 
     setBusy(true);
     setSubmitError(null);
     setNotice(null);
 
     try {
+      const formData = new FormData();
+      formData.set("contentText", trimmedText);
+      formData.set("locale", normalizedLocale);
+
+      if (image) {
+        formData.set("image", image.blob, "publication.webp");
+      }
+
       const response = await fetch(
         `/api/organizations/${encodeURIComponent(organizationId)}/messages`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contentText: trimmedText,
-            locale: normalizedLocale,
-          }),
+          body: formData,
         },
       );
 
       const payload = (await response.json().catch(() => null)) as
-        | {
-            ok?: boolean;
-            error?: string;
-          }
+        | { ok?: boolean; error?: string }
         | null;
 
       if (!response.ok || !payload?.ok) {
@@ -202,12 +319,11 @@ export default function EnterprisePublicActivityPanel({
       }
 
       setContentText("");
+      clearSelectedImage();
       setNotice(copy.published);
       router.refresh();
     } catch (error) {
-      setSubmitError(
-        error instanceof Error ? error.message : "Publication failed.",
-      );
+      setSubmitError(publicationImageErrorMessage(error, copy));
     } finally {
       setBusy(false);
     }
@@ -233,14 +349,63 @@ export default function EnterprisePublicActivityPanel({
             className="w-full resize-y rounded-xl border border-[#dfe3f1] bg-white px-3 py-2 text-[12px] leading-5 text-[#33384f] outline-none transition placeholder:text-[#a4a9bd] focus:border-[#9db3ff] focus:ring-2 focus:ring-[#e7edff]"
           />
 
+          {imagePreviewUrl ? (
+            <div className="mt-2.5 overflow-hidden rounded-xl border border-[#e7eaf4] bg-[#f8f9fd]">
+              {/* Optimized local object URL preview. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imagePreviewUrl}
+                alt=""
+                className="max-h-[220px] w-full object-contain"
+              />
+            </div>
+          ) : null}
+
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-            <div className="text-[10px] text-[#9ca3b8]">
-              {contentText.length}/5000
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] text-[#9ca3b8]">
+                {contentText.length}/5000
+              </span>
+
+              <label
+                className={[
+                  "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#dfe3f1] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#4a4f6a] shadow-sm transition hover:border-[#b9c7ff] hover:bg-[#f5f7ff]",
+                  busy || optimizingImage
+                    ? "pointer-events-none opacity-50"
+                    : "",
+                ].join(" ")}
+              >
+                <ImagePlus className="h-3.5 w-3.5 text-[#3b6ef8]" />
+                {optimizingImage ? copy.optimizingPhoto : copy.photo}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  disabled={busy || optimizingImage}
+                  className="sr-only"
+                  onChange={(event) => {
+                    const file = event.currentTarget.files?.[0] ?? null;
+                    void selectImage(file);
+                    event.currentTarget.value = "";
+                  }}
+                />
+              </label>
+
+              {image ? (
+                <button
+                  type="button"
+                  onClick={clearSelectedImage}
+                  disabled={busy || optimizingImage}
+                  className="inline-flex items-center gap-1 rounded-lg border border-[#f0d3d8] bg-white px-2 py-1.5 text-[10px] font-semibold text-[#b42318] transition hover:bg-[#fff7f7] disabled:opacity-50"
+                >
+                  <X className="h-3 w-3" />
+                  {copy.removePhoto}
+                </button>
+              ) : null}
             </div>
 
             <button
               type="submit"
-              disabled={!trimmedText || busy}
+              disabled={!trimmedText || busy || optimizingImage}
               className="inline-flex items-center gap-1.5 rounded-lg bg-[#3b6ef8] px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:bg-[#315fd8] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Send className="h-3.5 w-3.5" />
@@ -301,6 +466,20 @@ export default function EnterprisePublicActivityPanel({
                 <p className="mt-1 whitespace-pre-wrap break-words text-[12px] leading-5 text-[#5a5f7a]">
                   {message.contentText}
                 </p>
+              ) : null}
+
+              {message.image ? (
+                <div className="mt-2.5 flex justify-center overflow-hidden rounded-xl border border-[#e7eaf4] bg-[#f8f9fd]">
+                  {/* Direct public Storage/CDN URL, not Next Image/Vercel proxy. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={message.image.url}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="max-h-[300px] w-full object-contain"
+                  />
+                </div>
               ) : null}
             </article>
           ))}
