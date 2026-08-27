@@ -8,6 +8,7 @@ import { AiNavigatorProvider, useAiNavigator, type AiNavigatorMode } from "./ai-
 import { GlobalAiNavigator } from "./global-ai-navigator";
 import { GlobalSidebar, GlobalTopBar } from "./global-navigation";
 import { GlobalHelpLayer } from "../help/global-help-layer";
+import { PixelFilePickerLifecycleDiagnostic } from "./pixel-file-picker-lifecycle-diagnostic";
 
 export const ARCTOR_AI_RIGHT_RAIL_CORPORATE_MOBILE_MODES_V1 =
   "ARCTOR_AI_RIGHT_RAIL_CORPORATE_MOBILE_MODES_V1" as const;
@@ -191,6 +192,7 @@ export function GlobalAppShell({
   return (
     <AiNavigatorProvider>
       <div
+        data-arctor-app-shell="true"
         className="flex h-screen w-screen flex-col overflow-hidden bg-[#f0f2f7]"
         style={{
           fontFamily: "'Inter', system-ui, sans-serif",
@@ -202,7 +204,10 @@ export function GlobalAppShell({
         <div className="relative flex min-h-0 flex-1 overflow-hidden">
           <GlobalSidebar />
 
-          <main className="scrollbar-hide min-w-0 flex-1 overflow-y-auto bg-[#f0f2f7]">
+          <main
+            data-arctor-main="true"
+            className="scrollbar-hide min-w-0 flex-1 overflow-y-auto bg-[#f0f2f7]"
+          >
             {children}
           </main>
 
@@ -217,6 +222,7 @@ export function GlobalAppShell({
           onTouchEnd={handleDrawerTouchEnd}
         />
         <GlobalHelpLayer />
+        <PixelFilePickerLifecycleDiagnostic />
       </div>
     </AiNavigatorProvider>
   );
