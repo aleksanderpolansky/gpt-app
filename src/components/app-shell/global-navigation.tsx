@@ -660,7 +660,9 @@ export function GlobalSidebar({
   const certificateScope = certificateSearch.get("scope");
 
   const isDashboardActive = currentPathname === "/";
-  const isFeedActive = currentPathname === "/feed";
+  const isFeedCurrent = currentPathname === "/feed";
+  const isHiddenPublicationsActive = currentPathname === "/feed/hidden";
+  const isFeedActive = isFeedCurrent || isHiddenPublicationsActive;
   const isActivityTemplatesActive = currentPathname === "/activity-templates";
   const isUserAiProcessingActive =
     currentPathname === "/settings/ai-processing";
@@ -820,12 +822,21 @@ export function GlobalSidebar({
 
         <SidebarDivider />
 
-        <SidebarMainItem
+        <ExpandableSidebarLinkItem
           icon={Newspaper}
           label={t("navigation.feed")}
-          active={isFeedActive}
           href={localeHref("/feed")}
-        />
+          active={isFeedActive}
+          current={isFeedCurrent}
+          defaultOpen
+        >
+          <TreeItem
+            label={t("navigation.hiddenPublications")}
+            depth={1}
+            href={localeHref("/feed/hidden")}
+            active={isHiddenPublicationsActive}
+          />
+        </ExpandableSidebarLinkItem>
         <SidebarMainItem
           icon={CalendarDays}
           label={t("navigation.calendar")}

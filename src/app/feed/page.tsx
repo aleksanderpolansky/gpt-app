@@ -1,7 +1,9 @@
 import { Suspense } from "react";
 
 import { normalizeLocale } from "@/i18n";
+import { getCurrentFeedViewerState } from "@/lib/messages/feedViewerPreferences.server";
 import GlobalFeedContent from "./GlobalFeedContent";
+import UserPublicationComposer from "./UserPublicationComposer";
 import { getGlobalFeedCopy } from "./feedCopy";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +31,7 @@ export default async function GlobalFeedPage({
     firstSearchParam(params.locale) ?? firstSearchParam(params.lang),
   );
   const copy = getGlobalFeedCopy(locale);
+  const viewer = await getCurrentFeedViewerState();
 
   return (
     <div className="min-h-full px-3 py-4 sm:px-5 sm:py-5">
@@ -42,6 +45,13 @@ export default async function GlobalFeedPage({
           </p>
         </header>
 
+        {viewer?.canPublishPublicly ? (
+          <UserPublicationComposer
+            locale={locale}
+            displayName={viewer.displayName}
+          />
+        ) : null}
+
         <Suspense
           fallback={
             <div className="flex min-h-[180px] items-center justify-center rounded-2xl border border-[#e4e8f2] bg-white px-6 text-center text-[12px] text-[#9ca3b8]">
@@ -49,7 +59,11 @@ export default async function GlobalFeedPage({
             </div>
           }
         >
-          <GlobalFeedContent locale={locale} />
+          <GlobalFeedContent
+            locale={locale}
+            hiddenMessageObjectIds={viewer?.hiddenMessageObjectIds ?? []}
+            canPersonalize={Boolean(viewer)}
+          />
         </Suspense>
       </section>
     </div>

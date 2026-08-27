@@ -508,6 +508,7 @@ export default function EnterprisePublicActivityPanel({
               <PublicationComments
                 messageObjectId={message.id}
                 locale={normalizedLocale}
+                initialCount={message.commentCount}
               />
             </article>
           ))}

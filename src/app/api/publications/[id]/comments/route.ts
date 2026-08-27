@@ -8,6 +8,10 @@ import {
 import { auth0 } from "../../../../../../lib/auth0";
 import { toMediaDeliveryUrl } from "../../../../../../lib/media-egress";
 import { supabase } from "../../../../../../lib/supabase";
+import {
+  ensurePublicMessageObjectLocalizationsV1,
+  type MessageObjectLocalizationSource,
+} from "@/lib/messages/messageObjectOnDemandLocalization.server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -33,6 +37,15 @@ type CommentRow = {
   language_code: string | null;
   activated_at: string | null;
   created_at: string;
+};
+
+type CommentLocalizationRow = {
+  id: string;
+  owner_user_id: string | null;
+  created_by_actor_id: string | null;
+  content_text: string | null;
+  language_code: string | null;
+  metadata_json: Record<string, unknown> | null;
 };
 
 type PublicProfileRow = {
@@ -144,8 +157,9 @@ async function publicProfilesByActorIds(actorIds: string[]) {
   );
 }
 
-export async function GET(_request: Request, { params }: RouteProps) {
+export async function GET(request: Request, { params }: RouteProps) {
   const { id } = await params;
+  const locale = parseLocale(new URL(request.url).searchParams.get("locale"));
 
   if (!MESSAGE_ID_PATTERN.test(id)) {
     return NextResponse.json(
@@ -174,6 +188,62 @@ export async function GET(_request: Request, { params }: RouteProps) {
     [...new Set(rows.map((row) => row.author_actor_id))],
   );
 
+  const commentIds = rows.map((row) => row.comment_message_object_id);
+  const localizationSourceById =
+    new Map<string, MessageObjectLocalizationSource>();
+
+  if (commentIds.length > 0) {
+    const { data: localizationRows, error: localizationReadError } =
+      await supabase
+        .from("message_objects")
+        .select(
+          "id,owner_user_id,created_by_actor_id,content_text,language_code,metadata_json",
+        )
+        .in("id", commentIds)
+        .eq("audience_scope_code", "public")
+        .eq("intent_code", "comment")
+        .eq("lifecycle_status", "active");
+
+    if (localizationReadError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `PUBLICATION_COMMENT_LOCALIZATION_READ_FAILED:${localizationReadError.message}`,
+        },
+        { status: 500 },
+      );
+    }
+
+    for (const row of (localizationRows ?? []) as CommentLocalizationRow[]) {
+      localizationSourceById.set(row.id, {
+        id: row.id,
+        ownerUserId: row.owner_user_id,
+        createdByActorId: row.created_by_actor_id,
+        sourceLocaleHint: row.language_code,
+        contentText: row.content_text,
+        metadataJson: row.metadata_json,
+      });
+    }
+  }
+
+  const localization =
+    locale && localizationSourceById.size > 0
+      ? await ensurePublicMessageObjectLocalizationsV1({
+          targetLocale: locale,
+          messages: Array.from(localizationSourceById.values()),
+        })
+      : {
+          contentTextById: new Map<string, string>(),
+          warnings: [] as string[],
+        };
+
+  if (localization.warnings.length > 0) {
+    console.warn(
+      "Publication comment localization warnings",
+      localization.warnings,
+    );
+  }
+
   return NextResponse.json({
     ok: true,
     comments: rows.map((row) => {
@@ -199,7 +269,11 @@ export async function GET(_request: Request, { params }: RouteProps) {
               imageUrl: null,
               updatedAt: null,
             },
-        contentText: row.content_text,
+        contentText:
+          localization.contentTextById.get(row.comment_message_object_id) ??
+          localizationSourceById.get(row.comment_message_object_id)
+            ?.contentText ??
+          row.content_text,
         languageCode: row.language_code,
         activatedAt: row.activated_at,
         createdAt: row.created_at,

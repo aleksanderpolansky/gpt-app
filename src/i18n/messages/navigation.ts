@@ -5,6 +5,7 @@ import { type LocaleCode } from "../locales";
 export const navigationMessageKeys = [
   "navigation.dashboard",
   "navigation.feed",
+  "navigation.hiddenPublications",
   "navigation.myAiInstructions",
   "navigation.systemAiInstructions",
   "navigation.uploadedFiles",
@@ -112,6 +113,15 @@ export const navigationMessages: Record<NavigationMessageKey, Record<LocaleCode,
     uk: "Стрічка",
     de: "Neuigkeiten",
     cs: "Aktuality",
+  },
+  "navigation.hiddenPublications": {
+    ru: "Мои скрытые публикации",
+    pl: "Moje ukryte publikacje",
+    en: "My hidden publications",
+    es: "Mis publicaciones ocultas",
+    uk: "Мої приховані публікації",
+    de: "Meine ausgeblendeten Veröffentlichungen",
+    cs: "Moje skryté publikace",
   },
   "navigation.myAiInstructions": {
     ru: "Мои инструкции ИИ",

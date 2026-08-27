@@ -153,9 +153,11 @@ function initials(value: string) {
 export default function PublicationComments({
   messageObjectId,
   locale,
+  initialCount = 0,
 }: {
   messageObjectId: string;
   locale?: string;
+  initialCount?: number;
 }) {
   const normalizedLocale = getLocale(locale);
   const copy = COPY[normalizedLocale];
@@ -163,6 +165,7 @@ export default function PublicationComments({
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
+  const [commentCount, setCommentCount] = useState(initialCount);
   const [contentText, setContentText] = useState("");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -176,7 +179,7 @@ export default function PublicationComments({
 
     try {
       const response = await fetch(
-        `/api/publications/${encodeURIComponent(messageObjectId)}/comments`,
+        `/api/publications/${encodeURIComponent(messageObjectId)}/comments?locale=${encodeURIComponent(normalizedLocale)}`,
         {
           method: "GET",
           cache: "no-store",
@@ -190,7 +193,11 @@ export default function PublicationComments({
         throw new Error(payload?.error ?? `HTTP_${response.status}`);
       }
 
-      setComments(Array.isArray(payload.comments) ? payload.comments : []);
+      const nextComments = Array.isArray(payload.comments)
+        ? payload.comments
+        : [];
+      setComments(nextComments);
+      setCommentCount(nextComments.length);
       setLoaded(true);
     } catch {
       setErrorMessage(copy.loadError);
@@ -250,7 +257,7 @@ export default function PublicationComments({
       setLoaded(false);
 
       const refreshed = await fetch(
-        `/api/publications/${encodeURIComponent(messageObjectId)}/comments`,
+        `/api/publications/${encodeURIComponent(messageObjectId)}/comments?locale=${encodeURIComponent(normalizedLocale)}`,
         {
           method: "GET",
           cache: "no-store",
@@ -261,11 +268,11 @@ export default function PublicationComments({
         | null;
 
       if (refreshed.ok && refreshedPayload?.ok) {
-        setComments(
-          Array.isArray(refreshedPayload.comments)
-            ? refreshedPayload.comments
-            : [],
-        );
+        const nextComments = Array.isArray(refreshedPayload.comments)
+          ? refreshedPayload.comments
+          : [];
+        setComments(nextComments);
+        setCommentCount(nextComments.length);
         setLoaded(true);
       }
     } catch {
@@ -284,8 +291,8 @@ export default function PublicationComments({
       >
         <MessageCircle size={13} />
         {open
-          ? copy.hide
-          : `${copy.comments}${loaded ? ` (${comments.length})` : ""}`}
+          ? `${copy.hide} (${commentCount})`
+          : `${copy.comments} (${commentCount})`}
       </button>
 
       {open ? (

@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase";
+import { getPublicCommentCountMap } from "./commentCounts.server";
 import { ensurePublicMessageObjectLocalizationsV1 } from "./messageObjectOnDemandLocalization.server";
 import { getPublicMessageImageMap, type PublicMessageImage } from "./messageMedia.server";
 
@@ -29,6 +30,7 @@ export type PublicEnterpriseMessage = {
   languageCode: string | null;
   publishedAt: string;
   image: PublicMessageImage | null;
+  commentCount: number;
 };
 
 export type PublicEnterpriseMessagesResult = {
@@ -125,20 +127,22 @@ export async function getPublicEnterpriseMessages(input: {
       .filter((row) => distributedIds.has(row.id))
       .slice(0, limit);
 
-    const [localization, imageByMessageId] = await Promise.all([
-      ensurePublicMessageObjectLocalizationsV1({
-        targetLocale: input.locale,
-        messages: distributedRows.map((row) => ({
-          id: row.id,
-          ownerUserId: row.owner_user_id,
-          createdByActorId: row.created_by_actor_id,
-          sourceLocaleHint: row.language_code,
-          contentText: row.content_text,
-          metadataJson: row.metadata_json,
-        })),
-      }),
-      getPublicMessageImageMap(distributedRows.map((row) => row.id)),
-    ]);
+    const [localization, imageByMessageId, commentCountByMessageId] =
+      await Promise.all([
+        ensurePublicMessageObjectLocalizationsV1({
+          targetLocale: input.locale,
+          messages: distributedRows.map((row) => ({
+            id: row.id,
+            ownerUserId: row.owner_user_id,
+            createdByActorId: row.created_by_actor_id,
+            sourceLocaleHint: row.language_code,
+            contentText: row.content_text,
+            metadataJson: row.metadata_json,
+          })),
+        }),
+        getPublicMessageImageMap(distributedRows.map((row) => row.id)),
+        getPublicCommentCountMap(distributedRows.map((row) => row.id)),
+      ]);
 
     if (localization.warnings.length > 0) {
       console.warn(
@@ -156,6 +160,7 @@ export async function getPublicEnterpriseMessages(input: {
         languageCode: row.language_code,
         publishedAt: row.activated_at ?? row.created_at,
         image: imageByMessageId.get(row.id) ?? null,
+        commentCount: commentCountByMessageId.get(row.id) ?? 0,
       })),
       errorMessage: null,
     };

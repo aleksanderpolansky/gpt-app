@@ -1,6 +1,11 @@
+import { toMediaDeliveryUrl } from "../../../lib/media-egress";
 import { supabase } from "../../../lib/supabase";
 import { resolveLocalizedContentFieldsStrict } from "../localization/contentLocalization";
-import { getPublicMessageImageMap, type PublicMessageImage } from "./messageMedia.server";
+import { getPublicCommentCountMap } from "./commentCounts.server";
+import {
+  getPublicMessageImageMap,
+  type PublicMessageImage,
+} from "./messageMedia.server";
 import {
   ensurePublicMessageObjectLocalizationsV1,
   readCachedPublicMessageObjectLocalizationV1,
@@ -39,6 +44,16 @@ type OrganizationRow = {
   updated_at: string | null;
 };
 
+type PublicProfileRow = {
+  id: string;
+  actor_id: string;
+  public_slug: string;
+  display_name: string;
+  image_url: string | null;
+  is_public: boolean;
+  updated_at: string;
+};
+
 export type GlobalArctorFeedItem = {
   id: string;
   sourceContentText: string | null;
@@ -46,12 +61,13 @@ export type GlobalArctorFeedItem = {
   publishedAt: string;
   localizationSource: MessageObjectLocalizationSource;
   image: PublicMessageImage | null;
+  commentCount: number;
   author: {
     actorId: string;
-    organizationId: string;
-    organizationName: string;
+    kind: "organization" | "profile";
+    displayName: string;
     publicSlug: string;
-    logoUrl: string;
+    imageUrl: string | null;
   };
 };
 
@@ -62,8 +78,8 @@ export type GlobalArctorFeedResult = {
 
 const DEFAULT_LIMIT = 30;
 const MAX_LIMIT = 50;
-const READ_MULTIPLIER = 4;
-const MAX_CANDIDATES = 160;
+const READ_MULTIPLIER = 5;
+const MAX_CANDIDATES = 200;
 
 function clampLimit(value: number | undefined) {
   return Math.min(Math.max(value ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
@@ -75,6 +91,14 @@ function buildOrganizationLogoUrl(row: OrganizationRow) {
   return `/api/directory/organizations/${encodeURIComponent(
     row.public_slug ?? "",
   )}/logo?v=${encodeURIComponent(version)}`;
+}
+
+function buildProfileImageUrl(row: PublicProfileRow) {
+  return toMediaDeliveryUrl(
+    row.image_url,
+    `/api/profiles/${encodeURIComponent(row.id)}/image`,
+    row.updated_at,
+  );
 }
 
 export function readCachedGlobalArctorFeedItemContent(input: {
@@ -109,11 +133,23 @@ export async function localizeGlobalArctorFeedItems(input: {
 export async function getGlobalArctorFeed(input: {
   locale?: string;
   limit?: number;
+  excludeMessageObjectIds?: string[];
+  includeOnlyMessageObjectIds?: string[];
 }): Promise<GlobalArctorFeedResult> {
   const limit = clampLimit(input.limit);
+  const includeOnly = Array.from(
+    new Set((input.includeOnlyMessageObjectIds ?? []).filter(Boolean)),
+  );
+
+  if (
+    Array.isArray(input.includeOnlyMessageObjectIds) &&
+    includeOnly.length === 0
+  ) {
+    return { items: [], errorMessage: null };
+  }
 
   try {
-    const { data: messageRows, error: messageError } = await supabase
+    let query = supabase
       .from("message_objects")
       .select(
         "id,owner_user_id,created_by_actor_id,author_actor_id,content_text,language_code,metadata_json,activated_at,created_at",
@@ -127,11 +163,22 @@ export async function getGlobalArctorFeed(input: {
       .order("id", { ascending: false })
       .limit(Math.min(limit * READ_MULTIPLIER, MAX_CANDIDATES));
 
+    if (includeOnly.length > 0) {
+      query = query.in("id", includeOnly);
+    }
+
+    const { data: messageRows, error: messageError } = await query;
+
     if (messageError) {
       throw new Error(`GLOBAL_FEED_MESSAGE_READ_FAILED:${messageError.message}`);
     }
 
-    const messages = (messageRows ?? []) as MessageObjectRow[];
+    const excludedIds = new Set(
+      (input.excludeMessageObjectIds ?? []).filter(Boolean),
+    );
+    const messages = ((messageRows ?? []) as MessageObjectRow[]).filter(
+      (row) => !excludedIds.has(row.id),
+    );
 
     if (messages.length === 0) {
       return { items: [], errorMessage: null };
@@ -200,70 +247,151 @@ export async function getGlobalArctorFeed(input: {
       ),
     );
 
-    if (organizationIds.length === 0) {
-      return { items: [], errorMessage: null };
+    const profileActorIds = Array.from(
+      new Set(
+        deliveredMessages
+          .map((message) => actorById.get(message.author_actor_id))
+          .filter(
+            (actor): actor is ActorRow =>
+              Boolean(
+                actor &&
+                  (actor.actor_type === "person" ||
+                    actor.actor_type === "avatar"),
+              ),
+          )
+          .map((actor) => actor.id),
+      ),
+    );
+
+    let organizationRows: OrganizationRow[] = [];
+
+    if (organizationIds.length > 0) {
+      const { data, error } = await supabase
+        .from("organizations")
+        .select(
+          "id,organization_name,public_slug,metadata_json,created_at,updated_at",
+        )
+        .in("id", organizationIds)
+        .eq("status", "active")
+        .eq("directory_status", "published")
+        .eq("is_public_profile_enabled", true)
+        .eq("is_listed_in_directory", true);
+
+      if (error) {
+        throw new Error(
+          `GLOBAL_FEED_ORGANIZATION_READ_FAILED:${error.message}`,
+        );
+      }
+
+      organizationRows = (data ?? []) as OrganizationRow[];
     }
 
-    const { data: organizationRows, error: organizationError } = await supabase
-      .from("organizations")
-      .select(
-        "id,organization_name,public_slug,metadata_json,created_at,updated_at",
-      )
-      .in("id", organizationIds)
-      .eq("status", "active")
-      .eq("directory_status", "published")
-      .eq("is_public_profile_enabled", true)
-      .eq("is_listed_in_directory", true);
+    let profileRows: PublicProfileRow[] = [];
 
-    if (organizationError) {
-      throw new Error(
-        `GLOBAL_FEED_ORGANIZATION_READ_FAILED:${organizationError.message}`,
-      );
+    if (profileActorIds.length > 0) {
+      const { data, error } = await supabase
+        .from("actor_public_profiles")
+        .select(
+          "id,actor_id,public_slug,display_name,image_url,is_public,updated_at",
+        )
+        .in("actor_id", profileActorIds)
+        .eq("is_public", true);
+
+      if (error) {
+        throw new Error(`GLOBAL_FEED_PROFILE_READ_FAILED:${error.message}`);
+      }
+
+      profileRows = (data ?? []) as PublicProfileRow[];
     }
 
     const organizationById = new Map(
-      ((organizationRows ?? []) as OrganizationRow[])
+      organizationRows
         .filter((row) => Boolean(row.public_slug))
         .map((row) => [row.id, row]),
+    );
+
+    const profileByActorId = new Map(
+      profileRows
+        .filter((row) => Boolean(row.public_slug))
+        .map((row) => [row.actor_id, row]),
     );
 
     const eligibleMessages = deliveredMessages
       .filter((message) => {
         const actor = actorById.get(message.author_actor_id);
-        return Boolean(
-          actor?.organization_id &&
-            actor.actor_type === "organization" &&
-            organizationById.has(actor.organization_id),
-        );
+
+        if (!actor) return false;
+
+        if (
+          actor.actor_type === "organization" &&
+          actor.organization_id
+        ) {
+          return organizationById.has(actor.organization_id);
+        }
+
+        if (actor.actor_type === "person" || actor.actor_type === "avatar") {
+          return profileByActorId.has(actor.id);
+        }
+
+        return false;
       })
       .slice(0, limit);
 
-    const imageByMessageId = await getPublicMessageImageMap(
-      eligibleMessages.map((message) => message.id),
-    );
+    const eligibleIds = eligibleMessages.map((message) => message.id);
+    const [imageByMessageId, commentCountByMessageId] = await Promise.all([
+      getPublicMessageImageMap(eligibleIds),
+      getPublicCommentCountMap(eligibleIds),
+    ]);
 
     const items = eligibleMessages.flatMap((message) => {
       const actor = actorById.get(message.author_actor_id);
 
-      if (
-        !actor ||
-        actor.actor_type !== "organization" ||
-        !actor.organization_id
+      if (!actor) {
+        return [];
+      }
+
+      let author: GlobalArctorFeedItem["author"] | null = null;
+
+      if (actor.actor_type === "organization" && actor.organization_id) {
+        const organization = organizationById.get(actor.organization_id);
+
+        if (organization?.public_slug) {
+          const localizedOrganization = resolveLocalizedContentFieldsStrict({
+            metadata: organization.metadata_json,
+            locale: input.locale,
+            fieldCodes: ["organizationName"],
+          });
+
+          author = {
+            actorId: actor.id,
+            kind: "organization",
+            displayName:
+              localizedOrganization.organizationName ??
+              organization.organization_name,
+            publicSlug: organization.public_slug,
+            imageUrl: buildOrganizationLogoUrl(organization),
+          };
+        }
+      } else if (
+        actor.actor_type === "person" ||
+        actor.actor_type === "avatar"
       ) {
-        return [];
+        const profile = profileByActorId.get(actor.id);
+
+        if (profile?.public_slug) {
+          author = {
+            actorId: actor.id,
+            kind: "profile",
+            displayName: profile.display_name,
+            publicSlug: profile.public_slug,
+            imageUrl: buildProfileImageUrl(profile),
+          };
+        }
       }
 
-      const organization = organizationById.get(actor.organization_id);
-
-      if (!organization?.public_slug) {
+      if (!author) {
         return [];
       }
-
-      const localizedOrganization = resolveLocalizedContentFieldsStrict({
-        metadata: organization.metadata_json,
-        locale: input.locale,
-        fieldCodes: ["organizationName"],
-      });
 
       const localizationSource: MessageObjectLocalizationSource = {
         id: message.id,
@@ -282,15 +410,8 @@ export async function getGlobalArctorFeed(input: {
           publishedAt: message.activated_at ?? message.created_at,
           localizationSource,
           image: imageByMessageId.get(message.id) ?? null,
-          author: {
-            actorId: actor.id,
-            organizationId: organization.id,
-            organizationName:
-              localizedOrganization.organizationName ??
-              organization.organization_name,
-            publicSlug: organization.public_slug,
-            logoUrl: buildOrganizationLogoUrl(organization),
-          },
+          commentCount: commentCountByMessageId.get(message.id) ?? 0,
+          author,
         } satisfies GlobalArctorFeedItem,
       ];
     });
