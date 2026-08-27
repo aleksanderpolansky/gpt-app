@@ -234,6 +234,8 @@ export default function EnterprisePublicActivityPanel({
   const copy = COPY[normalizedLocale];
 
   const previewUrlRef = useRef<string | null>(null);
+  const photoButtonRef = useRef<HTMLButtonElement | null>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
   const [contentText, setContentText] = useState("");
   const [image, setImage] = useState<OptimizedPublicationImage | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -259,6 +261,21 @@ export default function EnterprisePublicActivityPanel({
     }
     setImagePreviewUrl(null);
     setImage(null);
+  }
+
+  function openImagePicker() {
+    if (busy || optimizingImage) return;
+
+    const input = photoInputRef.current;
+
+    if (!input) return;
+
+    input.value = "";
+    input.click();
+
+    window.requestAnimationFrame(() => {
+      photoButtonRef.current?.focus({ preventScroll: true });
+    });
   }
 
   async function selectImage(file: File | null) {
@@ -367,28 +384,33 @@ export default function EnterprisePublicActivityPanel({
                 {contentText.length}/5000
               </span>
 
-              <label
-                className={[
-                  "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#dfe3f1] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#4a4f6a] shadow-sm transition hover:border-[#b9c7ff] hover:bg-[#f5f7ff]",
-                  busy || optimizingImage
-                    ? "pointer-events-none opacity-50"
-                    : "",
-                ].join(" ")}
+              <button
+                ref={photoButtonRef}
+                type="button"
+                onClick={openImagePicker}
+                disabled={busy || optimizingImage}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#dfe3f1] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#4a4f6a] shadow-sm transition hover:border-[#b9c7ff] hover:bg-[#f5f7ff] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <ImagePlus className="h-3.5 w-3.5 text-[#3b6ef8]" />
                 {optimizingImage ? copy.optimizingPhoto : copy.photo}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  disabled={busy || optimizingImage}
-                  className="sr-only"
-                  onChange={(event) => {
-                    const file = event.currentTarget.files?.[0] ?? null;
-                    void selectImage(file);
-                    event.currentTarget.value = "";
-                  }}
-                />
-              </label>
+              </button>
+
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={busy || optimizingImage}
+                hidden
+                tabIndex={-1}
+                onClick={(event) => {
+                  event.stopPropagation();
+                }}
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0] ?? null;
+                  void selectImage(file);
+                  event.currentTarget.value = "";
+                }}
+              />
 
               {image ? (
                 <button
