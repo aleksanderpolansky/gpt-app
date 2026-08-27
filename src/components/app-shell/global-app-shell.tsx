@@ -14,6 +14,9 @@ export const ARCTOR_AI_RIGHT_RAIL_CORPORATE_MOBILE_MODES_V1 =
 
 type MobileLayer = "left" | "right" | null;
 
+const ARCTOR_APP_VIEWPORT_HEIGHT_CSS_VAR =
+  "--arctor-app-viewport-height";
+
 const mobileAiHandleStyle = {
   bottom: "calc(72px + env(safe-area-inset-bottom))",
 };
@@ -57,6 +60,99 @@ export function GlobalAppShell({
     };
   }, []);
 
+  useEffect(() => {
+    let firstFrameId: number | null = null;
+    let secondFrameId: number | null = null;
+
+    const mobileViewportQuery = window.matchMedia("(max-width: 1023px)");
+
+    function clearScheduledSync() {
+      if (firstFrameId !== null) {
+        window.cancelAnimationFrame(firstFrameId);
+        firstFrameId = null;
+      }
+
+      if (secondFrameId !== null) {
+        window.cancelAnimationFrame(secondFrameId);
+        secondFrameId = null;
+      }
+    }
+
+    function syncMobileViewportHeight() {
+      if (!mobileViewportQuery.matches) {
+        document.documentElement.style.removeProperty(
+          ARCTOR_APP_VIEWPORT_HEIGHT_CSS_VAR,
+        );
+        return;
+      }
+
+      const viewportHeight =
+        window.visualViewport?.height ?? window.innerHeight;
+
+      if (!Number.isFinite(viewportHeight) || viewportHeight <= 0) {
+        return;
+      }
+
+      document.documentElement.style.setProperty(
+        ARCTOR_APP_VIEWPORT_HEIGHT_CSS_VAR,
+        `${Math.round(viewportHeight)}px`,
+      );
+    }
+
+    function scheduleMobileViewportSync() {
+      clearScheduledSync();
+
+      firstFrameId = window.requestAnimationFrame(() => {
+        firstFrameId = null;
+        secondFrameId = window.requestAnimationFrame(() => {
+          secondFrameId = null;
+          syncMobileViewportHeight();
+        });
+      });
+    }
+
+    function syncAfterVisibilityReturn() {
+      if (document.visibilityState === "visible") {
+        scheduleMobileViewportSync();
+      }
+    }
+
+    syncMobileViewportHeight();
+
+    window.addEventListener("resize", scheduleMobileViewportSync);
+    window.addEventListener("orientationchange", scheduleMobileViewportSync);
+    window.addEventListener("pageshow", scheduleMobileViewportSync);
+    document.addEventListener(
+      "visibilitychange",
+      syncAfterVisibilityReturn,
+    );
+    window.visualViewport?.addEventListener(
+      "resize",
+      scheduleMobileViewportSync,
+    );
+
+    return () => {
+      clearScheduledSync();
+      window.removeEventListener("resize", scheduleMobileViewportSync);
+      window.removeEventListener(
+        "orientationchange",
+        scheduleMobileViewportSync,
+      );
+      window.removeEventListener("pageshow", scheduleMobileViewportSync);
+      document.removeEventListener(
+        "visibilitychange",
+        syncAfterVisibilityReturn,
+      );
+      window.visualViewport?.removeEventListener(
+        "resize",
+        scheduleMobileViewportSync,
+      );
+      document.documentElement.style.removeProperty(
+        ARCTOR_APP_VIEWPORT_HEIGHT_CSS_VAR,
+      );
+    };
+  }, []);
+
   if (shouldRenderPlainPage(pathname)) {
     return <>{children}</>;
   }
@@ -96,7 +192,10 @@ export function GlobalAppShell({
     <AiNavigatorProvider>
       <div
         className="flex h-screen w-screen flex-col overflow-hidden bg-[#f0f2f7]"
-        style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+        style={{
+          fontFamily: "'Inter', system-ui, sans-serif",
+          height: `var(${ARCTOR_APP_VIEWPORT_HEIGHT_CSS_VAR}, 100vh)`,
+        }}
       >
         <GlobalTopBar onOpenMobileNavigation={() => openMobileLayer("left")} />
 
