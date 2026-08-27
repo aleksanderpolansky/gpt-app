@@ -25,6 +25,7 @@ import {
   Gift,
   LayoutDashboard,
   Menu,
+  Newspaper,
   Plus,
   UserRoundCog,
   Users,
@@ -658,6 +659,7 @@ export function GlobalSidebar({
   const certificateScope = certificateSearch.get("scope");
 
   const isDashboardActive = currentPathname === "/";
+  const isFeedActive = currentPathname === "/feed";
   const isActivityTemplatesActive = currentPathname === "/activity-templates";
   const isUserAiProcessingActive =
     currentPathname === "/settings/ai-processing";
@@ -815,6 +817,12 @@ export function GlobalSidebar({
 
         <SidebarDivider />
 
+        <SidebarMainItem
+          icon={Newspaper}
+          label={t("navigation.feed")}
+          active={isFeedActive}
+          href={localeHref("/feed")}
+        />
         <SidebarMainItem
           icon={CalendarDays}
           label={t("navigation.calendar")}

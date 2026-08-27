@@ -4,6 +4,7 @@ import { type LocaleCode } from "../locales";
 
 export const navigationMessageKeys = [
   "navigation.dashboard",
+  "navigation.feed",
   "navigation.myAiInstructions",
   "navigation.systemAiInstructions",
   "navigation.uploadedFiles",
@@ -102,6 +103,15 @@ export const navigationMessages: Record<NavigationMessageKey, Record<LocaleCode,
     uk: "Мій кабінет",
     de: "Mein Dashboard",
     cs: "Můj panel",
+  },
+  "navigation.feed": {
+    ru: "Лента",
+    pl: "Aktualności",
+    en: "Feed",
+    es: "Novedades",
+    uk: "Стрічка",
+    de: "Neuigkeiten",
+    cs: "Aktuality",
   },
   "navigation.myAiInstructions": {
     ru: "Мои инструкции ИИ",
