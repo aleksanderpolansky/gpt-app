@@ -28,7 +28,7 @@ export type PublicationAuthorOption = {
   actorId: string;
   kind: PublicationAuthorKind;
   displayName: string;
-  publicSlug: string;
+  publicSlug: string | null;
   profileId: string | null;
   organizationId: string | null;
   destinationRef: string;
@@ -88,8 +88,6 @@ export async function getPublicationAuthorOptionsForUser(
 
     if (
       !actor ||
-      !profile.is_public ||
-      !profile.public_slug ||
       (actor.actor_type !== "person" && actor.actor_type !== "avatar")
     ) {
       continue;
@@ -102,7 +100,9 @@ export async function getPublicationAuthorOptionsForUser(
       publicSlug: profile.public_slug,
       profileId: profile.id,
       organizationId: null,
-      destinationRef: `people:${profile.public_slug}`,
+      destinationRef: profile.public_slug
+        ? `people:${profile.public_slug}`
+        : `actor:${actor.id}`,
     });
   }
 

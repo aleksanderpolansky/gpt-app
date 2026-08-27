@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 
-import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import {
@@ -514,103 +513,67 @@ export async function POST(request: Request) {
     }
   }
 
-  const { data: distributionData, error: distributionError } = await supabase
-    .from("message_object_distributions")
-    .insert({
-      message_object_id: createdMessage.id,
-      channel_code: "arctor",
-      destination_ref: author.destinationRef,
-      delivery_status: "pending",
-      metadata_json: {
-        surface: "feed",
-        author_kind: author.kind,
-        profile_id: author.profileId,
-        organization_id: author.organizationId,
-      },
-    })
-    .select("id")
-    .limit(1);
-
-  const distribution =
-    ((distributionData ?? [])[0] as DistributionRow | undefined) ?? null;
-
-  if (distributionError || !distribution) {
-    const cleanup = await cleanupPublicationResources({
-      messageObjectId: createdMessage.id,
-      mediaStoragePath,
-      mediaExistedBefore,
-    });
-
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          distributionError?.message ??
-          "ARCTor distribution could not be created.",
-        cleanup,
-      },
-      { status: 500 },
-    );
-  }
-
-  const { data: activateData, error: activateError } = await supabase.rpc(
-    "activate_message_object_v1",
-    {
-      p_owner_user_id: actorContext.appUserId,
-      p_message_object_id: createdMessage.id,
-    },
-  );
-
-  const activatedMessage = readRpcRow<MessageObjectRow>(activateData);
-
-  if (activateError || !activatedMessage) {
-    const cleanup = await cleanupPublicationResources({
-      messageObjectId: createdMessage.id,
-      mediaStoragePath,
-      mediaExistedBefore,
-    });
-
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          activateError?.message ??
-          "Canonical message object could not be activated.",
-        cleanup,
-      },
-      { status: activateError?.code === "42501" ? 403 : 500 },
-    );
-  }
-
   const deliveredAt = new Date().toISOString();
 
-  const { error: deliveryError } = await supabase
-    .from("message_object_distributions")
-    .update({
-      delivery_status: "succeeded",
-      first_attempt_at: deliveredAt,
-      last_attempt_at: deliveredAt,
-      delivered_at: deliveredAt,
-      error_code: null,
-      error_message: null,
-    })
-    .eq("id", distribution.id)
-    .eq("message_object_id", activatedMessage.id);
+  const [activationResult, distributionResult] = await Promise.all([
+    supabase.rpc("activate_message_object_v1", {
+      p_owner_user_id: actorContext.appUserId,
+      p_message_object_id: createdMessage.id,
+    }),
+    supabase
+      .from("message_object_distributions")
+      .insert({
+        message_object_id: createdMessage.id,
+        channel_code: "arctor",
+        destination_ref: author.destinationRef,
+        delivery_status: "succeeded",
+        first_attempt_at: deliveredAt,
+        last_attempt_at: deliveredAt,
+        delivered_at: deliveredAt,
+        error_code: null,
+        error_message: null,
+        metadata_json: {
+          surface: "feed",
+          author_kind: author.kind,
+          profile_id: author.profileId,
+          organization_id: author.organizationId,
+        },
+      })
+      .select("id")
+      .limit(1),
+  ]);
 
-  if (deliveryError) {
+  const activatedMessage = readRpcRow<MessageObjectRow>(activationResult.data);
+  const distribution =
+    ((distributionResult.data ?? [])[0] as DistributionRow | undefined) ?? null;
+
+  if (
+    activationResult.error ||
+    !activatedMessage ||
+    distributionResult.error ||
+    !distribution
+  ) {
     const cleanup = await cleanupPublicationResources({
-      messageObjectId: activatedMessage.id,
+      messageObjectId: createdMessage.id,
       mediaStoragePath,
       mediaExistedBefore,
     });
 
+    const error = activationResult.error ?? distributionResult.error;
+
     return NextResponse.json(
-      { ok: false, error: deliveryError.message, cleanup },
-      { status: 500 },
+      {
+        ok: false,
+        error:
+          error?.message ??
+          (!activatedMessage
+            ? "Canonical message object could not be activated."
+            : "ARCTor distribution could not be created."),
+        cleanup,
+      },
+      { status: error?.code === "42501" ? 403 : 500 },
     );
   }
-
-  revalidatePath("/feed");
 
   return NextResponse.json(
     {

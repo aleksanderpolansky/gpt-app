@@ -73,6 +73,7 @@ async function getCurrentActorContext() {
 }
 
 export async function POST(request: Request, { params }: RouteProps) {
+  const startedAt = performance.now();
   const { id } = await params;
 
   if (!MESSAGE_ID_PATTERN.test(id)) {
@@ -82,7 +83,9 @@ export async function POST(request: Request, { params }: RouteProps) {
     );
   }
 
+  const contextStartedAt = performance.now();
   const context = await getCurrentActorContext();
+  const contextMs = performance.now() - contextStartedAt;
 
   if (!context.actorContext) {
     return context.errorResponse;
@@ -105,11 +108,14 @@ export async function POST(request: Request, { params }: RouteProps) {
       ? "hide_message_object_for_viewer_v1"
       : "restore_message_object_for_viewer_v1";
 
+  const rpcStartedAt = performance.now();
   const { data, error } = await supabase.rpc(rpcName, {
     p_owner_user_id: context.actorContext.appUserId,
     p_viewer_actor_id: context.actorContext.actorId,
     p_message_object_id: id,
   });
+
+  const rpcMs = performance.now() - rpcStartedAt;
 
   if (error) {
     return NextResponse.json(
@@ -118,12 +124,34 @@ export async function POST(request: Request, { params }: RouteProps) {
     );
   }
 
+  const revalidateStartedAt = performance.now();
   revalidatePath("/feed");
   revalidatePath("/feed/hidden");
+  const revalidateMs = performance.now() - revalidateStartedAt;
+  const totalMs = performance.now() - startedAt;
 
-  return NextResponse.json({
-    ok: true,
-    action,
-    result: data,
-  });
+  return NextResponse.json(
+    {
+      ok: true,
+      action,
+      result: data,
+      timingsMs: {
+        context: Math.round(contextMs),
+        rpc: Math.round(rpcMs),
+        revalidate: Math.round(revalidateMs),
+        total: Math.round(totalMs),
+      },
+    },
+    {
+      headers: {
+        "cache-control": "no-store",
+        "server-timing": [
+          `context;dur=${contextMs.toFixed(1)}`,
+          `rpc;dur=${rpcMs.toFixed(1)}`,
+          `revalidate;dur=${revalidateMs.toFixed(1)}`,
+          `total;dur=${totalMs.toFixed(1)}`,
+        ].join(", "),
+      },
+    },
+  );
 }

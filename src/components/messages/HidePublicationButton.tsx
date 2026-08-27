@@ -1,7 +1,6 @@
 "use client";
 
 import { EyeOff, RotateCcw } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import type { LocaleCode } from "@/i18n";
@@ -16,16 +15,26 @@ export default function HidePublicationButton({
   locale: LocaleCode;
   mode: "hide" | "restore";
 }) {
-  const router = useRouter();
   const copy = getFeedInteractionCopy(locale);
   const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  function setCardHidden(hidden: boolean) {
+    const card = document.querySelector<HTMLElement>(
+      `[data-feed-message-object-id="${messageObjectId}"]`,
+    );
+
+    if (card) {
+      card.hidden = hidden;
+    }
+  }
 
   async function submit() {
     if (busy) return;
 
     setBusy(true);
     setErrorMessage(null);
+    setCardHidden(true);
 
     try {
       const response = await fetch(
@@ -49,8 +58,8 @@ export default function HidePublicationButton({
         throw new Error(payload?.error ?? `HTTP_${response.status}`);
       }
 
-      router.refresh();
     } catch (error) {
+      setCardHidden(false);
       setErrorMessage(
         error instanceof Error ? error.message : "PUBLICATION_VISIBILITY_FAILED",
       );

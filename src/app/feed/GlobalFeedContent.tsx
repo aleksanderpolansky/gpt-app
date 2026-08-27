@@ -36,6 +36,8 @@ function formatPublishedAt(value: string, locale: LocaleCode) {
 }
 
 function buildProfileHref(item: GlobalArctorFeedItem, locale: LocaleCode) {
+  if (!item.author.publicSlug) return null;
+
   const pathname =
     item.author.kind === "organization"
       ? `/directory/${encodeURIComponent(item.author.publicSlug)}`
@@ -73,38 +75,55 @@ function GlobalFeedItemCard({
   const profileHref = buildProfileHref(item, locale);
 
   return (
-    <article className="rounded-2xl border border-[#e4e8f2] bg-white px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.02)] sm:px-5">
+    <article
+      data-feed-message-object-id={item.id}
+      className="rounded-2xl border border-[#e4e8f2] bg-white px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.02)] sm:px-5"
+    >
       <div className="flex items-start gap-3">
-        <Link
-          href={profileHref}
-          aria-label={copy.openProfile}
-          className="flex-shrink-0"
-        >
-          {item.author.imageUrl ? (
-            // Same-origin profile/logo delivery or public profile media URL.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={item.author.imageUrl}
-              alt=""
-              className="h-10 w-10 rounded-xl border border-[#e4e8f2] bg-[#f7f8fc] object-cover"
-            />
-          ) : (
+        {profileHref ? (
+          <Link
+            href={profileHref}
+            aria-label={copy.openProfile}
+            className="flex-shrink-0"
+          >
+            {item.author.imageUrl ? (
+              // Same-origin profile/logo delivery or public profile media URL.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={item.author.imageUrl}
+                alt=""
+                className="h-10 w-10 rounded-xl border border-[#e4e8f2] bg-[#f7f8fc] object-cover"
+              />
+            ) : (
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#e4e8f2] bg-[#eef2ff] text-[11px] font-bold text-[#3b6ef8]">
+                {initials(item.author.displayName)}
+              </span>
+            )}
+          </Link>
+        ) : (
+          <span className="flex-shrink-0" aria-hidden="true">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#e4e8f2] bg-[#eef2ff] text-[11px] font-bold text-[#3b6ef8]">
               {initials(item.author.displayName)}
             </span>
-          )}
-        </Link>
+          </span>
+        )}
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                <Link
-                  href={profileHref}
-                  className="min-w-0 truncate text-[13px] font-semibold text-[#30354d] transition-colors hover:text-[#3b6ef8]"
-                >
-                  {item.author.displayName}
-                </Link>
+                {profileHref ? (
+                  <Link
+                    href={profileHref}
+                    className="min-w-0 truncate text-[13px] font-semibold text-[#30354d] transition-colors hover:text-[#3b6ef8]"
+                  >
+                    {item.author.displayName}
+                  </Link>
+                ) : (
+                  <span className="min-w-0 truncate text-[13px] font-semibold text-[#30354d]">
+                    {item.author.displayName}
+                  </span>
+                )}
                 <span className="text-[10px] font-medium text-[#7f8db6]">
                   {copy.sourceLabel}
                 </span>

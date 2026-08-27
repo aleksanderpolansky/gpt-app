@@ -47,7 +47,7 @@ type OrganizationRow = {
 type PublicProfileRow = {
   id: string;
   actor_id: string;
-  public_slug: string;
+  public_slug: string | null;
   display_name: string;
   image_url: string | null;
   is_public: boolean;
@@ -66,7 +66,7 @@ export type GlobalArctorFeedItem = {
     actorId: string;
     kind: "organization" | "profile";
     displayName: string;
-    publicSlug: string;
+    publicSlug: string | null;
     imageUrl: string | null;
   };
 };
@@ -294,8 +294,7 @@ export async function getGlobalArctorFeed(input: {
         .select(
           "id,actor_id,public_slug,display_name,image_url,is_public,updated_at",
         )
-        .in("actor_id", profileActorIds)
-        .eq("is_public", true);
+        .in("actor_id", profileActorIds);
 
       if (error) {
         throw new Error(`GLOBAL_FEED_PROFILE_READ_FAILED:${error.message}`);
@@ -311,9 +310,7 @@ export async function getGlobalArctorFeed(input: {
     );
 
     const profileByActorId = new Map(
-      profileRows
-        .filter((row) => Boolean(row.public_slug))
-        .map((row) => [row.actor_id, row]),
+      profileRows.map((row) => [row.actor_id, row]),
     );
 
     const eligibleMessages = deliveredMessages
@@ -378,13 +375,17 @@ export async function getGlobalArctorFeed(input: {
       ) {
         const profile = profileByActorId.get(actor.id);
 
-        if (profile?.public_slug) {
+        if (profile) {
+          const hasPublicProfile = Boolean(
+            profile.is_public && profile.public_slug,
+          );
+
           author = {
             actorId: actor.id,
             kind: "profile",
             displayName: profile.display_name,
-            publicSlug: profile.public_slug,
-            imageUrl: buildProfileImageUrl(profile),
+            publicSlug: hasPublicProfile ? profile.public_slug : null,
+            imageUrl: hasPublicProfile ? buildProfileImageUrl(profile) : null,
           };
         }
       }
