@@ -3,6 +3,7 @@ import type { LocaleCode } from "@/i18n";
 export type GlobalFeedCopy = {
   title: string;
   subtitle: string;
+  loading: string;
   translating: string;
   empty: string;
   loadError: string;
@@ -14,6 +15,7 @@ const COPY: Record<LocaleCode, GlobalFeedCopy> = {
   en: {
     title: "ARCTor Feed",
     subtitle: "Public updates from enterprises in ARCTor.",
+    loading: "Loading updates…",
     translating: "Translating into English…",
     empty: "No public updates yet.",
     loadError: "The feed could not be loaded.",
@@ -23,6 +25,7 @@ const COPY: Record<LocaleCode, GlobalFeedCopy> = {
   pl: {
     title: "Aktualności ARCTor",
     subtitle: "Publiczne aktualności przedsiębiorstw w ARCTor.",
+    loading: "Ładowanie aktualności…",
     translating: "Tłumaczenie na język polski…",
     empty: "Nie ma jeszcze publicznych aktualności.",
     loadError: "Nie udało się wczytać aktualności.",
@@ -32,6 +35,7 @@ const COPY: Record<LocaleCode, GlobalFeedCopy> = {
   ru: {
     title: "Лента ARCTor",
     subtitle: "Публичные новости и публикации предприятий в ARCTor.",
+    loading: "Загрузка ленты…",
     translating: "Переводится на русский…",
     empty: "Публичных публикаций пока нет.",
     loadError: "Не удалось загрузить ленту.",
@@ -41,6 +45,7 @@ const COPY: Record<LocaleCode, GlobalFeedCopy> = {
   uk: {
     title: "Стрічка ARCTor",
     subtitle: "Публічні новини та публікації підприємств в ARCTor.",
+    loading: "Завантаження стрічки…",
     translating: "Перекладається українською…",
     empty: "Публічних публікацій поки немає.",
     loadError: "Не вдалося завантажити стрічку.",
@@ -50,6 +55,7 @@ const COPY: Record<LocaleCode, GlobalFeedCopy> = {
   de: {
     title: "ARCTor Neuigkeiten",
     subtitle: "Öffentliche Neuigkeiten von Unternehmen in ARCTor.",
+    loading: "Neuigkeiten werden geladen…",
     translating: "Wird ins Deutsche übersetzt…",
     empty: "Noch keine öffentlichen Neuigkeiten.",
     loadError: "Die Neuigkeiten konnten nicht geladen werden.",
@@ -59,6 +65,7 @@ const COPY: Record<LocaleCode, GlobalFeedCopy> = {
   es: {
     title: "Novedades de ARCTor",
     subtitle: "Novedades públicas de empresas en ARCTor.",
+    loading: "Cargando novedades…",
     translating: "Traduciendo al español…",
     empty: "Todavía no hay novedades públicas.",
     loadError: "No se pudieron cargar las novedades.",
@@ -68,6 +75,7 @@ const COPY: Record<LocaleCode, GlobalFeedCopy> = {
   cs: {
     title: "Aktuality ARCTor",
     subtitle: "Veřejné aktuality podniků v ARCTor.",
+    loading: "Načítání aktualit…",
     translating: "Překládá se do češtiny…",
     empty: "Zatím nejsou žádné veřejné aktuality.",
     loadError: "Aktuality se nepodařilo načíst.",

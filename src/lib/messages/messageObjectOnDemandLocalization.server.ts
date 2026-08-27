@@ -55,6 +55,36 @@ function sourceRevision(input: {
     .digest("hex");
 }
 
+export function readCachedPublicMessageObjectLocalizationV1(input: {
+  targetLocale: unknown;
+  message: MessageObjectLocalizationSource;
+}): string | null {
+  const contentText = asText(input.message.contentText);
+
+  if (
+    !contentText ||
+    !isSupportedContentLocale(input.targetLocale) ||
+    !isSupportedContentLocale(input.message.sourceLocaleHint)
+  ) {
+    return null;
+  }
+
+  const targetLocale = input.targetLocale as ArctorContentLocale;
+  const sourceLocaleHint =
+    input.message.sourceLocaleHint as ArctorContentLocale;
+  const revision = sourceRevision({
+    sourceLocaleHint,
+    fields: { contentText },
+  });
+  const existing = readLocalizedContentEnvelope(input.message.metadataJson);
+
+  if (existing?.sourceRevision !== revision) {
+    return null;
+  }
+
+  return asText(existing.variants[targetLocale]?.contentText);
+}
+
 function cloneVariants(
   source: LocalizedContentEnvelope | null,
 ): LocalizedContentEnvelope["variants"] {

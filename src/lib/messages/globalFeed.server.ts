@@ -1,6 +1,10 @@
 import { supabase } from "../../../lib/supabase";
 import { resolveLocalizedContentFieldsStrict } from "../localization/contentLocalization";
-import { ensurePublicMessageObjectLocalizationsV1 } from "./messageObjectOnDemandLocalization.server";
+import {
+  ensurePublicMessageObjectLocalizationsV1,
+  readCachedPublicMessageObjectLocalizationV1,
+  type MessageObjectLocalizationSource,
+} from "./messageObjectOnDemandLocalization.server";
 
 type MessageObjectRow = {
   id: string;
@@ -36,9 +40,10 @@ type OrganizationRow = {
 
 export type GlobalArctorFeedItem = {
   id: string;
-  contentText: string | null;
+  sourceContentText: string | null;
   languageCode: string | null;
   publishedAt: string;
+  localizationSource: MessageObjectLocalizationSource;
   author: {
     actorId: string;
     organizationId: string;
@@ -68,6 +73,35 @@ function buildOrganizationLogoUrl(row: OrganizationRow) {
   return `/api/directory/organizations/${encodeURIComponent(
     row.public_slug ?? "",
   )}/logo?v=${encodeURIComponent(version)}`;
+}
+
+export function readCachedGlobalArctorFeedItemContent(input: {
+  locale?: string;
+  item: GlobalArctorFeedItem;
+}) {
+  return readCachedPublicMessageObjectLocalizationV1({
+    targetLocale: input.locale,
+    message: input.item.localizationSource,
+  });
+}
+
+export async function localizeGlobalArctorFeedItems(input: {
+  locale?: string;
+  items: GlobalArctorFeedItem[];
+}) {
+  const localization = await ensurePublicMessageObjectLocalizationsV1({
+    targetLocale: input.locale,
+    messages: input.items.map((item) => item.localizationSource),
+  });
+
+  if (localization.warnings.length > 0) {
+    console.warn(
+      "Global ARCTor feed localization warnings",
+      localization.warnings,
+    );
+  }
+
+  return localization.contentTextById;
 }
 
 export async function getGlobalArctorFeed(input: {
@@ -202,22 +236,6 @@ export async function getGlobalArctorFeed(input: {
       })
       .slice(0, limit);
 
-    const localization = await ensurePublicMessageObjectLocalizationsV1({
-      targetLocale: input.locale,
-      messages: eligibleMessages.map((row) => ({
-        id: row.id,
-        ownerUserId: row.owner_user_id,
-        createdByActorId: row.created_by_actor_id,
-        sourceLocaleHint: row.language_code,
-        contentText: row.content_text,
-        metadataJson: row.metadata_json,
-      })),
-    });
-
-    if (localization.warnings.length > 0) {
-      console.warn("Global ARCTor feed localization warnings", localization.warnings);
-    }
-
     const items = eligibleMessages.flatMap((message) => {
       const actor = actorById.get(message.author_actor_id);
 
@@ -241,13 +259,22 @@ export async function getGlobalArctorFeed(input: {
         fieldCodes: ["organizationName"],
       });
 
+      const localizationSource: MessageObjectLocalizationSource = {
+        id: message.id,
+        ownerUserId: message.owner_user_id,
+        createdByActorId: message.created_by_actor_id,
+        sourceLocaleHint: message.language_code,
+        contentText: message.content_text,
+        metadataJson: message.metadata_json,
+      };
+
       return [
         {
           id: message.id,
-          contentText:
-            localization.contentTextById.get(message.id) ?? message.content_text,
+          sourceContentText: message.content_text,
           languageCode: message.language_code,
           publishedAt: message.activated_at ?? message.created_at,
+          localizationSource,
           author: {
             actorId: actor.id,
             organizationId: organization.id,

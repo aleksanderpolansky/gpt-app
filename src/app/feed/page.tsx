@@ -45,7 +45,7 @@ export default async function GlobalFeedPage({
         <Suspense
           fallback={
             <div className="flex min-h-[180px] items-center justify-center rounded-2xl border border-[#e4e8f2] bg-white px-6 text-center text-[12px] text-[#9ca3b8]">
-              {copy.translating}
+              {copy.loading}
             </div>
           }
         >
