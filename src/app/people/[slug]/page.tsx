@@ -59,9 +59,11 @@ function readSearchValue(
 }
 
 function appendLocale(pathname: string, locale: string) {
-  return locale === "en"
-    ? pathname
-    : `${pathname}?locale=${encodeURIComponent(locale)}`;
+  if (locale === "en") {
+    return pathname;
+  }
+
+  return `${pathname}${pathname.includes("?") ? "&" : "?"}locale=${encodeURIComponent(locale)}`;
 }
 
 function getInitials(name: string) {
@@ -363,6 +365,17 @@ export default async function PublicPersonalProfilePage({
             {profile.public_phone ?? messages.phone}
           </ActionButton>
           <ActionButton href={websiteHref} icon={Globe}>{messages.website}</ActionButton>
+          {!isOwner ? (
+            <ActionButton
+              href={appendLocale(
+                `/messages?to=${encodeURIComponent(profile.actor_id)}`,
+                locale,
+              )}
+              icon={MessageCircle}
+            >
+              {messages.sendMessage}
+            </ActionButton>
+          ) : null}
           <ActionButton href={messengerHref} icon={MessageCircle}>{messages.messenger}</ActionButton>
           <a href="#profile-description" className="rounded-lg bg-[#3b6ef8] px-3 py-1.5 text-[12px] font-medium text-white shadow-sm transition-all hover:bg-[#2f5fe3]">
             {messages.description}

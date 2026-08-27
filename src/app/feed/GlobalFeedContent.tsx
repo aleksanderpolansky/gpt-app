@@ -9,6 +9,7 @@ import {
   type GlobalArctorFeedItem,
 } from "@/lib/messages/globalFeed.server";
 import { getGlobalFeedCopy } from "./feedCopy";
+import PublicationComments from "@/components/messages/PublicationComments";
 
 const INTL_LOCALE: Record<LocaleCode, string> = {
   en: "en-GB",
@@ -111,6 +112,11 @@ function GlobalFeedItemCard({
               />
             </div>
           ) : null}
+
+          <PublicationComments
+            messageObjectId={item.id}
+            locale={locale}
+          />
         </div>
       </div>
     </article>

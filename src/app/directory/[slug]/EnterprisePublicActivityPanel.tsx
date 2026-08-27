@@ -9,6 +9,7 @@ import {
   type OptimizedPublicationImage,
 } from "@/lib/media/browserPublicationImage";
 import type { PublicEnterpriseMessage } from "@/lib/messages/enterpriseMessages.server";
+import PublicationComments from "@/components/messages/PublicationComments";
 
 type LocaleKey = "en" | "pl" | "uk" | "ru" | "de" | "es" | "cs";
 
@@ -503,6 +504,11 @@ export default function EnterprisePublicActivityPanel({
                   />
                 </div>
               ) : null}
+
+              <PublicationComments
+                messageObjectId={message.id}
+                locale={normalizedLocale}
+              />
             </article>
           ))}
         </div>

@@ -25,6 +25,7 @@ import {
   Gift,
   LayoutDashboard,
   Menu,
+  MessageCircle,
   Newspaper,
   Plus,
   UserRoundCog,
@@ -716,6 +717,8 @@ export function GlobalSidebar({
 
   const isPeopleActive =
     currentPathname === "/people" || currentPathname.startsWith("/people/");
+  const isMessagesActive =
+    currentPathname === "/messages" || currentPathname.startsWith("/messages/");
   const isProfilesActive =
     currentPathname === "/profiles/new" ||
     currentPathname.startsWith("/profiles/");
@@ -930,6 +933,12 @@ export function GlobalSidebar({
           label={t("navigation.peopleAndAvatars")}
           active={isPeopleActive}
           href={localeHref("/people")}
+        />
+        <SidebarMainItem
+          icon={MessageCircle}
+          label={t("navigation.messages")}
+          active={isMessagesActive}
+          href={localeHref("/messages")}
         />
 
         <ExpandableSidebarItem

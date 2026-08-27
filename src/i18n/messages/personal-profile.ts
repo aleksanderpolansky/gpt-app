@@ -26,6 +26,7 @@ export type PersonalProfileMessages = {
   phone: string;
   website: string;
   messenger: string;
+  sendMessage: string;
   description: string;
   articles: string;
   activity: string;
@@ -80,6 +81,7 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
     phone: "Phone",
     website: "Website",
     messenger: "Messenger",
+    sendMessage: "Message",
     description: "About",
     articles: "Articles",
     activity: "Activity",
@@ -133,6 +135,7 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
     phone: "Telefon",
     website: "Strona",
     messenger: "Komunikator",
+    sendMessage: "Napisz wiadomość",
     description: "O mnie",
     articles: "Artykuły",
     activity: "Aktywność",
@@ -186,6 +189,7 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
     phone: "Телефон",
     website: "Сайт",
     messenger: "Мессенджер",
+    sendMessage: "Написать сообщение",
     description: "О себе",
     articles: "Статьи",
     activity: "Активность",
@@ -239,6 +243,7 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
     phone: "Телефон",
     website: "Сайт",
     messenger: "Месенджер",
+    sendMessage: "Написати повідомлення",
     description: "Про себе",
     articles: "Статті",
     activity: "Активність",
@@ -292,6 +297,7 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
     phone: "Telefon",
     website: "Website",
     messenger: "Messenger",
+    sendMessage: "Nachricht schreiben",
     description: "Über mich",
     articles: "Artikel",
     activity: "Aktivität",
@@ -345,6 +351,7 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
     phone: "Teléfono",
     website: "Sitio web",
     messenger: "Mensajería",
+    sendMessage: "Enviar mensaje",
     description: "Sobre mí",
     articles: "Artículos",
     activity: "Actividad",
@@ -398,6 +405,7 @@ const MESSAGES: Record<LocaleCode, PersonalProfileMessages> = {
     phone: "Telefon",
     website: "Web",
     messenger: "Komunikátor",
+    sendMessage: "Napsat zprávu",
     description: "O mně",
     articles: "Články",
     activity: "Aktivita",
