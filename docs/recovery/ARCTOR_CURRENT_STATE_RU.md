@@ -854,3 +854,16 @@ T2_1 закрыт после production runtime-проверки: пользов
 ## 2026-08-28 — ARCTOR_TABLE_VIEWS_T2_2_INLINE_CELL_EDITING_V1_1
 
 Baseline этапа остаётся `main @ 3ce5f149818dac7cc0d30351d1f32746defbf5ee`: V1 не дошёл до commit и завершился `ROLLBACK=PASS`. V1 был остановлен full TypeScript на несовпадении inferred JS event typing Tabulator (`TS2345`/`TS2339`) для прямого `instance.on("cellEdited")`. V1_1 исправляет только эту границу через узкий `TabulatorCellEditedEmitter` bridge и добавляет pre-mutation regression + release validator + changed-files ESLint + полный TypeScript + diff-check в отдельном scratch worktree с фактическим production `node_modules`. Функциональный scope T2_2 не расширяется: inline Name/Description, те же ontology/draft PATCH contracts, global/system fail-closed, structural parent не редактируется напрямую. Activity Journal и Facts пока read-only. Guest/Local Documents / Spreadsheets / Mind Maps направление сохраняется.
+
+
+## 2026-08-28 — ARCTOR_TABLE_VIEWS_T2_2_1_EXPANDED_CELL_EDITOR_UX_HOTFIX_V1_1
+
+- Baseline: `main @ 0aee9d0aa63fc6398802ad22201b67e677c69d24`.
+- Production T2_2 postcheck: inline editing работает, но длинный Description неудобен внутри 32px cell; пользователь потребовал Google-Sheets-like expanded editor и gray read-only cells.
+- Первый T2_2_1 V1 остановлен до source mutation при detached scratch worktree: длинная release-path в Downloads + уже длинный tracked filename вызвали Git for Windows `Filename too long`; `ROLLBACK=NOT_NEEDED_PREMUTATION`, main остался на baseline.
+- V1_1 переносит scratch в короткий sibling `<repo-parent>/_arctor_t221_preflight` и использует command-local `-c core.longpaths=true` без изменения global git config.
+- Expanded Name/Description editor рендерится body overlay; desktop остаётся double-click. Smartphone/coarse pointer получает single-tap edit, `visualViewport` positioning над virtual keyboard, почти full-width bottom-sheet editor, 16px controls, 44px Save/Cancel touch targets и mobile minWidth/responsive guards для обеих editable columns.
+- В Edit mode actual `.tabulator-editable` cells остаются белыми, остальные visible cells становятся gray/read-only. Поэтому `Intermediate`, counters, Status, а также global/system Name/Description визуально и фактически non-editable.
+- Write boundaries неизменны: только title/description через existing ontology/draft PATCH contracts; parent только controlled restructure preview/apply; no SQL/schema/DB/Storage/OpenAI release writes.
+- Guest/Local Documents / Spreadsheets / Mind Maps направление сохраняется.
+- Подробный checkpoint: `docs/recovery/ARCTOR_TABLE_VIEWS_T2_2_1_EXPANDED_CELL_EDITOR_UX_HOTFIX_V1_1_RU.md`.

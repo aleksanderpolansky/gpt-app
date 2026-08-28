@@ -57,7 +57,7 @@ const COPY: Record<LocaleCode, Copy> = {
   en: {
     enableMode: "Edit table",
     disableMode: "Exit editing",
-    selectRow: "Double-click a Name or Description cell to edit. Leaving the cell saves; Esc cancels.",
+    selectRow: "On a phone, tap a Name or Description cell once; on desktop, double-click. The editor expands over the table. Leaving it saves; Esc cancels. Gray cells are read-only.",
     editing: "Editing observation object",
     title: "Name",
     description: "Description",
@@ -78,7 +78,7 @@ const COPY: Record<LocaleCode, Copy> = {
   pl: {
     enableMode: "Edytuj tabelę",
     disableMode: "Zakończ edycję",
-    selectRow: "Kliknij dwukrotnie komórkę Nazwa lub Opis, aby edytować. Wyjście z komórki zapisuje; Esc anuluje.",
+    selectRow: "Na telefonie stuknij komórkę Nazwa lub Opis jeden raz; na komputerze kliknij ją dwukrotnie. Edytor rozszerza się nad tabelą. Wyjście zapisuje; Esc anuluje. Szare komórki są tylko do odczytu.",
     editing: "Edycja obiektu obserwacji",
     title: "Nazwa",
     description: "Opis",
@@ -99,7 +99,7 @@ const COPY: Record<LocaleCode, Copy> = {
   ru: {
     enableMode: "Редактировать таблицу",
     disableMode: "Завершить редактирование",
-    selectRow: "Дважды нажмите ячейку «Название» или «Описание», чтобы изменить её. Выход из ячейки сохраняет; Esc отменяет.",
+    selectRow: "На смартфоне один раз нажмите ячейку «Название» или «Описание»; на компьютере — дважды. Редактор раскрывается поверх таблицы. Выход сохраняет; Esc отменяет. Серые ячейки доступны только для чтения.",
     editing: "Редактирование объекта наблюдения",
     title: "Название",
     description: "Описание",
@@ -120,7 +120,7 @@ const COPY: Record<LocaleCode, Copy> = {
   uk: {
     enableMode: "Редагувати таблицю",
     disableMode: "Завершити редагування",
-    selectRow: "Двічі натисніть клітинку «Назва» або «Опис», щоб редагувати. Вихід із клітинки зберігає; Esc скасовує.",
+    selectRow: "На смартфоні один раз натисніть клітинку «Назва» або «Опис»; на комп’ютері — двічі. Редактор розгортається поверх таблиці. Вихід зберігає; Esc скасовує. Сірі клітинки доступні лише для читання.",
     editing: "Редагування об’єкта спостереження",
     title: "Назва",
     description: "Опис",
@@ -141,7 +141,7 @@ const COPY: Record<LocaleCode, Copy> = {
   de: {
     enableMode: "Tabelle bearbeiten",
     disableMode: "Bearbeitung beenden",
-    selectRow: "Doppelklicken Sie auf eine Zelle Name oder Beschreibung. Beim Verlassen der Zelle wird gespeichert; Esc bricht ab.",
+    selectRow: "Auf dem Smartphone tippen Sie einmal auf Name oder Beschreibung; am Computer doppelklicken Sie. Der Editor klappt über der Tabelle auf. Verlassen speichert; Esc bricht ab. Graue Zellen sind schreibgeschützt.",
     editing: "Beobachtungsobjekt bearbeiten",
     title: "Name",
     description: "Beschreibung",
@@ -162,7 +162,7 @@ const COPY: Record<LocaleCode, Copy> = {
   es: {
     enableMode: "Editar tabla",
     disableMode: "Salir de edición",
-    selectRow: "Haga doble clic en una celda Nombre o Descripción para editarla. Al salir de la celda se guarda; Esc cancela.",
+    selectRow: "En el teléfono, toque una vez una celda Nombre o Descripción; en el ordenador, haga doble clic. El editor se amplía sobre la tabla. Al salir se guarda; Esc cancela. Las celdas grises son de solo lectura.",
     editing: "Edición del objeto de observación",
     title: "Nombre",
     description: "Descripción",
@@ -183,7 +183,7 @@ const COPY: Record<LocaleCode, Copy> = {
   cs: {
     enableMode: "Upravit tabulku",
     disableMode: "Ukončit úpravy",
-    selectRow: "Dvakrát klikněte na buňku Název nebo Popis. Opuštění buňky uloží změnu; Esc ji zruší.",
+    selectRow: "Na telefonu klepněte na buňku Název nebo Popis jednou; na počítači dvakrát. Editor se rozbalí nad tabulkou. Opuštění uloží změnu; Esc ji zruší. Šedé buňky jsou pouze pro čtení.",
     editing: "Úprava objektu pozorování",
     title: "Název",
     description: "Popis",

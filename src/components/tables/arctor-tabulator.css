@@ -124,3 +124,126 @@
     padding: 6px 7px;
   }
 }
+
+/* ARCTOR_TABLE_VIEWS_T2_2_1_EXPANDED_CELL_EDITOR_UX_HOTFIX_V1_1 */
+.arctor-tabulator[data-edit-mode="true"] .tabulator-row .tabulator-cell:not(.tabulator-editable) {
+  background: #f3f4f6;
+  color: #8a90a3;
+}
+
+.arctor-tabulator[data-edit-mode="true"] .tabulator-row:hover .tabulator-cell:not(.tabulator-editable) {
+  background: #eef0f3;
+}
+
+.arctor-tabulator[data-edit-mode="true"] .tabulator-row .tabulator-cell.tabulator-editable {
+  cursor: text;
+  background: #ffffff;
+}
+
+.arctor-tabulator[data-edit-mode="true"] .tabulator-row .tabulator-cell.tabulator-editable:hover {
+  background: #f7f9ff;
+  box-shadow: inset 0 0 0 1px #c9d5ff;
+}
+
+.arctor-expanded-cell-editor-anchor {
+  display: block;
+  width: 100%;
+  height: 1px;
+  pointer-events: none;
+}
+
+.arctor-expanded-cell-editor-shell {
+  position: fixed;
+  z-index: 2147483000;
+  box-sizing: border-box;
+  margin: 0;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 24px);
+}
+
+.arctor-expanded-cell-editor {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  margin: 0;
+  border: 2px solid #3b6ef8;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(32, 54, 104, 0.22);
+  color: #111827;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  outline: none;
+}
+
+.arctor-expanded-cell-editor--input {
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.arctor-expanded-cell-editor--textarea {
+  padding: 9px 10px;
+  overflow: auto;
+  resize: both;
+  white-space: pre-wrap;
+}
+
+.arctor-expanded-cell-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 0 0;
+}
+
+.arctor-expanded-cell-editor-actions[hidden] {
+  display: none !important;
+}
+
+.arctor-expanded-cell-editor-action {
+  min-width: 84px;
+  min-height: 44px;
+  border: 1px solid #d7ddec;
+  border-radius: 10px;
+  padding: 0 14px;
+  background: #ffffff;
+  color: #4a4f6a;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.arctor-expanded-cell-editor-action--save {
+  border-color: #3b6ef8;
+  background: #3b6ef8;
+  color: #ffffff;
+}
+
+.arctor-expanded-cell-editor-shell[data-mobile="true"] {
+  max-width: none;
+  max-height: none;
+}
+
+.arctor-expanded-cell-editor-shell[data-mobile="true"] .arctor-expanded-cell-editor {
+  border-radius: 12px;
+  font-size: 16px;
+  line-height: 22px;
+  box-shadow: 0 16px 36px rgba(20, 35, 70, 0.28);
+}
+
+.arctor-expanded-cell-editor-shell[data-mobile="true"] .arctor-expanded-cell-editor--input {
+  padding: 11px 12px;
+}
+
+.arctor-expanded-cell-editor-shell[data-mobile="true"] .arctor-expanded-cell-editor--textarea {
+  padding: 12px;
+  resize: none;
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+  .arctor-tabulator[data-edit-mode="true"] .tabulator-row .tabulator-cell.tabulator-editable {
+    min-height: 38px;
+  }
+}

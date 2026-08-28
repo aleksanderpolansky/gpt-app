@@ -928,14 +928,19 @@ export function ValueObjectCatalogViews({
         responsive: 0,
         tooltip: true,
         cssClass: "arctor-table-title",
-        editor: tableEditMode ? "input" : false,
+        editor: tableEditMode ? "arctor-expanded-input" : false,
         editable: tableEditMode
           ? (cell) => cell.getRow().getData().editable
           : false,
         editorParams: tableEditMode
           ? {
-              selectContents: true,
               elementAttributes: { maxlength: "180" },
+              expandedMinWidth: 420,
+              expandedMaxWidth: 620,
+              expandedMinHeight: 40,
+              expandedMaxHeight: 44,
+              saveLabel: tableEditCopy.save,
+              cancelLabel: tableEditCopy.cancel,
             }
           : undefined,
       },
@@ -948,16 +953,19 @@ export function ValueObjectCatalogViews({
         responsive: 6,
         tooltip: true,
         cssClass: "arctor-table-muted",
-        editor: tableEditMode ? "textarea" : false,
+        editor: tableEditMode ? "arctor-expanded-textarea" : false,
         editable: tableEditMode
           ? (cell) => cell.getRow().getData().editable
           : false,
         editorParams: tableEditMode
           ? {
-              selectContents: true,
-              verticalNavigation: "editor",
-              shiftEnterSubmit: true,
               elementAttributes: { maxlength: "4000" },
+              expandedMinWidth: 620,
+              expandedMaxWidth: 760,
+              expandedMinHeight: 120,
+              expandedMaxHeight: 240,
+              saveLabel: tableEditCopy.save,
+              cancelLabel: tableEditCopy.cancel,
             }
           : undefined,
       },
@@ -1019,7 +1027,7 @@ export function ValueObjectCatalogViews({
         tooltip: true,
       },
     ],
-    [copy, tableEditMode],
+    [copy, tableEditCopy.cancel, tableEditCopy.save, tableEditMode],
   );
 
   const tableOptions = useMemo<ArctorTableOptions>(
@@ -1480,6 +1488,8 @@ export function ValueObjectCatalogViews({
             emptyLabel={copy.emptyTable}
             height="min(68vh, 760px)"
             options={tableOptions}
+            editMode={tableEditMode}
+            adaptiveTouchEditing={tableEditMode}
             onCellEdited={handleTableCellEdited}
             onRowClick={(row) => {
               if (tableEditMode) {
