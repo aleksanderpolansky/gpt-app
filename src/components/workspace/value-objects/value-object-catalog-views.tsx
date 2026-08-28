@@ -11,8 +11,15 @@ import {
   Map as MapIcon,
   Network,
   Plus,
+  Table2,
 } from "lucide-react";
 import { Fragment, type ReactNode, useMemo, useState } from "react";
+
+import {
+  ArctorTabulator,
+  type ArctorTableColumn,
+  type ArctorTableOptions,
+} from "@/components/tables/arctor-tabulator";
 
 import { ValueObjectMindMap } from "./value-object-mind-map";
 
@@ -20,7 +27,7 @@ type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 type RoleFilter = "all" | "root" | "intermediate" | "leaf" | "draft";
 type SortMode = "newest" | "title" | "structure";
 type SemanticRole = "root" | "intermediate" | "leaf";
-type ViewMode = "tree" | "cards" | "map";
+type ViewMode = "tree" | "cards" | "map" | "table";
 
 type OrganizationPayload = {
   organization_name?: string | null;
@@ -47,6 +54,10 @@ type CatalogCopy = {
   tree: string;
   cards: string;
   map: string;
+  table: string;
+  description: string;
+  parent: string;
+  emptyTable: string;
   rootFilter: string;
   insideFilter: string;
   allRoots: string;
@@ -83,6 +94,10 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     tree: "Tree",
     cards: "Cards",
     map: "Map",
+    table: "Table",
+    description: "Description",
+    parent: "Parent",
+    emptyTable: "No observation objects match the current filters.",
     rootFilter: "Root object",
     insideFilter: "Inside “{parent}”",
     allRoots: "All root objects",
@@ -117,6 +132,10 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     tree: "Drzewo",
     cards: "Karty",
     map: "Mapa",
+    table: "Tabela",
+    description: "Opis",
+    parent: "Rodzic",
+    emptyTable: "Brak obiektów obserwacji dla bieżących filtrów.",
     rootFilter: "Obiekt główny",
     insideFilter: "Wewnątrz „{parent}”",
     allRoots: "Wszystkie obiekty główne",
@@ -151,6 +170,10 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     tree: "Дерево",
     cards: "Карточки",
     map: "Карта",
+    table: "Таблица",
+    description: "Описание",
+    parent: "Родитель",
+    emptyTable: "Для текущих фильтров объектов наблюдения нет.",
     rootFilter: "Корневой объект",
     insideFilter: "Внутри «{parent}»",
     allRoots: "Все корневые объекты",
@@ -185,6 +208,10 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     tree: "Дерево",
     cards: "Картки",
     map: "Мапа",
+    table: "Таблиця",
+    description: "Опис",
+    parent: "Батьківський об’єкт",
+    emptyTable: "Для поточних фільтрів об’єктів спостереження немає.",
     rootFilter: "Кореневий об’єкт",
     insideFilter: "Усередині «{parent}»",
     allRoots: "Усі кореневі об’єкти",
@@ -219,6 +246,10 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     tree: "Baum",
     cards: "Karten",
     map: "Karte",
+    table: "Tabelle",
+    description: "Beschreibung",
+    parent: "Übergeordnet",
+    emptyTable: "Keine Beobachtungsobjekte für die aktuellen Filter.",
     rootFilter: "Wurzelobjekt",
     insideFilter: "Innerhalb „{parent}“",
     allRoots: "Alle Wurzelobjekte",
@@ -253,6 +284,10 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     tree: "Árbol",
     cards: "Tarjetas",
     map: "Mapa",
+    table: "Tabla",
+    description: "Descripción",
+    parent: "Padre",
+    emptyTable: "No hay objetos de observación para los filtros actuales.",
     rootFilter: "Objeto raíz",
     insideFilter: "Dentro de «{parent}»",
     allRoots: "Todos los objetos raíz",
@@ -287,6 +322,10 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     tree: "Strom",
     cards: "Karty",
     map: "Mapa",
+    table: "Tabulka",
+    description: "Popis",
+    parent: "Nadřazený objekt",
+    emptyTable: "Pro aktuální filtry nejsou žádné objekty pozorování.",
     rootFilter: "Kořenový objekt",
     insideFilter: "Uvnitř „{parent}“",
     allRoots: "Všechny kořenové objekty",
@@ -429,6 +468,19 @@ type TreeRow = {
   descendants: number;
   descendantLeaves: number;
   hasChildren: boolean;
+};
+
+type TableObjectRow = {
+  id: string;
+  title: string;
+  description: string;
+  parent: string;
+  role: string;
+  directChildren: number;
+  descendants: number;
+  descendantLeaves: number;
+  status: string;
+  _children?: TableObjectRow[];
 };
 
 type ValueObjectCatalogViewsProps = {
@@ -789,6 +841,120 @@ export function ValueObjectCatalogViews({
     visibleIds,
   ]);
 
+  const tableRows = useMemo<TableObjectRow[]>(() => {
+    const visited = new Set<string>();
+
+    function buildRow(valueObject: ValueObjectPayload): TableObjectRow | null {
+      if (!valueObject.id || visited.has(valueObject.id) || !visibleIds.has(valueObject.id)) {
+        return null;
+      }
+
+      visited.add(valueObject.id);
+      const children = sortObjects(
+        childrenByParent.get(valueObject.id) ?? [],
+        sortMode,
+        locale,
+      )
+        .map(buildRow)
+        .filter((row): row is TableObjectRow => Boolean(row));
+      const parentObject = valueObject.parent_value_object_id
+        ? objectsById.get(valueObject.parent_value_object_id)
+        : null;
+
+      return {
+        id: valueObject.id,
+        title: valueObject.title?.trim() || "—",
+        description: valueObject.description?.trim() || copy.noDescription,
+        parent: parentObject?.title?.trim() || "—",
+        role: getRoleLabel(getSemanticRole(valueObject), copy),
+        directChildren: childrenByParent.get(valueObject.id)?.length ?? 0,
+        descendants: descendantCountById.get(valueObject.id) ?? 0,
+        descendantLeaves: descendantLeafCountById.get(valueObject.id) ?? 0,
+        status: getStatusLabel(valueObject.status, copy),
+        ...(children.length > 0 ? { _children: children } : {}),
+      };
+    }
+
+    return sortObjects(treeRoots, sortMode, locale)
+      .map(buildRow)
+      .filter((row): row is TableObjectRow => Boolean(row));
+  }, [
+    childrenByParent,
+    copy,
+    descendantCountById,
+    descendantLeafCountById,
+    locale,
+    objectsById,
+    sortMode,
+    treeRoots,
+    visibleIds,
+  ]);
+
+  const tableColumns = useMemo<ArctorTableColumn<TableObjectRow>[]>(
+    () => [
+      {
+        title: copy.object,
+        field: "title",
+        minWidth: 280,
+        widthGrow: 2,
+        frozen: true,
+        cssClass: "arctor-table-title",
+      },
+      {
+        title: copy.description,
+        field: "description",
+        minWidth: 300,
+        widthGrow: 3,
+        cssClass: "arctor-table-muted",
+      },
+      {
+        title: copy.parent,
+        field: "parent",
+        minWidth: 190,
+        widthGrow: 1,
+        cssClass: "arctor-table-muted",
+      },
+      { title: copy.role, field: "role", minWidth: 120 },
+      {
+        title: copy.directChildren,
+        field: "directChildren",
+        width: 88,
+        hozAlign: "center",
+        headerHozAlign: "center",
+        cssClass: "arctor-table-number",
+      },
+      {
+        title: copy.descendants,
+        field: "descendants",
+        width: 96,
+        hozAlign: "center",
+        headerHozAlign: "center",
+        cssClass: "arctor-table-number",
+      },
+      {
+        title: copy.leaves,
+        field: "descendantLeaves",
+        width: 82,
+        hozAlign: "center",
+        headerHozAlign: "center",
+        cssClass: "arctor-table-number",
+      },
+      { title: copy.status, field: "status", minWidth: 110 },
+    ],
+    [copy],
+  );
+
+  const tableOptions = useMemo<ArctorTableOptions>(
+    () => ({
+      dataTree: true,
+      dataTreeChildField: "_children",
+      dataTreeChildIndent: 15,
+      dataTreeStartExpanded: filterActive || valueObjects.length <= 80,
+      columnHeaderVertAlign: "middle",
+    }),
+    [filterActive, valueObjects.length],
+  );
+
   function updateHierarchyLevel(levelIndex: number, nextId: string) {
     const basePath = hierarchyPathObjects
       .slice(0, levelIndex)
@@ -1037,6 +1203,19 @@ export function ValueObjectCatalogViews({
               <MapIcon size={15} />
               {copy.map}
             </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("table")}
+              className={[
+                "inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-semibold transition",
+                viewMode === "table"
+                  ? "bg-white text-[#3b6ef8] shadow-sm"
+                  : "text-[#7c8099] hover:text-[#1a1d2e]",
+              ].join(" ")}
+            >
+              <Table2 size={15} />
+              {copy.table}
+            </button>
           </div>
 
           <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:ml-1 lg:flex lg:min-w-0 lg:flex-1 lg:flex-wrap lg:justify-start">
@@ -1101,6 +1280,24 @@ export function ValueObjectCatalogViews({
           onValueObjectReparented={onValueObjectReparented}
           onValueObjectCreated={onValueObjectCreated}
         />
+      ) : null}
+
+      {viewMode === "table" ? (
+        <div className="rounded-[18px] border border-black/[0.04] bg-white p-2 shadow-sm">
+          <ArctorTabulator<TableObjectRow>
+            data={tableRows}
+            columns={tableColumns}
+            rowKey="id"
+            emptyLabel={copy.emptyTable}
+            height="min(68vh, 760px)"
+            options={tableOptions}
+            onRowClick={(row) => {
+              window.location.assign(
+                buildLocaleAwareHref(`/value-objects/${row.id}`, locale),
+              );
+            }}
+          />
+        </div>
       ) : null}
 
       {viewMode === "tree" ? (

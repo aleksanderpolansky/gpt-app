@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { LayoutGrid, Table2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+
+import {
+  ArctorTabulator,
+  type ArctorTableColumn,
+} from "@/components/tables/arctor-tabulator";
 
 import {
   formatMutualMetricValue,
@@ -73,6 +79,21 @@ type JournalItem = {
   raw: ActivityEventSummary | CalendarLogSummary;
 };
 
+type JournalViewMode = "cards" | "table";
+
+type JournalTableRow = {
+  id: string;
+  when: string;
+  activity: string;
+  actor: string;
+  eventTime: string;
+  duration: string;
+  analysis: string;
+  status: string;
+  source: string;
+  item: JournalItem;
+};
+
 type EditDraft = {
   description: string;
   startedAtLocal: string;
@@ -87,6 +108,11 @@ const UI: Record<Locale, {
   pageSubtitle: string;
   add: string;
   logTab: string;
+  cardsView: string;
+  tableView: string;
+  when: string;
+  activity: string;
+  analysis: string;
   title: string;
   subtitle: string;
   empty: string;
@@ -122,6 +148,11 @@ const UI: Record<Locale, {
     pageSubtitle: "Chronological log of activity containers.",
     add: "Add",
     logTab: "Activity log",
+    cardsView: "Cards",
+    tableView: "Table",
+    when: "When",
+    activity: "Activity",
+    analysis: "Analysis",
     title: "Activity log",
     subtitle: "Chronological actions with activity containers.",
     empty: "No activity actions yet.",
@@ -157,6 +188,11 @@ const UI: Record<Locale, {
     pageSubtitle: "Chronologiczny log kontenerów aktywności.",
     add: "Dodaj",
     logTab: "Dziennik aktywności",
+    cardsView: "Karty",
+    tableView: "Tabela",
+    when: "Kiedy",
+    activity: "Aktywność",
+    analysis: "Analiza",
     title: "Dziennik aktywności",
     subtitle: "Chronologia działań na kontenerach aktywności.",
     empty: "Brak działań aktywności.",
@@ -192,6 +228,11 @@ const UI: Record<Locale, {
     pageSubtitle: "Хронологический лог контейнеров активности.",
     add: "Добавить",
     logTab: "Журнал активностей",
+    cardsView: "Карточки",
+    tableView: "Таблица",
+    when: "Когда",
+    activity: "Активность",
+    analysis: "Анализ",
     title: "Журнал активностей",
     subtitle: "Хронология действий с контейнерами активности.",
     empty: "Пока нет действий активности.",
@@ -227,6 +268,11 @@ const UI: Record<Locale, {
     pageSubtitle: "Хронологічний лог контейнерів активності.",
     add: "Додати",
     logTab: "Журнал активностей",
+    cardsView: "Картки",
+    tableView: "Таблиця",
+    when: "Коли",
+    activity: "Активність",
+    analysis: "Аналіз",
     title: "Журнал активностей",
     subtitle: "Хронологія дій з контейнерами активності.",
     empty: "Поки немає дій активності.",
@@ -262,6 +308,11 @@ const UI: Record<Locale, {
     pageSubtitle: "Chronologisches Log der Aktivitätscontainer.",
     add: "Hinzufügen",
     logTab: "Aktivitätslog",
+    cardsView: "Karten",
+    tableView: "Tabelle",
+    when: "Wann",
+    activity: "Aktivität",
+    analysis: "Analyse",
     title: "Aktivitätslog",
     subtitle: "Chronologie der Aktionen mit Aktivitätscontainern.",
     empty: "Noch keine Aktivitätsaktionen.",
@@ -297,6 +348,11 @@ const UI: Record<Locale, {
     pageSubtitle: "Log cronológico de contenedores de actividad.",
     add: "Añadir",
     logTab: "Log de actividad",
+    cardsView: "Tarjetas",
+    tableView: "Tabla",
+    when: "Cuándo",
+    activity: "Actividad",
+    analysis: "Análisis",
     title: "Log de actividad",
     subtitle: "Cronología de acciones con contenedores de actividad.",
     empty: "Todavía no hay acciones de actividad.",
@@ -332,6 +388,11 @@ const UI: Record<Locale, {
     pageSubtitle: "Chronologický log kontejnerů aktivit.",
     add: "Přidat",
     logTab: "Log aktivit",
+    cardsView: "Karty",
+    tableView: "Tabulka",
+    when: "Kdy",
+    activity: "Aktivita",
+    analysis: "Analýza",
     title: "Log aktivit",
     subtitle: "Chronologie akcí s kontejnery aktivit.",
     empty: "Zatím žádné akce aktivit.",
@@ -675,6 +736,7 @@ function ActivityMutualPreview({
 
 export default function ActivityTodayPage() {
   const [locale, setLocale] = useState<Locale>("en");
+  const [viewMode, setViewMode] = useState<JournalViewMode>("cards");
   const [activityEvents, setActivityEvents] = useState<ActivityEventSummary[]>([]);
   const [calendarLogs, setCalendarLogs] = useState<CalendarLogSummary[]>([]);
   const [mutualLinksByActivityId, setMutualLinksByActivityId] = useState<Record<string, MutualLinkActivity>>({});
@@ -845,6 +907,71 @@ export default function ActivityTodayPage() {
       ...calendarLogs.map((log, index) => mapCalendarLog(log, index, locale)),
     ].sort(sortJournalItems),
     [activityEvents, calendarLogs, locale]
+  );
+
+  const journalTableRows = useMemo<JournalTableRow[]>(
+    () =>
+      journalItems.map((item) => {
+        const activity = item.kind === "activity"
+          ? (item.raw as ActivityEventSummary)
+          : null;
+        const duration = typeof activity?.durationMinutes === "number"
+          ? `${activity.durationMinutes} min`
+          : "—";
+        const analysis = item.kind === "activity" && item.sourceId
+          ? getBasicAnalysisStatusText(
+              locale,
+              basicIntakeAnalysesByActivityId[item.sourceId]?.status,
+            )
+          : "—";
+
+        return {
+          id: item.id,
+          when: formatDateTime(item.occurredAt, locale),
+          activity: item.title,
+          actor: item.actorName,
+          eventTime: item.eventTime ?? "—",
+          duration,
+          analysis,
+          status: item.status || "—",
+          source: item.source || "—",
+          item,
+        };
+      }),
+    [basicIntakeAnalysesByActivityId, journalItems, locale],
+  );
+
+  const journalTableColumns = useMemo<ArctorTableColumn<JournalTableRow>[]>(
+    () => [
+      {
+        title: ui.when,
+        field: "when",
+        minWidth: 150,
+        frozen: true,
+        cssClass: "arctor-table-muted",
+      },
+      {
+        title: ui.activity,
+        field: "activity",
+        minWidth: 300,
+        widthGrow: 3,
+        cssClass: "arctor-table-title",
+      },
+      { title: ui.actor, field: "actor", minWidth: 150, widthGrow: 1 },
+      { title: ui.eventTime, field: "eventTime", minWidth: 180, widthGrow: 1 },
+      {
+        title: ui.duration,
+        field: "duration",
+        width: 110,
+        hozAlign: "center",
+        headerHozAlign: "center",
+        cssClass: "arctor-table-number",
+      },
+      { title: ui.analysis, field: "analysis", minWidth: 170, widthGrow: 1 },
+      { title: ui.status, field: "status", minWidth: 120 },
+      { title: ui.source, field: "source", minWidth: 120 },
+    ],
+    [ui],
   );
 
   // ARCTOR_ACTIVITY_TODAY_LINT_SAFE_AUTO_OPEN_EFFECT_V1
@@ -1050,12 +1177,43 @@ export default function ActivityTodayPage() {
         </section>
 
         <section className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
-          <div className="mb-4">
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#3b6ef8]">
-              {ui.logTab}
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#3b6ef8]">
+                {ui.logTab}
+              </div>
+              <h2 className="mt-1 text-xl font-bold text-[#1a1d2e]">{ui.title}</h2>
+              <p className="mt-1 text-sm font-medium text-[#7c8099]">{ui.subtitle}</p>
             </div>
-            <h2 className="mt-1 text-xl font-bold text-[#1a1d2e]">{ui.title}</h2>
-            <p className="mt-1 text-sm font-medium text-[#7c8099]">{ui.subtitle}</p>
+
+            <div className="inline-flex rounded-xl bg-[#f5f6fb] p-1">
+              <button
+                type="button"
+                onClick={() => setViewMode("cards")}
+                className={[
+                  "inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition",
+                  viewMode === "cards"
+                    ? "bg-white text-[#3b6ef8] shadow-sm"
+                    : "text-[#7c8099] hover:text-[#1a1d2e]",
+                ].join(" ")}
+              >
+                <LayoutGrid size={15} />
+                {ui.cardsView}
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("table")}
+                className={[
+                  "inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition",
+                  viewMode === "table"
+                    ? "bg-white text-[#3b6ef8] shadow-sm"
+                    : "text-[#7c8099] hover:text-[#1a1d2e]",
+                ].join(" ")}
+              >
+                <Table2 size={15} />
+                {ui.tableView}
+              </button>
+            </div>
           </div>
 
           {error ? (
@@ -1072,6 +1230,15 @@ export default function ActivityTodayPage() {
             <div className="rounded-xl border border-dashed border-[#d8deef] bg-[#fbfcff] p-5 text-sm font-semibold text-[#7c8099]">
               {ui.empty}
             </div>
+          ) : viewMode === "table" ? (
+            <ArctorTabulator<JournalTableRow>
+              data={journalTableRows}
+              columns={journalTableColumns}
+              rowKey="id"
+              emptyLabel={ui.empty}
+              height="min(66vh, 720px)"
+              onRowClick={(row) => openItem(row.item)}
+            />
           ) : (
             <div className="space-y-3">
               {journalItems.map((item) => (

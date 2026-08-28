@@ -1,8 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { LayoutGrid, Table2 } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+
+import {
+  ArctorTabulator,
+  type ArctorTableColumn,
+} from "@/components/tables/arctor-tabulator";
+
 import { ActivityFactTaggingPanel } from "./activity-fact-tagging-panel";
 
 type Locale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
@@ -38,6 +45,22 @@ type ActivityFact = {
   }>;
 };
 
+type FactsViewMode = "cards" | "table";
+
+type FactTableRow = {
+  id: string;
+  date: string;
+  activity: string;
+  valueObject: string;
+  type: string;
+  value: string;
+  unit: string;
+  status: string;
+  source: string;
+  confidence: string;
+  fact: ActivityFact;
+};
+
 type FactsApiResponse = {
   ok?: boolean;
   facts?: ActivityFact[];
@@ -55,6 +78,10 @@ type ActivityFactsCopy = {
   pageTitle: string;
   pageSubtitle: string;
   refresh: string;
+  cardsView: string;
+  tableView: string;
+  date: string;
+  activity: string;
   filters: string;
   filtersSubtitle: string;
   limit: string;
@@ -105,6 +132,10 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     pageTitle: "Activity facts",
     pageSubtitle: "Saved facts extracted from past and planned activity containers.",
     refresh: "Refresh",
+    cardsView: "Cards",
+    tableView: "Table",
+    date: "Date",
+    activity: "Activity",
     filters: "Filters",
     filtersSubtitle: "Narrow the list by semantic key, value object, activity, or status.",
     limit: "Limit",
@@ -157,6 +188,10 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     pageTitle: "Tabela faktów aktywności",
     pageSubtitle: "Zapisane fakty wyodrębnione z wykonanych i planowanych kontenerów aktywności.",
     refresh: "Odśwież",
+    cardsView: "Karty",
+    tableView: "Tabela",
+    date: "Data",
+    activity: "Aktywność",
     filters: "Filtry",
     filtersSubtitle: "Zawęź listę według klucza semantycznego, obiektu wartości, aktywności albo statusu.",
     limit: "Limit",
@@ -209,6 +244,10 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     pageTitle: "Таблица фактов активности",
     pageSubtitle: "Сохранённые факты, извлечённые из выполненных и плановых контейнеров активности.",
     refresh: "Обновить",
+    cardsView: "Карточки",
+    tableView: "Таблица",
+    date: "Дата",
+    activity: "Активность",
     filters: "Фильтры",
     filtersSubtitle: "Сузь список по семантическому ключу, ценному объекту, активности или статусу.",
     limit: "Лимит",
@@ -261,6 +300,10 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     pageTitle: "Таблиця фактів активності",
     pageSubtitle: "Збережені факти, витягнуті з виконаних і планових контейнерів активності.",
     refresh: "Оновити",
+    cardsView: "Картки",
+    tableView: "Таблиця",
+    date: "Дата",
+    activity: "Активність",
     filters: "Фільтри",
     filtersSubtitle: "Звузь список за семантичним ключем, цінним об’єктом, активністю або статусом.",
     limit: "Ліміт",
@@ -313,6 +356,10 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     pageTitle: "Aktivitätsfakten",
     pageSubtitle: "Gespeicherte Fakten aus erledigten und geplanten Aktivitätscontainern.",
     refresh: "Aktualisieren",
+    cardsView: "Karten",
+    tableView: "Tabelle",
+    date: "Datum",
+    activity: "Aktivität",
     filters: "Filter",
     filtersSubtitle: "Liste nach semantischem Schlüssel, Wertobjekt, Aktivität oder Status eingrenzen.",
     limit: "Limit",
@@ -365,6 +412,10 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     pageTitle: "Hechos de actividad",
     pageSubtitle: "Hechos guardados extraídos de contenedores de actividad realizados y planificados.",
     refresh: "Actualizar",
+    cardsView: "Tarjetas",
+    tableView: "Tabla",
+    date: "Fecha",
+    activity: "Actividad",
     filters: "Filtros",
     filtersSubtitle: "Filtra por clave semántica, objeto de valor, actividad o estado.",
     limit: "Límite",
@@ -417,6 +468,10 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     pageTitle: "Fakta aktivit",
     pageSubtitle: "Uložená fakta získaná z dokončených a plánovaných kontejnerů aktivit.",
     refresh: "Obnovit",
+    cardsView: "Karty",
+    tableView: "Tabulka",
+    date: "Datum",
+    activity: "Aktivita",
     filters: "Filtry",
     filtersSubtitle: "Zúž seznam podle sémantického klíče, hodnotového objektu, aktivity nebo stavu.",
     limit: "Limit",
@@ -803,6 +858,7 @@ function ActivityFactsPageContent() {
   const [activityEventId, setActivityEventId] = useState(searchParams.get("activityEventId") ?? "");
   const [factStatus, setFactStatus] = useState(searchParams.get("factStatus") ?? "");
   const [selectedFactId, setSelectedFactId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<FactsViewMode>("cards");
   const [state, setState] = useState<LoadState>({
     status: "idle",
     message: copy.loading,
@@ -826,6 +882,80 @@ function ActivityFactsPageContent() {
   const groupedFacts = useMemo(() => groupFacts(facts), [facts]);
   const selectedFact =
     facts.find((fact) => fact.factId === selectedFactId) ?? facts[0] ?? null;
+
+  const factTableRows = useMemo<FactTableRow[]>(
+    () =>
+      facts.map((fact, index) => ({
+        id: fact.factId ?? `${fact.activityEventId ?? "fact"}-${index}`,
+        date: formatDate(fact.createdAt, locale),
+        activity:
+          fact.activityTitle ??
+          (fact.activityEventId
+            ? `A: ${truncateMiddle(fact.activityEventId, 8, 6)}`
+            : "—"),
+        valueObject:
+          (fact.valueObjects ?? []).map((valueObject) => valueObject.title).join("; ") ||
+          fact.semanticObjectKey ||
+          "—",
+        type: fact.measureType ?? "—",
+        value: formatMetricValue(fact.metricValue),
+        unit: fact.unit ?? "—",
+        status: getStatusLabel(fact.factStatus, copy),
+        source: fact.sourceType ?? "—",
+        confidence:
+          typeof fact.confidence === "number"
+            ? `${Math.round(fact.confidence * 100)}%`
+            : "—",
+        fact,
+      })),
+    [copy, facts, locale],
+  );
+
+  const factTableColumns = useMemo<ArctorTableColumn<FactTableRow>[]>(
+    () => [
+      {
+        title: copy.date,
+        field: "date",
+        minWidth: 150,
+        frozen: true,
+        cssClass: "arctor-table-muted",
+      },
+      {
+        title: copy.activity,
+        field: "activity",
+        minWidth: 260,
+        widthGrow: 2,
+        cssClass: "arctor-table-title",
+      },
+      {
+        title: copy.valueObject,
+        field: "valueObject",
+        minWidth: 250,
+        widthGrow: 2,
+      },
+      { title: copy.type, field: "type", minWidth: 160, widthGrow: 1 },
+      {
+        title: copy.value,
+        field: "value",
+        minWidth: 100,
+        hozAlign: "right",
+        headerHozAlign: "right",
+        cssClass: "arctor-table-number",
+      },
+      { title: copy.unit, field: "unit", minWidth: 90 },
+      { title: copy.status, field: "status", minWidth: 130 },
+      { title: copy.source, field: "source", minWidth: 130 },
+      {
+        title: copy.confidence,
+        field: "confidence",
+        width: 110,
+        hozAlign: "right",
+        headerHozAlign: "right",
+        cssClass: "arctor-table-number",
+      },
+    ],
+    [copy],
+  );
 
   const loadFacts = useCallback(async () => {
     setState({
@@ -943,6 +1073,37 @@ function ActivityFactsPageContent() {
           <SummaryCard label={copy.summaryOther} value={groupedFacts.other.length} tone="text-amber-600" />
         </section>
 
+        <div className="flex justify-end">
+          <div className="inline-flex rounded-xl bg-[#f5f6fb] p-1 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setViewMode("cards")}
+              className={[
+                "inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-xs font-black transition",
+                viewMode === "cards"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-[#747da0] hover:text-[#101632]",
+              ].join(" ")}
+            >
+              <LayoutGrid size={15} />
+              {copy.cardsView}
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("table")}
+              className={[
+                "inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-xs font-black transition",
+                viewMode === "table"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-[#747da0] hover:text-[#101632]",
+              ].join(" ")}
+            >
+              <Table2 size={15} />
+              {copy.tableView}
+            </button>
+          </div>
+        </div>
+
         <section className="rounded-[28px] border border-black/[0.06] bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -1055,35 +1216,50 @@ function ActivityFactsPageContent() {
           </div>
         </section>
 
-        <FactGroup
-          title={copy.proposedTitle}
-          subtitle={copy.proposedSubtitle}
-          facts={groupedFacts.proposed}
-          locale={locale}
-          copy={copy}
-          selectedFact={selectedFact}
-          onSelect={setSelectedFactId}
-        />
+        {viewMode === "table" ? (
+          <section className="rounded-[28px] border border-black/[0.06] bg-white p-3 shadow-sm sm:p-4">
+            <ArctorTabulator<FactTableRow>
+              data={factTableRows}
+              columns={factTableColumns}
+              rowKey="id"
+              emptyLabel={copy.empty}
+              height="min(68vh, 760px)"
+              onRowClick={(row) => setSelectedFactId(row.fact.factId)}
+            />
+          </section>
+        ) : (
+          <>
+            <FactGroup
+              title={copy.proposedTitle}
+              subtitle={copy.proposedSubtitle}
+              facts={groupedFacts.proposed}
+              locale={locale}
+              copy={copy}
+              selectedFact={selectedFact}
+              onSelect={setSelectedFactId}
+            />
 
-        <FactGroup
-          title={copy.confirmedTitle}
-          subtitle={copy.confirmedSubtitle}
-          facts={groupedFacts.confirmed}
-          locale={locale}
-          copy={copy}
-          selectedFact={selectedFact}
-          onSelect={setSelectedFactId}
-        />
+            <FactGroup
+              title={copy.confirmedTitle}
+              subtitle={copy.confirmedSubtitle}
+              facts={groupedFacts.confirmed}
+              locale={locale}
+              copy={copy}
+              selectedFact={selectedFact}
+              onSelect={setSelectedFactId}
+            />
 
-        <FactGroup
-          title={copy.otherTitle}
-          subtitle={copy.otherSubtitle}
-          facts={groupedFacts.other}
-          locale={locale}
-          copy={copy}
-          selectedFact={selectedFact}
-          onSelect={setSelectedFactId}
-        />
+            <FactGroup
+              title={copy.otherTitle}
+              subtitle={copy.otherSubtitle}
+              facts={groupedFacts.other}
+              locale={locale}
+              copy={copy}
+              selectedFact={selectedFact}
+              onSelect={setSelectedFactId}
+            />
+          </>
+        )}
 
         <section className="rounded-[28px] border border-black/[0.06] bg-white p-5 shadow-sm sm:p-6">
           <p className="text-[12px] font-black uppercase tracking-[0.18em] text-blue-600">

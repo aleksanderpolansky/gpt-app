@@ -807,3 +807,12 @@ V1A source release остановился до mutation на ошибке runner
 - Manual SQL `20260821_vo_branch_driven_leaf_authoring_v1.sql` нормализует только существующие actor/private/user_declared ontology rows, созданные старым manual authoring: `draft -> active`, non-root `is_a/other -> part_of`, с rollback marker в metadata. GLOBAL/System и commercial rows не затрагиваются.
 - Private list/detail UI больше не показывает `ENTITY · generic_entity` как пользовательский «вид» объекта; технические codes сохраняются для GLOBAL/System и commercial контуров.
 - Следующая точка продолжения после release: создать под «Физическое развитие» промежуточные ветки «Процессы…», «Состояния…», «Угрозы…», затем создать обычные leaf-объекты без выбора вида и проверить путь/факты/analytics overlay.
+
+## 2026-08-28 — ARCTOR_TABLE_VIEWS_T1_TABULATOR_V1_1
+
+- Baseline: `main @ 6c91b6d48a379c05fdc5532cd74e327d34b32313`; V1 attempt остановлен full TypeScript gate до commit/push и полностью откатан (`ROLLBACK=PASS`).
+- Причина V1: новые поля локализации Table View для `pl/es/cs` были ошибочно объединены в locale `pl`, что вызвало `TS1117` и отсутствие обязательных `CatalogCopy` полей в `es/cs` (`TS2739`).
+- V1_1 исправляет locale blocks и усиливает validator: каждый новый ключ проверяется ровно один раз внутри каждого из 7 locale; runner дополнительно выполняет pre-mutation isolated TypeScript delta gate.
+- Scope T1 неизменен: read-only compact Table View на `tabulator-tables@6.5.2` для `/value-objects`, `/activity-today`, `/activity-facts`; существующие Tree/Cards/Map/detail/tagging контуры сохраняются.
+- Inline editing, reparenting, arbitrary spreadsheets, XLSX/Google Sheets, SQL/DB/Storage/OpenAI changes в T1 не входят.
+- Подробный checkpoint: `docs/recovery/ARCTOR_TABLE_VIEWS_T1_TABULATOR_V1_1_RU.md`.
