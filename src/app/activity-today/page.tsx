@@ -461,6 +461,66 @@ function getBasicAnalysisStatusText(locale: Locale, status: string | undefined) 
   return copy[locale].pending;
 }
 
+function getBasicAnalysisStatusShortText(locale: Locale, status: string | undefined) {
+  const copy: Record<Locale, { ready: string; pending: string; failed: string }> = {
+    ru: { ready: "Готов", pending: "Выполняется", failed: "Повторить" },
+    en: { ready: "Ready", pending: "Running", failed: "Retry" },
+    pl: { ready: "Gotowa", pending: "Trwa", failed: "Powtórz" },
+    uk: { ready: "Готовий", pending: "Виконується", failed: "Повторити" },
+    de: { ready: "Fertig", pending: "Läuft", failed: "Erneut" },
+    es: { ready: "Listo", pending: "En curso", failed: "Repetir" },
+    cs: { ready: "Hotovo", pending: "Probíhá", failed: "Opakovat" },
+  };
+
+  if (status === "completed") return copy[locale].ready;
+  if (status === "failed") return copy[locale].failed;
+  return copy[locale].pending;
+}
+
+function getJournalTableStatusText(item: JournalItem, locale: Locale) {
+  const copy: Record<Locale, {
+    completed: string;
+    planned: string;
+    cancelled: string;
+    archived: string;
+    active: string;
+    updated: string;
+    restored: string;
+    unknown: string;
+  }> = {
+    en: { completed: "Completed", planned: "Planned", cancelled: "Deleted", archived: "Archived", active: "Active", updated: "Updated", restored: "Restored", unknown: "—" },
+    pl: { completed: "Wykonano", planned: "Planowana", cancelled: "Usunięta", archived: "Archiwalna", active: "Aktywna", updated: "Zmieniona", restored: "Przywrócona", unknown: "—" },
+    ru: { completed: "Выполнено", planned: "Запланировано", cancelled: "Удалено", archived: "В архиве", active: "Активно", updated: "Изменено", restored: "Восстановлено", unknown: "—" },
+    uk: { completed: "Виконано", planned: "Заплановано", cancelled: "Видалено", archived: "В архіві", active: "Активно", updated: "Змінено", restored: "Відновлено", unknown: "—" },
+    de: { completed: "Erledigt", planned: "Geplant", cancelled: "Gelöscht", archived: "Archiviert", active: "Aktiv", updated: "Geändert", restored: "Wiederhergestellt", unknown: "—" },
+    es: { completed: "Completada", planned: "Planificada", cancelled: "Eliminada", archived: "Archivada", active: "Activa", updated: "Actualizada", restored: "Restaurada", unknown: "—" },
+    cs: { completed: "Dokončeno", planned: "Plánováno", cancelled: "Smazáno", archived: "Archivováno", active: "Aktivní", updated: "Změněno", restored: "Obnoveno", unknown: "—" },
+  };
+
+  const labels = copy[locale];
+
+  if (item.kind === "activity") {
+    const activity = item.raw as ActivityEventSummary;
+    const status = activity.status ?? "";
+    const role = activity.activityRoleCode ?? (activity.temporalDirection === "future" ? "planned" : "actual");
+
+    if (status === "cancelled") return labels.cancelled;
+    if (status === "archived") return labels.archived;
+    if (status === "completed") return labels.completed;
+    if (status === "planned" || role === "planned") return labels.planned;
+    if (status === "active" || role === "actual") return labels.active;
+    return status.replaceAll("_", " ") || labels.unknown;
+  }
+
+  const log = item.raw as CalendarLogSummary;
+  if (log.action === "cancelled") return labels.cancelled;
+  if (log.action === "restored") return labels.restored;
+  if (log.action === "updated") return labels.updated;
+  if (log.eventStatus === "completed") return labels.completed;
+  if (log.eventStatus === "planned") return labels.planned;
+  return (log.eventStatus ?? log.action ?? "").replaceAll("_", " ") || labels.unknown;
+}
+
 function formatDatetimeLocal(value: string | null) {
   if (!value) {
     return "";
@@ -919,7 +979,7 @@ export default function ActivityTodayPage() {
           ? `${activity.durationMinutes} min`
           : "—";
         const analysis = item.kind === "activity" && item.sourceId
-          ? getBasicAnalysisStatusText(
+          ? getBasicAnalysisStatusShortText(
               locale,
               basicIntakeAnalysesByActivityId[item.sourceId]?.status,
             )
@@ -933,7 +993,7 @@ export default function ActivityTodayPage() {
           eventTime: item.eventTime ?? "—",
           duration,
           analysis,
-          status: item.status || "—",
+          status: getJournalTableStatusText(item, locale),
           source: item.source || "—",
           item,
         };
@@ -946,35 +1006,40 @@ export default function ActivityTodayPage() {
       {
         title: ui.when,
         field: "when",
-        width: 142,
-        minWidth: 126,
-        widthShrink: 2,
+        width: 154,
+        minWidth: 142,
+        widthShrink: 1,
         responsive: 2,
         frozen: true,
+        tooltip: true,
         cssClass: "arctor-table-muted",
       },
       {
         title: ui.activity,
         field: "activity",
-        minWidth: 220,
-        widthGrow: 4,
+        minWidth: 250,
+        widthGrow: 5,
         widthShrink: 3,
         responsive: 0,
+        tooltip: true,
         cssClass: "arctor-table-title",
       },
       {
         title: ui.eventTime,
         field: "eventTime",
-        minWidth: 150,
+        minWidth: 180,
         widthGrow: 2,
         widthShrink: 3,
         responsive: 3,
+        tooltip: true,
       },
       {
         title: ui.duration,
         field: "duration",
-        width: 88,
+        width: 100,
+        minWidth: 92,
         responsive: 0,
+        tooltip: true,
         hozAlign: "center",
         headerHozAlign: "center",
         cssClass: "arctor-table-number",
@@ -982,13 +1047,27 @@ export default function ActivityTodayPage() {
       {
         title: ui.analysis,
         field: "analysis",
-        minWidth: 108,
+        minWidth: 104,
         widthGrow: 1,
-        widthShrink: 2,
+        widthShrink: 1,
         responsive: 2,
+        tooltip: true,
       },
-      { title: ui.status, field: "status", minWidth: 96, widthShrink: 2, responsive: 1 },
-      { title: ui.source, field: "source", minWidth: 92, widthShrink: 2, responsive: 5 },
+      {
+        title: ui.status,
+        field: "status",
+        minWidth: 112,
+        widthShrink: 1,
+        responsive: 1,
+        tooltip: true,
+      },
+      {
+        title: ui.source,
+        field: "source",
+        visible: false,
+        responsive: 6,
+        tooltip: true,
+      },
     ],
     [ui],
   );

@@ -827,3 +827,13 @@ V1A source release остановился до mutation на ошибке runner
 - `/value-objects`: Object/Role/Status/счётчики приоритетны; Description/Parent остаются в column model, но скрываются первыми на узком desktop.
 - SQL/DB/Storage/OpenAI и write-boundaries не меняются; Tabulator остаётся `6.5.2` MIT; inline editing/reparent/XLSX/Google Sheets не входят.
 - Подробный checkpoint: `docs/recovery/ARCTOR_TABLE_VIEWS_T1_2_LAYOUT_UX_HOTFIX_V1_RU.md`.
+
+## 2026-08-28 — ARCTOR_TABLE_VIEWS_T1_3_READABILITY_HOTFIX_V1
+
+- Baseline: `main @ f0ca8bcfb785592375972913567b30d2661603e5` после успешного T1_2 layout/UX hotfix.
+- T1_2 устранил горизонтальный overflow; T1_3 доводит именно читаемость без изменения data/write contracts.
+- `/activity-today`: Source скрывается из main table, Analysis/Status получают короткие локализованные пользовательские состояния, long values получают tooltip.
+- `/activity-facts`: known measure/unit/source codes локализуются только на display layer; неизвестные codes сохраняются как есть. Effective linked VO titles остаются приоритетом; legacy `semanticObjectKey` fallback явно маркируется как «не привязан к объекту наблюдения», чтобы не выдавать технический ключ за сохранённую связь Reality Model.
+- `/value-objects`: Parent остаётся в row model, но скрывается из Data Tree table surface; объекту и счётчикам отдаётся больше ширины; text columns получают tooltip.
+- SQL/DB/Storage/OpenAI/backfill/inline editing/reparenting не входят. `tabulator-tables@6.5.2` не меняется.
+- Подробный checkpoint: `docs/recovery/ARCTOR_TABLE_VIEWS_T1_3_READABILITY_HOTFIX_V1_RU.md`.

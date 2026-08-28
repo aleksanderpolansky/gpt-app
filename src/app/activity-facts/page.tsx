@@ -123,6 +123,7 @@ type ActivityFactsCopy = {
   createdAt: string;
   source: string;
   confidence: string;
+  unlinkedValueObject: string;
   factStatusLabels: Record<string, string>;
 };
 
@@ -178,6 +179,7 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     createdAt: "Created at",
     source: "Source",
     confidence: "Confidence",
+    unlinkedValueObject: "Not linked to an observation object",
     factStatusLabels: {
       confirmed: "confirmed",
       proposed: "proposed",
@@ -235,6 +237,7 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     createdAt: "Utworzono",
     source: "Źródło",
     confidence: "Pewność",
+    unlinkedValueObject: "Niepowiązany z obiektem obserwacji",
     factStatusLabels: {
       confirmed: "potwierdzony",
       proposed: "planowany",
@@ -292,6 +295,7 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     createdAt: "Создано",
     source: "Источник",
     confidence: "Уверенность",
+    unlinkedValueObject: "Не привязан к объекту наблюдения",
     factStatusLabels: {
       confirmed: "подтверждён",
       proposed: "плановый",
@@ -349,6 +353,7 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     createdAt: "Створено",
     source: "Джерело",
     confidence: "Впевненість",
+    unlinkedValueObject: "Не прив’язаний до об’єкта спостереження",
     factStatusLabels: {
       confirmed: "підтверджено",
       proposed: "плановий",
@@ -406,6 +411,7 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     createdAt: "Erstellt",
     source: "Quelle",
     confidence: "Sicherheit",
+    unlinkedValueObject: "Nicht mit einem Beobachtungsobjekt verknüpft",
     factStatusLabels: {
       confirmed: "bestätigt",
       proposed: "geplant",
@@ -463,6 +469,7 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     createdAt: "Creado",
     source: "Fuente",
     confidence: "Confianza",
+    unlinkedValueObject: "No vinculado a un objeto de observación",
     factStatusLabels: {
       confirmed: "confirmado",
       proposed: "planificado",
@@ -520,6 +527,7 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     createdAt: "Vytvořeno",
     source: "Zdroj",
     confidence: "Jistota",
+    unlinkedValueObject: "Není propojeno s objektem pozorování",
     factStatusLabels: {
       confirmed: "potvrzeno",
       proposed: "plánováno",
@@ -529,6 +537,78 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     },
   },
 };
+
+type FactDisplayCodeCopy = {
+  measureTypes: Record<string, string>;
+  units: Record<string, string>;
+  sources: Record<string, string>;
+};
+
+const FACT_DISPLAY_CODES: Record<Locale, FactDisplayCodeCopy> = {
+  en: {
+    measureTypes: { duration: "Duration", count: "Count", context_tag: "Context" },
+    units: { minute: "min", minutes: "min", hour: "h", hours: "h", second: "s", seconds: "s", count: "count", tag: "tag", percent: "%", meter: "m", kilometer: "km" },
+    sources: { user_edit: "User edit", ai_extraction: "AI extraction", manual_form: "Manual", system_event: "System", activity_capture: "Activity capture" },
+  },
+  pl: {
+    measureTypes: { duration: "Czas trwania", count: "Liczba", context_tag: "Kontekst" },
+    units: { minute: "min", minutes: "min", hour: "h", hours: "h", second: "s", seconds: "s", count: "liczba", tag: "tag", percent: "%", meter: "m", kilometer: "km" },
+    sources: { user_edit: "Edycja użytkownika", ai_extraction: "Ekstrakcja AI", manual_form: "Ręcznie", system_event: "System", activity_capture: "Rejestr aktywności" },
+  },
+  ru: {
+    measureTypes: { duration: "Длительность", count: "Количество", context_tag: "Контекст" },
+    units: { minute: "мин", minutes: "мин", hour: "ч", hours: "ч", second: "с", seconds: "с", count: "кол-во", tag: "метка", percent: "%", meter: "м", kilometer: "км" },
+    sources: { user_edit: "Изменено пользователем", ai_extraction: "Извлечено AI", manual_form: "Вручную", system_event: "Система", activity_capture: "Фиксация активности" },
+  },
+  uk: {
+    measureTypes: { duration: "Тривалість", count: "Кількість", context_tag: "Контекст" },
+    units: { minute: "хв", minutes: "хв", hour: "год", hours: "год", second: "с", seconds: "с", count: "кільк.", tag: "мітка", percent: "%", meter: "м", kilometer: "км" },
+    sources: { user_edit: "Змінено користувачем", ai_extraction: "Видобуто AI", manual_form: "Вручну", system_event: "Система", activity_capture: "Фіксація активності" },
+  },
+  de: {
+    measureTypes: { duration: "Dauer", count: "Anzahl", context_tag: "Kontext" },
+    units: { minute: "min", minutes: "min", hour: "h", hours: "h", second: "s", seconds: "s", count: "Anz.", tag: "Tag", percent: "%", meter: "m", kilometer: "km" },
+    sources: { user_edit: "Benutzeränderung", ai_extraction: "AI-Extraktion", manual_form: "Manuell", system_event: "System", activity_capture: "Aktivitätserfassung" },
+  },
+  es: {
+    measureTypes: { duration: "Duración", count: "Cantidad", context_tag: "Contexto" },
+    units: { minute: "min", minutes: "min", hour: "h", hours: "h", second: "s", seconds: "s", count: "cant.", tag: "etiqueta", percent: "%", meter: "m", kilometer: "km" },
+    sources: { user_edit: "Edición del usuario", ai_extraction: "Extracción AI", manual_form: "Manual", system_event: "Sistema", activity_capture: "Registro de actividad" },
+  },
+  cs: {
+    measureTypes: { duration: "Doba trvání", count: "Počet", context_tag: "Kontext" },
+    units: { minute: "min", minutes: "min", hour: "h", hours: "h", second: "s", seconds: "s", count: "počet", tag: "štítek", percent: "%", meter: "m", kilometer: "km" },
+    sources: { user_edit: "Úprava uživatelem", ai_extraction: "Extrakce AI", manual_form: "Ručně", system_event: "Systém", activity_capture: "Záznam aktivity" },
+  },
+};
+
+function localizeFactCode(
+  locale: Locale,
+  kind: keyof FactDisplayCodeCopy,
+  value: string | null,
+) {
+  if (!value) {
+    return "—";
+  }
+
+  return FACT_DISPLAY_CODES[locale][kind][value] ?? value;
+}
+
+function formatFactValueObjectLabel(fact: ActivityFact, copy: ActivityFactsCopy) {
+  const linkedTitles = (fact.valueObjects ?? [])
+    .map((valueObject) => valueObject.title.trim())
+    .filter(Boolean);
+
+  if (linkedTitles.length > 0) {
+    return linkedTitles.join("; ");
+  }
+
+  if (fact.semanticObjectKey) {
+    return `${fact.semanticObjectKey} · ${copy.unlinkedValueObject}`;
+  }
+
+  return `— · ${copy.unlinkedValueObject}`;
+}
 
 function normalizeLocale(value: string | null): Locale {
   return SUPPORTED_LOCALES.includes(value as Locale) ? (value as Locale) : "en";
@@ -743,8 +823,14 @@ function FactRow({
               </Link>
             ))
           ) : (
-            <span className="font-mono text-sm font-black text-slate-500">
+            <span
+              className="font-mono text-sm font-black text-slate-500"
+              title={copy.unlinkedValueObject}
+            >
               {fact.semanticObjectKey ?? "—"}
+              <span className="ml-2 font-sans text-[11px] font-bold text-amber-700">
+                · {copy.unlinkedValueObject}
+              </span>
             </span>
           )}
         </div>
@@ -901,15 +987,12 @@ function ActivityFactsPageContent() {
           (fact.activityEventId
             ? `A: ${truncateMiddle(fact.activityEventId, 8, 6)}`
             : "—"),
-        valueObject:
-          (fact.valueObjects ?? []).map((valueObject) => valueObject.title).join("; ") ||
-          fact.semanticObjectKey ||
-          "—",
-        type: fact.measureType ?? "—",
+        valueObject: formatFactValueObjectLabel(fact, copy),
+        type: localizeFactCode(locale, "measureTypes", fact.measureType),
         value: formatMetricValue(fact.metricValue),
-        unit: fact.unit ?? "—",
+        unit: localizeFactCode(locale, "units", fact.unit),
         status: getStatusLabel(fact.factStatus, copy),
-        source: fact.sourceType ?? "—",
+        source: localizeFactCode(locale, "sources", fact.sourceType),
         confidence:
           typeof fact.confidence === "number"
             ? `${Math.round(fact.confidence * 100)}%`
@@ -924,49 +1007,84 @@ function ActivityFactsPageContent() {
       {
         title: copy.date,
         field: "date",
-        width: 132,
-        minWidth: 118,
-        widthShrink: 2,
+        width: 136,
+        minWidth: 124,
+        widthShrink: 1,
         responsive: 3,
         frozen: true,
+        tooltip: true,
         cssClass: "arctor-table-muted",
       },
       {
         title: copy.activity,
         field: "activity",
-        minWidth: 190,
+        minWidth: 210,
         widthGrow: 3,
         widthShrink: 3,
         responsive: 0,
+        tooltip: true,
         cssClass: "arctor-table-title",
       },
       {
         title: copy.valueObject,
         field: "valueObject",
-        minWidth: 170,
-        widthGrow: 3,
+        minWidth: 220,
+        widthGrow: 4,
         widthShrink: 3,
         responsive: 0,
+        tooltip: true,
       },
-      { title: copy.type, field: "type", minWidth: 108, widthGrow: 1, widthShrink: 2, responsive: 4 },
+      {
+        title: copy.type,
+        field: "type",
+        minWidth: 112,
+        widthGrow: 1,
+        widthShrink: 2,
+        responsive: 4,
+        tooltip: true,
+      },
       {
         title: copy.value,
         field: "value",
-        width: 84,
-        minWidth: 72,
+        width: 86,
+        minWidth: 76,
         responsive: 0,
+        tooltip: true,
         hozAlign: "right",
         headerHozAlign: "right",
         cssClass: "arctor-table-number",
       },
-      { title: copy.unit, field: "unit", width: 76, minWidth: 66, responsive: 1 },
-      { title: copy.status, field: "status", minWidth: 96, widthShrink: 2, responsive: 1 },
-      { title: copy.source, field: "source", minWidth: 94, widthShrink: 2, responsive: 6 },
+      {
+        title: copy.unit,
+        field: "unit",
+        width: 82,
+        minWidth: 72,
+        responsive: 1,
+        tooltip: true,
+      },
+      {
+        title: copy.status,
+        field: "status",
+        minWidth: 104,
+        widthShrink: 1,
+        responsive: 1,
+        tooltip: true,
+      },
+      {
+        title: copy.source,
+        field: "source",
+        minWidth: 112,
+        widthShrink: 2,
+        responsive: 6,
+        tooltip: true,
+      },
       {
         title: copy.confidence,
         field: "confidence",
-        width: 88,
+        width: 98,
+        minWidth: 90,
         responsive: 5,
+        tooltip: true,
         hozAlign: "right",
         headerHozAlign: "right",
         cssClass: "arctor-table-number",
