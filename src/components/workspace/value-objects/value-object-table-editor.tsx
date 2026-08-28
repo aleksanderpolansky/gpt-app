@@ -46,6 +46,14 @@ type Copy = {
   redo: string;
   undone: string;
   redone: string;
+  copied: string;
+  pasting: string;
+  pasted: string;
+  pasteNoEditable: string;
+  pasteTooLarge: string;
+  pasteRolledBack: string;
+  pasteRollbackFailed: string;
+  rangeHint: string;
   saved: string;
   noChanges: string;
   titleRequired: string;
@@ -73,6 +81,14 @@ const COPY: Record<LocaleCode, Copy> = {
     redo: "Redo",
     undone: "Change undone.",
     redone: "Change restored.",
+    copied: "Copied selected cells.",
+    pasting: "Pasting…",
+    pasted: "Pasted {count} cells. Skipped: {skipped}.",
+    pasteNoEditable: "Nothing editable in the pasted range.",
+    pasteTooLarge: "Paste is limited to 100 editable cells at a time.",
+    pasteRolledBack: "Paste failed. Earlier writes were rolled back.",
+    pasteRollbackFailed: "Paste failed and rollback was incomplete. Reload the page before editing again.",
+    rangeHint: "Desktop: drag to select a range; Ctrl+C copies and Ctrl+V pastes TSV from Excel or Google Sheets. Gray/read-only cells are skipped. On smartphones, range drag is disabled so horizontal swipe and single-tap editing stay reliable.",
     saved: "Saved.",
     noChanges: "No changes to save.",
     titleRequired: "Name cannot be empty.",
@@ -98,6 +114,14 @@ const COPY: Record<LocaleCode, Copy> = {
     redo: "Ponów",
     undone: "Zmiana cofnięta.",
     redone: "Zmiana ponowiona.",
+    copied: "Skopiowano zaznaczone komórki.",
+    pasting: "Wklejanie…",
+    pasted: "Wklejono komórki: {count}. Pominięto: {skipped}.",
+    pasteNoEditable: "W zaznaczonym zakresie nie ma komórek możliwych do edycji.",
+    pasteTooLarge: "Jednorazowo można wkleić maksymalnie 100 edytowalnych komórek.",
+    pasteRolledBack: "Wklejanie nie powiodło się. Wcześniejsze zapisy zostały wycofane.",
+    pasteRollbackFailed: "Wklejanie nie powiodło się, a wycofanie było niepełne. Odśwież stronę przed dalszą edycją.",
+    rangeHint: "Komputer: przeciągnij, aby zaznaczyć zakres; Ctrl+C kopiuje, Ctrl+V wkleja TSV z Excela lub Arkuszy Google. Szare komórki są pomijane. Na smartfonie zaznaczanie zakresu przeciągnięciem jest wyłączone, aby zachować pewne przewijanie poziome i edycję jednym dotknięciem.",
     saved: "Zapisano.",
     noChanges: "Brak zmian do zapisania.",
     titleRequired: "Nazwa nie może być pusta.",
@@ -123,6 +147,14 @@ const COPY: Record<LocaleCode, Copy> = {
     redo: "Повторить",
     undone: "Изменение отменено.",
     redone: "Изменение повторено.",
+    copied: "Выделенные ячейки скопированы.",
+    pasting: "Вставка…",
+    pasted: "Вставлено ячеек: {count}. Пропущено: {skipped}.",
+    pasteNoEditable: "Во вставляемом диапазоне нет доступных для редактирования ячеек.",
+    pasteTooLarge: "За одну операцию можно вставить не более 100 редактируемых ячеек.",
+    pasteRolledBack: "Вставка не выполнена. Уже сделанные записи отменены.",
+    pasteRollbackFailed: "Вставка не выполнена, а откат завершился не полностью. Обновите страницу перед дальнейшим редактированием.",
+    rangeHint: "На компьютере: протяните мышью для выделения диапазона; Ctrl+C копирует, Ctrl+V вставляет TSV из Excel или Google Таблиц. Серые/недоступные ячейки пропускаются. На смартфоне протягивание диапазона отключено, чтобы не мешать горизонтальному скроллу и редактированию одним нажатием.",
     saved: "Сохранено.",
     noChanges: "Нет изменений для сохранения.",
     titleRequired: "Название не может быть пустым.",
@@ -148,6 +180,14 @@ const COPY: Record<LocaleCode, Copy> = {
     redo: "Повторити",
     undone: "Зміну скасовано.",
     redone: "Зміну повторено.",
+    copied: "Виділені клітинки скопійовано.",
+    pasting: "Вставлення…",
+    pasted: "Вставлено клітинок: {count}. Пропущено: {skipped}.",
+    pasteNoEditable: "У вставленому діапазоні немає клітинок, доступних для редагування.",
+    pasteTooLarge: "За одну операцію можна вставити не більше 100 редагованих клітинок.",
+    pasteRolledBack: "Вставлення не виконано. Уже зроблені записи відкотилися.",
+    pasteRollbackFailed: "Вставлення не виконано, а відкат завершився не повністю. Оновіть сторінку перед подальшим редагуванням.",
+    rangeHint: "На комп’ютері: протягніть мишею, щоб виділити діапазон; Ctrl+C копіює, Ctrl+V вставляє TSV з Excel або Google Таблиць. Сірі/недоступні клітинки пропускаються. На смартфоні виділення діапазону протягуванням вимкнено, щоб не заважати горизонтальному гортанню та редагуванню одним дотиком.",
     saved: "Збережено.",
     noChanges: "Немає змін для збереження.",
     titleRequired: "Назва не може бути порожньою.",
@@ -173,6 +213,14 @@ const COPY: Record<LocaleCode, Copy> = {
     redo: "Wiederholen",
     undone: "Änderung rückgängig gemacht.",
     redone: "Änderung wiederholt.",
+    copied: "Ausgewählte Zellen kopiert.",
+    pasting: "Einfügen…",
+    pasted: "{count} Zellen eingefügt. Übersprungen: {skipped}.",
+    pasteNoEditable: "Im eingefügten Bereich gibt es keine bearbeitbaren Zellen.",
+    pasteTooLarge: "Pro Vorgang können höchstens 100 bearbeitbare Zellen eingefügt werden.",
+    pasteRolledBack: "Einfügen fehlgeschlagen. Bereits ausgeführte Schreibvorgänge wurden zurückgesetzt.",
+    pasteRollbackFailed: "Einfügen fehlgeschlagen und das Zurücksetzen war unvollständig. Laden Sie die Seite vor weiterer Bearbeitung neu.",
+    rangeHint: "Desktop: Bereich mit der Maus aufziehen; Ctrl+C kopiert, Ctrl+V fügt TSV aus Excel oder Google Tabellen ein. Graue/schreibgeschützte Zellen werden übersprungen. Auf Smartphones ist das Ziehen von Bereichen deaktiviert, damit horizontales Wischen und Ein-Tipp-Bearbeitung zuverlässig bleiben.",
     saved: "Gespeichert.",
     noChanges: "Keine Änderungen zu speichern.",
     titleRequired: "Der Name darf nicht leer sein.",
@@ -198,6 +246,14 @@ const COPY: Record<LocaleCode, Copy> = {
     redo: "Rehacer",
     undone: "Cambio deshecho.",
     redone: "Cambio rehecho.",
+    copied: "Celdas seleccionadas copiadas.",
+    pasting: "Pegando…",
+    pasted: "Celdas pegadas: {count}. Omitidas: {skipped}.",
+    pasteNoEditable: "No hay celdas editables en el rango pegado.",
+    pasteTooLarge: "Se pueden pegar como máximo 100 celdas editables por operación.",
+    pasteRolledBack: "No se pudo pegar. Las escrituras ya realizadas se revirtieron.",
+    pasteRollbackFailed: "No se pudo pegar y la reversión quedó incompleta. Recargue la página antes de seguir editando.",
+    rangeHint: "Escritorio: arrastre para seleccionar un rango; Ctrl+C copia y Ctrl+V pega TSV desde Excel o Google Sheets. Las celdas grises/de solo lectura se omiten. En smartphones se desactiva el arrastre de rangos para conservar el desplazamiento horizontal y la edición con un toque.",
     saved: "Guardado.",
     noChanges: "No hay cambios para guardar.",
     titleRequired: "El nombre no puede estar vacío.",
@@ -223,6 +279,14 @@ const COPY: Record<LocaleCode, Copy> = {
     redo: "Znovu",
     undone: "Změna byla vrácena.",
     redone: "Změna byla zopakována.",
+    copied: "Vybrané buňky byly zkopírovány.",
+    pasting: "Vkládání…",
+    pasted: "Vloženo buněk: {count}. Přeskočeno: {skipped}.",
+    pasteNoEditable: "Ve vkládaném rozsahu nejsou žádné upravitelné buňky.",
+    pasteTooLarge: "V jedné operaci lze vložit nejvýše 100 upravitelných buněk.",
+    pasteRolledBack: "Vložení se nezdařilo. Již provedené zápisy byly vráceny.",
+    pasteRollbackFailed: "Vložení se nezdařilo a vrácení změn nebylo úplné. Před dalšími úpravami stránku obnovte.",
+    rangeHint: "Počítač: tažením vyberte rozsah; Ctrl+C kopíruje a Ctrl+V vkládá TSV z Excelu nebo Tabulek Google. Šedé buňky jen pro čtení se přeskočí. Na smartphonu je tažení rozsahu vypnuté, aby spolehlivě fungoval vodorovný posun a úpravy jedním klepnutím.",
     saved: "Uloženo.",
     noChanges: "Nejsou žádné změny k uložení.",
     titleRequired: "Název nesmí být prázdný.",
@@ -366,12 +430,12 @@ export function canEditValueObjectTableCells(valueObject: EditableValueObject) {
   return strategy === "ontology" || strategy === "draft";
 }
 
-export async function saveValueObjectTableField(args: {
+export function validateValueObjectTableFieldValue(args: {
   valueObject: EditableValueObject;
   field: ValueObjectTableEditableField;
   value: string;
   locale: string;
-}): Promise<ValueObjectTableEditPatch | null> {
+}) {
   const locale = normalizeLocale(args.locale);
   const copy = COPY[locale];
   const selectedValueObject = args.valueObject;
@@ -389,29 +453,57 @@ export async function saveValueObjectTableField(args: {
   }
 
   if (args.field === "title") {
-    const nextTitle = args.value.trim();
-    const previousTitle = selectedValueObject.title?.trim() ?? "";
-
-    if (!nextTitle) {
+    const nextValue = args.value.trim();
+    const previousValue = selectedValueObject.title?.trim() ?? "";
+    if (!nextValue) {
       throw new Error(copy.titleRequired);
     }
-    if (nextTitle.length > 180) {
+    if (nextValue.length > 180) {
       throw new Error(`${copy.title}: max 180`);
     }
-    if (nextTitle === previousTitle) {
-      return null;
-    }
+    return { strategy, nextValue, previousValue, changed: nextValue !== previousValue };
+  }
+
+  const nextValue = args.value.trim();
+  const previousValue = selectedValueObject.description?.trim() ?? "";
+  if (nextValue.length > 4000) {
+    throw new Error(`${copy.description}: max 4000`);
+  }
+  return { strategy, nextValue, previousValue, changed: nextValue !== previousValue };
+}
+
+export async function saveValueObjectTableField(args: {
+  valueObject: EditableValueObject;
+  field: ValueObjectTableEditableField;
+  value: string;
+  locale: string;
+}): Promise<ValueObjectTableEditPatch | null> {
+  const locale = normalizeLocale(args.locale);
+  const selectedValueObject = args.valueObject;
+  const valueObjectId = selectedValueObject.id;
+  if (!valueObjectId) {
+    throw new Error(COPY[locale].saveFailed);
+  }
+  const validation = validateValueObjectTableFieldValue(args);
+  const strategy = validation.strategy;
+
+  if (!validation.changed) {
+    return null;
+  }
+
+  if (args.field === "title") {
+    const nextTitle = validation.nextValue;
 
     if (strategy === "ontology") {
       await requestOntologyEdit({
-        valueObjectId: selectedValueObject.id,
+        valueObjectId,
         locale,
         editKind: "rename",
         patch: { title: nextTitle },
       });
     } else {
       await requestDraftEdit({
-        valueObjectId: selectedValueObject.id,
+        valueObjectId,
         titleChanged: true,
         descriptionChanged: false,
         title: nextTitle,
@@ -419,29 +511,21 @@ export async function saveValueObjectTableField(args: {
       });
     }
 
-    return { id: selectedValueObject.id, title: nextTitle };
+    return { id: valueObjectId, title: nextTitle };
   }
 
-  const nextDescriptionText = args.value.trim();
-  const previousDescription = selectedValueObject.description?.trim() ?? "";
-  if (nextDescriptionText.length > 4000) {
-    throw new Error(`${copy.description}: max 4000`);
-  }
-  if (nextDescriptionText === previousDescription) {
-    return null;
-  }
-
+  const nextDescriptionText = validation.nextValue;
   const nextDescription = nextDescriptionText || null;
   if (strategy === "ontology") {
     await requestOntologyEdit({
-      valueObjectId: selectedValueObject.id,
+      valueObjectId,
       locale,
       editKind: "semantic_definition",
       patch: { description: nextDescription },
     });
   } else {
     await requestDraftEdit({
-      valueObjectId: selectedValueObject.id,
+      valueObjectId,
       titleChanged: false,
       descriptionChanged: true,
       title: selectedValueObject.title?.trim() ?? "",
@@ -449,7 +533,7 @@ export async function saveValueObjectTableField(args: {
     });
   }
 
-  return { id: selectedValueObject.id, description: nextDescription };
+  return { id: valueObjectId, description: nextDescription };
 }
 
 export function ValueObjectTableEditor({

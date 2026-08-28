@@ -22,6 +22,7 @@ import {
   type ArctorTableCellEditedEvent,
   type ArctorTableColumn,
   type ArctorTableOptions,
+  type ArctorTableRangePasteEvent,
 } from "@/components/tables/arctor-tabulator";
 
 import { ValueObjectMindMap } from "./value-object-mind-map";
@@ -30,6 +31,7 @@ import {
   getValueObjectTableEditStrategy,
   getValueObjectTableEditorCopy,
   saveValueObjectTableField,
+  validateValueObjectTableFieldValue,
   type ValueObjectTableEditableField,
   type ValueObjectTableEditPatch,
 } from "./value-object-table-editor";
@@ -508,6 +510,19 @@ type TableEditHistoryEntry = {
   after: string;
 };
 
+type TableEditHistoryAction = {
+  kind: "cell" | "paste";
+  entries: TableEditHistoryEntry[];
+};
+
+type TableBatchWriteResult = {
+  ok: boolean;
+  rollbackIncomplete: boolean;
+  error?: unknown;
+};
+
+const MAX_TABLE_PASTE_WRITES = 100;
+
 function normalizeTableHistoryValue(value: unknown) {
   return value == null ? "" : String(value).trim();
 }
@@ -549,8 +564,8 @@ export function ValueObjectCatalogViews({
   const [tableEditMode, setTableEditMode] = useState(false);
   const [tableEditFeedback, setTableEditFeedback] =
     useState<TableEditFeedback | null>(null);
-  const [tableUndoStack, setTableUndoStack] = useState<TableEditHistoryEntry[]>([]);
-  const [tableRedoStack, setTableRedoStack] = useState<TableEditHistoryEntry[]>([]);
+  const [tableUndoStack, setTableUndoStack] = useState<TableEditHistoryAction[]>([]);
+  const [tableRedoStack, setTableRedoStack] = useState<TableEditHistoryAction[]>([]);
   const [tableHistoryBusy, setTableHistoryBusy] = useState(false);
 
   const objectsById = useMemo(() => {
@@ -1139,7 +1154,11 @@ export function ValueObjectCatalogViews({
           before: previousValue,
           after: persistedValue,
         };
-        setTableUndoStack((current) => [...current.slice(-49), historyEntry]);
+        const historyAction: TableEditHistoryAction = {
+          kind: "cell",
+          entries: [historyEntry],
+        };
+        setTableUndoStack((current) => [...current.slice(-49), historyAction]);
         setTableRedoStack([]);
       }
 
@@ -1156,79 +1175,285 @@ export function ValueObjectCatalogViews({
     }
   }
 
+  function withExpectedTableValue(
+    valueObject: ValueObjectPayload,
+    entry: TableEditHistoryEntry,
+    expectedValue: string,
+  ): ValueObjectPayload {
+    return {
+      ...valueObject,
+      ...(entry.field === "title"
+        ? { title: expectedValue }
+        : { description: expectedValue || null }),
+    };
+  }
+
+  function mergeTablePatch(
+    valueObject: ValueObjectPayload,
+    patch: ValueObjectTableEditPatch,
+  ): ValueObjectPayload {
+    return {
+      ...valueObject,
+      ...(Object.prototype.hasOwnProperty.call(patch, "title")
+        ? { title: patch.title ?? null }
+        : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, "description")
+        ? { description: patch.description ?? null }
+        : {}),
+    };
+  }
+
+  async function persistTableHistoryEntries(
+    entries: TableEditHistoryEntry[],
+    direction: "forward" | "reverse",
+  ): Promise<TableBatchWriteResult> {
+    const orderedEntries =
+      direction === "reverse" ? [...entries].reverse() : [...entries];
+    const workingObjects = new Map<string, ValueObjectPayload>();
+    const applied: Array<{
+      entry: TableEditHistoryEntry;
+      from: string;
+      to: string;
+    }> = [];
+
+    try {
+      for (const entry of orderedEntries) {
+        const sourceObject =
+          workingObjects.get(entry.objectId) ?? objectsById.get(entry.objectId);
+        if (!sourceObject?.id) {
+          throw new Error(tableEditCopy.saveFailed);
+        }
+
+        const strategy = getValueObjectTableEditStrategy(sourceObject);
+        if (strategy === "readonly_system" || strategy === "readonly_contract") {
+          throw new Error(
+            strategy === "readonly_system"
+              ? tableEditCopy.readOnlySystem
+              : tableEditCopy.readOnlyContract,
+          );
+        }
+
+        const from = direction === "forward" ? entry.before : entry.after;
+        const to = direction === "forward" ? entry.after : entry.before;
+        const valueObjectForWrite = withExpectedTableValue(
+          sourceObject,
+          entry,
+          from,
+        );
+        const patch = await saveValueObjectTableField({
+          valueObject: valueObjectForWrite,
+          field: entry.field,
+          value: to,
+          locale,
+        });
+
+        if (!patch) {
+          throw new Error(tableEditCopy.saveFailed);
+        }
+
+        const persistedObject = mergeTablePatch(valueObjectForWrite, patch);
+        workingObjects.set(entry.objectId, persistedObject);
+        onValueObjectUpdated?.(patch);
+        applied.push({ entry, from, to });
+      }
+
+      return { ok: true, rollbackIncomplete: false };
+    } catch (error) {
+      let rollbackIncomplete = false;
+
+      for (const appliedWrite of [...applied].reverse()) {
+        try {
+          const sourceObject =
+            workingObjects.get(appliedWrite.entry.objectId) ??
+            objectsById.get(appliedWrite.entry.objectId);
+          if (!sourceObject?.id) {
+            rollbackIncomplete = true;
+            continue;
+          }
+
+          const rollbackObject = withExpectedTableValue(
+            sourceObject,
+            appliedWrite.entry,
+            appliedWrite.to,
+          );
+          const rollbackPatch = await saveValueObjectTableField({
+            valueObject: rollbackObject,
+            field: appliedWrite.entry.field,
+            value: appliedWrite.from,
+            locale,
+          });
+
+          if (!rollbackPatch) {
+            rollbackIncomplete = true;
+            continue;
+          }
+
+          const restoredObject = mergeTablePatch(rollbackObject, rollbackPatch);
+          workingObjects.set(appliedWrite.entry.objectId, restoredObject);
+          onValueObjectUpdated?.(rollbackPatch);
+        } catch {
+          rollbackIncomplete = true;
+        }
+      }
+
+      return { ok: false, rollbackIncomplete, error };
+    }
+  }
+
+  async function handleTableRangePaste(
+    event: ArctorTableRangePasteEvent<TableObjectRow>,
+  ) {
+    if (!tableEditMode || tableHistoryBusy) {
+      return;
+    }
+
+    let skipped = event.truncatedCells;
+    const plannedByCell = new Map<string, TableEditHistoryEntry>();
+
+    try {
+      for (const cell of event.cells) {
+        if (cell.field !== "title" && cell.field !== "description") {
+          skipped += 1;
+          continue;
+        }
+
+        const valueObject = objectsById.get(cell.row.id);
+        if (!valueObject?.id) {
+          skipped += 1;
+          continue;
+        }
+
+        const strategy = getValueObjectTableEditStrategy(valueObject);
+        if (strategy === "readonly_system" || strategy === "readonly_contract") {
+          skipped += 1;
+          continue;
+        }
+
+        const field = cell.field as ValueObjectTableEditableField;
+        const validation = validateValueObjectTableFieldValue({
+          valueObject,
+          field,
+          value: cell.value,
+          locale,
+        });
+
+        if (!validation.changed) {
+          skipped += 1;
+          continue;
+        }
+
+        const key = `${valueObject.id}:${field}`;
+        const existing = plannedByCell.get(key);
+        plannedByCell.set(key, {
+          objectId: valueObject.id,
+          field,
+          before: existing?.before ?? validation.previousValue,
+          after: validation.nextValue,
+        });
+      }
+    } catch (validationError) {
+      setTableEditFeedback({
+        kind: "error",
+        text:
+          validationError instanceof Error && validationError.message
+            ? validationError.message
+            : tableEditCopy.saveFailed,
+      });
+      return;
+    }
+
+    const entries = [...plannedByCell.values()].filter(
+      (entry) => entry.before !== entry.after,
+    );
+
+    if (entries.length === 0) {
+      setTableEditFeedback({
+        kind: "info",
+        text: tableEditCopy.pasteNoEditable,
+      });
+      return;
+    }
+
+    if (entries.length > MAX_TABLE_PASTE_WRITES) {
+      setTableEditFeedback({ kind: "error", text: tableEditCopy.pasteTooLarge });
+      return;
+    }
+
+    setTableHistoryBusy(true);
+    setTableEditFeedback({ kind: "saving", text: tableEditCopy.pasting });
+
+    try {
+      const result = await persistTableHistoryEntries(entries, "forward");
+      if (!result.ok) {
+        const originalMessage =
+          result.error instanceof Error && result.error.message
+            ? result.error.message
+            : "";
+        setTableEditFeedback({
+          kind: "error",
+          text: result.rollbackIncomplete
+            ? tableEditCopy.pasteRollbackFailed
+            : [tableEditCopy.pasteRolledBack, originalMessage]
+                .filter(Boolean)
+                .join(" "),
+        });
+        return;
+      }
+
+      const action: TableEditHistoryAction = { kind: "paste", entries };
+      setTableUndoStack((current) => [...current.slice(-49), action]);
+      setTableRedoStack([]);
+      setTableEditFeedback({
+        kind: "success",
+        text: tableEditCopy.pasted
+          .replace("{count}", String(entries.length))
+          .replace("{skipped}", String(skipped)),
+      });
+    } finally {
+      setTableHistoryBusy(false);
+    }
+  }
+
   async function applyTableHistory(direction: "undo" | "redo") {
     if (tableHistoryBusy) {
       return;
     }
 
     const sourceStack = direction === "undo" ? tableUndoStack : tableRedoStack;
-    const entry = sourceStack[sourceStack.length - 1];
-    if (!entry) {
+    const action = sourceStack[sourceStack.length - 1];
+    if (!action) {
       return;
     }
-
-    const valueObject = objectsById.get(entry.objectId);
-    if (!valueObject?.id) {
-      setTableEditFeedback({ kind: "error", text: tableEditCopy.saveFailed });
-      return;
-    }
-
-    const strategy = getValueObjectTableEditStrategy(valueObject);
-    if (strategy === "readonly_system" || strategy === "readonly_contract") {
-      setTableEditFeedback({
-        kind: "error",
-        text:
-          strategy === "readonly_system"
-            ? tableEditCopy.readOnlySystem
-            : tableEditCopy.readOnlyContract,
-      });
-      return;
-    }
-
-    const expectedCurrentValue = direction === "undo" ? entry.after : entry.before;
-    const nextValue = direction === "undo" ? entry.before : entry.after;
-    const valueObjectForWrite: ValueObjectPayload = {
-      ...valueObject,
-      ...(entry.field === "title"
-        ? { title: expectedCurrentValue }
-        : { description: expectedCurrentValue || null }),
-    };
 
     setTableHistoryBusy(true);
     setTableEditFeedback({ kind: "saving", text: tableEditCopy.saving });
 
     try {
-      const patch = await saveValueObjectTableField({
-        valueObject: valueObjectForWrite,
-        field: entry.field,
-        value: nextValue,
-        locale,
-      });
-
-      if (!patch) {
-        setTableEditFeedback({ kind: "info", text: tableEditCopy.noChanges });
+      const result = await persistTableHistoryEntries(
+        action.entries,
+        direction === "undo" ? "reverse" : "forward",
+      );
+      if (!result.ok) {
+        setTableEditFeedback({
+          kind: "error",
+          text: result.rollbackIncomplete
+            ? tableEditCopy.pasteRollbackFailed
+            : result.error instanceof Error && result.error.message
+              ? result.error.message
+              : tableEditCopy.saveFailed,
+        });
         return;
       }
 
-      onValueObjectUpdated?.(patch);
-
       if (direction === "undo") {
         setTableUndoStack((current) => current.slice(0, -1));
-        setTableRedoStack((current) => [...current.slice(-49), entry]);
+        setTableRedoStack((current) => [...current.slice(-49), action]);
         setTableEditFeedback({ kind: "success", text: tableEditCopy.undone });
       } else {
         setTableRedoStack((current) => current.slice(0, -1));
-        setTableUndoStack((current) => [...current.slice(-49), entry]);
+        setTableUndoStack((current) => [...current.slice(-49), action]);
         setTableEditFeedback({ kind: "success", text: tableEditCopy.redone });
       }
-    } catch (historyError) {
-      setTableEditFeedback({
-        kind: "error",
-        text:
-          historyError instanceof Error && historyError.message
-            ? historyError.message
-            : tableEditCopy.saveFailed,
-      });
     } finally {
       setTableHistoryBusy(false);
     }
@@ -1632,7 +1857,12 @@ export function ValueObjectCatalogViews({
               ].join(" ")}
               role={tableEditFeedback?.kind === "error" ? "alert" : "status"}
             >
-              {tableEditFeedback?.text ?? tableEditCopy.selectRow}
+              <span>{tableEditFeedback?.text ?? tableEditCopy.selectRow}</span>
+              {tableEditFeedback?.kind === "info" ? (
+                <span className="mt-1 block font-medium text-[#7c8099]">
+                  {tableEditCopy.rangeHint}
+                </span>
+              ) : null}
             </div>
           ) : null}
           <ArctorTabulator<TableObjectRow>
@@ -1646,6 +1876,16 @@ export function ValueObjectCatalogViews({
             adaptiveTouchEditing={tableEditMode}
             mobileHorizontalScroll
             allowNativePinchZoom
+            rangeClipboard={tableEditMode}
+            onRangeCopied={() => {
+              if (tableEditMode && !tableHistoryBusy) {
+                setTableEditFeedback({
+                  kind: "success",
+                  text: tableEditCopy.copied,
+                });
+              }
+            }}
+            onRangePaste={handleTableRangePaste}
             onCellEdited={handleTableCellEdited}
             onRowClick={(row) => {
               if (tableEditMode) {

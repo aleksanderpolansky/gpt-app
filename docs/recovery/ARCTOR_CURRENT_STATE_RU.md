@@ -885,3 +885,30 @@ T2_2_2 добавляет к Observation Objects Table View:
 Структурные boundaries неизменны: parent только controlled restructure preview/apply. Release не выполняет SQL/schema/DB/Storage/OpenAI writes.
 
 Recovery checkpoint: `docs/recovery/ARCTOR_TABLE_VIEWS_T2_2_2_MOBILE_SCROLL_HISTORY_ZOOM_V1_RU.md`.
+
+## Авторитетное обновление — Table Views T2_3 Range Clipboard, 2026-08-28
+
+Подтверждённый исходный baseline: `95bbcac37b025ac8ba6e8e16d915e764fa87adf1` (`table-views-t2-2-2-mobile-scroll-history-zoom-v1`). После release пользователь подтвердил production runtime T2_2_2: horizontal swipe, persisted Undo/Redo и native pinch zoom работают. T2_2_2 считается CLOSED / PASS.
+
+T2_3 добавляет к Observation Objects Table View desktop/fine-pointer range selection и clipboard workflow, совместимый с Excel / Google Sheets:
+
+- drag range selection;
+- `Ctrl/Cmd+C` копирует выбранный range как TSV;
+- `Ctrl/Cmd+V` разбирает TSV от верхней левой выбранной ячейки;
+- Tabulator используется для selection/copy, но встроенный mutation paste НЕ используется;
+- ARCTor paste пишет только `title` и `description` через существующие ontology/draft PATCH contracts;
+- gray/read-only cells, global/system и unsupported objects пропускаются без write;
+- весь editable batch предварительно валидируется; максимум 100 writes за одну paste operation;
+- paste является одним Undo/Redo action;
+- при mid-batch failure выполняется best-effort compensation rollback уже подтверждённых PATCH writes; incomplete rollback явно требует reload;
+- structural parent/Role/counters/Status/create/delete boundaries не меняются.
+
+На smartphone multi-cell drag range намеренно отключён, чтобы не ломать уже подтверждённые horizontal swipe, pinch zoom и single-tap expanded editing. Single-cell OS copy/paste внутри expanded editor остаётся.
+
+Recovery checkpoint: `docs/recovery/ARCTOR_TABLE_VIEWS_T2_3_RANGE_CLIPBOARD_V1_RU.md`.
+
+Guest/Local Documents / Spreadsheets / Mind Maps направление сохраняется: guest без forced signup для open/create/edit/download; client-side там, где возможно; account добавляет cloud/history/sync/collaboration/AI.
+
+### T2_3 release-safety note
+
+До выдачи T2_3 локально прошли semantic TypeScript, TSV parser fixtures, range target mapper fixtures, actual-source batch compensation fixtures, validator 136/136, `git diff --check` и package self-test. Synthetic release simulation подтверждает полный commit/push/remote-verify path, precommit rollback path и postcommit push-resume path. Реальные full project TypeScript/ESLint/Next checks остаются обязательными gates runner-а на production checkout до commit.

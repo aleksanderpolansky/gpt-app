@@ -56,6 +56,38 @@ type TabulatorCellEditedEmitter = {
   ) => void;
 };
 
+type TabulatorClipboardCopiedEmitter = {
+  on: (event: "clipboardCopied", callback: (clipboard: string) => void) => void;
+};
+
+type TabulatorRangeColumnComponent = {
+  isVisible: () => boolean;
+};
+
+type TabulatorRangeCellComponent = {
+  getRow: () => TabulatorRangeRowComponent;
+  getColumn: () => TabulatorRangeColumnComponent;
+  getField: () => string;
+  getValue: () => unknown;
+};
+
+type TabulatorRangeRowComponent = {
+  getData: () => unknown;
+  getCells: () => TabulatorRangeCellComponent[];
+  getNextRow: () => TabulatorRangeRowComponent | false;
+};
+
+type TabulatorRangeComponent = {
+  getBounds: () => {
+    start: TabulatorRangeCellComponent;
+    end: TabulatorRangeCellComponent;
+  };
+};
+
+type TabulatorRangeTable = {
+  getRanges: () => TabulatorRangeComponent[];
+};
+
 type TabulatorEditorCellComponent = {
   getElement: () => HTMLElement;
   getValue: () => unknown;
@@ -77,6 +109,20 @@ export type ArctorTableCellEditedEvent<T extends object> = {
   restoreOldValue: () => void;
 };
 
+export type ArctorTableRangePasteCell<T extends object> = {
+  row: T;
+  field: keyof T & string;
+  value: string;
+  oldValue: unknown;
+};
+
+export type ArctorTableRangePasteEvent<T extends object> = {
+  cells: ArctorTableRangePasteCell<T>[];
+  sourceRows: number;
+  sourceColumns: number;
+  truncatedCells: number;
+};
+
 export type ArctorTableOptions = Record<string, TablePrimitive | object>;
 
 type ArctorTabulatorProps<T extends object> = {
@@ -90,8 +136,11 @@ type ArctorTabulatorProps<T extends object> = {
   adaptiveTouchEditing?: boolean;
   mobileHorizontalScroll?: boolean;
   allowNativePinchZoom?: boolean;
+  rangeClipboard?: boolean;
   onRowClick?: (row: T) => void;
   onCellEdited?: (event: ArctorTableCellEditedEvent<T>) => void | Promise<void>;
+  onRangeCopied?: (clipboard: string) => void;
+  onRangePaste?: (event: ArctorTableRangePasteEvent<T>) => void | Promise<void>;
 };
 
 function isInteractiveTarget(target: EventTarget | null) {
@@ -139,6 +188,127 @@ function isCompactTouchEnvironment() {
     window.matchMedia?.("(pointer: coarse)").matches === true ||
     window.innerWidth <= 768
   );
+}
+
+export function parseArctorClipboardMatrix(clipboard: string) {
+  const source = clipboard.replace(/^\uFEFF/, "");
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index];
+
+    if (character === '"') {
+      if (quoted && source[index + 1] === '"') {
+        cell += '"';
+        index += 1;
+        continue;
+      }
+      if (quoted) {
+        quoted = false;
+        continue;
+      }
+      if (cell.length === 0) {
+        quoted = true;
+        continue;
+      }
+      cell += character;
+      continue;
+    }
+
+    if (!quoted && character === "\t") {
+      row.push(cell);
+      cell = "";
+      continue;
+    }
+
+    if (!quoted && (character === "\n" || character === "\r")) {
+      if (character === "\r" && source[index + 1] === "\n") {
+        index += 1;
+      }
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+      continue;
+    }
+
+    cell += character;
+  }
+
+  row.push(cell);
+  rows.push(row);
+
+  while (rows.length > 1 && rows[rows.length - 1]?.length === 1 && rows[rows.length - 1]?.[0] === "") {
+    rows.pop();
+  }
+
+  return rows.length > 0 ? rows : [[""]];
+}
+
+function collectRangePasteCells<T extends object>(
+  instance: TabulatorRangeTable,
+  matrix: string[][],
+): ArctorTableRangePasteEvent<T> | null {
+  const ranges = instance.getRanges();
+  const activeRange = ranges[ranges.length - 1];
+  if (!activeRange) {
+    return null;
+  }
+
+  const startCell = activeRange.getBounds().start;
+  const startField = startCell.getField();
+  let currentRow: TabulatorRangeRowComponent | false = startCell.getRow();
+  let truncatedCells = 0;
+  const cells: ArctorTableRangePasteCell<T>[] = [];
+  const sourceColumns = matrix.reduce((maximum, sourceRow) => Math.max(maximum, sourceRow.length), 0);
+
+  for (let rowIndex = 0; rowIndex < matrix.length; rowIndex += 1) {
+    const sourceRow = matrix[rowIndex] ?? [];
+    if (!currentRow) {
+      truncatedCells += sourceRow.length;
+      continue;
+    }
+
+    const visibleCells = currentRow
+      .getCells()
+      .filter((candidate) => candidate.getColumn().isVisible());
+    const startColumnIndex = visibleCells.findIndex(
+      (candidate) => candidate.getField() === startField,
+    );
+
+    if (startColumnIndex < 0) {
+      truncatedCells += sourceRow.length;
+      currentRow = currentRow.getNextRow();
+      continue;
+    }
+
+    for (let columnIndex = 0; columnIndex < sourceRow.length; columnIndex += 1) {
+      const targetCell = visibleCells[startColumnIndex + columnIndex];
+      if (!targetCell) {
+        truncatedCells += 1;
+        continue;
+      }
+
+      cells.push({
+        row: targetCell.getRow().getData() as T,
+        field: targetCell.getField() as keyof T & string,
+        value: sourceRow[columnIndex] ?? "",
+        oldValue: targetCell.getValue(),
+      });
+    }
+
+    currentRow = currentRow.getNextRow();
+  }
+
+  return {
+    cells,
+    sourceRows: matrix.length,
+    sourceColumns,
+    truncatedCells,
+  };
 }
 
 function createExpandedEditor(kind: "input" | "textarea"): TabulatorEditor {
@@ -503,12 +673,17 @@ export function ArctorTabulator<T extends object>({
   adaptiveTouchEditing = false,
   mobileHorizontalScroll = false,
   allowNativePinchZoom = false,
+  rangeClipboard = false,
   onRowClick,
   onCellEdited,
+  onRangeCopied,
+  onRangePaste,
 }: ArctorTabulatorProps<T>) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const onRowClickRef = useRef(onRowClick);
   const onCellEditedRef = useRef(onCellEdited);
+  const onRangeCopiedRef = useRef(onRangeCopied);
+  const onRangePasteRef = useRef(onRangePaste);
 
   useEffect(() => {
     onRowClickRef.current = onRowClick;
@@ -519,8 +694,18 @@ export function ArctorTabulator<T extends object>({
   }, [onCellEdited]);
 
   useEffect(() => {
+    onRangeCopiedRef.current = onRangeCopied;
+  }, [onRangeCopied]);
+
+  useEffect(() => {
+    onRangePasteRef.current = onRangePaste;
+  }, [onRangePaste]);
+
+  useEffect(() => {
     let disposed = false;
     let table: { destroy: () => void } | null = null;
+    let pasteHost: HTMLDivElement | null = null;
+    let pasteListener: ((event: ClipboardEvent) => void) | null = null;
 
     async function mountTable() {
       const host = hostRef.current;
@@ -538,6 +723,11 @@ export function ArctorTabulator<T extends object>({
         adaptiveTouchEditing && editMode && compactTouchEnvironment;
       const mobileHorizontalScrollActive =
         mobileHorizontalScroll && compactTouchEnvironment;
+      // Drag-range selection competes with horizontal swipe and single-tap editing on
+      // coarse pointers. Keep multi-cell range clipboard desktop/fine-pointer only;
+      // smartphone single-cell copy/paste remains available inside the expanded editor.
+      const rangeClipboardActive =
+        rangeClipboard && editMode && !compactTouchEnvironment;
       const resolvedColumns = resolveEditorColumns(
         columns,
         compactTouchEditing,
@@ -548,6 +738,23 @@ export function ArctorTabulator<T extends object>({
         ...(compactTouchEditing ? { editTriggerEvent: "click" } : {}),
         ...(mobileHorizontalScrollActive
           ? { layout: "fitData", responsiveLayout: false }
+          : {}),
+        ...(rangeClipboardActive
+          ? {
+              selectableRange: 1,
+              selectableRangeColumns: false,
+              selectableRangeRows: false,
+              selectableRangeClearCells: false,
+              selectableRangeAutoFocus: true,
+              selectableRangeBlurEditOnNavigate: false,
+              clipboard: "copy",
+              clipboardCopyStyled: false,
+              clipboardCopyConfig: {
+                rowHeaders: false,
+                columnHeaders: false,
+              },
+              clipboardCopyRowRange: "range",
+            }
           : {}),
       };
       const instance = new TabulatorFull(host, {
@@ -606,6 +813,42 @@ export function ArctorTabulator<T extends object>({
         });
       }
 
+      if (rangeClipboardActive && onRangeCopiedRef.current) {
+        const clipboardEmitter = instance as unknown as TabulatorClipboardCopiedEmitter;
+        clipboardEmitter.on("clipboardCopied", (clipboard) => {
+          onRangeCopiedRef.current?.(clipboard);
+        });
+      }
+
+      if (rangeClipboardActive && onRangePasteRef.current) {
+        pasteHost = host;
+        pasteListener = (event) => {
+          if (isInteractiveTarget(event.target)) {
+            return;
+          }
+
+          const clipboard = event.clipboardData?.getData("text/plain");
+          if (clipboard == null) {
+            return;
+          }
+
+          const matrix = parseArctorClipboardMatrix(clipboard);
+          const pasteEvent = collectRangePasteCells<T>(
+            instance as unknown as TabulatorRangeTable,
+            matrix,
+          );
+          const callback = onRangePasteRef.current;
+          if (!pasteEvent || !callback) {
+            return;
+          }
+
+          event.preventDefault();
+          event.stopPropagation();
+          void Promise.resolve(callback(pasteEvent)).catch(() => undefined);
+        };
+        pasteHost.addEventListener("paste", pasteListener);
+      }
+
       table = instance;
     }
 
@@ -613,6 +856,9 @@ export function ArctorTabulator<T extends object>({
 
     return () => {
       disposed = true;
+      if (pasteHost && pasteListener) {
+        pasteHost.removeEventListener("paste", pasteListener);
+      }
       table?.destroy();
     };
   }, [
@@ -624,6 +870,7 @@ export function ArctorTabulator<T extends object>({
     height,
     mobileHorizontalScroll,
     options,
+    rangeClipboard,
     rowKey,
   ]);
 
@@ -634,6 +881,7 @@ export function ArctorTabulator<T extends object>({
       data-edit-mode={editMode ? "true" : undefined}
       data-mobile-horizontal-scroll={mobileHorizontalScroll ? "true" : undefined}
       data-native-pinch-zoom={allowNativePinchZoom ? "true" : undefined}
+      data-range-clipboard={rangeClipboard && editMode ? "true" : undefined}
     />
   );
 }
