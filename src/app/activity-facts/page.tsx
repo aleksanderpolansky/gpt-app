@@ -84,6 +84,7 @@ type ActivityFactsCopy = {
   activity: string;
   filters: string;
   filtersSubtitle: string;
+  advancedFilters: string;
   limit: string;
   semanticKey: string;
   valueObjectId: string;
@@ -137,7 +138,8 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     date: "Date",
     activity: "Activity",
     filters: "Filters",
-    filtersSubtitle: "Narrow the list by semantic key, value object, activity, or status.",
+    filtersSubtitle: "Filter by result count and status. Technical identifiers are available below.",
+    advancedFilters: "Technical filters",
     limit: "Limit",
     semanticKey: "Semantic key",
     valueObjectId: "Value object ID",
@@ -193,7 +195,8 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     date: "Data",
     activity: "Aktywność",
     filters: "Filtry",
-    filtersSubtitle: "Zawęź listę według klucza semantycznego, obiektu wartości, aktywności albo statusu.",
+    filtersSubtitle: "Filtruj według liczby wyników i statusu. Identyfikatory techniczne są dostępne poniżej.",
+    advancedFilters: "Filtry techniczne",
     limit: "Limit",
     semanticKey: "Klucz semantyczny",
     valueObjectId: "ID obiektu wartości",
@@ -249,7 +252,8 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     date: "Дата",
     activity: "Активность",
     filters: "Фильтры",
-    filtersSubtitle: "Сузь список по семантическому ключу, ценному объекту, активности или статусу.",
+    filtersSubtitle: "Фильтруйте по количеству результатов и статусу. Технические идентификаторы доступны ниже.",
+    advancedFilters: "Технические фильтры",
     limit: "Лимит",
     semanticKey: "Семантический ключ",
     valueObjectId: "ID ценного объекта",
@@ -305,7 +309,8 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     date: "Дата",
     activity: "Активність",
     filters: "Фільтри",
-    filtersSubtitle: "Звузь список за семантичним ключем, цінним об’єктом, активністю або статусом.",
+    filtersSubtitle: "Фільтруйте за кількістю результатів і статусом. Технічні ідентифікатори доступні нижче.",
+    advancedFilters: "Технічні фільтри",
     limit: "Ліміт",
     semanticKey: "Семантичний ключ",
     valueObjectId: "ID цінного об’єкта",
@@ -361,7 +366,8 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     date: "Datum",
     activity: "Aktivität",
     filters: "Filter",
-    filtersSubtitle: "Liste nach semantischem Schlüssel, Wertobjekt, Aktivität oder Status eingrenzen.",
+    filtersSubtitle: "Nach Ergebnisanzahl und Status filtern. Technische Kennungen sind unten verfügbar.",
+    advancedFilters: "Technische Filter",
     limit: "Limit",
     semanticKey: "Semantischer Schlüssel",
     valueObjectId: "Wertobjekt-ID",
@@ -417,7 +423,8 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     date: "Fecha",
     activity: "Actividad",
     filters: "Filtros",
-    filtersSubtitle: "Filtra por clave semántica, objeto de valor, actividad o estado.",
+    filtersSubtitle: "Filtra por cantidad de resultados y estado. Los identificadores técnicos están disponibles abajo.",
+    advancedFilters: "Filtros técnicos",
     limit: "Límite",
     semanticKey: "Clave semántica",
     valueObjectId: "ID del objeto de valor",
@@ -473,7 +480,8 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
     date: "Datum",
     activity: "Aktivita",
     filters: "Filtry",
-    filtersSubtitle: "Zúž seznam podle sémantického klíče, hodnotového objektu, aktivity nebo stavu.",
+    filtersSubtitle: "Filtrujte podle počtu výsledků a stavu. Technické identifikátory jsou dostupné níže.",
+    advancedFilters: "Technické filtry",
     limit: "Limit",
     semanticKey: "Sémantický klíč",
     valueObjectId: "ID hodnotového objektu",
@@ -916,39 +924,49 @@ function ActivityFactsPageContent() {
       {
         title: copy.date,
         field: "date",
-        minWidth: 150,
+        width: 132,
+        minWidth: 118,
+        widthShrink: 2,
+        responsive: 3,
         frozen: true,
         cssClass: "arctor-table-muted",
       },
       {
         title: copy.activity,
         field: "activity",
-        minWidth: 260,
-        widthGrow: 2,
+        minWidth: 190,
+        widthGrow: 3,
+        widthShrink: 3,
+        responsive: 0,
         cssClass: "arctor-table-title",
       },
       {
         title: copy.valueObject,
         field: "valueObject",
-        minWidth: 250,
-        widthGrow: 2,
+        minWidth: 170,
+        widthGrow: 3,
+        widthShrink: 3,
+        responsive: 0,
       },
-      { title: copy.type, field: "type", minWidth: 160, widthGrow: 1 },
+      { title: copy.type, field: "type", minWidth: 108, widthGrow: 1, widthShrink: 2, responsive: 4 },
       {
         title: copy.value,
         field: "value",
-        minWidth: 100,
+        width: 84,
+        minWidth: 72,
+        responsive: 0,
         hozAlign: "right",
         headerHozAlign: "right",
         cssClass: "arctor-table-number",
       },
-      { title: copy.unit, field: "unit", minWidth: 90 },
-      { title: copy.status, field: "status", minWidth: 130 },
-      { title: copy.source, field: "source", minWidth: 130 },
+      { title: copy.unit, field: "unit", width: 76, minWidth: 66, responsive: 1 },
+      { title: copy.status, field: "status", minWidth: 96, widthShrink: 2, responsive: 1 },
+      { title: copy.source, field: "source", minWidth: 94, widthShrink: 2, responsive: 6 },
       {
         title: copy.confidence,
         field: "confidence",
-        width: 110,
+        width: 88,
+        responsive: 5,
         hozAlign: "right",
         headerHozAlign: "right",
         cssClass: "arctor-table-number",
@@ -1125,7 +1143,7 @@ function ActivityFactsPageContent() {
             </span>
           </div>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-5">
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
             <label className="grid gap-2">
               <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
                 {copy.limit}
@@ -1140,42 +1158,6 @@ function ActivityFactsPageContent() {
                 <option value="50">50</option>
                 <option value="100">100</option>
               </select>
-            </label>
-
-            <label className="grid gap-2">
-              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
-                {copy.semanticKey}
-              </span>
-              <input
-                value={semanticObjectKey}
-                onChange={(event) => setSemanticObjectKey(event.target.value)}
-                placeholder="walk"
-                className="min-h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
-              />
-            </label>
-
-            <label className="grid gap-2">
-              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
-                {copy.valueObjectId}
-              </span>
-              <input
-                value={valueObjectId}
-                onChange={(event) => setValueObjectId(event.target.value)}
-                placeholder="uuid"
-                className="min-h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
-              />
-            </label>
-
-            <label className="grid gap-2">
-              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
-                {copy.activityId}
-              </span>
-              <input
-                value={activityEventId}
-                onChange={(event) => setActivityEventId(event.target.value)}
-                placeholder="uuid"
-                className="min-h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
-              />
             </label>
 
             <label className="grid gap-2">
@@ -1196,6 +1178,49 @@ function ActivityFactsPageContent() {
               </select>
             </label>
           </div>
+
+          <details className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3">
+            <summary className="cursor-pointer text-sm font-black text-slate-700">
+              {copy.advancedFilters}
+            </summary>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <label className="grid gap-2">
+                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                  {copy.semanticKey}
+                </span>
+                <input
+                  value={semanticObjectKey}
+                  onChange={(event) => setSemanticObjectKey(event.target.value)}
+                  placeholder="walk"
+                  className="min-h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
+                />
+              </label>
+
+              <label className="grid gap-2">
+                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                  {copy.valueObjectId}
+                </span>
+                <input
+                  value={valueObjectId}
+                  onChange={(event) => setValueObjectId(event.target.value)}
+                  placeholder="uuid"
+                  className="min-h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
+                />
+              </label>
+
+              <label className="grid gap-2">
+                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                  {copy.activityId}
+                </span>
+                <input
+                  value={activityEventId}
+                  onChange={(event) => setActivityEventId(event.target.value)}
+                  placeholder="uuid"
+                  className="min-h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
+                />
+              </label>
+            </div>
+          </details>
 
           <div className="mt-5 flex flex-wrap gap-3">
             <button

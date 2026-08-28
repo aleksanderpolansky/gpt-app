@@ -89,3 +89,38 @@
   scrollbar-color: #c7cede #f5f7fb;
   scrollbar-width: thin;
 }
+
+/* ARCTOR_TABLE_VIEWS_T1_2_LAYOUT_UX_HOTFIX_V1 */
+.arctor-tabulator.tabulator {
+  width: 100%;
+  max-width: 100%;
+}
+
+.arctor-tabulator .tabulator-tableholder {
+  max-width: 100%;
+}
+
+.arctor-tabulator .tabulator-header .tabulator-col .tabulator-col-title,
+.arctor-tabulator .tabulator-row .tabulator-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .arctor-tabulator.tabulator {
+    font-size: 11px;
+  }
+
+  .arctor-tabulator .tabulator-header {
+    font-size: 9px;
+  }
+
+  .arctor-tabulator .tabulator-header .tabulator-col .tabulator-col-content {
+    padding: 7px;
+  }
+
+  .arctor-tabulator .tabulator-row .tabulator-cell {
+    padding: 6px 7px;
+  }
+}

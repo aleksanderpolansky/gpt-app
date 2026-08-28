@@ -816,3 +816,14 @@ V1A source release остановился до mutation на ошибке runner
 - Scope T1 неизменен: read-only compact Table View на `tabulator-tables@6.5.2` для `/value-objects`, `/activity-today`, `/activity-facts`; существующие Tree/Cards/Map/detail/tagging контуры сохраняются.
 - Inline editing, reparenting, arbitrary spreadsheets, XLSX/Google Sheets, SQL/DB/Storage/OpenAI changes в T1 не входят.
 - Подробный checkpoint: `docs/recovery/ARCTOR_TABLE_VIEWS_T1_TABULATOR_V1_1_RU.md`.
+
+## 2026-08-28 — ARCTOR_TABLE_VIEWS_T1_2_LAYOUT_UX_HOTFIX_V1
+
+- Baseline: `main @ 5e99924af14df853036cc9b4d4c01cb2afa6ba64` после успешного `ARCTOR_TABLE_VIEWS_T1_TABULATOR_V1_1`.
+- Production visual postcheck подтвердил работу Tabulator на `/value-objects`, `/activity-today`, `/activity-facts`, но выявил horizontal overflow/обрезание правых колонок при одновременной left navigation + AI right rail.
+- Общий adapter переведён с `fitDataStretch` на `fitColumns` + `responsiveLayout: hide`; добавлены responsive priorities и ellipsis/max-width guards.
+- `/activity-today`: actor/User убран только из отображаемых table columns; Activity/Duration/Analysis/Status получают приоритет ширины.
+- `/activity-facts`: Activity/Value Object/Value/Unit/Status приоритетны; Source/Confidence/Type/Date могут скрываться при недостатке ширины. Основной filter surface оставляет Limit/Status, а semantic key/VO UUID/activity UUID перенесены в локализованный сворачиваемый блок технических фильтров.
+- `/value-objects`: Object/Role/Status/счётчики приоритетны; Description/Parent остаются в column model, но скрываются первыми на узком desktop.
+- SQL/DB/Storage/OpenAI и write-boundaries не меняются; Tabulator остаётся `6.5.2` MIT; inline editing/reparent/XLSX/Google Sheets не входят.
+- Подробный checkpoint: `docs/recovery/ARCTOR_TABLE_VIEWS_T1_2_LAYOUT_UX_HOTFIX_V1_RU.md`.

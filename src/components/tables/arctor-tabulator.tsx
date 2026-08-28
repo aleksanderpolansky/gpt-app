@@ -20,6 +20,9 @@ export type ArctorTableColumn<T extends object> = {
   cssClass?: string;
   formatter?: string;
   sorter?: string;
+  responsive?: number;
+  visible?: boolean;
+  tooltip?: boolean | string;
 };
 
 export type ArctorTableOptions = Record<string, TablePrimitive | object>;
@@ -81,12 +84,13 @@ export function ArctorTabulator<T extends object>({
         data,
         columns,
         index: rowKey,
-        layout: "fitDataStretch",
+        layout: "fitColumns",
         height,
         rowHeight: 32,
         placeholder: emptyLabel,
         movableColumns: true,
         resizableColumnFit: true,
+        responsiveLayout: "hide",
         ...options,
       });
 
