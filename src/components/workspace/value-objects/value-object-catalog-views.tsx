@@ -22,6 +22,11 @@ import {
 } from "@/components/tables/arctor-tabulator";
 
 import { ValueObjectMindMap } from "./value-object-mind-map";
+import {
+  ValueObjectTableEditor,
+  getValueObjectTableEditorCopy,
+  type ValueObjectTableEditPatch,
+} from "./value-object-table-editor";
 
 type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 type RoleFilter = "all" | "root" | "intermediate" | "leaf" | "draft";
@@ -44,6 +49,7 @@ type ValueObjectPayload = {
   node_role_code?: string | null;
   root_value_object_id?: string | null;
   parent_value_object_id?: string | null;
+  canonical_key?: string | null;
   ontology_node_role_code?: string | null;
   scope_code?: string | null;
   origin_type_code?: string | null;
@@ -494,6 +500,7 @@ type ValueObjectCatalogViewsProps = {
   children: ReactNode;
   onValueObjectDeleted?: (deletedId: string) => void;
   onValueObjectReparented?: (movedId: string, newParentId: string) => void;
+  onValueObjectUpdated?: (updatedValueObject: ValueObjectTableEditPatch) => void;
   onValueObjectCreated?: (createdValueObject: ValueObjectPayload) => void;
 };
 
@@ -508,12 +515,16 @@ export function ValueObjectCatalogViews({
   children,
   onValueObjectDeleted,
   onValueObjectReparented,
+  onValueObjectUpdated,
   onValueObjectCreated,
 }: ValueObjectCatalogViewsProps) {
   const copy = COPY[locale] ?? COPY.en;
+  const tableEditCopy = getValueObjectTableEditorCopy(locale);
   const [viewMode, setViewMode] = useState<ViewMode>("tree");
   const [expandedIds, setExpandedIds] = useState<Set<string> | null>(null);
   const [insertParentId, setInsertParentId] = useState<string | null>(null);
+  const [tableEditMode, setTableEditMode] = useState(false);
+  const [selectedTableEditId, setSelectedTableEditId] = useState<string | null>(null);
 
   const objectsById = useMemo(() => {
     const map = new Map<string, ValueObjectPayload>();
@@ -522,6 +533,10 @@ export function ValueObjectCatalogViews({
     }
     return map;
   }, [valueObjects]);
+
+  const selectedTableEditObject = selectedTableEditId
+    ? objectsById.get(selectedTableEditId) ?? null
+    : null;
 
   const childrenByParent = useMemo(() => {
     const map = new Map<string, ValueObjectPayload[]>();
@@ -1252,6 +1267,25 @@ export function ValueObjectCatalogViews({
             {renderHierarchyFilters()}
           </div>
 
+          {viewMode === "table" ? (
+            <button
+              type="button"
+              onClick={() => {
+                const nextMode = !tableEditMode;
+                setTableEditMode(nextMode);
+                if (!nextMode) setSelectedTableEditId(null);
+              }}
+              className={[
+                "rounded-xl border px-3 py-2 text-[11px] font-semibold transition lg:shrink-0",
+                tableEditMode
+                  ? "border-[#3b6ef8] bg-[#eef2ff] text-[#3b6ef8]"
+                  : "border-[#dfe3f1] bg-white text-[#4a4f6a] hover:bg-[#f8fafc]",
+              ].join(" ")}
+            >
+              {tableEditMode ? tableEditCopy.disableMode : tableEditCopy.enableMode}
+            </button>
+          ) : null}
+
           {viewMode === "tree" ? (
             <div className="flex flex-wrap items-center gap-2 lg:shrink-0">
               <span className="hidden text-[11px] font-semibold text-[#7c8099] xl:inline">
@@ -1313,7 +1347,23 @@ export function ValueObjectCatalogViews({
       ) : null}
 
       {viewMode === "table" ? (
-        <div className="rounded-[18px] border border-black/[0.04] bg-white p-2 shadow-sm">
+        <div className="grid gap-2 rounded-[18px] border border-black/[0.04] bg-white p-2 shadow-sm">
+          {tableEditMode ? (
+            <ValueObjectTableEditor
+              key={selectedTableEditObject?.id ?? "no-selection"}
+              valueObject={selectedTableEditObject}
+              parentTitle={
+                selectedTableEditObject?.parent_value_object_id
+                  ? objectsById.get(selectedTableEditObject.parent_value_object_id)?.title?.trim() || "—"
+                  : "—"
+              }
+              locale={locale}
+              onClose={() => setSelectedTableEditId(null)}
+              onSaved={(patch) => {
+                onValueObjectUpdated?.(patch);
+              }}
+            />
+          ) : null}
           <ArctorTabulator<TableObjectRow>
             data={tableRows}
             columns={tableColumns}
@@ -1322,6 +1372,11 @@ export function ValueObjectCatalogViews({
             height="min(68vh, 760px)"
             options={tableOptions}
             onRowClick={(row) => {
+              if (tableEditMode) {
+                setSelectedTableEditId(row.id);
+                return;
+              }
+
               window.location.assign(
                 buildLocaleAwareHref(`/value-objects/${row.id}`, locale),
               );

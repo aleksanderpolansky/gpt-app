@@ -988,6 +988,15 @@ export function ActualValueObjectsList() {
                 current.includes(movedId) ? [] : current,
               );
             }}
+            onValueObjectUpdated={(updatedValueObject) => {
+              setValueObjects((current) =>
+                current.map((valueObject) =>
+                  valueObject.id === updatedValueObject.id
+                    ? { ...valueObject, ...updatedValueObject }
+                    : valueObject,
+                ),
+              );
+            }}
             onValueObjectCreated={(createdValueObject) => {
               setValueObjects((current) =>
                 current.some(
