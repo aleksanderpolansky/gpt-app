@@ -31,6 +31,9 @@ export type ArctorTableColumn<T extends object> = {
   formatter?: string;
   sorter?: string;
   responsive?: number;
+  mobileMinWidth?: number;
+  mobileWidth?: number;
+  mobileFrozen?: boolean;
   visible?: boolean;
   tooltip?: boolean | string;
   editor?: boolean | false | "input" | "textarea" | ExpandedEditorKind;
@@ -85,6 +88,8 @@ type ArctorTabulatorProps<T extends object> = {
   options?: ArctorTableOptions;
   editMode?: boolean;
   adaptiveTouchEditing?: boolean;
+  mobileHorizontalScroll?: boolean;
+  allowNativePinchZoom?: boolean;
   onRowClick?: (row: T) => void;
   onCellEdited?: (event: ArctorTableCellEditedEvent<T>) => void | Promise<void>;
 };
@@ -435,13 +440,35 @@ function createExpandedEditor(kind: "input" | "textarea"): TabulatorEditor {
 function resolveEditorColumns<T extends object>(
   columns: ArctorTableColumn<T>[],
   compactTouchEditing: boolean,
+  mobileHorizontalScrollActive: boolean,
 ) {
   return columns.map((column) => {
+    const {
+      mobileMinWidth,
+      mobileWidth,
+      mobileFrozen,
+      ...columnWithoutMobileHints
+    } = column;
+
+    const mobileOverrides = mobileHorizontalScrollActive
+      ? {
+          ...(typeof mobileMinWidth === "number"
+            ? { minWidth: mobileMinWidth }
+            : {}),
+          ...(typeof mobileWidth === "number" ? { width: mobileWidth } : {}),
+          ...(typeof mobileFrozen === "boolean"
+            ? { frozen: mobileFrozen }
+            : {}),
+          responsive: 0,
+        }
+      : {};
+
     if (column.editor === "arctor-expanded-input") {
       return {
-        ...column,
-        ...(compactTouchEditing
-          ? { minWidth: 180, responsive: 0 }
+        ...columnWithoutMobileHints,
+        ...mobileOverrides,
+        ...(compactTouchEditing && typeof mobileMinWidth !== "number"
+          ? { minWidth: 180 }
           : {}),
         editor: createExpandedEditor("input"),
       };
@@ -449,15 +476,19 @@ function resolveEditorColumns<T extends object>(
 
     if (column.editor === "arctor-expanded-textarea") {
       return {
-        ...column,
-        ...(compactTouchEditing
-          ? { minWidth: 180, responsive: 0 }
+        ...columnWithoutMobileHints,
+        ...mobileOverrides,
+        ...(compactTouchEditing && typeof mobileMinWidth !== "number"
+          ? { minWidth: 180 }
           : {}),
         editor: createExpandedEditor("textarea"),
       };
     }
 
-    return column;
+    return {
+      ...columnWithoutMobileHints,
+      ...mobileOverrides,
+    };
   });
 }
 
@@ -470,6 +501,8 @@ export function ArctorTabulator<T extends object>({
   options,
   editMode = false,
   adaptiveTouchEditing = false,
+  mobileHorizontalScroll = false,
+  allowNativePinchZoom = false,
   onRowClick,
   onCellEdited,
 }: ArctorTabulatorProps<T>) {
@@ -500,15 +533,23 @@ export function ArctorTabulator<T extends object>({
         return;
       }
 
+      const compactTouchEnvironment = isCompactTouchEnvironment();
       const compactTouchEditing =
-        adaptiveTouchEditing && editMode && isCompactTouchEnvironment();
+        adaptiveTouchEditing && editMode && compactTouchEnvironment;
+      const mobileHorizontalScrollActive =
+        mobileHorizontalScroll && compactTouchEnvironment;
       const resolvedColumns = resolveEditorColumns(
         columns,
         compactTouchEditing,
+        mobileHorizontalScrollActive,
       );
-      const resolvedOptions = compactTouchEditing
-        ? { ...options, editTriggerEvent: "click" }
-        : options;
+      const resolvedOptions = {
+        ...options,
+        ...(compactTouchEditing ? { editTriggerEvent: "click" } : {}),
+        ...(mobileHorizontalScrollActive
+          ? { layout: "fitData", responsiveLayout: false }
+          : {}),
+      };
       const instance = new TabulatorFull(host, {
         data,
         // Tabulator 6.5.2 is JavaScript-first; special ARCTor editor markers
@@ -574,13 +615,25 @@ export function ArctorTabulator<T extends object>({
       disposed = true;
       table?.destroy();
     };
-  }, [adaptiveTouchEditing, columns, data, editMode, emptyLabel, height, options, rowKey]);
+  }, [
+    adaptiveTouchEditing,
+    columns,
+    data,
+    editMode,
+    emptyLabel,
+    height,
+    mobileHorizontalScroll,
+    options,
+    rowKey,
+  ]);
 
   return (
     <div
       ref={hostRef}
       className="arctor-tabulator"
       data-edit-mode={editMode ? "true" : undefined}
+      data-mobile-horizontal-scroll={mobileHorizontalScroll ? "true" : undefined}
+      data-native-pinch-zoom={allowNativePinchZoom ? "true" : undefined}
     />
   );
 }

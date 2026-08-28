@@ -247,3 +247,21 @@
     min-height: 38px;
   }
 }
+
+/* ARCTOR_TABLE_VIEWS_T2_2_2_MOBILE_SCROLL_UNDO_REDO_ZOOM_V1 */
+.arctor-tabulator[data-native-pinch-zoom="true"] {
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+  .arctor-tabulator[data-mobile-horizontal-scroll="true"] .tabulator-tableholder {
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x pan-y pinch-zoom;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .arctor-tabulator[data-mobile-horizontal-scroll="true"] .tabulator-table {
+    min-width: max-content;
+  }
+}

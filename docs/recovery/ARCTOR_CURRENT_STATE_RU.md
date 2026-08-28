@@ -867,3 +867,21 @@ Baseline этапа остаётся `main @ 3ce5f149818dac7cc0d30351d1f32746def
 - Write boundaries неизменны: только title/description через existing ontology/draft PATCH contracts; parent только controlled restructure preview/apply; no SQL/schema/DB/Storage/OpenAI release writes.
 - Guest/Local Documents / Spreadsheets / Mind Maps направление сохраняется.
 - Подробный checkpoint: `docs/recovery/ARCTOR_TABLE_VIEWS_T2_2_1_EXPANDED_CELL_EDITOR_UX_HOTFIX_V1_1_RU.md`.
+
+## Авторитетное обновление — Table Views T2_2_2 Mobile Scroll / Undo-Redo / Pinch Zoom, 2026-08-28
+
+Исходный baseline: `ef40312b861db69553199249bef6500dcd021d5e` (`table-views-t2-2-1-expanded-cell-editor-ux-hotfix-v1-1`). T2_2_1 подтверждён production на desktop и smartphone: expanded editor корректен, сохранение работает, gray/read-only cells видимы.
+
+T2_2_2 добавляет к Observation Objects Table View:
+
+- mobile horizontal swipe со всеми видимыми столбцами (`fitData`, responsive hiding отключён только для compact touch mode);
+- отдельные mobile widths и unfrozen first column на смартфоне;
+- browser-native pinch zoom через разрешённый `touch-action: pan-x pan-y pinch-zoom`; custom transform zoom не используется;
+- Undo/Redo для успешно сохранённых title/description edits текущей Edit table session;
+- Undo/Redo выполняют реальные existing PATCH writes через `saveValueObjectTableField`, а не только локально меняют ячейку;
+- новая правка очищает Redo; session history ограничена 50 операциями и очищается при переключении Edit table;
+- global/system/unsupported objects остаются fail-closed; Role/counters/Status/parent не становятся editable.
+
+Структурные boundaries неизменны: parent только controlled restructure preview/apply. Release не выполняет SQL/schema/DB/Storage/OpenAI writes.
+
+Recovery checkpoint: `docs/recovery/ARCTOR_TABLE_VIEWS_T2_2_2_MOBILE_SCROLL_HISTORY_ZOOM_V1_RU.md`.

@@ -42,6 +42,10 @@ type Copy = {
   save: string;
   saving: string;
   cancel: string;
+  undo: string;
+  redo: string;
+  undone: string;
+  redone: string;
   saved: string;
   noChanges: string;
   titleRequired: string;
@@ -57,7 +61,7 @@ const COPY: Record<LocaleCode, Copy> = {
   en: {
     enableMode: "Edit table",
     disableMode: "Exit editing",
-    selectRow: "On a phone, tap a Name or Description cell once; on desktop, double-click. The editor expands over the table. Leaving it saves; Esc cancels. Gray cells are read-only.",
+    selectRow: "On a phone, swipe sideways to see all columns and pinch to zoom; tap Name or Description once. On desktop, double-click. Leaving the expanded editor saves; Esc cancels. Gray cells are read-only.",
     editing: "Editing observation object",
     title: "Name",
     description: "Description",
@@ -65,6 +69,10 @@ const COPY: Record<LocaleCode, Copy> = {
     save: "Save",
     saving: "Saving…",
     cancel: "Cancel",
+    undo: "Undo",
+    redo: "Redo",
+    undone: "Change undone.",
+    redone: "Change restored.",
     saved: "Saved.",
     noChanges: "No changes to save.",
     titleRequired: "Name cannot be empty.",
@@ -78,7 +86,7 @@ const COPY: Record<LocaleCode, Copy> = {
   pl: {
     enableMode: "Edytuj tabelę",
     disableMode: "Zakończ edycję",
-    selectRow: "Na telefonie stuknij komórkę Nazwa lub Opis jeden raz; na komputerze kliknij ją dwukrotnie. Edytor rozszerza się nad tabelą. Wyjście zapisuje; Esc anuluje. Szare komórki są tylko do odczytu.",
+    selectRow: "Na telefonie przesuwaj tabelę w bok, aby zobaczyć wszystkie kolumny, i powiększaj gestem szczypania; Nazwę lub Opis stuknij raz. Na komputerze kliknij dwukrotnie. Wyjście zapisuje; Esc anuluje. Szare komórki są tylko do odczytu.",
     editing: "Edycja obiektu obserwacji",
     title: "Nazwa",
     description: "Opis",
@@ -86,6 +94,10 @@ const COPY: Record<LocaleCode, Copy> = {
     save: "Zapisz",
     saving: "Zapisywanie…",
     cancel: "Anuluj",
+    undo: "Cofnij",
+    redo: "Ponów",
+    undone: "Zmiana cofnięta.",
+    redone: "Zmiana ponowiona.",
     saved: "Zapisano.",
     noChanges: "Brak zmian do zapisania.",
     titleRequired: "Nazwa nie może być pusta.",
@@ -99,7 +111,7 @@ const COPY: Record<LocaleCode, Copy> = {
   ru: {
     enableMode: "Редактировать таблицу",
     disableMode: "Завершить редактирование",
-    selectRow: "На смартфоне один раз нажмите ячейку «Название» или «Описание»; на компьютере — дважды. Редактор раскрывается поверх таблицы. Выход сохраняет; Esc отменяет. Серые ячейки доступны только для чтения.",
+    selectRow: "На смартфоне листайте таблицу по горизонтали, чтобы увидеть все столбцы, и масштабируйте щипком; «Название» или «Описание» нажмите один раз. На компьютере — дважды. Выход из раскрытого редактора сохраняет; Esc отменяет. Серые ячейки только для чтения.",
     editing: "Редактирование объекта наблюдения",
     title: "Название",
     description: "Описание",
@@ -107,6 +119,10 @@ const COPY: Record<LocaleCode, Copy> = {
     save: "Сохранить",
     saving: "Сохранение…",
     cancel: "Отмена",
+    undo: "Отменить",
+    redo: "Повторить",
+    undone: "Изменение отменено.",
+    redone: "Изменение повторено.",
     saved: "Сохранено.",
     noChanges: "Нет изменений для сохранения.",
     titleRequired: "Название не может быть пустым.",
@@ -120,7 +136,7 @@ const COPY: Record<LocaleCode, Copy> = {
   uk: {
     enableMode: "Редагувати таблицю",
     disableMode: "Завершити редагування",
-    selectRow: "На смартфоні один раз натисніть клітинку «Назва» або «Опис»; на комп’ютері — двічі. Редактор розгортається поверх таблиці. Вихід зберігає; Esc скасовує. Сірі клітинки доступні лише для читання.",
+    selectRow: "На смартфоні гортайте таблицю горизонтально, щоб побачити всі стовпці, і масштабуйте щипком; «Назву» або «Опис» натисніть один раз. На комп’ютері — двічі. Вихід із розгорнутого редактора зберігає; Esc скасовує. Сірі клітинки лише для читання.",
     editing: "Редагування об’єкта спостереження",
     title: "Назва",
     description: "Опис",
@@ -128,6 +144,10 @@ const COPY: Record<LocaleCode, Copy> = {
     save: "Зберегти",
     saving: "Збереження…",
     cancel: "Скасувати",
+    undo: "Скасувати зміну",
+    redo: "Повторити",
+    undone: "Зміну скасовано.",
+    redone: "Зміну повторено.",
     saved: "Збережено.",
     noChanges: "Немає змін для збереження.",
     titleRequired: "Назва не може бути порожньою.",
@@ -141,7 +161,7 @@ const COPY: Record<LocaleCode, Copy> = {
   de: {
     enableMode: "Tabelle bearbeiten",
     disableMode: "Bearbeitung beenden",
-    selectRow: "Auf dem Smartphone tippen Sie einmal auf Name oder Beschreibung; am Computer doppelklicken Sie. Der Editor klappt über der Tabelle auf. Verlassen speichert; Esc bricht ab. Graue Zellen sind schreibgeschützt.",
+    selectRow: "Auf dem Smartphone wischen Sie seitlich, um alle Spalten zu sehen, und zoomen per Zwei-Finger-Geste; Name oder Beschreibung einmal antippen. Am Computer doppelklicken. Verlassen speichert; Esc bricht ab. Graue Zellen sind schreibgeschützt.",
     editing: "Beobachtungsobjekt bearbeiten",
     title: "Name",
     description: "Beschreibung",
@@ -149,6 +169,10 @@ const COPY: Record<LocaleCode, Copy> = {
     save: "Speichern",
     saving: "Speichern…",
     cancel: "Abbrechen",
+    undo: "Rückgängig",
+    redo: "Wiederholen",
+    undone: "Änderung rückgängig gemacht.",
+    redone: "Änderung wiederholt.",
     saved: "Gespeichert.",
     noChanges: "Keine Änderungen zu speichern.",
     titleRequired: "Der Name darf nicht leer sein.",
@@ -162,7 +186,7 @@ const COPY: Record<LocaleCode, Copy> = {
   es: {
     enableMode: "Editar tabla",
     disableMode: "Salir de edición",
-    selectRow: "En el teléfono, toque una vez una celda Nombre o Descripción; en el ordenador, haga doble clic. El editor se amplía sobre la tabla. Al salir se guarda; Esc cancela. Las celdas grises son de solo lectura.",
+    selectRow: "En el teléfono, deslice la tabla horizontalmente para ver todas las columnas y use el gesto de pellizco para ampliar; toque Nombre o Descripción una vez. En el ordenador, haga doble clic. Al salir se guarda; Esc cancela. Las celdas grises son de solo lectura.",
     editing: "Edición del objeto de observación",
     title: "Nombre",
     description: "Descripción",
@@ -170,6 +194,10 @@ const COPY: Record<LocaleCode, Copy> = {
     save: "Guardar",
     saving: "Guardando…",
     cancel: "Cancelar",
+    undo: "Deshacer",
+    redo: "Rehacer",
+    undone: "Cambio deshecho.",
+    redone: "Cambio rehecho.",
     saved: "Guardado.",
     noChanges: "No hay cambios para guardar.",
     titleRequired: "El nombre no puede estar vacío.",
@@ -183,7 +211,7 @@ const COPY: Record<LocaleCode, Copy> = {
   cs: {
     enableMode: "Upravit tabulku",
     disableMode: "Ukončit úpravy",
-    selectRow: "Na telefonu klepněte na buňku Název nebo Popis jednou; na počítači dvakrát. Editor se rozbalí nad tabulkou. Opuštění uloží změnu; Esc ji zruší. Šedé buňky jsou pouze pro čtení.",
+    selectRow: "Na telefonu posouvejte tabulku do stran, abyste viděli všechny sloupce, a přibližujte gestem sevření; na Název nebo Popis klepněte jednou. Na počítači dvakrát. Opuštění uloží změnu; Esc ji zruší. Šedé buňky jsou pouze pro čtení.",
     editing: "Úprava objektu pozorování",
     title: "Název",
     description: "Popis",
@@ -191,6 +219,10 @@ const COPY: Record<LocaleCode, Copy> = {
     save: "Uložit",
     saving: "Ukládání…",
     cancel: "Zrušit",
+    undo: "Zpět",
+    redo: "Znovu",
+    undone: "Změna byla vrácena.",
+    redone: "Změna byla zopakována.",
     saved: "Uloženo.",
     noChanges: "Nejsou žádné změny k uložení.",
     titleRequired: "Název nesmí být prázdný.",

@@ -11,7 +11,9 @@ import {
   Map as MapIcon,
   Network,
   Plus,
+  Redo2,
   Table2,
+  Undo2,
 } from "lucide-react";
 import { Fragment, type ReactNode, useMemo, useState } from "react";
 
@@ -499,6 +501,17 @@ type TableEditFeedback = {
   text: string;
 };
 
+type TableEditHistoryEntry = {
+  objectId: string;
+  field: ValueObjectTableEditableField;
+  before: string;
+  after: string;
+};
+
+function normalizeTableHistoryValue(value: unknown) {
+  return value == null ? "" : String(value).trim();
+}
+
 type ValueObjectCatalogViewsProps = {
   valueObjects: ValueObjectPayload[];
   locale: LocaleCode;
@@ -536,6 +549,9 @@ export function ValueObjectCatalogViews({
   const [tableEditMode, setTableEditMode] = useState(false);
   const [tableEditFeedback, setTableEditFeedback] =
     useState<TableEditFeedback | null>(null);
+  const [tableUndoStack, setTableUndoStack] = useState<TableEditHistoryEntry[]>([]);
+  const [tableRedoStack, setTableRedoStack] = useState<TableEditHistoryEntry[]>([]);
+  const [tableHistoryBusy, setTableHistoryBusy] = useState(false);
 
   const objectsById = useMemo(() => {
     const map = new Map<string, ValueObjectPayload>();
@@ -922,6 +938,8 @@ export function ValueObjectCatalogViews({
         title: copy.object,
         field: "title",
         minWidth: 340,
+        mobileMinWidth: 210,
+        mobileFrozen: false,
         widthGrow: 5,
         widthShrink: 3,
         frozen: true,
@@ -929,7 +947,7 @@ export function ValueObjectCatalogViews({
         tooltip: true,
         cssClass: "arctor-table-title",
         editor: tableEditMode ? "arctor-expanded-input" : false,
-        editable: tableEditMode
+        editable: tableEditMode && !tableHistoryBusy
           ? (cell) => cell.getRow().getData().editable
           : false,
         editorParams: tableEditMode
@@ -948,13 +966,14 @@ export function ValueObjectCatalogViews({
         title: copy.description,
         field: "description",
         minWidth: 220,
+        mobileMinWidth: 260,
         widthGrow: 2,
         widthShrink: 3,
         responsive: 6,
         tooltip: true,
         cssClass: "arctor-table-muted",
         editor: tableEditMode ? "arctor-expanded-textarea" : false,
-        editable: tableEditMode
+        editable: tableEditMode && !tableHistoryBusy
           ? (cell) => cell.getRow().getData().editable
           : false,
         editorParams: tableEditMode
@@ -981,6 +1000,7 @@ export function ValueObjectCatalogViews({
         title: copy.role,
         field: "role",
         minWidth: 122,
+        mobileMinWidth: 110,
         widthShrink: 1,
         responsive: 1,
         tooltip: true,
@@ -990,6 +1010,8 @@ export function ValueObjectCatalogViews({
         field: "directChildren",
         width: 108,
         minWidth: 100,
+        mobileWidth: 92,
+        mobileMinWidth: 88,
         responsive: 1,
         tooltip: true,
         hozAlign: "center",
@@ -1001,6 +1023,8 @@ export function ValueObjectCatalogViews({
         field: "descendants",
         width: 122,
         minWidth: 112,
+        mobileWidth: 108,
+        mobileMinWidth: 100,
         responsive: 2,
         tooltip: true,
         hozAlign: "center",
@@ -1012,6 +1036,8 @@ export function ValueObjectCatalogViews({
         field: "descendantLeaves",
         width: 92,
         minWidth: 84,
+        mobileWidth: 84,
+        mobileMinWidth: 80,
         responsive: 2,
         tooltip: true,
         hozAlign: "center",
@@ -1022,12 +1048,13 @@ export function ValueObjectCatalogViews({
         title: copy.status,
         field: "status",
         minWidth: 104,
+        mobileMinWidth: 96,
         widthShrink: 1,
         responsive: 1,
         tooltip: true,
       },
     ],
-    [copy, tableEditCopy.cancel, tableEditCopy.save, tableEditMode],
+    [copy, tableEditCopy.cancel, tableEditCopy.save, tableEditMode, tableHistoryBusy],
   );
 
   const tableOptions = useMemo<ArctorTableOptions>(
@@ -1045,7 +1072,7 @@ export function ValueObjectCatalogViews({
   async function handleTableCellEdited(
     event: ArctorTableCellEditedEvent<TableObjectRow>,
   ) {
-    if (!tableEditMode) {
+    if (!tableEditMode || tableHistoryBusy) {
       event.restoreOldValue();
       return;
     }
@@ -1099,6 +1126,23 @@ export function ValueObjectCatalogViews({
       }
 
       onValueObjectUpdated?.(patch);
+
+      const persistedValue =
+        event.field === "title"
+          ? normalizeTableHistoryValue(patch.title)
+          : normalizeTableHistoryValue(patch.description);
+      const previousValue = normalizeTableHistoryValue(event.oldValue);
+      if (persistedValue !== previousValue) {
+        const historyEntry: TableEditHistoryEntry = {
+          objectId: valueObject.id,
+          field: event.field as ValueObjectTableEditableField,
+          before: previousValue,
+          after: persistedValue,
+        };
+        setTableUndoStack((current) => [...current.slice(-49), historyEntry]);
+        setTableRedoStack([]);
+      }
+
       setTableEditFeedback({ kind: "success", text: tableEditCopy.saved });
     } catch (saveError) {
       event.restoreOldValue();
@@ -1109,6 +1153,84 @@ export function ValueObjectCatalogViews({
             ? saveError.message
             : tableEditCopy.saveFailed,
       });
+    }
+  }
+
+  async function applyTableHistory(direction: "undo" | "redo") {
+    if (tableHistoryBusy) {
+      return;
+    }
+
+    const sourceStack = direction === "undo" ? tableUndoStack : tableRedoStack;
+    const entry = sourceStack[sourceStack.length - 1];
+    if (!entry) {
+      return;
+    }
+
+    const valueObject = objectsById.get(entry.objectId);
+    if (!valueObject?.id) {
+      setTableEditFeedback({ kind: "error", text: tableEditCopy.saveFailed });
+      return;
+    }
+
+    const strategy = getValueObjectTableEditStrategy(valueObject);
+    if (strategy === "readonly_system" || strategy === "readonly_contract") {
+      setTableEditFeedback({
+        kind: "error",
+        text:
+          strategy === "readonly_system"
+            ? tableEditCopy.readOnlySystem
+            : tableEditCopy.readOnlyContract,
+      });
+      return;
+    }
+
+    const expectedCurrentValue = direction === "undo" ? entry.after : entry.before;
+    const nextValue = direction === "undo" ? entry.before : entry.after;
+    const valueObjectForWrite: ValueObjectPayload = {
+      ...valueObject,
+      ...(entry.field === "title"
+        ? { title: expectedCurrentValue }
+        : { description: expectedCurrentValue || null }),
+    };
+
+    setTableHistoryBusy(true);
+    setTableEditFeedback({ kind: "saving", text: tableEditCopy.saving });
+
+    try {
+      const patch = await saveValueObjectTableField({
+        valueObject: valueObjectForWrite,
+        field: entry.field,
+        value: nextValue,
+        locale,
+      });
+
+      if (!patch) {
+        setTableEditFeedback({ kind: "info", text: tableEditCopy.noChanges });
+        return;
+      }
+
+      onValueObjectUpdated?.(patch);
+
+      if (direction === "undo") {
+        setTableUndoStack((current) => current.slice(0, -1));
+        setTableRedoStack((current) => [...current.slice(-49), entry]);
+        setTableEditFeedback({ kind: "success", text: tableEditCopy.undone });
+      } else {
+        setTableRedoStack((current) => current.slice(0, -1));
+        setTableUndoStack((current) => [...current.slice(-49), entry]);
+        setTableEditFeedback({ kind: "success", text: tableEditCopy.redone });
+      }
+    } catch (historyError) {
+      setTableEditFeedback({
+        kind: "error",
+        text:
+          historyError instanceof Error && historyError.message
+            ? historyError.message
+            : tableEditCopy.saveFailed,
+      });
+    } finally {
+      setTableHistoryBusy(false);
     }
   }
 
@@ -1380,26 +1502,58 @@ export function ValueObjectCatalogViews({
           </div>
 
           {viewMode === "table" ? (
-            <button
-              type="button"
-              onClick={() => {
-                const nextMode = !tableEditMode;
-                setTableEditMode(nextMode);
-                setTableEditFeedback(
-                  nextMode
-                    ? { kind: "info", text: tableEditCopy.selectRow }
-                    : null,
-                );
-              }}
-              className={[
-                "rounded-xl border px-3 py-2 text-[11px] font-semibold transition lg:shrink-0",
-                tableEditMode
-                  ? "border-[#3b6ef8] bg-[#eef2ff] text-[#3b6ef8]"
-                  : "border-[#dfe3f1] bg-white text-[#4a4f6a] hover:bg-[#f8fafc]",
-              ].join(" ")}
-            >
-              {tableEditMode ? tableEditCopy.disableMode : tableEditCopy.enableMode}
-            </button>
+            <div className="flex flex-wrap items-center gap-2 lg:shrink-0">
+              {tableEditMode ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => void applyTableHistory("undo")}
+                    disabled={tableHistoryBusy || tableUndoStack.length === 0}
+                    aria-label={tableEditCopy.undo}
+                    title={tableEditCopy.undo}
+                    className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-xl border border-[#dfe3f1] bg-white px-2.5 text-[11px] font-semibold text-[#4a4f6a] transition hover:bg-[#f8fafc] disabled:cursor-not-allowed disabled:bg-[#f3f4f6] disabled:text-[#a4a9b8]"
+                  >
+                    <Undo2 size={16} />
+                    <span className="hidden sm:inline">{tableEditCopy.undo}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void applyTableHistory("redo")}
+                    disabled={tableHistoryBusy || tableRedoStack.length === 0}
+                    aria-label={tableEditCopy.redo}
+                    title={tableEditCopy.redo}
+                    className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-xl border border-[#dfe3f1] bg-white px-2.5 text-[11px] font-semibold text-[#4a4f6a] transition hover:bg-[#f8fafc] disabled:cursor-not-allowed disabled:bg-[#f3f4f6] disabled:text-[#a4a9b8]"
+                  >
+                    <Redo2 size={16} />
+                    <span className="hidden sm:inline">{tableEditCopy.redo}</span>
+                  </button>
+                </>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={() => {
+                  const nextMode = !tableEditMode;
+                  setTableEditMode(nextMode);
+                  setTableUndoStack([]);
+                  setTableRedoStack([]);
+                  setTableHistoryBusy(false);
+                  setTableEditFeedback(
+                    nextMode
+                      ? { kind: "info", text: tableEditCopy.selectRow }
+                      : null,
+                  );
+                }}
+                className={[
+                  "min-h-11 rounded-xl border px-3 py-2 text-[11px] font-semibold transition",
+                  tableEditMode
+                    ? "border-[#3b6ef8] bg-[#eef2ff] text-[#3b6ef8]"
+                    : "border-[#dfe3f1] bg-white text-[#4a4f6a] hover:bg-[#f8fafc]",
+                ].join(" ")}
+              >
+                {tableEditMode ? tableEditCopy.disableMode : tableEditCopy.enableMode}
+              </button>
+            </div>
           ) : null}
 
           {viewMode === "tree" ? (
@@ -1490,6 +1644,8 @@ export function ValueObjectCatalogViews({
             options={tableOptions}
             editMode={tableEditMode}
             adaptiveTouchEditing={tableEditMode}
+            mobileHorizontalScroll
+            allowNativePinchZoom
             onCellEdited={handleTableCellEdited}
             onRowClick={(row) => {
               if (tableEditMode) {
