@@ -7,6 +7,12 @@ import { useEffect, useRef } from "react";
 
 type TablePrimitive = string | number | boolean | null | undefined;
 
+export type ArctorTableCellApi<T extends object> = {
+  getRow: () => { getData: () => T };
+  getField: () => string;
+  getValue: () => unknown;
+};
+
 export type ArctorTableColumn<T extends object> = {
   title: string;
   field: keyof T & string;
@@ -23,6 +29,33 @@ export type ArctorTableColumn<T extends object> = {
   responsive?: number;
   visible?: boolean;
   tooltip?: boolean | string;
+  editor?: boolean | false | "input" | "textarea";
+  editable?: boolean | ((cell: ArctorTableCellApi<T>) => boolean);
+  editorParams?: Record<string, unknown>;
+};
+
+
+type TabulatorEditedCellComponent = {
+  getRow: () => { getData: () => unknown };
+  getField: () => string;
+  getValue: () => unknown;
+  getOldValue: () => unknown;
+  restoreOldValue: () => void;
+};
+
+type TabulatorCellEditedEmitter = {
+  on: (
+    event: "cellEdited",
+    callback: (cell: TabulatorEditedCellComponent) => void,
+  ) => void;
+};
+
+export type ArctorTableCellEditedEvent<T extends object> = {
+  row: T;
+  field: keyof T & string;
+  value: unknown;
+  oldValue: unknown;
+  restoreOldValue: () => void;
 };
 
 export type ArctorTableOptions = Record<string, TablePrimitive | object>;
@@ -35,6 +68,7 @@ type ArctorTabulatorProps<T extends object> = {
   height?: string;
   options?: ArctorTableOptions;
   onRowClick?: (row: T) => void;
+  onCellEdited?: (event: ArctorTableCellEditedEvent<T>) => void | Promise<void>;
 };
 
 function isInteractiveTarget(target: EventTarget | null) {
@@ -57,13 +91,19 @@ export function ArctorTabulator<T extends object>({
   height = "62vh",
   options,
   onRowClick,
+  onCellEdited,
 }: ArctorTabulatorProps<T>) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const onRowClickRef = useRef(onRowClick);
+  const onCellEditedRef = useRef(onCellEdited);
 
   useEffect(() => {
     onRowClickRef.current = onRowClick;
   }, [onRowClick]);
+
+  useEffect(() => {
+    onCellEditedRef.current = onCellEdited;
+  }, [onCellEdited]);
 
   useEffect(() => {
     let disposed = false;
@@ -104,6 +144,33 @@ export function ArctorTabulator<T extends object>({
           if (callback) {
             callback(row.getData() as T);
           }
+        });
+      }
+
+      if (onCellEditedRef.current) {
+        // Tabulator 6.5.2 ships JavaScript rather than a complete TypeScript event map.
+        // With this project's allowJs inference, instance.on is narrowed to the
+        // already-subscribed rowClick shape. Runtime Tabulator still exposes the
+        // documented cellEdited event, so bridge only that event through a local
+        // structural interface instead of weakening the whole table instance.
+        const cellEditedEmitter = instance as unknown as TabulatorCellEditedEmitter;
+        cellEditedEmitter.on("cellEdited", (cell) => {
+          const callback = onCellEditedRef.current;
+          if (!callback) {
+            return;
+          }
+
+          const editEvent: ArctorTableCellEditedEvent<T> = {
+            row: cell.getRow().getData() as T,
+            field: cell.getField() as keyof T & string,
+            value: cell.getValue(),
+            oldValue: cell.getOldValue(),
+            restoreOldValue: () => cell.restoreOldValue(),
+          };
+
+          void Promise.resolve(callback(editEvent)).catch(() => {
+            editEvent.restoreOldValue();
+          });
         });
       }
 

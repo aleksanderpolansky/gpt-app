@@ -17,14 +17,18 @@ import { Fragment, type ReactNode, useMemo, useState } from "react";
 
 import {
   ArctorTabulator,
+  type ArctorTableCellEditedEvent,
   type ArctorTableColumn,
   type ArctorTableOptions,
 } from "@/components/tables/arctor-tabulator";
 
 import { ValueObjectMindMap } from "./value-object-mind-map";
 import {
-  ValueObjectTableEditor,
+  canEditValueObjectTableCells,
+  getValueObjectTableEditStrategy,
   getValueObjectTableEditorCopy,
+  saveValueObjectTableField,
+  type ValueObjectTableEditableField,
   type ValueObjectTableEditPatch,
 } from "./value-object-table-editor";
 
@@ -480,6 +484,7 @@ type TableObjectRow = {
   id: string;
   title: string;
   description: string;
+  editable: boolean;
   parent: string;
   role: string;
   directChildren: number;
@@ -487,6 +492,11 @@ type TableObjectRow = {
   descendantLeaves: number;
   status: string;
   _children?: TableObjectRow[];
+};
+
+type TableEditFeedback = {
+  kind: "info" | "saving" | "success" | "error";
+  text: string;
 };
 
 type ValueObjectCatalogViewsProps = {
@@ -524,7 +534,8 @@ export function ValueObjectCatalogViews({
   const [expandedIds, setExpandedIds] = useState<Set<string> | null>(null);
   const [insertParentId, setInsertParentId] = useState<string | null>(null);
   const [tableEditMode, setTableEditMode] = useState(false);
-  const [selectedTableEditId, setSelectedTableEditId] = useState<string | null>(null);
+  const [tableEditFeedback, setTableEditFeedback] =
+    useState<TableEditFeedback | null>(null);
 
   const objectsById = useMemo(() => {
     const map = new Map<string, ValueObjectPayload>();
@@ -533,10 +544,6 @@ export function ValueObjectCatalogViews({
     }
     return map;
   }, [valueObjects]);
-
-  const selectedTableEditObject = selectedTableEditId
-    ? objectsById.get(selectedTableEditId) ?? null
-    : null;
 
   const childrenByParent = useMemo(() => {
     const map = new Map<string, ValueObjectPayload[]>();
@@ -879,7 +886,10 @@ export function ValueObjectCatalogViews({
       return {
         id: valueObject.id,
         title: valueObject.title?.trim() || "—",
-        description: valueObject.description?.trim() || copy.noDescription,
+        description:
+          valueObject.description?.trim() ||
+          (tableEditMode ? "" : copy.noDescription),
+        editable: canEditValueObjectTableCells(valueObject),
         parent: parentObject?.title?.trim() || "—",
         role: getRoleLabel(getSemanticRole(valueObject), copy),
         directChildren: childrenByParent.get(valueObject.id)?.length ?? 0,
@@ -901,6 +911,7 @@ export function ValueObjectCatalogViews({
     locale,
     objectsById,
     sortMode,
+    tableEditMode,
     treeRoots,
     visibleIds,
   ]);
@@ -917,6 +928,16 @@ export function ValueObjectCatalogViews({
         responsive: 0,
         tooltip: true,
         cssClass: "arctor-table-title",
+        editor: tableEditMode ? "input" : false,
+        editable: tableEditMode
+          ? (cell) => cell.getRow().getData().editable
+          : false,
+        editorParams: tableEditMode
+          ? {
+              selectContents: true,
+              elementAttributes: { maxlength: "180" },
+            }
+          : undefined,
       },
       {
         title: copy.description,
@@ -927,6 +948,18 @@ export function ValueObjectCatalogViews({
         responsive: 6,
         tooltip: true,
         cssClass: "arctor-table-muted",
+        editor: tableEditMode ? "textarea" : false,
+        editable: tableEditMode
+          ? (cell) => cell.getRow().getData().editable
+          : false,
+        editorParams: tableEditMode
+          ? {
+              selectContents: true,
+              verticalNavigation: "editor",
+              shiftEnterSubmit: true,
+              elementAttributes: { maxlength: "4000" },
+            }
+          : undefined,
       },
       {
         title: copy.parent,
@@ -986,7 +1019,7 @@ export function ValueObjectCatalogViews({
         tooltip: true,
       },
     ],
-    [copy],
+    [copy, tableEditMode],
   );
 
   const tableOptions = useMemo<ArctorTableOptions>(
@@ -996,9 +1029,80 @@ export function ValueObjectCatalogViews({
       dataTreeChildIndent: 15,
       dataTreeStartExpanded: filterActive || valueObjects.length <= 80,
       columnHeaderVertAlign: "middle",
+      editTriggerEvent: "dblclick",
     }),
     [filterActive, valueObjects.length],
   );
+
+  async function handleTableCellEdited(
+    event: ArctorTableCellEditedEvent<TableObjectRow>,
+  ) {
+    if (!tableEditMode) {
+      event.restoreOldValue();
+      return;
+    }
+
+    if (event.field !== "title" && event.field !== "description") {
+      event.restoreOldValue();
+      return;
+    }
+
+    const valueObject = objectsById.get(event.row.id);
+    if (!valueObject?.id) {
+      event.restoreOldValue();
+      setTableEditFeedback({ kind: "error", text: tableEditCopy.saveFailed });
+      return;
+    }
+
+    const strategy = getValueObjectTableEditStrategy(valueObject);
+    if (strategy === "readonly_system" || strategy === "readonly_contract") {
+      event.restoreOldValue();
+      setTableEditFeedback({
+        kind: "error",
+        text:
+          strategy === "readonly_system"
+            ? tableEditCopy.readOnlySystem
+            : tableEditCopy.readOnlyContract,
+      });
+      return;
+    }
+
+    const nextValue =
+      typeof event.value === "string"
+        ? event.value
+        : event.value == null
+          ? ""
+          : String(event.value);
+
+    setTableEditFeedback({ kind: "saving", text: tableEditCopy.saving });
+
+    try {
+      const patch = await saveValueObjectTableField({
+        valueObject,
+        field: event.field as ValueObjectTableEditableField,
+        value: nextValue,
+        locale,
+      });
+
+      if (!patch) {
+        event.restoreOldValue();
+        setTableEditFeedback({ kind: "info", text: tableEditCopy.noChanges });
+        return;
+      }
+
+      onValueObjectUpdated?.(patch);
+      setTableEditFeedback({ kind: "success", text: tableEditCopy.saved });
+    } catch (saveError) {
+      event.restoreOldValue();
+      setTableEditFeedback({
+        kind: "error",
+        text:
+          saveError instanceof Error && saveError.message
+            ? saveError.message
+            : tableEditCopy.saveFailed,
+      });
+    }
+  }
 
   function updateHierarchyLevel(levelIndex: number, nextId: string) {
     const basePath = hierarchyPathObjects
@@ -1273,7 +1377,11 @@ export function ValueObjectCatalogViews({
               onClick={() => {
                 const nextMode = !tableEditMode;
                 setTableEditMode(nextMode);
-                if (!nextMode) setSelectedTableEditId(null);
+                setTableEditFeedback(
+                  nextMode
+                    ? { kind: "info", text: tableEditCopy.selectRow }
+                    : null,
+                );
               }}
               className={[
                 "rounded-xl border px-3 py-2 text-[11px] font-semibold transition lg:shrink-0",
@@ -1349,20 +1457,21 @@ export function ValueObjectCatalogViews({
       {viewMode === "table" ? (
         <div className="grid gap-2 rounded-[18px] border border-black/[0.04] bg-white p-2 shadow-sm">
           {tableEditMode ? (
-            <ValueObjectTableEditor
-              key={selectedTableEditObject?.id ?? "no-selection"}
-              valueObject={selectedTableEditObject}
-              parentTitle={
-                selectedTableEditObject?.parent_value_object_id
-                  ? objectsById.get(selectedTableEditObject.parent_value_object_id)?.title?.trim() || "—"
-                  : "—"
-              }
-              locale={locale}
-              onClose={() => setSelectedTableEditId(null)}
-              onSaved={(patch) => {
-                onValueObjectUpdated?.(patch);
-              }}
-            />
+            <div
+              className={[
+                "rounded-xl border px-3 py-2 text-[11px] font-semibold",
+                tableEditFeedback?.kind === "success"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : tableEditFeedback?.kind === "error"
+                    ? "border-rose-200 bg-rose-50 text-rose-700"
+                    : tableEditFeedback?.kind === "saving"
+                      ? "border-[#c9d5ff] bg-[#eef2ff] text-[#3b6ef8]"
+                      : "border-dashed border-[#c9d5ff] bg-[#f7f9ff] text-[#5a6484]",
+              ].join(" ")}
+              role={tableEditFeedback?.kind === "error" ? "alert" : "status"}
+            >
+              {tableEditFeedback?.text ?? tableEditCopy.selectRow}
+            </div>
           ) : null}
           <ArctorTabulator<TableObjectRow>
             data={tableRows}
@@ -1371,9 +1480,22 @@ export function ValueObjectCatalogViews({
             emptyLabel={copy.emptyTable}
             height="min(68vh, 760px)"
             options={tableOptions}
+            onCellEdited={handleTableCellEdited}
             onRowClick={(row) => {
               if (tableEditMode) {
-                setSelectedTableEditId(row.id);
+                const valueObject = objectsById.get(row.id);
+                if (valueObject) {
+                  const strategy = getValueObjectTableEditStrategy(valueObject);
+                  if (strategy === "readonly_system" || strategy === "readonly_contract") {
+                    setTableEditFeedback({
+                      kind: "error",
+                      text:
+                        strategy === "readonly_system"
+                          ? tableEditCopy.readOnlySystem
+                          : tableEditCopy.readOnlyContract,
+                    });
+                  }
+                }
                 return;
               }
 

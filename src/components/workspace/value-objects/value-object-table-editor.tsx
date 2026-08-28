@@ -11,7 +11,7 @@ export type ValueObjectTableEditPatch = {
 
 type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
-type EditableValueObject = {
+export type EditableValueObject = {
   id?: string | null;
   title?: string | null;
   description?: string | null;
@@ -23,7 +23,13 @@ type EditableValueObject = {
   parent_value_object_id?: string | null;
 };
 
-type EditStrategy = "ontology" | "draft" | "readonly_system" | "readonly_contract";
+export type ValueObjectTableEditStrategy =
+  | "ontology"
+  | "draft"
+  | "readonly_system"
+  | "readonly_contract";
+
+export type ValueObjectTableEditableField = "title" | "description";
 
 type Copy = {
   enableMode: string;
@@ -51,7 +57,7 @@ const COPY: Record<LocaleCode, Copy> = {
   en: {
     enableMode: "Edit table",
     disableMode: "Exit editing",
-    selectRow: "Select a row to edit its name or description.",
+    selectRow: "Double-click a Name or Description cell to edit. Leaving the cell saves; Esc cancels.",
     editing: "Editing observation object",
     title: "Name",
     description: "Description",
@@ -72,7 +78,7 @@ const COPY: Record<LocaleCode, Copy> = {
   pl: {
     enableMode: "Edytuj tabelę",
     disableMode: "Zakończ edycję",
-    selectRow: "Wybierz wiersz, aby edytować nazwę lub opis.",
+    selectRow: "Kliknij dwukrotnie komórkę Nazwa lub Opis, aby edytować. Wyjście z komórki zapisuje; Esc anuluje.",
     editing: "Edycja obiektu obserwacji",
     title: "Nazwa",
     description: "Opis",
@@ -93,7 +99,7 @@ const COPY: Record<LocaleCode, Copy> = {
   ru: {
     enableMode: "Редактировать таблицу",
     disableMode: "Завершить редактирование",
-    selectRow: "Выберите строку, чтобы изменить название или описание.",
+    selectRow: "Дважды нажмите ячейку «Название» или «Описание», чтобы изменить её. Выход из ячейки сохраняет; Esc отменяет.",
     editing: "Редактирование объекта наблюдения",
     title: "Название",
     description: "Описание",
@@ -114,7 +120,7 @@ const COPY: Record<LocaleCode, Copy> = {
   uk: {
     enableMode: "Редагувати таблицю",
     disableMode: "Завершити редагування",
-    selectRow: "Виберіть рядок, щоб змінити назву або опис.",
+    selectRow: "Двічі натисніть клітинку «Назва» або «Опис», щоб редагувати. Вихід із клітинки зберігає; Esc скасовує.",
     editing: "Редагування об’єкта спостереження",
     title: "Назва",
     description: "Опис",
@@ -135,7 +141,7 @@ const COPY: Record<LocaleCode, Copy> = {
   de: {
     enableMode: "Tabelle bearbeiten",
     disableMode: "Bearbeitung beenden",
-    selectRow: "Wählen Sie eine Zeile, um Name oder Beschreibung zu bearbeiten.",
+    selectRow: "Doppelklicken Sie auf eine Zelle Name oder Beschreibung. Beim Verlassen der Zelle wird gespeichert; Esc bricht ab.",
     editing: "Beobachtungsobjekt bearbeiten",
     title: "Name",
     description: "Beschreibung",
@@ -156,7 +162,7 @@ const COPY: Record<LocaleCode, Copy> = {
   es: {
     enableMode: "Editar tabla",
     disableMode: "Salir de edición",
-    selectRow: "Seleccione una fila para editar el nombre o la descripción.",
+    selectRow: "Haga doble clic en una celda Nombre o Descripción para editarla. Al salir de la celda se guarda; Esc cancela.",
     editing: "Edición del objeto de observación",
     title: "Nombre",
     description: "Descripción",
@@ -177,7 +183,7 @@ const COPY: Record<LocaleCode, Copy> = {
   cs: {
     enableMode: "Upravit tabulku",
     disableMode: "Ukončit úpravy",
-    selectRow: "Vyberte řádek a upravte název nebo popis.",
+    selectRow: "Dvakrát klikněte na buňku Název nebo Popis. Opuštění buňky uloží změnu; Esc ji zruší.",
     editing: "Úprava objektu pozorování",
     title: "Název",
     description: "Popis",
@@ -207,7 +213,9 @@ export function getValueObjectTableEditorCopy(locale: string) {
   return COPY[normalizeLocale(locale)];
 }
 
-function getEditStrategy(valueObject: EditableValueObject): EditStrategy {
+export function getValueObjectTableEditStrategy(
+  valueObject: EditableValueObject,
+): ValueObjectTableEditStrategy {
   if (valueObject.scope_code === "global" || valueObject.origin_type_code === "system") {
     return "readonly_system";
   }
@@ -321,6 +329,97 @@ async function requestDraftEdit(args: {
   }
 }
 
+export function canEditValueObjectTableCells(valueObject: EditableValueObject) {
+  const strategy = getValueObjectTableEditStrategy(valueObject);
+  return strategy === "ontology" || strategy === "draft";
+}
+
+export async function saveValueObjectTableField(args: {
+  valueObject: EditableValueObject;
+  field: ValueObjectTableEditableField;
+  value: string;
+  locale: string;
+}): Promise<ValueObjectTableEditPatch | null> {
+  const locale = normalizeLocale(args.locale);
+  const copy = COPY[locale];
+  const selectedValueObject = args.valueObject;
+
+  if (!selectedValueObject.id) {
+    throw new Error(copy.saveFailed);
+  }
+
+  const strategy = getValueObjectTableEditStrategy(selectedValueObject);
+  if (strategy === "readonly_system") {
+    throw new Error(copy.readOnlySystem);
+  }
+  if (strategy === "readonly_contract") {
+    throw new Error(copy.readOnlyContract);
+  }
+
+  if (args.field === "title") {
+    const nextTitle = args.value.trim();
+    const previousTitle = selectedValueObject.title?.trim() ?? "";
+
+    if (!nextTitle) {
+      throw new Error(copy.titleRequired);
+    }
+    if (nextTitle.length > 180) {
+      throw new Error(`${copy.title}: max 180`);
+    }
+    if (nextTitle === previousTitle) {
+      return null;
+    }
+
+    if (strategy === "ontology") {
+      await requestOntologyEdit({
+        valueObjectId: selectedValueObject.id,
+        locale,
+        editKind: "rename",
+        patch: { title: nextTitle },
+      });
+    } else {
+      await requestDraftEdit({
+        valueObjectId: selectedValueObject.id,
+        titleChanged: true,
+        descriptionChanged: false,
+        title: nextTitle,
+        description: selectedValueObject.description?.trim() || null,
+      });
+    }
+
+    return { id: selectedValueObject.id, title: nextTitle };
+  }
+
+  const nextDescriptionText = args.value.trim();
+  const previousDescription = selectedValueObject.description?.trim() ?? "";
+  if (nextDescriptionText.length > 4000) {
+    throw new Error(`${copy.description}: max 4000`);
+  }
+  if (nextDescriptionText === previousDescription) {
+    return null;
+  }
+
+  const nextDescription = nextDescriptionText || null;
+  if (strategy === "ontology") {
+    await requestOntologyEdit({
+      valueObjectId: selectedValueObject.id,
+      locale,
+      editKind: "semantic_definition",
+      patch: { description: nextDescription },
+    });
+  } else {
+    await requestDraftEdit({
+      valueObjectId: selectedValueObject.id,
+      titleChanged: false,
+      descriptionChanged: true,
+      title: selectedValueObject.title?.trim() ?? "",
+      description: nextDescription,
+    });
+  }
+
+  return { id: selectedValueObject.id, description: nextDescription };
+}
+
 export function ValueObjectTableEditor({
   valueObject,
   parentTitle,
@@ -347,7 +446,7 @@ export function ValueObjectTableEditor({
   const [error, setError] = useState("");
 
   const strategy = useMemo(
-    () => (valueObject ? getEditStrategy(valueObject) : null),
+    () => (valueObject ? getValueObjectTableEditStrategy(valueObject) : null),
     [valueObject],
   );
 
