@@ -5,6 +5,8 @@ import "./arctor-tabulator.css";
 
 import { useEffect, useRef } from "react";
 
+import { serializeArctorClipboardMatrix } from "./arctor-clipboard";
+
 type TablePrimitive = string | number | boolean | null | undefined;
 
 type ExpandedEditorKind =
@@ -82,10 +84,18 @@ type TabulatorRangeComponent = {
     start: TabulatorRangeCellComponent;
     end: TabulatorRangeCellComponent;
   };
+  getStructuredCells: () => TabulatorRangeCellComponent[][];
 };
 
 type TabulatorRangeTable = {
   getRanges: () => TabulatorRangeComponent[];
+};
+
+type TabulatorRangeEventEmitter = {
+  on: (
+    event: "rangeAdded" | "rangeChanged" | "rangeRemoved",
+    callback: (range: TabulatorRangeComponent) => void,
+  ) => void;
 };
 
 type TabulatorEditorCellComponent = {
@@ -706,6 +716,10 @@ export function ArctorTabulator<T extends object>({
     let table: { destroy: () => void } | null = null;
     let pasteHost: HTMLDivElement | null = null;
     let pasteListener: ((event: ClipboardEvent) => void) | null = null;
+    let copyDocument: Document | null = null;
+    let copyListener: ((event: ClipboardEvent) => void) | null = null;
+    let copyPointerListener: ((event: PointerEvent) => void) | null = null;
+    let rangeCopyArmed = false;
 
     async function mountTable() {
       const host = hostRef.current;
@@ -746,6 +760,7 @@ export function ArctorTabulator<T extends object>({
               selectableRangeRows: false,
               selectableRangeClearCells: false,
               selectableRangeAutoFocus: true,
+              selectableRangeInitializeDefault: false,
               selectableRangeBlurEditOnNavigate: false,
               clipboard: "copy",
               clipboardCopyStyled: false,
@@ -813,6 +828,59 @@ export function ArctorTabulator<T extends object>({
         });
       }
 
+      if (rangeClipboardActive) {
+        const rangeTable = instance as unknown as TabulatorRangeTable;
+        const rangeEvents = instance as unknown as TabulatorRangeEventEmitter;
+        const syncRangeCopyArm = () => {
+          rangeCopyArmed = rangeTable.getRanges().length > 0;
+        };
+
+        rangeEvents.on("rangeAdded", syncRangeCopyArm);
+        rangeEvents.on("rangeChanged", syncRangeCopyArm);
+        rangeEvents.on("rangeRemoved", syncRangeCopyArm);
+
+        copyPointerListener = (event) => {
+          const target = event.target;
+          if (!(target instanceof Node) || !host.contains(target)) {
+            rangeCopyArmed = false;
+          }
+        };
+
+        copyListener = (event) => {
+          if (!rangeCopyArmed || isInteractiveTarget(event.target)) {
+            return;
+          }
+
+          const selection = document.getSelection();
+          if (selection && !selection.isCollapsed) {
+            return;
+          }
+
+          const ranges = rangeTable.getRanges();
+          const activeRange = ranges[ranges.length - 1];
+          const clipboardData = event.clipboardData;
+          if (!activeRange || !clipboardData) {
+            return;
+          }
+
+          const matrix = activeRange
+            .getStructuredCells()
+            .map((row) => row.map((cell) => cell.getValue()));
+          const clipboard = serializeArctorClipboardMatrix(matrix);
+
+          clipboardData.setData("text/plain", clipboard);
+          event.preventDefault();
+          event.stopPropagation();
+          onRangeCopiedRef.current?.(clipboard);
+        };
+
+        copyDocument = document;
+        copyDocument.addEventListener("pointerdown", copyPointerListener, true);
+        copyDocument.addEventListener("copy", copyListener, true);
+      }
+
+      // Keep Tabulator's clipboardCopied callback as a harmless fallback/feedback path.
+      // The document capture listener above is authoritative for actual clipboard data.
       if (rangeClipboardActive && onRangeCopiedRef.current) {
         const clipboardEmitter = instance as unknown as TabulatorClipboardCopiedEmitter;
         clipboardEmitter.on("clipboardCopied", (clipboard) => {
@@ -858,6 +926,12 @@ export function ArctorTabulator<T extends object>({
       disposed = true;
       if (pasteHost && pasteListener) {
         pasteHost.removeEventListener("paste", pasteListener);
+      }
+      if (copyDocument && copyPointerListener) {
+        copyDocument.removeEventListener("pointerdown", copyPointerListener, true);
+      }
+      if (copyDocument && copyListener) {
+        copyDocument.removeEventListener("copy", copyListener, true);
       }
       table?.destroy();
     };

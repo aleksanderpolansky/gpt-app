@@ -912,3 +912,15 @@ Guest/Local Documents / Spreadsheets / Mind Maps направление сохр
 ### T2_3 release-safety note
 
 До выдачи T2_3 локально прошли semantic TypeScript, TSV parser fixtures, range target mapper fixtures, actual-source batch compensation fixtures, validator 136/136, `git diff --check` и package self-test. Synthetic release simulation подтверждает полный commit/push/remote-verify path, precommit rollback path и postcommit push-resume path. Реальные full project TypeScript/ESLint/Next checks остаются обязательными gates runner-а на production checkout до commit.
+
+## Авторитетное обновление — Table Views T2_3_1 Copy Hotfix V1_1, 2026-08-28
+
+Baseline: `main @ 21da8ca46802559e2c8a6f114ee4b89db21c7d1b` (`table-views-t2-3-range-clipboard-v1`). Сам T2_3 release прошёл все build/release gates, но production runtime выявил clipboard-focus integration defect: multi-cell range выделялся, а реальный Chrome `copy` event имел `defaultPrevented:false`, `types:[]`, `textLength:0`, поэтому Ctrl+C ничего не переносил.
+
+Первый V1 остановился до изменения main на противоречивом validator check `FAIL 034`: patch заменял legacy subscription, а validator одновременно требовал её наличие. `ROLLBACK=NOT_NEEDED_PREMUTATION`, baseline не изменился. V1_1 сохраняет legacy `clipboardCopied` fallback subscription как feedback/fallback path, а authoritative clipboard write выполняет document-level capture listener.
+
+T2_3_1 V1_1 убирает зависимость range-copy от keyboard focus Tabulator: ARCTor отслеживает rangeAdded/rangeChanged/rangeRemoved, document-level capture `copy` сериализует последний активный `getStructuredCells()` range в Excel/Google-Sheets-compatible TSV и пишет его в `clipboardData`. Pointer click вне таблицы разоружает range-copy; обычный DOM text selection и input/textarea copy не перехватываются. `selectableRangeInitializeDefault:false` исключает скрытый initial range.
+
+Paste/write boundaries T2_3 не меняются: только title/description через existing safe ontology/draft PATCH, max 100 writes, prevalidation, best-effort compensation rollback; gray/global/system/unsupported cells остаются non-writable. Smartphone multi-cell range по-прежнему disabled, horizontal swipe/pinch/single-tap editing сохраняются.
+
+Recovery checkpoint: `docs/recovery/ARCTOR_TABLE_VIEWS_T2_3_1_COPY_HOTFIX_V1_1_RU.md`.
