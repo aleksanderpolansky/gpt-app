@@ -31,9 +31,13 @@ import {
 
 import type {
   ValueObjectTreeRestructureApplyResult,
-  ValueObjectTreeRestructureError,
   ValueObjectTreeRestructurePreview,
 } from "@/types/value-object-tree-restructure";
+
+import {
+  applyValueObjectReparent,
+  previewValueObjectReparent,
+} from "./value-object-reparent-client";
 
 type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 type SemanticRole = "root" | "intermediate" | "leaf";
@@ -1363,25 +1367,10 @@ function MindMapCanvas({
       setReparentError("");
       setReparentPending("preview");
       try {
-        const response = await fetch(
-          `/api/value-objects/${encodeURIComponent(target.sourceId)}/tree-restructure/preview`,
-          {
-            method: "POST",
-            credentials: "same-origin",
-            headers: { "Content-Type": "application/json", Accept: "application/json" },
-            body: JSON.stringify({
-              mode: "reparent",
-              payload: { newParentValueObjectId: target.newParentId },
-            }),
-          },
-        );
-        const payload = (await response.json().catch(() => null)) as
-          | ValueObjectTreeRestructurePreview
-          | ValueObjectTreeRestructureError
-          | null;
-        if (!response.ok || !payload || !("previewHash" in payload)) {
-          throw new Error(payload && "error" in payload ? payload.error : reparentCopy.previewFailed);
-        }
+        const payload = await previewValueObjectReparent({
+          sourceId: target.sourceId,
+          newParentId: target.newParentId,
+        });
         setReparentPreview(payload);
       } catch (caught) {
         setReparentError(caught instanceof Error ? caught.message : reparentCopy.previewFailed);
@@ -1397,27 +1386,12 @@ function MindMapCanvas({
     setReparentPending("apply");
     setReparentError("");
     try {
-      const response = await fetch(
-        `/api/value-objects/${encodeURIComponent(reparentTarget.sourceId)}/tree-restructure/apply`,
-        {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({
-            mode: "reparent",
-            payload: { newParentValueObjectId: reparentTarget.newParentId },
-            previewHash: reparentPreview.previewHash,
-            idempotencyKey: createIdempotencyKey("mind-map-reparent"),
-          }),
-        },
-      );
-      const payload = (await response.json().catch(() => null)) as
-        | ValueObjectTreeRestructureApplyResult
-        | ValueObjectTreeRestructureError
-        | null;
-      if (!response.ok || !payload || !("operationId" in payload)) {
-        throw new Error(payload && "error" in payload ? payload.error : reparentCopy.applyFailed);
-      }
+      const payload = await applyValueObjectReparent({
+        sourceId: reparentTarget.sourceId,
+        newParentId: reparentTarget.newParentId,
+        preview: reparentPreview,
+        idempotencyKey: createIdempotencyKey("mind-map-reparent"),
+      });
       setReparentResult(payload);
       onValueObjectReparented?.(reparentTarget.sourceId, reparentTarget.newParentId);
     } catch (caught) {

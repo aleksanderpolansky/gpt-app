@@ -42,6 +42,16 @@ import {
   deleteObservationObjectFromTable,
   ValueObjectTableDeleteError,
 } from "./value-object-table-row-delete";
+import {
+  applyObservationObjectTableReparent,
+  canReparentObservationObjectFromTable,
+  canUseObservationObjectTableReparentParent,
+  createValueObjectTableReparentDraft,
+  previewObservationObjectTableReparent,
+  ValueObjectTableReparentError,
+  type ValueObjectTableReparentDraft,
+  type ValueObjectTableReparentPreview,
+} from "./value-object-table-row-reparent";
 
 import { ValueObjectMindMap } from "./value-object-mind-map";
 import {
@@ -137,6 +147,20 @@ type CatalogCopy = {
   rowDeleted: string;
   rowDeleteFailed: string;
   technicalDependency: string;
+  changeParent: string;
+  moveParentRequired: string;
+  movePreview: string;
+  movePreviewing: string;
+  moveApply: string;
+  moveApplying: string;
+  moveCancel: string;
+  moveCurrentPath: string;
+  moveNewPath: string;
+  moveWarnings: string;
+  movePreviewReady: string;
+  rowMoved: string;
+  rowMoveFailed: string;
+  rowMoveNotAllowed: string;
 };
 
 const COPY: Record<LocaleCode, CatalogCopy> = {
@@ -194,6 +218,20 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowDeleted: "Object deleted.",
     rowDeleteFailed: "Could not delete object.",
     technicalDependency: "Blocking dependency",
+    changeParent: "Change parent",
+    moveParentRequired: "Select new parent",
+    movePreview: "Preview move",
+    movePreviewing: "Previewing…",
+    moveApply: "Apply move",
+    moveApplying: "Applying…",
+    moveCancel: "Cancel",
+    moveCurrentPath: "Current path",
+    moveNewPath: "New path",
+    moveWarnings: "Warnings",
+    movePreviewReady: "Preview ready. Review the paths, then apply the move.",
+    rowMoved: "Parent changed.",
+    rowMoveFailed: "Could not change parent.",
+    rowMoveNotAllowed: "The selected object cannot be moved from the table.",
   },
   pl: {
     tree: "Drzewo",
@@ -249,6 +287,20 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowDeleted: "Obiekt usunięty.",
     rowDeleteFailed: "Nie udało się usunąć obiektu.",
     technicalDependency: "Blokująca zależność",
+    changeParent: "Zmień rodzica",
+    moveParentRequired: "Wybierz nowego rodzica",
+    movePreview: "Podgląd przeniesienia",
+    movePreviewing: "Tworzenie podglądu…",
+    moveApply: "Zastosuj przeniesienie",
+    moveApplying: "Stosowanie…",
+    moveCancel: "Anuluj",
+    moveCurrentPath: "Bieżąca ścieżka",
+    moveNewPath: "Nowa ścieżka",
+    moveWarnings: "Ostrzeżenia",
+    movePreviewReady: "Podgląd gotowy. Sprawdź ścieżki i zastosuj przeniesienie.",
+    rowMoved: "Rodzic został zmieniony.",
+    rowMoveFailed: "Nie udało się zmienić rodzica.",
+    rowMoveNotAllowed: "Wybranego obiektu nie można przenieść z tabeli.",
   },
   ru: {
     tree: "Дерево",
@@ -304,6 +356,20 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowDeleted: "Объект удалён.",
     rowDeleteFailed: "Не удалось удалить объект.",
     technicalDependency: "Блокирующая зависимость",
+    changeParent: "Изменить родителя",
+    moveParentRequired: "Выберите нового родителя",
+    movePreview: "Предпросмотр переноса",
+    movePreviewing: "Подготовка предпросмотра…",
+    moveApply: "Применить перенос",
+    moveApplying: "Применение…",
+    moveCancel: "Отмена",
+    moveCurrentPath: "Текущий путь",
+    moveNewPath: "Новый путь",
+    moveWarnings: "Предупреждения",
+    movePreviewReady: "Предпросмотр готов. Проверьте пути и примените перенос.",
+    rowMoved: "Родитель изменён.",
+    rowMoveFailed: "Не удалось изменить родителя.",
+    rowMoveNotAllowed: "Выбранный объект нельзя переносить из таблицы.",
   },
   uk: {
     tree: "Дерево",
@@ -359,6 +425,20 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowDeleted: "Об’єкт видалено.",
     rowDeleteFailed: "Не вдалося видалити об’єкт.",
     technicalDependency: "Блокуюча залежність",
+    changeParent: "Змінити батьківський об’єкт",
+    moveParentRequired: "Виберіть новий батьківський об’єкт",
+    movePreview: "Попередній перегляд перенесення",
+    movePreviewing: "Підготовка перегляду…",
+    moveApply: "Застосувати перенесення",
+    moveApplying: "Застосування…",
+    moveCancel: "Скасувати",
+    moveCurrentPath: "Поточний шлях",
+    moveNewPath: "Новий шлях",
+    moveWarnings: "Попередження",
+    movePreviewReady: "Перегляд готовий. Перевірте шляхи та застосуйте перенесення.",
+    rowMoved: "Батьківський об’єкт змінено.",
+    rowMoveFailed: "Не вдалося змінити батьківський об’єкт.",
+    rowMoveNotAllowed: "Вибраний об’єкт не можна переносити з таблиці.",
   },
   de: {
     tree: "Baum",
@@ -414,6 +494,20 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowDeleted: "Objekt gelöscht.",
     rowDeleteFailed: "Objekt konnte nicht gelöscht werden.",
     technicalDependency: "Blockierende Abhängigkeit",
+    changeParent: "Übergeordnetes Objekt ändern",
+    moveParentRequired: "Neues übergeordnetes Objekt wählen",
+    movePreview: "Verschiebung prüfen",
+    movePreviewing: "Vorschau wird erstellt…",
+    moveApply: "Verschiebung anwenden",
+    moveApplying: "Wird angewendet…",
+    moveCancel: "Abbrechen",
+    moveCurrentPath: "Aktueller Pfad",
+    moveNewPath: "Neuer Pfad",
+    moveWarnings: "Warnungen",
+    movePreviewReady: "Vorschau bereit. Pfade prüfen und Verschiebung anwenden.",
+    rowMoved: "Übergeordnetes Objekt geändert.",
+    rowMoveFailed: "Übergeordnetes Objekt konnte nicht geändert werden.",
+    rowMoveNotAllowed: "Das ausgewählte Objekt kann nicht aus der Tabelle verschoben werden.",
   },
   es: {
     tree: "Árbol",
@@ -469,6 +563,20 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowDeleted: "Objeto eliminado.",
     rowDeleteFailed: "No se pudo eliminar el objeto.",
     technicalDependency: "Dependencia bloqueante",
+    changeParent: "Cambiar padre",
+    moveParentRequired: "Selecciona el nuevo padre",
+    movePreview: "Previsualizar traslado",
+    movePreviewing: "Preparando vista previa…",
+    moveApply: "Aplicar traslado",
+    moveApplying: "Aplicando…",
+    moveCancel: "Cancelar",
+    moveCurrentPath: "Ruta actual",
+    moveNewPath: "Nueva ruta",
+    moveWarnings: "Advertencias",
+    movePreviewReady: "Vista previa lista. Revisa las rutas y aplica el traslado.",
+    rowMoved: "Padre cambiado.",
+    rowMoveFailed: "No se pudo cambiar el padre.",
+    rowMoveNotAllowed: "El objeto seleccionado no se puede trasladar desde la tabla.",
   },
   cs: {
     tree: "Strom",
@@ -524,6 +632,20 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowDeleted: "Objekt odstraněn.",
     rowDeleteFailed: "Objekt se nepodařilo odstranit.",
     technicalDependency: "Blokující závislost",
+    changeParent: "Změnit rodiče",
+    moveParentRequired: "Vyberte nového rodiče",
+    movePreview: "Náhled přesunu",
+    movePreviewing: "Příprava náhledu…",
+    moveApply: "Použít přesun",
+    moveApplying: "Používání…",
+    moveCancel: "Zrušit",
+    moveCurrentPath: "Aktuální cesta",
+    moveNewPath: "Nová cesta",
+    moveWarnings: "Varování",
+    movePreviewReady: "Náhled je připraven. Zkontrolujte cesty a použijte přesun.",
+    rowMoved: "Rodič změněn.",
+    rowMoveFailed: "Rodiče se nepodařilo změnit.",
+    rowMoveNotAllowed: "Vybraný objekt nelze přesunout z tabulky.",
   },
 };
 
@@ -763,6 +885,12 @@ export function ValueObjectCatalogViews({
     useState<ValueObjectTableCreateDraft | null>(null);
   const [tableCreateBusy, setTableCreateBusy] = useState(false);
   const [tableDeleteBusy, setTableDeleteBusy] = useState(false);
+  const [tableReparentDraft, setTableReparentDraft] =
+    useState<ValueObjectTableReparentDraft | null>(null);
+  const [tableReparentPreview, setTableReparentPreview] =
+    useState<ValueObjectTableReparentPreview | null>(null);
+  const [tableReparentBusy, setTableReparentBusy] =
+    useState<"preview" | "apply" | null>(null);
   const [tableRowSelectionId, setTableRowSelectionId] = useState<string | null>(null);
 
   const objectsById = useMemo(() => {
@@ -1132,6 +1260,69 @@ export function ValueObjectCatalogViews({
       ),
   );
 
+  const tableReparentSource = tableReparentDraft?.sourceId
+    ? objectsById.get(tableReparentDraft.sourceId) ?? null
+    : null;
+  const tableSelectedReparentable = canReparentObservationObjectFromTable(
+    tableRowSelectionId ? objectsById.get(tableRowSelectionId) ?? null : null,
+  );
+  const tableReparentParentOptions = useMemo(() => {
+    const reparentDraft = tableReparentDraft;
+    const source = reparentDraft?.sourceId
+      ? objectsById.get(reparentDraft.sourceId) ?? null
+      : null;
+    if (!reparentDraft || !canReparentObservationObjectFromTable(source)) {
+      return [];
+    }
+
+    return valueObjects
+      .filter(
+        (candidate): candidate is ValueObjectPayload & { id: string } => {
+          if (
+            !candidate.id ||
+            !visibleIds.has(candidate.id) ||
+            !canUseObservationObjectTableReparentParent(source, candidate)
+          ) {
+            return false;
+          }
+
+          const visited = new Set<string>();
+          let cursor: ValueObjectPayload | undefined = candidate;
+          while (cursor?.id && !visited.has(cursor.id)) {
+            visited.add(cursor.id);
+            const parentId = cursor.parent_value_object_id;
+            if (!parentId) break;
+            if (parentId === source.id) return false;
+            cursor = objectsById.get(parentId);
+          }
+          return true;
+        },
+      )
+      .sort((a, b) =>
+        (pathById.get(a.id) ?? a.title ?? "").localeCompare(
+          pathById.get(b.id) ?? b.title ?? "",
+          locale,
+        ),
+      );
+  }, [
+    locale,
+    objectsById,
+    pathById,
+    tableReparentDraft,
+    valueObjects,
+    visibleIds,
+  ]);
+  const tableReparentParent = tableReparentDraft?.newParentId
+    ? objectsById.get(tableReparentDraft.newParentId) ?? null
+    : null;
+  const tableReparentCanPreview = Boolean(
+    tableReparentDraft?.newParentId &&
+      canUseObservationObjectTableReparentParent(
+        tableReparentSource,
+        tableReparentParent,
+      ),
+  );
+
   const tableRows = useMemo<TableObjectRow[]>(() => {
     const visited = new Set<string>();
 
@@ -1244,9 +1435,15 @@ export function ValueObjectCatalogViews({
         tooltip: true,
         cssClass: "arctor-table-title",
         editor: tableEditMode ? "arctor-expanded-input" : false,
-        editable: tableEditMode && !tableHistoryBusy && !tableCreateBusy
-          ? (cell) => cell.getRow().getData().editable
-          : false,
+        editable:
+          tableEditMode &&
+          !tableHistoryBusy &&
+          !tableCreateBusy &&
+          !tableDeleteBusy &&
+          !tableReparentDraft &&
+          !tableReparentBusy
+            ? (cell) => cell.getRow().getData().editable
+            : false,
         editorParams: tableEditMode
           ? {
               elementAttributes: { maxlength: "180" },
@@ -1270,9 +1467,15 @@ export function ValueObjectCatalogViews({
         tooltip: true,
         cssClass: "arctor-table-muted",
         editor: tableEditMode ? "arctor-expanded-textarea" : false,
-        editable: tableEditMode && !tableHistoryBusy && !tableCreateBusy
-          ? (cell) => cell.getRow().getData().editable
-          : false,
+        editable:
+          tableEditMode &&
+          !tableHistoryBusy &&
+          !tableCreateBusy &&
+          !tableDeleteBusy &&
+          !tableReparentDraft &&
+          !tableReparentBusy
+            ? (cell) => cell.getRow().getData().editable
+            : false,
         editorParams: tableEditMode
           ? {
               elementAttributes: { maxlength: "4000" },
@@ -1354,10 +1557,13 @@ export function ValueObjectCatalogViews({
     [
       copy,
       tableCreateBusy,
+      tableDeleteBusy,
       tableEditCopy.cancel,
       tableEditCopy.save,
       tableEditMode,
       tableHistoryBusy,
+      tableReparentBusy,
+      tableReparentDraft,
     ],
   );
 
@@ -1376,7 +1582,14 @@ export function ValueObjectCatalogViews({
   async function handleTableCellEdited(
     event: ArctorTableCellEditedEvent<TableObjectRow>,
   ) {
-    if (!tableEditMode || tableHistoryBusy || tableCreateBusy) {
+    if (
+      !tableEditMode ||
+      tableHistoryBusy ||
+      tableCreateBusy ||
+      tableDeleteBusy ||
+      tableReparentDraft ||
+      tableReparentBusy
+    ) {
       event.restoreOldValue();
       return;
     }
@@ -1616,7 +1829,14 @@ export function ValueObjectCatalogViews({
   async function handleTableRangePaste(
     event: ArctorTableRangePasteEvent<TableObjectRow>,
   ) {
-    if (!tableEditMode || tableHistoryBusy || tableCreateBusy) {
+    if (
+      !tableEditMode ||
+      tableHistoryBusy ||
+      tableCreateBusy ||
+      tableDeleteBusy ||
+      tableReparentDraft ||
+      tableReparentBusy
+    ) {
       return;
     }
 
@@ -1914,7 +2134,9 @@ export function ValueObjectCatalogViews({
       tableDeleteBusy ||
       tableCreateBusy ||
       tableHistoryBusy ||
-      tableCreateDraft
+      tableCreateDraft ||
+      tableReparentDraft ||
+      tableReparentBusy
     ) {
       return;
     }
@@ -1985,6 +2207,110 @@ export function ValueObjectCatalogViews({
       });
     } finally {
       setTableDeleteBusy(false);
+    }
+  }
+
+  function beginTableReparent() {
+    if (
+      !tableEditMode ||
+      tableHistoryBusy ||
+      tableCreateBusy ||
+      tableDeleteBusy ||
+      tableReparentDraft ||
+      tableReparentBusy
+    ) {
+      return;
+    }
+
+    const source = tableRowSelectionId
+      ? objectsById.get(tableRowSelectionId) ?? null
+      : null;
+    const draft = createValueObjectTableReparentDraft(source);
+    if (!draft) {
+      setTableEditFeedback({ kind: "error", text: copy.rowMoveNotAllowed });
+      return;
+    }
+    setTableReparentDraft(draft);
+    setTableReparentPreview(null);
+    setTableEditFeedback({ kind: "info", text: copy.moveParentRequired });
+  }
+
+  function changeTableReparentParent(nextParentId: string) {
+    if (tableReparentBusy) return;
+    setTableReparentDraft((current) =>
+      current ? { ...current, newParentId: nextParentId } : current,
+    );
+    setTableReparentPreview(null);
+    setTableEditFeedback({ kind: "info", text: copy.moveParentRequired });
+  }
+
+  function cancelTableReparent() {
+    if (tableReparentBusy) return;
+    setTableReparentDraft(null);
+    setTableReparentPreview(null);
+    setTableEditFeedback({ kind: "info", text: tableEditCopy.selectRow });
+  }
+
+  async function previewTableReparent() {
+    const draft = tableReparentDraft;
+    if (!draft || !tableReparentCanPreview || tableReparentBusy) return;
+    const source = objectsById.get(draft.sourceId) ?? null;
+    const parent = objectsById.get(draft.newParentId) ?? null;
+    setTableReparentBusy("preview");
+    setTableEditFeedback({ kind: "saving", text: copy.movePreviewing });
+    try {
+      const preview = await previewObservationObjectTableReparent({
+        draft,
+        source,
+        parent,
+      });
+      setTableReparentPreview(preview);
+      setTableEditFeedback({ kind: "info", text: copy.movePreviewReady });
+    } catch (moveError) {
+      const detail =
+        moveError instanceof ValueObjectTableReparentError || moveError instanceof Error
+          ? moveError.message
+          : "";
+      setTableReparentPreview(null);
+      setTableEditFeedback({
+        kind: "error",
+        text: [copy.rowMoveFailed, detail].filter(Boolean).join(" "),
+      });
+    } finally {
+      setTableReparentBusy(null);
+    }
+  }
+
+  async function applyTableReparent() {
+    const draft = tableReparentDraft;
+    const preview = tableReparentPreview;
+    if (!draft || !preview || tableReparentBusy) return;
+    const source = objectsById.get(draft.sourceId) ?? null;
+    const parent = objectsById.get(draft.newParentId) ?? null;
+    setTableReparentBusy("apply");
+    setTableEditFeedback({ kind: "saving", text: copy.moveApplying });
+    try {
+      const result = await applyObservationObjectTableReparent({
+        draft,
+        preview,
+        source,
+        parent,
+      });
+      onValueObjectReparented?.(result.targetValueObjectId, draft.newParentId);
+      setTableRowSelectionId(result.targetValueObjectId);
+      setTableReparentDraft(null);
+      setTableReparentPreview(null);
+      setTableUndoStack([]);
+      setTableRedoStack([]);
+      setTableEditFeedback({ kind: "success", text: copy.rowMoved });
+    } catch (moveError) {
+      const detail = moveError instanceof Error ? moveError.message : "";
+      setTableEditFeedback({
+        kind: "error",
+        text: [copy.rowMoveFailed, detail].filter(Boolean).join(" "),
+      });
+    } finally {
+      setTableReparentBusy(null);
     }
   }
 
@@ -2281,7 +2607,12 @@ export function ValueObjectCatalogViews({
                     type="button"
                     onClick={beginTableRowCreate}
                     disabled={
-                      tableHistoryBusy || tableCreateBusy || Boolean(tableCreateDraft)
+                      tableHistoryBusy ||
+                      tableCreateBusy ||
+                      tableDeleteBusy ||
+                      Boolean(tableCreateDraft) ||
+                      Boolean(tableReparentDraft) ||
+                      Boolean(tableReparentBusy)
                     }
                     aria-label={copy.addRow}
                     title={copy.addRow}
@@ -2298,6 +2629,8 @@ export function ValueObjectCatalogViews({
                       tableCreateBusy ||
                       tableDeleteBusy ||
                       Boolean(tableCreateDraft) ||
+                      Boolean(tableReparentDraft) ||
+                      Boolean(tableReparentBusy) ||
                       !tableRowSelectionId
                     }
                     aria-label={copy.deleteRow}
@@ -2309,11 +2642,32 @@ export function ValueObjectCatalogViews({
                   </button>
                   <button
                     type="button"
+                    onClick={beginTableReparent}
+                    disabled={
+                      tableHistoryBusy ||
+                      tableCreateBusy ||
+                      tableDeleteBusy ||
+                      Boolean(tableCreateDraft) ||
+                      Boolean(tableReparentDraft) ||
+                      Boolean(tableReparentBusy) ||
+                      !tableSelectedReparentable
+                    }
+                    aria-label={copy.changeParent}
+                    title={copy.changeParent}
+                    className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-[#d7dcff] bg-white px-2.5 text-[11px] font-semibold text-[#4f5fc7] transition hover:bg-[#f7f8ff] disabled:cursor-not-allowed disabled:bg-[#f3f4f6] disabled:text-[#a4a9b8]"
+                  >
+                    <Network size={16} />
+                    <span>{copy.changeParent}</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => void applyTableHistory("undo")}
                     disabled={
                       tableHistoryBusy ||
                       tableCreateBusy ||
                       tableDeleteBusy ||
+                      Boolean(tableReparentDraft) ||
+                      Boolean(tableReparentBusy) ||
                       tableUndoStack.length === 0
                     }
                     aria-label={tableEditCopy.undo}
@@ -2330,6 +2684,8 @@ export function ValueObjectCatalogViews({
                       tableHistoryBusy ||
                       tableCreateBusy ||
                       tableDeleteBusy ||
+                      Boolean(tableReparentDraft) ||
+                      Boolean(tableReparentBusy) ||
                       tableRedoStack.length === 0
                     }
                     aria-label={tableEditCopy.redo}
@@ -2344,7 +2700,13 @@ export function ValueObjectCatalogViews({
 
               <button
                 type="button"
-                disabled={tableCreateBusy || tableDeleteBusy || tableHistoryBusy}
+                disabled={
+                  tableCreateBusy ||
+                  tableDeleteBusy ||
+                  tableHistoryBusy ||
+                  Boolean(tableReparentDraft) ||
+                  Boolean(tableReparentBusy)
+                }
                 onClick={() => {
                   const nextMode = !tableEditMode;
                   setTableEditMode(nextMode);
@@ -2354,6 +2716,9 @@ export function ValueObjectCatalogViews({
                   setTableCreateDraft(null);
                   setTableCreateBusy(false);
                   setTableDeleteBusy(false);
+                  setTableReparentDraft(null);
+                  setTableReparentPreview(null);
+                  setTableReparentBusy(null);
                   setTableRowSelectionId(null);
                   setTableEditFeedback(
                     nextMode
@@ -2492,6 +2857,66 @@ export function ValueObjectCatalogViews({
             </div>
           ) : null}
 
+          {tableReparentDraft ? (
+            <div className="grid gap-2 rounded-xl border border-[#cfd8ff] bg-[#f8faff] p-2.5 lg:grid-cols-[minmax(180px,1fr)_minmax(260px,2fr)_auto_auto] lg:items-center">
+              <div className="min-w-0 text-[10px] font-semibold leading-4 text-[#5a6484]">
+                <span className="block text-[#303a69]">{copy.changeParent}</span>
+                <span className="block truncate">
+                  {tableReparentSource?.title?.trim() || tableReparentDraft.sourceId}
+                </span>
+              </div>
+              <select
+                value={tableReparentDraft.newParentId}
+                onChange={(event) => changeTableReparentParent(event.target.value)}
+                disabled={Boolean(tableReparentBusy)}
+                className="min-h-10 rounded-lg border border-[#dfe3f1] bg-white px-3 text-[11px] font-semibold text-[#343854] outline-none disabled:bg-[#f1f3f7] disabled:text-[#8b91a7]"
+              >
+                <option value="">{copy.moveParentRequired}</option>
+                {tableReparentParentOptions.map((valueObject) => (
+                  <option key={valueObject.id} value={valueObject.id}>
+                    {pathById.get(valueObject.id) ?? valueObject.title ?? "—"}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => void previewTableReparent()}
+                disabled={Boolean(tableReparentBusy) || !tableReparentCanPreview}
+                className="min-h-10 rounded-lg border border-[#cfd8ff] bg-white px-3 text-[11px] font-bold text-[#3b6ef8] transition hover:bg-[#f1f5ff] disabled:cursor-not-allowed disabled:text-[#a4a9b8]"
+              >
+                {tableReparentBusy === "preview" ? copy.movePreviewing : copy.movePreview}
+              </button>
+              <button
+                type="button"
+                onClick={cancelTableReparent}
+                disabled={Boolean(tableReparentBusy)}
+                className="min-h-10 rounded-lg border border-[#dfe3f1] bg-white px-3 text-[11px] font-semibold text-[#4a4f6a] transition hover:bg-[#f8fafc] disabled:opacity-60"
+              >
+                {copy.moveCancel}
+              </button>
+
+              {tableReparentPreview ? (
+                <div className="grid gap-1 rounded-lg border border-[#dde4ff] bg-white p-2 text-[10px] leading-4 text-[#5a6484] lg:col-span-3">
+                  <div><strong>{copy.moveCurrentPath}:</strong> {tableReparentPreview.oldPath.map((node) => node.title).join(" → ")}</div>
+                  <div><strong>{copy.moveNewPath}:</strong> {tableReparentPreview.newPath.map((node) => node.title).join(" → ")}</div>
+                  {tableReparentPreview.warnings.length > 0 ? (
+                    <div><strong>{copy.moveWarnings}:</strong> {tableReparentPreview.warnings.join(" · ")}</div>
+                  ) : null}
+                </div>
+              ) : null}
+              {tableReparentPreview ? (
+                <button
+                  type="button"
+                  onClick={() => void applyTableReparent()}
+                  disabled={Boolean(tableReparentBusy)}
+                  className="min-h-10 rounded-lg bg-[#3b6ef8] px-3 text-[11px] font-bold text-white transition hover:bg-[#315fdc] disabled:bg-[#b7c4ee]"
+                >
+                  {tableReparentBusy === "apply" ? copy.moveApplying : copy.moveApply}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
           {tableEditMode ? (
             <div
               className={[
@@ -2544,6 +2969,10 @@ export function ValueObjectCatalogViews({
               if (tableEditMode) {
                 if (row.createDraft) {
                   setTableEditFeedback({ kind: "info", text: copy.rowCreateHint });
+                  return;
+                }
+                if (tableReparentDraft) {
+                  setTableEditFeedback({ kind: "info", text: copy.moveParentRequired });
                   return;
                 }
 
