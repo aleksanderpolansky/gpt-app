@@ -9,9 +9,11 @@ import {
   LayoutGrid,
   Leaf,
   ListTree,
+  History,
   Map as MapIcon,
   Network,
   Plus,
+  RotateCcw,
   Redo2,
   Table2,
   Trash2,
@@ -52,6 +54,14 @@ import {
   type ValueObjectTableReparentDraft,
   type ValueObjectTableReparentPreview,
 } from "./value-object-table-row-reparent";
+import {
+  createValueObjectTreeOperationIdempotencyKey,
+  getRollbackEligibleOperationId,
+  loadValueObjectTreeRestructureContext,
+  rollbackValueObjectTreeRestructureOperation,
+  ValueObjectTreeOperationClientError,
+} from "./value-object-tree-operation-client";
+import type { ValueObjectTreeRestructureContext } from "@/types/value-object-tree-restructure";
 
 import { ValueObjectMindMap } from "./value-object-mind-map";
 import {
@@ -161,6 +171,16 @@ type CatalogCopy = {
   rowMoved: string;
   rowMoveFailed: string;
   rowMoveNotAllowed: string;
+  structureHistory: string;
+  historyLoading: string;
+  historyNoOperations: string;
+  historyRollback: string;
+  historyRollingBack: string;
+  historyClose: string;
+  historyRollbackConfirm: string;
+  historyRollbackFailed: string;
+  historyReady: string;
+  historyRolledBack: string;
 };
 
 const COPY: Record<LocaleCode, CatalogCopy> = {
@@ -232,6 +252,16 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowMoved: "Parent changed.",
     rowMoveFailed: "Could not change parent.",
     rowMoveNotAllowed: "The selected object cannot be moved from the table.",
+    structureHistory: "Structure history",
+    historyLoading: "Loading history…",
+    historyNoOperations: "No controlled structural operations for this object yet.",
+    historyRollback: "Rollback",
+    historyRollingBack: "Rolling back…",
+    historyClose: "Close history",
+    historyRollbackConfirm: "Rollback the latest structural operation? The previous tree state will be restored by protected domain rollback.",
+    historyRollbackFailed: "Could not roll back the structural operation.",
+    historyReady: "Structural history loaded.",
+    historyRolledBack: "Structural operation rolled back. Reloading current tree…",
   },
   pl: {
     tree: "Drzewo",
@@ -301,6 +331,16 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowMoved: "Rodzic został zmieniony.",
     rowMoveFailed: "Nie udało się zmienić rodzica.",
     rowMoveNotAllowed: "Wybranego obiektu nie można przenieść z tabeli.",
+    structureHistory: "Historia struktury",
+    historyLoading: "Ładowanie historii…",
+    historyNoOperations: "Brak kontrolowanych operacji strukturalnych dla tego obiektu.",
+    historyRollback: "Cofnij operację",
+    historyRollingBack: "Cofanie…",
+    historyClose: "Zamknij historię",
+    historyRollbackConfirm: "Cofnąć najnowszą operację strukturalną? Poprzedni stan drzewa zostanie przywrócony przez chroniony rollback domenowy.",
+    historyRollbackFailed: "Nie udało się cofnąć operacji strukturalnej.",
+    historyReady: "Historia struktury załadowana.",
+    historyRolledBack: "Operacja strukturalna cofnięta. Odświeżanie bieżącego drzewa…",
   },
   ru: {
     tree: "Дерево",
@@ -370,6 +410,16 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowMoved: "Родитель изменён.",
     rowMoveFailed: "Не удалось изменить родителя.",
     rowMoveNotAllowed: "Выбранный объект нельзя переносить из таблицы.",
+    structureHistory: "История структуры",
+    historyLoading: "Загрузка истории…",
+    historyNoOperations: "Для этого объекта ещё нет контролируемых структурных операций.",
+    historyRollback: "Откатить",
+    historyRollingBack: "Откат…",
+    historyClose: "Закрыть историю",
+    historyRollbackConfirm: "Откатить последнюю структурную операцию? Предыдущее состояние дерева будет восстановлено защищённым доменным rollback.",
+    historyRollbackFailed: "Не удалось откатить структурную операцию.",
+    historyReady: "История структуры загружена.",
+    historyRolledBack: "Структурная операция откатана. Перезагружаю актуальное дерево…",
   },
   uk: {
     tree: "Дерево",
@@ -439,6 +489,16 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowMoved: "Батьківський об’єкт змінено.",
     rowMoveFailed: "Не вдалося змінити батьківський об’єкт.",
     rowMoveNotAllowed: "Вибраний об’єкт не можна переносити з таблиці.",
+    structureHistory: "Історія структури",
+    historyLoading: "Завантаження історії…",
+    historyNoOperations: "Для цього об’єкта ще немає контрольованих структурних операцій.",
+    historyRollback: "Відкотити",
+    historyRollingBack: "Відкат…",
+    historyClose: "Закрити історію",
+    historyRollbackConfirm: "Відкотити останню структурну операцію? Попередній стан дерева буде відновлено захищеним доменним rollback.",
+    historyRollbackFailed: "Не вдалося відкотити структурну операцію.",
+    historyReady: "Історію структури завантажено.",
+    historyRolledBack: "Структурну операцію відкотано. Перезавантажую актуальне дерево…",
   },
   de: {
     tree: "Baum",
@@ -508,6 +568,16 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowMoved: "Übergeordnetes Objekt geändert.",
     rowMoveFailed: "Übergeordnetes Objekt konnte nicht geändert werden.",
     rowMoveNotAllowed: "Das ausgewählte Objekt kann nicht aus der Tabelle verschoben werden.",
+    structureHistory: "Strukturverlauf",
+    historyLoading: "Verlauf wird geladen…",
+    historyNoOperations: "Noch keine kontrollierten Strukturvorgänge für dieses Objekt.",
+    historyRollback: "Zurückrollen",
+    historyRollingBack: "Wird zurückgerollt…",
+    historyClose: "Verlauf schließen",
+    historyRollbackConfirm: "Den neuesten Strukturvorgang zurückrollen? Der vorherige Baumzustand wird durch den geschützten Domain-Rollback wiederhergestellt.",
+    historyRollbackFailed: "Der Strukturvorgang konnte nicht zurückgerollt werden.",
+    historyReady: "Strukturverlauf geladen.",
+    historyRolledBack: "Strukturvorgang zurückgerollt. Aktueller Baum wird neu geladen…",
   },
   es: {
     tree: "Árbol",
@@ -577,6 +647,16 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowMoved: "Padre cambiado.",
     rowMoveFailed: "No se pudo cambiar el padre.",
     rowMoveNotAllowed: "El objeto seleccionado no se puede trasladar desde la tabla.",
+    structureHistory: "Historial de estructura",
+    historyLoading: "Cargando historial…",
+    historyNoOperations: "Aún no hay operaciones estructurales controladas para este objeto.",
+    historyRollback: "Revertir",
+    historyRollingBack: "Revirtiendo…",
+    historyClose: "Cerrar historial",
+    historyRollbackConfirm: "¿Revertir la operación estructural más reciente? El estado anterior del árbol se restaurará mediante el rollback de dominio protegido.",
+    historyRollbackFailed: "No se pudo revertir la operación estructural.",
+    historyReady: "Historial de estructura cargado.",
+    historyRolledBack: "Operación estructural revertida. Recargando el árbol actual…",
   },
   cs: {
     tree: "Strom",
@@ -646,6 +726,16 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowMoved: "Rodič změněn.",
     rowMoveFailed: "Rodiče se nepodařilo změnit.",
     rowMoveNotAllowed: "Vybraný objekt nelze přesunout z tabulky.",
+    structureHistory: "Historie struktury",
+    historyLoading: "Načítání historie…",
+    historyNoOperations: "Pro tento objekt zatím nejsou žádné řízené strukturální operace.",
+    historyRollback: "Vrátit operaci",
+    historyRollingBack: "Vrácení…",
+    historyClose: "Zavřít historii",
+    historyRollbackConfirm: "Vrátit nejnovější strukturální operaci? Předchozí stav stromu bude obnoven chráněným doménovým rollbackem.",
+    historyRollbackFailed: "Strukturální operaci se nepodařilo vrátit.",
+    historyReady: "Historie struktury načtena.",
+    historyRolledBack: "Strukturální operace vrácena. Načítám aktuální strom…",
   },
 };
 
@@ -891,6 +981,12 @@ export function ValueObjectCatalogViews({
     useState<ValueObjectTableReparentPreview | null>(null);
   const [tableReparentBusy, setTableReparentBusy] =
     useState<"preview" | "apply" | null>(null);
+  const [tableStructureHistoryContext, setTableStructureHistoryContext] =
+    useState<ValueObjectTreeRestructureContext | null>(null);
+  const [tableStructureHistoryBusy, setTableStructureHistoryBusy] =
+    useState<"load" | "rollback" | null>(null);
+  const [tableStructureRollbackOperationId, setTableStructureRollbackOperationId] =
+    useState<string | null>(null);
   const [tableRowSelectionId, setTableRowSelectionId] = useState<string | null>(null);
 
   const objectsById = useMemo(() => {
@@ -2314,6 +2410,49 @@ export function ValueObjectCatalogViews({
     }
   }
 
+  async function openTableStructureHistory() {
+    if (!tableEditMode || tableHistoryBusy || tableCreateBusy || tableDeleteBusy || tableCreateDraft || tableReparentDraft || tableReparentBusy || tableStructureHistoryBusy) return;
+    const selectedId = tableRowSelectionId;
+    if (!selectedId) { setTableEditFeedback({ kind: "info", text: tableEditCopy.selectRow }); return; }
+    setTableStructureHistoryBusy("load");
+    setTableEditFeedback({ kind: "saving", text: copy.historyLoading });
+    try {
+      const context = await loadValueObjectTreeRestructureContext({ valueObjectId: selectedId });
+      setTableStructureHistoryContext(context);
+      setTableEditFeedback({ kind: "info", text: copy.historyReady });
+    } catch (historyError) {
+      const detail = historyError instanceof Error ? historyError.message : "";
+      setTableStructureHistoryContext(null);
+      setTableEditFeedback({ kind: "error", text: [copy.historyRollbackFailed, detail].filter(Boolean).join(" ") });
+    } finally { setTableStructureHistoryBusy(null); }
+  }
+
+  function closeTableStructureHistory() {
+    if (tableStructureHistoryBusy) return;
+    setTableStructureHistoryContext(null);
+    setTableStructureRollbackOperationId(null);
+    setTableEditFeedback({ kind: "info", text: tableEditCopy.selectRow });
+  }
+
+  async function rollbackTableStructureOperation(operationId: string) {
+    const context = tableStructureHistoryContext;
+    if (!context || tableStructureHistoryBusy || tableHistoryBusy || tableCreateBusy || tableDeleteBusy || tableCreateDraft || tableReparentDraft || tableReparentBusy) return;
+    if (getRollbackEligibleOperationId(context.recentOperations) !== operationId) return;
+    if (!window.confirm(copy.historyRollbackConfirm)) return;
+    setTableStructureHistoryBusy("rollback");
+    setTableStructureRollbackOperationId(operationId);
+    setTableEditFeedback({ kind: "saving", text: copy.historyRollingBack });
+    try {
+      await rollbackValueObjectTreeRestructureOperation({ operationId, idempotencyKey: createValueObjectTreeOperationIdempotencyKey("table-tree-rollback") });
+      setTableUndoStack([]); setTableRedoStack([]);
+      setTableEditFeedback({ kind: "success", text: copy.historyRolledBack });
+      window.location.reload();
+    } catch (rollbackError) {
+      const detail = rollbackError instanceof ValueObjectTreeOperationClientError || rollbackError instanceof Error ? rollbackError.message : "";
+      setTableEditFeedback({ kind: "error", text: [copy.historyRollbackFailed, detail].filter(Boolean).join(" ") });
+    } finally { setTableStructureHistoryBusy(null); setTableStructureRollbackOperationId(null); }
+  }
+
   function updateHierarchyLevel(levelIndex: number, nextId: string) {
     const basePath = hierarchyPathObjects
       .slice(0, levelIndex)
@@ -2659,6 +2798,9 @@ export function ValueObjectCatalogViews({
                     <Network size={16} />
                     <span>{copy.changeParent}</span>
                   </button>
+                  <button type="button" onClick={() => void openTableStructureHistory()} disabled={tableHistoryBusy || tableCreateBusy || tableDeleteBusy || Boolean(tableCreateDraft) || Boolean(tableReparentDraft) || Boolean(tableReparentBusy) || Boolean(tableStructureHistoryBusy) || !tableRowSelectionId} aria-label={copy.structureHistory} title={copy.structureHistory} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-[#d7dcff] bg-white px-2.5 text-[11px] font-semibold text-[#4f5fc7] transition hover:bg-[#f7f8ff] disabled:cursor-not-allowed disabled:bg-[#f3f4f6] disabled:text-[#a4a9b8]">
+                    <History size={16} /><span>{copy.structureHistory}</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => void applyTableHistory("undo")}
@@ -2719,6 +2861,9 @@ export function ValueObjectCatalogViews({
                   setTableReparentDraft(null);
                   setTableReparentPreview(null);
                   setTableReparentBusy(null);
+                  setTableStructureHistoryContext(null);
+                  setTableStructureHistoryBusy(null);
+                  setTableStructureRollbackOperationId(null);
                   setTableRowSelectionId(null);
                   setTableEditFeedback(
                     nextMode
@@ -2914,6 +3059,13 @@ export function ValueObjectCatalogViews({
                   {tableReparentBusy === "apply" ? copy.moveApplying : copy.moveApply}
                 </button>
               ) : null}
+            </div>
+          ) : null}
+
+          {tableStructureHistoryContext ? (
+            <div className="grid gap-2 rounded-xl border border-[#dfe3f1] bg-white p-3 text-[11px] text-[#4a4f6a]">
+              <div className="flex flex-wrap items-center justify-between gap-2"><div><span className="font-bold text-[#303a69]">{copy.structureHistory}</span><span className="ml-2 text-[10px] text-[#7c8099]">{tableStructureHistoryContext.current.title}</span></div><button type="button" onClick={closeTableStructureHistory} disabled={Boolean(tableStructureHistoryBusy)} className="min-h-9 rounded-lg border border-[#dfe3f1] bg-white px-3 text-[10px] font-semibold text-[#4a4f6a] disabled:opacity-50">{copy.historyClose}</button></div>
+              {tableStructureHistoryContext.recentOperations.length === 0 ? <div className="rounded-lg bg-[#f8fafc] p-2 text-[#7c8099]">{copy.historyNoOperations}</div> : <div className="grid gap-1.5">{tableStructureHistoryContext.recentOperations.map((operation) => { const canRollback = operation.id === getRollbackEligibleOperationId(tableStructureHistoryContext.recentOperations); const timestamp=operation.appliedAt ?? operation.createdAt; return <div key={operation.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#edf0f7] bg-[#fafbff] px-2.5 py-2"><div className="min-w-0"><span className="font-bold text-[#303a69]">{operation.operationType}</span><span className="ml-2">{operation.status}</span><span className="ml-2 text-[10px] text-[#8b91a7]">{new Date(timestamp).toLocaleString(locale)}</span></div>{canRollback ? <button type="button" onClick={() => void rollbackTableStructureOperation(operation.id)} disabled={Boolean(tableStructureHistoryBusy)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 text-[10px] font-bold text-rose-700 disabled:opacity-50"><RotateCcw size={14} /><span>{tableStructureHistoryBusy === "rollback" && tableStructureRollbackOperationId === operation.id ? copy.historyRollingBack : copy.historyRollback}</span></button> : null}</div>})}</div>}
             </div>
           ) : null}
 
