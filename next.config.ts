@@ -18,6 +18,11 @@ const LOCAL_EDITOR_CONTENT_SECURITY_POLICY = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    resolveAlias: {
+      "@schnsrw/core": "./src/lib/local-editors/casual-core-foreign-converter-disabled.ts",
+    },
+  },
   async headers() {
     return [
       {
