@@ -28,6 +28,16 @@ import {
 
 import { StandaloneWorkspaceCloseButton } from "@/components/workspace/standalone-workspace-close-button";
 
+import {
+  canCreateObservationObjectChildUnder,
+  canUseObservationObjectTableParent,
+  createObservationObjectFromTable,
+  createValueObjectTableDraft,
+  getDefaultObservationObjectTableChildRole,
+  type ValueObjectTableCreateDraft,
+  type ValueObjectTableCreateRole,
+} from "./value-object-table-row-create";
+
 import { ValueObjectMindMap } from "./value-object-mind-map";
 import {
   canEditValueObjectTableCells,
@@ -60,6 +70,7 @@ type ValueObjectPayload = {
   node_role_code?: string | null;
   root_value_object_id?: string | null;
   parent_value_object_id?: string | null;
+  branch_type_code?: string | null;
   canonical_key?: string | null;
   ontology_node_role_code?: string | null;
   scope_code?: string | null;
@@ -104,6 +115,17 @@ type CatalogCopy = {
   objects: string;
   noDescription: string;
   addChild: string;
+  addRow: string;
+  newRow: string;
+  rowCreateHint: string;
+  createRow: string;
+  creatingRow: string;
+  parentRequired: string;
+  selectParentFirst: string;
+  rowParentInvalid: string;
+  rowCreated: string;
+  rowCreatedRefreshWarning: string;
+  rowCreateFailed: string;
 };
 
 const COPY: Record<LocaleCode, CatalogCopy> = {
@@ -144,6 +166,17 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     objects: "objects",
     noDescription: "No description yet.",
     addChild: "Add child object",
+    addRow: "Add row",
+    newRow: "New row",
+    rowCreateHint: "Edit Name/Description in the provisional child row, confirm its role and parent, then create the object.",
+    createRow: "Create object",
+    creatingRow: "Creating…",
+    parentRequired: "Select parent",
+    selectParentFirst: "Select a root or intermediate parent first.",
+    rowParentInvalid: "This row cannot be the parent for the selected role.",
+    rowCreated: "Object created.",
+    rowCreatedRefreshWarning: "Object was created, but the catalog refresh failed. Reload before using it as a parent.",
+    rowCreateFailed: "Could not create object.",
   },
   pl: {
     tree: "Drzewo",
@@ -182,6 +215,17 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     objects: "obiektów",
     noDescription: "Nie dodano jeszcze opisu.",
     addChild: "Dodaj obiekt podrzędny",
+    addRow: "Dodaj wiersz",
+    newRow: "Nowy wiersz",
+    rowCreateHint: "Edytuj nazwę/opis w roboczym wierszu podrzędnym, sprawdź rolę i rodzica, a następnie utwórz obiekt.",
+    createRow: "Utwórz obiekt",
+    creatingRow: "Tworzenie…",
+    parentRequired: "Wybierz rodzica",
+    selectParentFirst: "Najpierw wybierz korzeń lub obiekt pośredni jako rodzica.",
+    rowParentInvalid: "Ten wiersz nie może być rodzicem dla wybranej roli.",
+    rowCreated: "Obiekt utworzony.",
+    rowCreatedRefreshWarning: "Obiekt został utworzony, ale nie udało się odświeżyć katalogu. Odśwież tabelę przed użyciem go jako rodzica.",
+    rowCreateFailed: "Nie udało się utworzyć obiektu.",
   },
   ru: {
     tree: "Дерево",
@@ -220,6 +264,17 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     objects: "объектов",
     noDescription: "Описание пока не добавлено.",
     addChild: "Добавить дочерний объект",
+    addRow: "Добавить строку",
+    newRow: "Новая строка",
+    rowCreateHint: "Измените название/описание в новой дочерней строке, проверьте роль и родителя, затем создайте объект.",
+    createRow: "Создать объект",
+    creatingRow: "Создание…",
+    parentRequired: "Выберите родителя",
+    selectParentFirst: "Сначала выберите родительский корневой или промежуточный ОН.",
+    rowParentInvalid: "Эта строка не может быть родителем для выбранной роли.",
+    rowCreated: "Объект создан.",
+    rowCreatedRefreshWarning: "Объект создан, но каталог не удалось полностью обновить. Перезагрузите таблицу перед использованием его как родителя.",
+    rowCreateFailed: "Не удалось создать объект.",
   },
   uk: {
     tree: "Дерево",
@@ -258,6 +313,17 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     objects: "об’єктів",
     noDescription: "Опис ще не додано.",
     addChild: "Додати дочірній об’єкт",
+    addRow: "Додати рядок",
+    newRow: "Новий рядок",
+    rowCreateHint: "Змініть назву/опис у новому дочірньому рядку, перевірте роль і батьківський об’єкт, потім створіть об’єкт.",
+    createRow: "Створити об’єкт",
+    creatingRow: "Створення…",
+    parentRequired: "Виберіть батьківський об’єкт",
+    selectParentFirst: "Спочатку виберіть кореневий або проміжний батьківський об’єкт.",
+    rowParentInvalid: "Цей рядок не може бути батьківським для вибраної ролі.",
+    rowCreated: "Об’єкт створено.",
+    rowCreatedRefreshWarning: "Об’єкт створено, але каталог не вдалося повністю оновити. Перезавантажте таблицю перед використанням його як батьківського.",
+    rowCreateFailed: "Не вдалося створити об’єкт.",
   },
   de: {
     tree: "Baum",
@@ -296,6 +362,17 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     objects: "Objekte",
     noDescription: "Noch keine Beschreibung.",
     addChild: "Untergeordnetes Objekt hinzufügen",
+    addRow: "Zeile hinzufügen",
+    newRow: "Neue Zeile",
+    rowCreateHint: "Name/Beschreibung in der vorläufigen untergeordneten Zeile bearbeiten, Rolle und übergeordnetes Objekt prüfen und dann erstellen.",
+    createRow: "Objekt erstellen",
+    creatingRow: "Wird erstellt…",
+    parentRequired: "Übergeordnetes Objekt wählen",
+    selectParentFirst: "Zuerst eine Wurzel oder ein Zwischenobjekt als übergeordnetes Objekt auswählen.",
+    rowParentInvalid: "Diese Zeile kann für die gewählte Rolle nicht übergeordnet sein.",
+    rowCreated: "Objekt erstellt.",
+    rowCreatedRefreshWarning: "Das Objekt wurde erstellt, aber der Katalog konnte nicht aktualisiert werden. Vor der Verwendung als übergeordnetes Objekt die Tabelle neu laden.",
+    rowCreateFailed: "Objekt konnte nicht erstellt werden.",
   },
   es: {
     tree: "Árbol",
@@ -334,6 +411,17 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     objects: "objetos",
     noDescription: "Todavía no hay descripción.",
     addChild: "Añadir objeto hijo",
+    addRow: "Añadir fila",
+    newRow: "Nueva fila",
+    rowCreateHint: "Edita nombre/descripción en la fila hija provisional, comprueba el rol y el padre y luego crea el objeto.",
+    createRow: "Crear objeto",
+    creatingRow: "Creando…",
+    parentRequired: "Seleccionar padre",
+    selectParentFirst: "Primero selecciona una raíz o un objeto intermedio como padre.",
+    rowParentInvalid: "Esta fila no puede ser padre para el rol seleccionado.",
+    rowCreated: "Objeto creado.",
+    rowCreatedRefreshWarning: "El objeto se creó, pero no se pudo actualizar el catálogo. Recarga la tabla antes de usarlo como padre.",
+    rowCreateFailed: "No se pudo crear el objeto.",
   },
   cs: {
     tree: "Strom",
@@ -372,6 +460,17 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     objects: "objektů",
     noDescription: "Popis zatím nebyl přidán.",
     addChild: "Přidat podřízený objekt",
+    addRow: "Přidat řádek",
+    newRow: "Nový řádek",
+    rowCreateHint: "Upravte název/popisek v pracovním podřízeném řádku, zkontrolujte roli a nadřazený objekt a poté objekt vytvořte.",
+    createRow: "Vytvořit objekt",
+    creatingRow: "Vytváření…",
+    parentRequired: "Vyberte nadřazený objekt",
+    selectParentFirst: "Nejprve vyberte kořen nebo mezilehlý objekt jako nadřazený.",
+    rowParentInvalid: "Tento řádek nemůže být nadřazeným objektem pro zvolenou roli.",
+    rowCreated: "Objekt vytvořen.",
+    rowCreatedRefreshWarning: "Objekt byl vytvořen, ale katalog se nepodařilo obnovit. Před použitím jako nadřazeného objektu tabulku znovu načtěte.",
+    rowCreateFailed: "Objekt se nepodařilo vytvořit.",
   },
 };
 
@@ -530,6 +629,7 @@ type TableObjectRow = {
   descendants: number;
   descendantLeaves: number;
   status: string;
+  createDraft?: boolean;
   _children?: TableObjectRow[];
 };
 
@@ -606,6 +706,10 @@ export function ValueObjectCatalogViews({
   const [tableUndoStack, setTableUndoStack] = useState<TableEditHistoryAction[]>([]);
   const [tableRedoStack, setTableRedoStack] = useState<TableEditHistoryAction[]>([]);
   const [tableHistoryBusy, setTableHistoryBusy] = useState(false);
+  const [tableCreateDraft, setTableCreateDraft] =
+    useState<ValueObjectTableCreateDraft | null>(null);
+  const [tableCreateBusy, setTableCreateBusy] = useState(false);
+  const [tableRowSelectionId, setTableRowSelectionId] = useState<string | null>(null);
 
   const objectsById = useMemo(() => {
     const map = new Map<string, ValueObjectPayload>();
@@ -933,6 +1037,47 @@ export function ValueObjectCatalogViews({
     visibleIds,
   ]);
 
+  const tableCreateParentOptions = useMemo(() => {
+    const createDraft = tableCreateDraft;
+    if (!createDraft) {
+      return [];
+    }
+    const createRole = createDraft.role;
+
+    return valueObjects
+      .filter(
+        (valueObject): valueObject is ValueObjectPayload & { id: string } =>
+          Boolean(
+            valueObject.id &&
+              visibleIds.has(valueObject.id) &&
+              canUseObservationObjectTableParent(valueObject, createRole),
+          ),
+      )
+      .sort((a, b) =>
+        (pathById.get(a.id) ?? a.title ?? "").localeCompare(
+          pathById.get(b.id) ?? b.title ?? "",
+          locale,
+        ),
+      );
+  }, [locale, pathById, tableCreateDraft, valueObjects, visibleIds]);
+
+  const tableCreateParent = tableCreateDraft?.parentId
+    ? objectsById.get(tableCreateDraft.parentId) ?? null
+    : null;
+  const tableCreateLeafAllowed = canUseObservationObjectTableParent(
+    tableCreateParent,
+    "leaf",
+  );
+
+  const tableCreateCanSubmit = Boolean(
+    tableCreateDraft?.title.trim() &&
+      tableCreateDraft.parentId &&
+      canUseObservationObjectTableParent(
+        tableCreateParent,
+        tableCreateDraft.role,
+      ),
+  );
+
   const tableRows = useMemo<TableObjectRow[]>(() => {
     const visited = new Set<string>();
 
@@ -970,9 +1115,52 @@ export function ValueObjectCatalogViews({
       };
     }
 
-    return sortObjects(treeRoots, sortMode, locale)
+    const builtRows = sortObjects(treeRoots, sortMode, locale)
       .map(buildRow)
       .filter((row): row is TableObjectRow => Boolean(row));
+
+    const createDraft = tableCreateDraft;
+    if (!createDraft) {
+      return builtRows;
+    }
+
+    const createParentId = createDraft.parentId;
+    const draftParent = objectsById.get(createParentId) ?? null;
+    const draftRow: TableObjectRow = {
+      id: createDraft.operationId,
+      title: createDraft.title,
+      description: createDraft.description,
+      editable: true,
+      parent: draftParent?.title?.trim() || "—",
+      role: getRoleLabel(createDraft.role, copy),
+      directChildren: 0,
+      descendants: 0,
+      descendantLeaves: 0,
+      status: copy.newRow,
+      createDraft: true,
+    };
+
+    let inserted = false;
+    function insertDraft(rowsToVisit: TableObjectRow[]): TableObjectRow[] {
+      return rowsToVisit.map((row) => {
+        if (row.id === createParentId) {
+          inserted = true;
+          return {
+            ...row,
+            _children: [...(row._children ?? []), draftRow],
+          };
+        }
+
+        if (row._children?.length) {
+          return { ...row, _children: insertDraft(row._children) };
+        }
+
+        return row;
+      });
+    }
+
+    const rowsWithDraft = insertDraft(builtRows);
+    return inserted ? rowsWithDraft : builtRows;
   }, [
     childrenByParent,
     copy,
@@ -981,6 +1169,7 @@ export function ValueObjectCatalogViews({
     locale,
     objectsById,
     sortMode,
+    tableCreateDraft,
     tableEditMode,
     treeRoots,
     visibleIds,
@@ -1001,7 +1190,7 @@ export function ValueObjectCatalogViews({
         tooltip: true,
         cssClass: "arctor-table-title",
         editor: tableEditMode ? "arctor-expanded-input" : false,
-        editable: tableEditMode && !tableHistoryBusy
+        editable: tableEditMode && !tableHistoryBusy && !tableCreateBusy
           ? (cell) => cell.getRow().getData().editable
           : false,
         editorParams: tableEditMode
@@ -1027,7 +1216,7 @@ export function ValueObjectCatalogViews({
         tooltip: true,
         cssClass: "arctor-table-muted",
         editor: tableEditMode ? "arctor-expanded-textarea" : false,
-        editable: tableEditMode && !tableHistoryBusy
+        editable: tableEditMode && !tableHistoryBusy && !tableCreateBusy
           ? (cell) => cell.getRow().getData().editable
           : false,
         editorParams: tableEditMode
@@ -1108,7 +1297,14 @@ export function ValueObjectCatalogViews({
         tooltip: true,
       },
     ],
-    [copy, tableEditCopy.cancel, tableEditCopy.save, tableEditMode, tableHistoryBusy],
+    [
+      copy,
+      tableCreateBusy,
+      tableEditCopy.cancel,
+      tableEditCopy.save,
+      tableEditMode,
+      tableHistoryBusy,
+    ],
   );
 
   const tableOptions = useMemo<ArctorTableOptions>(
@@ -1126,13 +1322,37 @@ export function ValueObjectCatalogViews({
   async function handleTableCellEdited(
     event: ArctorTableCellEditedEvent<TableObjectRow>,
   ) {
-    if (!tableEditMode || tableHistoryBusy) {
+    if (!tableEditMode || tableHistoryBusy || tableCreateBusy) {
       event.restoreOldValue();
       return;
     }
 
     if (event.field !== "title" && event.field !== "description") {
       event.restoreOldValue();
+      return;
+    }
+
+    if (
+      event.row.createDraft &&
+      tableCreateDraft?.operationId === event.row.id
+    ) {
+      const nextValue =
+        typeof event.value === "string"
+          ? event.value
+          : event.value == null
+            ? ""
+            : String(event.value);
+      setTableCreateDraft((current) =>
+        current && current.operationId === event.row.id
+          ? {
+              ...current,
+              ...(event.field === "title"
+                ? { title: nextValue }
+                : { description: nextValue }),
+            }
+          : current,
+      );
+      setTableEditFeedback({ kind: "info", text: copy.rowCreateHint });
       return;
     }
 
@@ -1342,7 +1562,7 @@ export function ValueObjectCatalogViews({
   async function handleTableRangePaste(
     event: ArctorTableRangePasteEvent<TableObjectRow>,
   ) {
-    if (!tableEditMode || tableHistoryBusy) {
+    if (!tableEditMode || tableHistoryBusy || tableCreateBusy) {
       return;
     }
 
@@ -1351,6 +1571,11 @@ export function ValueObjectCatalogViews({
 
     try {
       for (const cell of event.cells) {
+        if (cell.row.createDraft) {
+          skipped += 1;
+          continue;
+        }
+
         if (cell.field !== "title" && cell.field !== "description") {
           skipped += 1;
           continue;
@@ -1454,7 +1679,7 @@ export function ValueObjectCatalogViews({
   }
 
   async function applyTableHistory(direction: "undo" | "redo") {
-    if (tableHistoryBusy) {
+    if (tableHistoryBusy || tableCreateBusy) {
       return;
     }
 
@@ -1495,6 +1720,137 @@ export function ValueObjectCatalogViews({
       }
     } finally {
       setTableHistoryBusy(false);
+    }
+  }
+
+  function resolvePreferredTableCreateParent() {
+    for (const candidateId of [tableRowSelectionId, selectedHierarchyId]) {
+      if (!candidateId) {
+        continue;
+      }
+      const candidate = objectsById.get(candidateId);
+      if (canCreateObservationObjectChildUnder(candidate)) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  function beginTableRowCreate() {
+    if (
+      !tableEditMode ||
+      tableHistoryBusy ||
+      tableCreateBusy ||
+      tableCreateDraft
+    ) {
+      return;
+    }
+
+    const preferredParent = resolvePreferredTableCreateParent();
+    const createDraft = createValueObjectTableDraft({
+      locale,
+      preferredParent,
+    });
+    if (!createDraft) {
+      setTableEditFeedback({ kind: "error", text: copy.selectParentFirst });
+      return;
+    }
+
+    setTableCreateDraft(createDraft);
+    setTableEditFeedback({ kind: "info", text: copy.rowCreateHint });
+  }
+
+  function changeTableCreateRole(nextRole: ValueObjectTableCreateRole) {
+    setTableCreateDraft((current) => {
+      if (!current) {
+        return current;
+      }
+
+      const currentParent = objectsById.get(current.parentId) ?? null;
+      if (!canUseObservationObjectTableParent(currentParent, nextRole)) {
+        return current;
+      }
+
+      return { ...current, role: nextRole };
+    });
+    setTableEditFeedback({ kind: "info", text: copy.rowCreateHint });
+  }
+
+  function changeTableCreateParent(nextParentId: string) {
+    setTableCreateDraft((current) => {
+      if (!current) {
+        return current;
+      }
+      const nextParent = objectsById.get(nextParentId) ?? null;
+      const defaultRole = getDefaultObservationObjectTableChildRole(nextParent);
+      if (!nextParent?.id || !defaultRole) {
+        return current;
+      }
+
+      return {
+        ...current,
+        parentId: nextParent.id,
+        role: canUseObservationObjectTableParent(nextParent, current.role)
+          ? current.role
+          : defaultRole,
+      };
+    });
+    setTableRowSelectionId(nextParentId);
+    setTableEditFeedback({ kind: "info", text: copy.rowCreateHint });
+  }
+
+  function cancelTableRowCreate() {
+    if (tableCreateBusy) {
+      return;
+    }
+    setTableCreateDraft(null);
+    setTableEditFeedback({ kind: "info", text: tableEditCopy.selectRow });
+  }
+
+  async function commitTableRowCreate() {
+    const createDraft = tableCreateDraft;
+    if (
+      !createDraft ||
+      !tableCreateCanSubmit ||
+      tableCreateBusy ||
+      tableHistoryBusy
+    ) {
+      return;
+    }
+    const createParent = objectsById.get(createDraft.parentId) ?? null;
+    if (!canUseObservationObjectTableParent(createParent, createDraft.role)) {
+      setTableEditFeedback({ kind: "error", text: copy.rowParentInvalid });
+      return;
+    }
+
+    setTableCreateBusy(true);
+    setTableEditFeedback({ kind: "saving", text: copy.creatingRow });
+
+    try {
+      const result = await createObservationObjectFromTable({
+        draft: createDraft,
+        parent: createParent,
+      });
+      onValueObjectCreated?.(result.row);
+      setTableRowSelectionId(result.row.id);
+      setTableCreateDraft(null);
+      setTableEditFeedback({
+        kind: result.warningCode ? "info" : "success",
+        text: result.warningCode
+          ? copy.rowCreatedRefreshWarning
+          : copy.rowCreated,
+      });
+    } catch (createError) {
+      const detail =
+        createError instanceof Error && createError.message
+          ? createError.message
+          : "";
+      setTableEditFeedback({
+        kind: "error",
+        text: [copy.rowCreateFailed, detail].filter(Boolean).join(" "),
+      });
+    } finally {
+      setTableCreateBusy(false);
     }
   }
 
@@ -1789,8 +2145,25 @@ export function ValueObjectCatalogViews({
                 <>
                   <button
                     type="button"
+                    onClick={beginTableRowCreate}
+                    disabled={
+                      tableHistoryBusy || tableCreateBusy || Boolean(tableCreateDraft)
+                    }
+                    aria-label={copy.addRow}
+                    title={copy.addRow}
+                    className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-[#cfd8ff] bg-white px-2.5 text-[11px] font-semibold text-[#3b6ef8] transition hover:bg-[#f7f9ff] disabled:cursor-not-allowed disabled:bg-[#f3f4f6] disabled:text-[#a4a9b8]"
+                  >
+                    <Plus size={16} />
+                    <span>{copy.addRow}</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => void applyTableHistory("undo")}
-                    disabled={tableHistoryBusy || tableUndoStack.length === 0}
+                    disabled={
+                      tableHistoryBusy ||
+                      tableCreateBusy ||
+                      tableUndoStack.length === 0
+                    }
                     aria-label={tableEditCopy.undo}
                     title={tableEditCopy.undo}
                     className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-xl border border-[#dfe3f1] bg-white px-2.5 text-[11px] font-semibold text-[#4a4f6a] transition hover:bg-[#f8fafc] disabled:cursor-not-allowed disabled:bg-[#f3f4f6] disabled:text-[#a4a9b8]"
@@ -1801,7 +2174,11 @@ export function ValueObjectCatalogViews({
                   <button
                     type="button"
                     onClick={() => void applyTableHistory("redo")}
-                    disabled={tableHistoryBusy || tableRedoStack.length === 0}
+                    disabled={
+                      tableHistoryBusy ||
+                      tableCreateBusy ||
+                      tableRedoStack.length === 0
+                    }
                     aria-label={tableEditCopy.redo}
                     title={tableEditCopy.redo}
                     className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-xl border border-[#dfe3f1] bg-white px-2.5 text-[11px] font-semibold text-[#4a4f6a] transition hover:bg-[#f8fafc] disabled:cursor-not-allowed disabled:bg-[#f3f4f6] disabled:text-[#a4a9b8]"
@@ -1814,12 +2191,16 @@ export function ValueObjectCatalogViews({
 
               <button
                 type="button"
+                disabled={tableCreateBusy || tableHistoryBusy}
                 onClick={() => {
                   const nextMode = !tableEditMode;
                   setTableEditMode(nextMode);
                   setTableUndoStack([]);
                   setTableRedoStack([]);
                   setTableHistoryBusy(false);
+                  setTableCreateDraft(null);
+                  setTableCreateBusy(false);
+                  setTableRowSelectionId(null);
                   setTableEditFeedback(
                     nextMode
                       ? { kind: "info", text: tableEditCopy.selectRow }
@@ -1827,7 +2208,7 @@ export function ValueObjectCatalogViews({
                   );
                 }}
                 className={[
-                  "min-h-11 rounded-xl border px-3 py-2 text-[11px] font-semibold transition",
+                  "min-h-11 rounded-xl border px-3 py-2 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-60",
                   tableEditMode
                     ? "border-[#3b6ef8] bg-[#eef2ff] text-[#3b6ef8]"
                     : "border-[#dfe3f1] bg-white text-[#4a4f6a] hover:bg-[#f8fafc]",
@@ -1900,6 +2281,63 @@ export function ValueObjectCatalogViews({
 
       {viewMode === "table" ? (
         <div className="grid gap-2 rounded-[18px] border border-black/[0.04] bg-white p-2 shadow-sm">
+          {tableEditMode && tableCreateDraft ? (
+            <div className="grid gap-2 rounded-xl border border-[#c9d5ff] bg-[#f7f9ff] p-2.5 lg:grid-cols-[150px_minmax(220px,1fr)_minmax(260px,1.4fr)_auto_auto] lg:items-center">
+              <select
+                value={tableCreateDraft.role}
+                disabled={tableCreateBusy}
+                onChange={(event) =>
+                  changeTableCreateRole(
+                    event.target.value as ValueObjectTableCreateRole,
+                  )
+                }
+                className="min-h-10 rounded-lg border border-[#dfe3f1] bg-white px-3 text-[11px] font-semibold text-[#343854] outline-none"
+              >
+                <option value="intermediate">{copy.intermediate}</option>
+                {tableCreateLeafAllowed ? (
+                  <option value="leaf">{copy.leaf}</option>
+                ) : null}
+              </select>
+
+              <select
+                value={tableCreateDraft.parentId}
+                disabled={tableCreateBusy}
+                onChange={(event) => changeTableCreateParent(event.target.value)}
+                className="min-h-10 rounded-lg border border-[#dfe3f1] bg-white px-3 text-[11px] font-semibold text-[#343854] outline-none disabled:bg-[#f1f3f7] disabled:text-[#8b91a7]"
+              >
+                <option value="" disabled>{copy.parentRequired}</option>
+                {tableCreateParentOptions.map((valueObject) => (
+                  <option key={valueObject.id} value={valueObject.id}>
+                    {pathById.get(valueObject.id) ?? valueObject.title ?? "—"}
+                  </option>
+                ))}
+              </select>
+
+              <div className="text-[10px] font-semibold leading-4 text-[#66708f]">
+                {copy.rowCreateHint}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void commitTableRowCreate()}
+                disabled={
+                  tableCreateBusy || tableHistoryBusy || !tableCreateCanSubmit
+                }
+                className="min-h-10 rounded-lg bg-[#3b6ef8] px-3 text-[11px] font-bold text-white transition hover:bg-[#315fdc] disabled:cursor-not-allowed disabled:bg-[#b7c4ee]"
+              >
+                {tableCreateBusy ? copy.creatingRow : copy.createRow}
+              </button>
+              <button
+                type="button"
+                onClick={cancelTableRowCreate}
+                disabled={tableCreateBusy}
+                className="min-h-10 rounded-lg border border-[#dfe3f1] bg-white px-3 text-[11px] font-semibold text-[#4a4f6a] transition hover:bg-[#f8fafc] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {tableEditCopy.cancel}
+              </button>
+            </div>
+          ) : null}
+
           {tableEditMode ? (
             <div
               className={[
@@ -1950,6 +2388,11 @@ export function ValueObjectCatalogViews({
             onCellEdited={handleTableCellEdited}
             onRowClick={(row) => {
               if (tableEditMode) {
+                if (row.createDraft) {
+                  setTableEditFeedback({ kind: "info", text: copy.rowCreateHint });
+                  return;
+                }
+
                 const valueObject = objectsById.get(row.id);
                 if (valueObject) {
                   const strategy = getValueObjectTableEditStrategy(valueObject);
@@ -1960,6 +2403,50 @@ export function ValueObjectCatalogViews({
                         strategy === "readonly_system"
                           ? tableEditCopy.readOnlySystem
                           : tableEditCopy.readOnlyContract,
+                    });
+                    return;
+                  }
+
+                  if (canCreateObservationObjectChildUnder(valueObject)) {
+                    setTableRowSelectionId(valueObject.id);
+                    if (tableCreateDraft) {
+                      const defaultRole =
+                        getDefaultObservationObjectTableChildRole(valueObject);
+                      if (!defaultRole) {
+                        setTableEditFeedback({
+                          kind: "error",
+                          text: copy.rowParentInvalid,
+                        });
+                        return;
+                      }
+                      setTableCreateDraft((current) =>
+                        current
+                          ? {
+                              ...current,
+                              parentId: valueObject.id as string,
+                              role: canUseObservationObjectTableParent(
+                                valueObject,
+                                current.role,
+                              )
+                                ? current.role
+                                : defaultRole,
+                            }
+                          : current,
+                      );
+                      setTableEditFeedback({
+                        kind: "info",
+                        text: copy.rowCreateHint,
+                      });
+                    } else {
+                      setTableEditFeedback({
+                        kind: "info",
+                        text: tableEditCopy.selectRow,
+                      });
+                    }
+                  } else {
+                    setTableEditFeedback({
+                      kind: "error",
+                      text: copy.rowParentInvalid,
                     });
                   }
                 }

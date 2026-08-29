@@ -38,6 +38,7 @@ type ActualValueObjectPayload = {
   node_role_code?: string | null;
   root_value_object_id?: string | null;
   parent_value_object_id?: string | null;
+  branch_type_code?: string | null;
 
   canonical_key?: string | null;
   facet_code?: string | null;
