@@ -14,6 +14,7 @@ import {
   Plus,
   Redo2,
   Table2,
+  Trash2,
   Undo2,
 } from "lucide-react";
 import { Fragment, type ReactNode, useMemo, useState } from "react";
@@ -37,6 +38,10 @@ import {
   type ValueObjectTableCreateDraft,
   type ValueObjectTableCreateRole,
 } from "./value-object-table-row-create";
+import {
+  deleteObservationObjectFromTable,
+  ValueObjectTableDeleteError,
+} from "./value-object-table-row-delete";
 
 import { ValueObjectMindMap } from "./value-object-mind-map";
 import {
@@ -126,6 +131,12 @@ type CatalogCopy = {
   rowCreated: string;
   rowCreatedRefreshWarning: string;
   rowCreateFailed: string;
+  deleteRow: string;
+  deletingRow: string;
+  deleteRowConfirm: string;
+  rowDeleted: string;
+  rowDeleteFailed: string;
+  technicalDependency: string;
 };
 
 const COPY: Record<LocaleCode, CatalogCopy> = {
@@ -177,6 +188,12 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowCreated: "Object created.",
     rowCreatedRefreshWarning: "Object was created, but the catalog refresh failed. Reload before using it as a parent.",
     rowCreateFailed: "Could not create object.",
+    deleteRow: "Delete row",
+    deletingRow: "Deleting…",
+    deleteRowConfirm: "Delete “{title}”? The protected delete contract will allow this only for an unused private object without children or protected dependencies.",
+    rowDeleted: "Object deleted.",
+    rowDeleteFailed: "Could not delete object.",
+    technicalDependency: "Blocking dependency",
   },
   pl: {
     tree: "Drzewo",
@@ -226,6 +243,12 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowCreated: "Obiekt utworzony.",
     rowCreatedRefreshWarning: "Obiekt został utworzony, ale nie udało się odświeżyć katalogu. Odśwież tabelę przed użyciem go jako rodzica.",
     rowCreateFailed: "Nie udało się utworzyć obiektu.",
+    deleteRow: "Usuń wiersz",
+    deletingRow: "Usuwanie…",
+    deleteRowConfirm: "Usunąć „{title}”? Chroniony kontrakt usuwania zezwoli na to tylko dla nieużywanego prywatnego obiektu bez dzieci i chronionych zależności.",
+    rowDeleted: "Obiekt usunięty.",
+    rowDeleteFailed: "Nie udało się usunąć obiektu.",
+    technicalDependency: "Blokująca zależność",
   },
   ru: {
     tree: "Дерево",
@@ -275,6 +298,12 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowCreated: "Объект создан.",
     rowCreatedRefreshWarning: "Объект создан, но каталог не удалось полностью обновить. Перезагрузите таблицу перед использованием его как родителя.",
     rowCreateFailed: "Не удалось создать объект.",
+    deleteRow: "Удалить строку",
+    deletingRow: "Удаление…",
+    deleteRowConfirm: "Удалить «{title}»? Защищённый контракт разрешит это только для неиспользуемого личного объекта без дочерних узлов и защищённых зависимостей.",
+    rowDeleted: "Объект удалён.",
+    rowDeleteFailed: "Не удалось удалить объект.",
+    technicalDependency: "Блокирующая зависимость",
   },
   uk: {
     tree: "Дерево",
@@ -324,6 +353,12 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowCreated: "Об’єкт створено.",
     rowCreatedRefreshWarning: "Об’єкт створено, але каталог не вдалося повністю оновити. Перезавантажте таблицю перед використанням його як батьківського.",
     rowCreateFailed: "Не вдалося створити об’єкт.",
+    deleteRow: "Видалити рядок",
+    deletingRow: "Видалення…",
+    deleteRowConfirm: "Видалити «{title}»? Захищений контракт дозволить це лише для невикористаного приватного об’єкта без дочірніх вузлів і захищених залежностей.",
+    rowDeleted: "Об’єкт видалено.",
+    rowDeleteFailed: "Не вдалося видалити об’єкт.",
+    technicalDependency: "Блокуюча залежність",
   },
   de: {
     tree: "Baum",
@@ -373,6 +408,12 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowCreated: "Objekt erstellt.",
     rowCreatedRefreshWarning: "Das Objekt wurde erstellt, aber der Katalog konnte nicht aktualisiert werden. Vor der Verwendung als übergeordnetes Objekt die Tabelle neu laden.",
     rowCreateFailed: "Objekt konnte nicht erstellt werden.",
+    deleteRow: "Zeile löschen",
+    deletingRow: "Wird gelöscht…",
+    deleteRowConfirm: "„{title}“ löschen? Der geschützte Löschvertrag erlaubt dies nur für ein unbenutztes privates Objekt ohne Kinder oder geschützte Abhängigkeiten.",
+    rowDeleted: "Objekt gelöscht.",
+    rowDeleteFailed: "Objekt konnte nicht gelöscht werden.",
+    technicalDependency: "Blockierende Abhängigkeit",
   },
   es: {
     tree: "Árbol",
@@ -422,6 +463,12 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowCreated: "Objeto creado.",
     rowCreatedRefreshWarning: "El objeto se creó, pero no se pudo actualizar el catálogo. Recarga la tabla antes de usarlo como padre.",
     rowCreateFailed: "No se pudo crear el objeto.",
+    deleteRow: "Eliminar fila",
+    deletingRow: "Eliminando…",
+    deleteRowConfirm: "¿Eliminar «{title}»? El contrato protegido solo lo permitirá para un objeto privado sin uso, sin hijos ni dependencias protegidas.",
+    rowDeleted: "Objeto eliminado.",
+    rowDeleteFailed: "No se pudo eliminar el objeto.",
+    technicalDependency: "Dependencia bloqueante",
   },
   cs: {
     tree: "Strom",
@@ -471,6 +518,12 @@ const COPY: Record<LocaleCode, CatalogCopy> = {
     rowCreated: "Objekt vytvořen.",
     rowCreatedRefreshWarning: "Objekt byl vytvořen, ale katalog se nepodařilo obnovit. Před použitím jako nadřazeného objektu tabulku znovu načtěte.",
     rowCreateFailed: "Objekt se nepodařilo vytvořit.",
+    deleteRow: "Odstranit řádek",
+    deletingRow: "Odstraňování…",
+    deleteRowConfirm: "Odstranit „{title}“? Chráněný kontrakt to dovolí pouze pro nepoužívaný soukromý objekt bez potomků a chráněných závislostí.",
+    rowDeleted: "Objekt odstraněn.",
+    rowDeleteFailed: "Objekt se nepodařilo odstranit.",
+    technicalDependency: "Blokující závislost",
   },
 };
 
@@ -709,6 +762,7 @@ export function ValueObjectCatalogViews({
   const [tableCreateDraft, setTableCreateDraft] =
     useState<ValueObjectTableCreateDraft | null>(null);
   const [tableCreateBusy, setTableCreateBusy] = useState(false);
+  const [tableDeleteBusy, setTableDeleteBusy] = useState(false);
   const [tableRowSelectionId, setTableRowSelectionId] = useState<string | null>(null);
 
   const objectsById = useMemo(() => {
@@ -1854,6 +1908,86 @@ export function ValueObjectCatalogViews({
     }
   }
 
+  async function deleteSelectedTableRow() {
+    if (
+      !tableEditMode ||
+      tableDeleteBusy ||
+      tableCreateBusy ||
+      tableHistoryBusy ||
+      tableCreateDraft
+    ) {
+      return;
+    }
+
+    const selectedId = tableRowSelectionId;
+    const selectedValueObject = selectedId ? objectsById.get(selectedId) ?? null : null;
+    if (!selectedValueObject?.id) {
+      setTableEditFeedback({ kind: "info", text: tableEditCopy.selectRow });
+      return;
+    }
+
+    const strategy = getValueObjectTableEditStrategy(selectedValueObject);
+    if (strategy === "readonly_system" || strategy === "readonly_contract") {
+      setTableRowSelectionId(null);
+      setTableEditFeedback({
+        kind: "error",
+        text:
+          strategy === "readonly_system"
+            ? tableEditCopy.readOnlySystem
+            : tableEditCopy.readOnlyContract,
+      });
+      return;
+    }
+
+    const title = selectedValueObject.title?.trim() || selectedValueObject.id;
+    const confirmed = window.confirm(
+      copy.deleteRowConfirm.replace("{title}", title),
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setTableDeleteBusy(true);
+    setTableEditFeedback({ kind: "saving", text: copy.deletingRow });
+
+    try {
+      const result = await deleteObservationObjectFromTable({
+        rowId: selectedValueObject.id,
+      });
+      onValueObjectDeleted?.(result.deletedId);
+      setTableRowSelectionId(null);
+      setTableUndoStack([]);
+      setTableRedoStack([]);
+      setTableEditFeedback({ kind: "success", text: copy.rowDeleted });
+    } catch (deleteError) {
+      const blockerText =
+        deleteError instanceof ValueObjectTableDeleteError &&
+        deleteError.blocker?.table
+          ? " " +
+            copy.technicalDependency +
+            ": " +
+            deleteError.blocker.table +
+            (deleteError.blocker.column
+              ? "." + deleteError.blocker.column
+              : "") +
+            "."
+          : "";
+      const detail =
+        deleteError instanceof Error && deleteError.message
+          ? deleteError.message
+          : "";
+      setTableEditFeedback({
+        kind: "error",
+        text: [copy.rowDeleteFailed, detail, blockerText]
+          .filter(Boolean)
+          .join(" ")
+          .trim(),
+      });
+    } finally {
+      setTableDeleteBusy(false);
+    }
+  }
+
   function updateHierarchyLevel(levelIndex: number, nextId: string) {
     const basePath = hierarchyPathObjects
       .slice(0, levelIndex)
@@ -2158,10 +2292,28 @@ export function ValueObjectCatalogViews({
                   </button>
                   <button
                     type="button"
+                    onClick={() => void deleteSelectedTableRow()}
+                    disabled={
+                      tableHistoryBusy ||
+                      tableCreateBusy ||
+                      tableDeleteBusy ||
+                      Boolean(tableCreateDraft) ||
+                      !tableRowSelectionId
+                    }
+                    aria-label={copy.deleteRow}
+                    title={copy.deleteRow}
+                    className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-[#ffd2d2] bg-white px-2.5 text-[11px] font-semibold text-[#c24141] transition hover:bg-[#fff8f8] disabled:cursor-not-allowed disabled:bg-[#f3f4f6] disabled:text-[#a4a9b8]"
+                  >
+                    <Trash2 size={16} />
+                    <span>{tableDeleteBusy ? copy.deletingRow : copy.deleteRow}</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => void applyTableHistory("undo")}
                     disabled={
                       tableHistoryBusy ||
                       tableCreateBusy ||
+                      tableDeleteBusy ||
                       tableUndoStack.length === 0
                     }
                     aria-label={tableEditCopy.undo}
@@ -2177,6 +2329,7 @@ export function ValueObjectCatalogViews({
                     disabled={
                       tableHistoryBusy ||
                       tableCreateBusy ||
+                      tableDeleteBusy ||
                       tableRedoStack.length === 0
                     }
                     aria-label={tableEditCopy.redo}
@@ -2191,7 +2344,7 @@ export function ValueObjectCatalogViews({
 
               <button
                 type="button"
-                disabled={tableCreateBusy || tableHistoryBusy}
+                disabled={tableCreateBusy || tableDeleteBusy || tableHistoryBusy}
                 onClick={() => {
                   const nextMode = !tableEditMode;
                   setTableEditMode(nextMode);
@@ -2200,6 +2353,7 @@ export function ValueObjectCatalogViews({
                   setTableHistoryBusy(false);
                   setTableCreateDraft(null);
                   setTableCreateBusy(false);
+                  setTableDeleteBusy(false);
                   setTableRowSelectionId(null);
                   setTableEditFeedback(
                     nextMode
@@ -2397,6 +2551,7 @@ export function ValueObjectCatalogViews({
                 if (valueObject) {
                   const strategy = getValueObjectTableEditStrategy(valueObject);
                   if (strategy === "readonly_system" || strategy === "readonly_contract") {
+                    setTableRowSelectionId(null);
                     setTableEditFeedback({
                       kind: "error",
                       text:
@@ -2407,46 +2562,48 @@ export function ValueObjectCatalogViews({
                     return;
                   }
 
-                  if (canCreateObservationObjectChildUnder(valueObject)) {
-                    setTableRowSelectionId(valueObject.id);
-                    if (tableCreateDraft) {
-                      const defaultRole =
-                        getDefaultObservationObjectTableChildRole(valueObject);
-                      if (!defaultRole) {
-                        setTableEditFeedback({
-                          kind: "error",
-                          text: copy.rowParentInvalid,
-                        });
-                        return;
-                      }
-                      setTableCreateDraft((current) =>
-                        current
-                          ? {
-                              ...current,
-                              parentId: valueObject.id as string,
-                              role: canUseObservationObjectTableParent(
-                                valueObject,
-                                current.role,
-                              )
-                                ? current.role
-                                : defaultRole,
-                            }
-                          : current,
-                      );
+                  setTableRowSelectionId(valueObject.id ?? null);
+
+                  if (tableCreateDraft) {
+                    if (!canCreateObservationObjectChildUnder(valueObject)) {
                       setTableEditFeedback({
-                        kind: "info",
-                        text: copy.rowCreateHint,
+                        kind: "error",
+                        text: copy.rowParentInvalid,
                       });
-                    } else {
-                      setTableEditFeedback({
-                        kind: "info",
-                        text: tableEditCopy.selectRow,
-                      });
+                      return;
                     }
+
+                    const defaultRole =
+                      getDefaultObservationObjectTableChildRole(valueObject);
+                    if (!defaultRole) {
+                      setTableEditFeedback({
+                        kind: "error",
+                        text: copy.rowParentInvalid,
+                      });
+                      return;
+                    }
+                    setTableCreateDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            parentId: valueObject.id as string,
+                            role: canUseObservationObjectTableParent(
+                              valueObject,
+                              current.role,
+                            )
+                              ? current.role
+                              : defaultRole,
+                          }
+                        : current,
+                    );
+                    setTableEditFeedback({
+                      kind: "info",
+                      text: copy.rowCreateHint,
+                    });
                   } else {
                     setTableEditFeedback({
-                      kind: "error",
-                      text: copy.rowParentInvalid,
+                      kind: "info",
+                      text: tableEditCopy.selectRow,
                     });
                   }
                 }
