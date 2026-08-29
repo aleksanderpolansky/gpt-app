@@ -2,13 +2,18 @@
 
 import "@casualoffice/docs/styles.css";
 
+import casualDe from "@casualoffice/docs/i18n/de.json";
+import casualEn from "@casualoffice/docs/i18n/en.json";
+import casualPl from "@casualoffice/docs/i18n/pl.json";
 import {
   DocxEditor,
+  type DocxEditorProps,
   type DocxEditorRef,
 } from "@casualoffice/docs/react";
 import { Download, Loader2, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { type LocaleCode } from "@/i18n";
 import { saveLocalEditorBlob } from "@/lib/local-editors/local-file-runtime";
 
 const DOCX_MIME =
@@ -16,7 +21,84 @@ const DOCX_MIME =
 
 type LocalDocxEditorProps = {
   file: File;
+  locale: LocaleCode;
   onDirtyChange?: (dirty: boolean) => void;
+};
+
+type DocxCopy = {
+  localBadge: string;
+  unsaved: string;
+  save: string;
+  notReady: string;
+  saved: string;
+  cancelled: string;
+};
+
+const DOCX_COPY: Record<LocaleCode, DocxCopy> = {
+  en: {
+    localBadge: "Local DOCX editor · no server document storage",
+    unsaved: "unsaved changes",
+    save: "Save DOCX locally",
+    notReady: "DOCX editor is not ready yet.",
+    saved: "Local DOCX copy saved.",
+    cancelled: "Saving was cancelled.",
+  },
+  pl: {
+    localBadge: "Lokalny edytor DOCX · bez przechowywania dokumentu na serwerze",
+    unsaved: "niezapisane zmiany",
+    save: "Zapisz DOCX lokalnie",
+    notReady: "Edytor DOCX nie jest jeszcze gotowy.",
+    saved: "Lokalna kopia DOCX została zapisana.",
+    cancelled: "Zapisywanie zostało anulowane.",
+  },
+  ru: {
+    localBadge: "Локальный DOCX-редактор · без хранения документа на сервере",
+    unsaved: "несохранённые изменения",
+    save: "Сохранить DOCX локально",
+    notReady: "DOCX-редактор ещё не готов.",
+    saved: "Локальная копия DOCX сохранена.",
+    cancelled: "Сохранение отменено.",
+  },
+  uk: {
+    localBadge: "Локальний DOCX-редактор · без зберігання документа на сервері",
+    unsaved: "незбережені зміни",
+    save: "Зберегти DOCX локально",
+    notReady: "DOCX-редактор ще не готовий.",
+    saved: "Локальну копію DOCX збережено.",
+    cancelled: "Збереження скасовано.",
+  },
+  de: {
+    localBadge: "Lokaler DOCX-Editor · keine Dokumentspeicherung auf dem Server",
+    unsaved: "ungespeicherte Änderungen",
+    save: "DOCX lokal speichern",
+    notReady: "Der DOCX-Editor ist noch nicht bereit.",
+    saved: "Lokale DOCX-Kopie gespeichert.",
+    cancelled: "Speichern wurde abgebrochen.",
+  },
+  es: {
+    localBadge: "Editor DOCX local · sin almacenamiento del documento en el servidor",
+    unsaved: "cambios sin guardar",
+    save: "Guardar DOCX localmente",
+    notReady: "El editor DOCX aún no está listo.",
+    saved: "Copia DOCX local guardada.",
+    cancelled: "Se canceló el guardado.",
+  },
+  cs: {
+    localBadge: "Lokální editor DOCX · bez ukládání dokumentu na server",
+    unsaved: "neuložené změny",
+    save: "Uložit DOCX lokálně",
+    notReady: "Editor DOCX ještě není připraven.",
+    saved: "Místní kopie DOCX byla uložena.",
+    cancelled: "Ukládání bylo zrušeno.",
+  },
+};
+
+type DocxTranslations = NonNullable<DocxEditorProps["i18n"]>;
+
+const DOCX_I18N: Partial<Record<LocaleCode, DocxTranslations>> = {
+  en: casualEn as unknown as DocxTranslations,
+  pl: casualPl as unknown as DocxTranslations,
+  de: casualDe as unknown as DocxTranslations,
 };
 
 type DesktopGuardWindow = Window & {
@@ -80,7 +162,9 @@ export function releaseLocalDocxPrivacyGuard(): void {
   }
 }
 
-export function LocalDocxEditor({ file, onDirtyChange }: LocalDocxEditorProps) {
+export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditorProps) {
+  const copy = DOCX_COPY[locale] ?? DOCX_COPY.en;
+  const editorI18n = DOCX_I18N[locale] ?? DOCX_I18N.en;
   const editorRef = useRef<DocxEditorRef | null>(null);
   const readyRef = useRef(false);
   const [dirty, setDirty] = useState(false);
@@ -109,7 +193,7 @@ export function LocalDocxEditor({ file, onDirtyChange }: LocalDocxEditorProps) {
 
   const saveEditedCopy = useCallback(async () => {
     if (!editorRef.current) {
-      setError("DOCX editor is not ready yet.");
+      setError(copy.notReady);
       return;
     }
 
@@ -128,16 +212,16 @@ export function LocalDocxEditor({ file, onDirtyChange }: LocalDocxEditorProps) {
       });
       if (result.status === "saved") {
         setDirtyState(false);
-        setMessage("Local DOCX copy saved.");
+        setMessage(copy.saved);
       } else {
-        setMessage("Saving was cancelled.");
+        setMessage(copy.cancelled);
       }
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : String(saveError));
     } finally {
       setSaving(false);
     }
-  }, [file.name, setDirtyState]);
+  }, [copy.cancelled, copy.notReady, copy.saved, file.name, setDirtyState]);
 
   return (
     <section className="overflow-hidden rounded-[26px] border border-black/[0.07] bg-white shadow-sm">
@@ -145,11 +229,11 @@ export function LocalDocxEditor({ file, onDirtyChange }: LocalDocxEditorProps) {
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-[12px] font-bold text-emerald-700">
             <ShieldCheck size={16} aria-hidden="true" />
-            Local DOCX editor · no server document storage
+            {copy.localBadge}
           </div>
           <div className="mt-1 truncate text-[14px] font-bold text-[#20263b]" title={file.name}>
             {file.name}
-            {dirty ? " · unsaved changes" : ""}
+            {dirty ? ` · ${copy.unsaved}` : ""}
           </div>
         </div>
 
@@ -164,7 +248,7 @@ export function LocalDocxEditor({ file, onDirtyChange }: LocalDocxEditorProps) {
           ) : (
             <Download size={16} aria-hidden="true" />
           )}
-          Save DOCX locally
+          {copy.save}
         </button>
       </div>
 
@@ -185,6 +269,7 @@ export function LocalDocxEditor({ file, onDirtyChange }: LocalDocxEditorProps) {
           documentBuffer={file}
           documentName={file.name}
           chrome="embedded"
+          i18n={editorI18n}
           ai={{ enabled: false }}
           onReady={() => {
             readyRef.current = true;

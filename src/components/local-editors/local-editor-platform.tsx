@@ -9,7 +9,7 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import {
   activateLocalDocxPrivacyGuard,
@@ -27,7 +27,7 @@ import {
   saveLocalEditorBlob,
 } from "@/lib/local-editors/local-file-runtime";
 
-type LocaleCode = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
+import { getLocaleSearchParam, type LocaleCode } from "@/i18n";
 
 type LocalCopy = {
   title: string;
@@ -54,6 +54,7 @@ type LocalCopy = {
   runtimeReady: string;
   documentReady: string;
   discardWarning: string;
+  unsaved: string;
 };
 
 const EN_COPY: LocalCopy = {
@@ -82,6 +83,36 @@ const EN_COPY: LocalCopy = {
   runtimeReady: "Local file runtime ready; editing engine attaches in a later release.",
   documentReady: "DOCX editing engine active below.",
   discardWarning: "This document has unsaved changes. Discard them?",
+  unsaved: "unsaved changes",
+};
+
+const PL_COPY: LocalCopy = {
+  title: "Edytory lokalne",
+  subtitle: "Dokumenty, arkusze i mapy myśli, które pozostają na tym urządzeniu.",
+  localOnly: "Tylko lokalnie",
+  privacyTitle: "Granica prywatności pliku",
+  privacyBody:
+    "Otwarte pliki pozostają w pamięci przeglądarki. ARCTor nie przesyła ani nie przechowuje ich zawartości. Zapis tworzy kopię na Twoim urządzeniu.",
+  memoryOnly: "Tylko pamięć przeglądarki podczas otwarcia",
+  noUpload: "Bez wysyłania dokumentu",
+  noStorage: "Bez przechowywania na serwerze ani trwałego zapisu w przeglądarce",
+  networkBlocked: "Bez wywołań API ARCTor z treścią dokumentu",
+  document: "Dokument",
+  spreadsheet: "Arkusz kalkulacyjny",
+  mindmap: "Mapa myśli",
+  open: "Otwórz plik lokalny",
+  openAnother: "Otwórz inny plik",
+  saveCopy: "Zapisz kopię lokalnie",
+  clear: "Usuń z pamięci",
+  noFile: "W pamięci przeglądarki nie ma teraz pliku.",
+  selected: "Wybrano lokalnie",
+  cancelled: "Anulowano wybór pliku.",
+  saved: "Kopia lokalna została zapisana.",
+  nextStep: "Silnik edytora",
+  runtimeReady: "Lokalny moduł plików jest gotowy; silnik edycji zostanie podłączony w kolejnym wydaniu.",
+  documentReady: "Edytor DOCX jest aktywny poniżej.",
+  discardWarning: "Dokument zawiera niezapisane zmiany. Odrzucić je?",
+  unsaved: "niezapisane zmiany",
 };
 
 const RU_COPY: LocalCopy = {
@@ -110,17 +141,135 @@ const RU_COPY: LocalCopy = {
   runtimeReady: "Локальный файловый runtime готов; движок редактирования подключается следующим релизом.",
   documentReady: "DOCX-редактор активен ниже.",
   discardWarning: "В документе есть несохранённые изменения. Отбросить их?",
+  unsaved: "несохранённые изменения",
+};
+
+const UK_COPY: LocalCopy = {
+  title: "Локальні редактори",
+  subtitle: "Документи, таблиці та мапи думок, які залишаються на цьому пристрої.",
+  localOnly: "Лише локально",
+  privacyTitle: "Межа конфіденційності файла",
+  privacyBody:
+    "Відкриті файли залишаються в пам’яті браузера. ARCTor не завантажує і не зберігає їхній вміст. Збереження записує копію назад на пристрій користувача.",
+  memoryOnly: "Лише пам’ять браузера, поки файл відкрито",
+  noUpload: "Без завантаження документа",
+  noStorage: "Без серверного та постійного браузерного зберігання",
+  networkBlocked: "Без API-викликів ARCTor із вмістом документа",
+  document: "Документ",
+  spreadsheet: "Електронна таблиця",
+  mindmap: "Мапа думок",
+  open: "Відкрити локальний файл",
+  openAnother: "Відкрити інший файл",
+  saveCopy: "Зберегти локальну копію",
+  clear: "Видалити з пам’яті",
+  noFile: "У пам’яті браузера зараз немає файла.",
+  selected: "Вибрано локально",
+  cancelled: "Вибір файла скасовано.",
+  saved: "Локальну копію збережено.",
+  nextStep: "Рушій редактора",
+  runtimeReady: "Локальний файловий runtime готовий; рушій редагування буде підключено в наступному релізі.",
+  documentReady: "DOCX-редактор активний нижче.",
+  discardWarning: "У документі є незбережені зміни. Відкинути їх?",
+  unsaved: "незбережені зміни",
+};
+
+const DE_COPY: LocalCopy = {
+  title: "Lokale Editoren",
+  subtitle: "Dokumente, Tabellen und Mindmaps, die auf diesem Gerät bleiben.",
+  localOnly: "Nur lokal",
+  privacyTitle: "Datei-Datenschutzgrenze",
+  privacyBody:
+    "Geöffnete Dateien bleiben im Arbeitsspeicher des Browsers. ARCTor lädt ihren Inhalt nicht hoch und speichert ihn nicht. Beim Speichern wird eine Kopie auf Ihr Gerät geschrieben.",
+  memoryOnly: "Nur Browserspeicher, solange die Datei geöffnet ist",
+  noUpload: "Kein Dokument-Upload",
+  noStorage: "Keine Server- oder dauerhafte Browserspeicherung",
+  networkBlocked: "Keine ARCTor-API-Aufrufe mit Dokumentinhalt",
+  document: "Dokument",
+  spreadsheet: "Tabelle",
+  mindmap: "Mindmap",
+  open: "Lokale Datei öffnen",
+  openAnother: "Andere Datei öffnen",
+  saveCopy: "Lokale Kopie speichern",
+  clear: "Aus dem Speicher entfernen",
+  noFile: "Derzeit befindet sich keine Datei im Browserspeicher.",
+  selected: "Lokal ausgewählt",
+  cancelled: "Dateiauswahl wurde abgebrochen.",
+  saved: "Lokale Kopie gespeichert.",
+  nextStep: "Editor-Engine",
+  runtimeReady: "Die lokale Dateilaufzeit ist bereit; die Bearbeitungs-Engine wird in einer späteren Version angebunden.",
+  documentReady: "Der DOCX-Editor ist unten aktiv.",
+  discardWarning: "Dieses Dokument enthält ungespeicherte Änderungen. Verwerfen?",
+  unsaved: "ungespeicherte Änderungen",
+};
+
+const ES_COPY: LocalCopy = {
+  title: "Editores locales",
+  subtitle: "Documentos, hojas de cálculo y mapas mentales que permanecen en este dispositivo.",
+  localOnly: "Solo local",
+  privacyTitle: "Límite de privacidad del archivo",
+  privacyBody:
+    "Los archivos abiertos permanecen en la memoria del navegador. ARCTor no carga ni almacena su contenido. Al guardar se escribe una copia en tu dispositivo.",
+  memoryOnly: "Solo memoria del navegador mientras el archivo está abierto",
+  noUpload: "Sin carga del documento",
+  noStorage: "Sin almacenamiento en servidor ni almacenamiento persistente del navegador",
+  networkBlocked: "Sin llamadas a la API de ARCTor con contenido del documento",
+  document: "Documento",
+  spreadsheet: "Hoja de cálculo",
+  mindmap: "Mapa mental",
+  open: "Abrir archivo local",
+  openAnother: "Abrir otro archivo",
+  saveCopy: "Guardar copia local",
+  clear: "Eliminar de la memoria",
+  noFile: "No hay ningún archivo en la memoria del navegador.",
+  selected: "Seleccionado localmente",
+  cancelled: "Se canceló la selección del archivo.",
+  saved: "Copia local guardada.",
+  nextStep: "Motor del editor",
+  runtimeReady: "El runtime local de archivos está listo; el motor de edición se conectará en una versión posterior.",
+  documentReady: "El editor DOCX está activo abajo.",
+  discardWarning: "Este documento tiene cambios sin guardar. ¿Descartarlos?",
+  unsaved: "cambios sin guardar",
+};
+
+const CS_COPY: LocalCopy = {
+  title: "Lokální editory",
+  subtitle: "Dokumenty, tabulky a myšlenkové mapy, které zůstávají v tomto zařízení.",
+  localOnly: "Pouze lokálně",
+  privacyTitle: "Hranice soukromí souboru",
+  privacyBody:
+    "Otevřené soubory zůstávají v paměti prohlížeče. ARCTor jejich obsah nenahrává ani neukládá. Při uložení se kopie zapíše zpět do vašeho zařízení.",
+  memoryOnly: "Pouze paměť prohlížeče po dobu otevření souboru",
+  noUpload: "Bez nahrávání dokumentu",
+  noStorage: "Bez serverového a trvalého úložiště prohlížeče",
+  networkBlocked: "Bez volání API ARCTor s obsahem dokumentu",
+  document: "Dokument",
+  spreadsheet: "Tabulka",
+  mindmap: "Myšlenková mapa",
+  open: "Otevřít místní soubor",
+  openAnother: "Otevřít jiný soubor",
+  saveCopy: "Uložit místní kopii",
+  clear: "Odstranit z paměti",
+  noFile: "V paměti prohlížeče nyní není žádný soubor.",
+  selected: "Vybráno lokálně",
+  cancelled: "Výběr souboru byl zrušen.",
+  saved: "Místní kopie byla uložena.",
+  nextStep: "Jádro editoru",
+  runtimeReady: "Lokální souborový runtime je připraven; editační jádro bude připojeno v některé z dalších verzí.",
+  documentReady: "Editor DOCX je aktivní níže.",
+  discardWarning: "Dokument obsahuje neuložené změny. Zahodit je?",
+  unsaved: "neuložené změny",
 };
 
 const COPY: Record<LocaleCode, LocalCopy> = {
   en: EN_COPY,
-  pl: EN_COPY,
+  pl: PL_COPY,
   ru: RU_COPY,
-  uk: RU_COPY,
-  de: EN_COPY,
-  es: EN_COPY,
-  cs: EN_COPY,
+  uk: UK_COPY,
+  de: DE_COPY,
+  es: ES_COPY,
+  cs: CS_COPY,
 };
+
 
 const EDITORS: Array<{
   kind: LocalEditorKind;
@@ -131,19 +280,16 @@ const EDITORS: Array<{
   { kind: "mindmap", icon: Network },
 ];
 
-function readLocale(): LocaleCode {
-  if (typeof window === "undefined") return "en";
-  const value = new URLSearchParams(window.location.search).get("locale")?.toLowerCase();
-  if (
-    value === "ru" ||
-    value === "pl" ||
-    value === "uk" ||
-    value === "de" ||
-    value === "es" ||
-    value === "cs"
-  ) {
-    return value;
-  }
+function subscribeLocale(onStoreChange: () => void): () => void {
+  window.addEventListener("popstate", onStoreChange);
+  return () => window.removeEventListener("popstate", onStoreChange);
+}
+
+function getLocaleSnapshot(): LocaleCode {
+  return getLocaleSearchParam(new URLSearchParams(window.location.search));
+}
+
+function getServerLocaleSnapshot(): LocaleCode {
   return "en";
 }
 
@@ -154,7 +300,11 @@ function editorLabel(kind: LocalEditorKind, copy: LocalCopy): string {
 }
 
 export function LocalEditorPlatform() {
-  const [locale] = useState<LocaleCode>(() => readLocale());
+  const locale = useSyncExternalStore(
+    subscribeLocale,
+    getLocaleSnapshot,
+    getServerLocaleSnapshot,
+  );
   const copy = COPY[locale] ?? COPY.en;
   const [files, setFiles] = useState<Partial<Record<LocalEditorKind, File>>>({});
   const [busyKind, setBusyKind] = useState<LocalEditorKind | null>(null);
@@ -294,6 +444,7 @@ export function LocalEditorPlatform() {
           <LocalDocxEditor
             key={`docx:${documentRevision}`}
             file={documentFile}
+            locale={locale}
             onDirtyChange={setDocumentDirty}
           />
         ) : null}
@@ -333,7 +484,7 @@ export function LocalEditorPlatform() {
                       </div>
                       <div className="mt-1 text-[12px] text-[#767d97]">
                         {formatLocalFileSize(file.size)} · {copy.selected}
-                        {documentActive && documentDirty ? " · unsaved changes" : ""}
+                        {documentActive && documentDirty ? ` · ${copy.unsaved}` : ""}
                       </div>
                     </>
                   ) : (

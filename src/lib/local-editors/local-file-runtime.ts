@@ -48,8 +48,28 @@ export function openLocalEditorFile(kind: LocalEditorKind): Promise<File | null>
     input.style.height = "1px";
 
     let settled = false;
+    let legacyFocusTimer: number | null = null;
+    const supportsCancelEvent = "oncancel" in input;
+
+    const clearLegacyFocusTimer = () => {
+      if (legacyFocusTimer === null) return;
+      window.clearTimeout(legacyFocusTimer);
+      legacyFocusTimer = null;
+    };
+    const handleLegacyWindowFocus = () => {
+      clearLegacyFocusTimer();
+      legacyFocusTimer = window.setTimeout(() => {
+        legacyFocusTimer = null;
+        if (!settled && (!input.files || input.files.length === 0)) {
+          finish(null);
+        }
+      }, 500);
+    };
     const cleanup = () => {
-      window.removeEventListener("focus", handleWindowFocus, true);
+      clearLegacyFocusTimer();
+      if (!supportsCancelEvent) {
+        window.removeEventListener("focus", handleLegacyWindowFocus, true);
+      }
       input.remove();
     };
     const finish = (value: File | null) => {
@@ -63,13 +83,6 @@ export function openLocalEditorFile(kind: LocalEditorKind): Promise<File | null>
       settled = true;
       cleanup();
       reject(error);
-    };
-    const handleWindowFocus = () => {
-      window.setTimeout(() => {
-        if (!settled && (!input.files || input.files.length === 0)) {
-          finish(null);
-        }
-      }, 0);
     };
 
     input.addEventListener("cancel", () => finish(null), { once: true });
@@ -92,7 +105,9 @@ export function openLocalEditorFile(kind: LocalEditorKind): Promise<File | null>
     );
 
     document.body.appendChild(input);
-    window.addEventListener("focus", handleWindowFocus, true);
+    if (!supportsCancelEvent) {
+      window.addEventListener("focus", handleLegacyWindowFocus, true);
+    }
     input.click();
   });
 }
