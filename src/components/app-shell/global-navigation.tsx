@@ -57,6 +57,13 @@ type NavigationTranslate = (
   params?: MessageParams,
 ) => string;
 
+export const ARCTOR_LOCAL_EDITORS_REMOTE_SHELL_IMAGES_DISABLED_V1 =
+  "ARCTOR_LOCAL_EDITORS_REMOTE_SHELL_IMAGES_DISABLED_V1" as const;
+
+function isLocalEditorPrivacyRoute(pathname: string) {
+  return pathname === "/local-editors" || pathname.startsWith("/local-editors/");
+}
+
 export const UI_MINI_FIX_REAL_ORGANIZATIONS_IN_GLOBAL_NAV =
   "UI_MINI_FIX_REAL_ORGANIZATIONS_IN_GLOBAL_NAV" as const;
 
@@ -515,9 +522,11 @@ function getProfileInitials(displayName: string) {
 function ProfileNavigationTreeItem({
   profile,
   locale,
+  suppressRemoteImage,
 }: {
   readonly profile: SidebarProfile;
   readonly locale: LocaleCode;
+  readonly suppressRemoteImage: boolean;
 }) {
   const href = buildLocaleAwareHref(
     `/profiles/${encodeURIComponent(profile.profileId)}/edit`,
@@ -530,7 +539,7 @@ function ProfileNavigationTreeItem({
       title={profile.displayName}
       className="group ml-9 flex min-w-0 items-center gap-2 rounded-md py-1.5 pl-2 pr-2 text-[11.5px] font-normal text-[#7c8099] transition-all hover:bg-gray-50 hover:text-[#1a1d2e]"
     >
-      {profile.imageUrl ? (
+      {profile.imageUrl && !suppressRemoteImage ? (
         <>
           {/* Arbitrary user/profile media URLs are intentionally rendered as-is; Next Image remote hosts are not enumerable here. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -574,6 +583,8 @@ export function GlobalSidebar({
   const locale = useInterfaceLocale();
   const certificateView = useUnifiedCertificateView();
   const localeHref = (pathname: string) => buildLocaleAwareHref(pathname, locale);
+  const suppressRemoteProfileImages =
+    currentPathname === "" || isLocalEditorPrivacyRoute(currentPathname);
 
   useEffect(() => {
     const readLocation = () => {
@@ -975,6 +986,7 @@ export function GlobalSidebar({
                 key={profile.profileId}
                 profile={profile}
                 locale={locale}
+                suppressRemoteImage={suppressRemoteProfileImages}
               />
             ))
           )}
