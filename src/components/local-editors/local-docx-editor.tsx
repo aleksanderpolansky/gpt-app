@@ -10,7 +10,7 @@ import {
   type DocxEditorProps,
   type DocxEditorRef,
 } from "@casualoffice/docs/react";
-import { Download, Loader2, ShieldCheck } from "lucide-react";
+import { Download, Loader2, ScanLine, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { type LocaleCode } from "@/i18n";
@@ -18,6 +18,22 @@ import { saveLocalEditorBlob } from "@/lib/local-editors/local-file-runtime";
 
 const DOCX_MIME =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+const MOBILE_DOCX_VIEWPORT_QUERY = "(max-width: 720px)";
+const MOBILE_DOCX_REFERENCE_WIDTH_PX = 900;
+const MOBILE_DOCX_HORIZONTAL_GUTTER_PX = 20;
+const MOBILE_DOCX_MIN_ZOOM = 0.25;
+const MOBILE_DOCX_MAX_ZOOM = 0.75;
+
+export function getLocalDocxMobileFitZoom(containerWidth: number): number {
+  const safeWidth = Number.isFinite(containerWidth) && containerWidth > 0
+    ? containerWidth
+    : 360;
+  const availableWidth = Math.max(1, safeWidth - MOBILE_DOCX_HORIZONTAL_GUTTER_PX);
+  const rawZoom = availableWidth / MOBILE_DOCX_REFERENCE_WIDTH_PX;
+  const clamped = Math.max(MOBILE_DOCX_MIN_ZOOM, Math.min(MOBILE_DOCX_MAX_ZOOM, rawZoom));
+  return Math.floor(clamped * 100) / 100;
+}
 
 type LocalDocxEditorProps = {
   file: File;
@@ -32,6 +48,8 @@ type DocxCopy = {
   notReady: string;
   saved: string;
   cancelled: string;
+  fit: string;
+  mobileHint: string;
 };
 
 const DOCX_COPY: Record<LocaleCode, DocxCopy> = {
@@ -42,6 +60,8 @@ const DOCX_COPY: Record<LocaleCode, DocxCopy> = {
     notReady: "DOCX editor is not ready yet.",
     saved: "Local DOCX copy saved.",
     cancelled: "Saving was cancelled.",
+    fit: "Fit page",
+    mobileHint: "The document is fitted to the phone width. Use the zoom control to enlarge it when needed.",
   },
   pl: {
     localBadge: "Lokalny edytor DOCX · bez przechowywania dokumentu na serwerze",
@@ -50,6 +70,8 @@ const DOCX_COPY: Record<LocaleCode, DocxCopy> = {
     notReady: "Edytor DOCX nie jest jeszcze gotowy.",
     saved: "Lokalna kopia DOCX została zapisana.",
     cancelled: "Zapisywanie zostało anulowane.",
+    fit: "Dopasuj stronę",
+    mobileHint: "Dokument jest dopasowany do szerokości telefonu. W razie potrzeby powiększ go kontrolką zoomu.",
   },
   ru: {
     localBadge: "Локальный DOCX-редактор · без хранения документа на сервере",
@@ -58,6 +80,8 @@ const DOCX_COPY: Record<LocaleCode, DocxCopy> = {
     notReady: "DOCX-редактор ещё не готов.",
     saved: "Локальная копия DOCX сохранена.",
     cancelled: "Сохранение отменено.",
+    fit: "По ширине",
+    mobileHint: "Документ подогнан по ширине телефона. При необходимости увеличьте его через масштаб редактора.",
   },
   uk: {
     localBadge: "Локальний DOCX-редактор · без зберігання документа на сервері",
@@ -66,6 +90,8 @@ const DOCX_COPY: Record<LocaleCode, DocxCopy> = {
     notReady: "DOCX-редактор ще не готовий.",
     saved: "Локальну копію DOCX збережено.",
     cancelled: "Збереження скасовано.",
+    fit: "За шириною",
+    mobileHint: "Документ підігнано під ширину телефона. За потреби збільште його через масштаб редактора.",
   },
   de: {
     localBadge: "Lokaler DOCX-Editor · keine Dokumentspeicherung auf dem Server",
@@ -74,6 +100,8 @@ const DOCX_COPY: Record<LocaleCode, DocxCopy> = {
     notReady: "Der DOCX-Editor ist noch nicht bereit.",
     saved: "Lokale DOCX-Kopie gespeichert.",
     cancelled: "Speichern wurde abgebrochen.",
+    fit: "Seite einpassen",
+    mobileHint: "Das Dokument wird an die Telefonbreite angepasst. Bei Bedarf können Sie es über die Zoomsteuerung vergrößern.",
   },
   es: {
     localBadge: "Editor DOCX local · sin almacenamiento del documento en el servidor",
@@ -82,6 +110,8 @@ const DOCX_COPY: Record<LocaleCode, DocxCopy> = {
     notReady: "El editor DOCX aún no está listo.",
     saved: "Copia DOCX local guardada.",
     cancelled: "Se canceló el guardado.",
+    fit: "Ajustar página",
+    mobileHint: "El documento se ajusta al ancho del teléfono. Usa el control de zoom para ampliarlo cuando lo necesites.",
   },
   cs: {
     localBadge: "Lokální editor DOCX · bez ukládání dokumentu na server",
@@ -90,6 +120,8 @@ const DOCX_COPY: Record<LocaleCode, DocxCopy> = {
     notReady: "Editor DOCX ještě není připraven.",
     saved: "Místní kopie DOCX byla uložena.",
     cancelled: "Ukládání bylo zrušeno.",
+    fit: "Přizpůsobit stránku",
+    mobileHint: "Dokument je přizpůsoben šířce telefonu. V případě potřeby jej zvětšete ovládáním měřítka.",
   },
 };
 
@@ -166,6 +198,7 @@ export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditor
   const copy = DOCX_COPY[locale] ?? DOCX_COPY.en;
   const editorI18n = DOCX_I18N[locale] ?? DOCX_I18N.en;
   const editorRef = useRef<DocxEditorRef | null>(null);
+  const editorViewportRef = useRef<HTMLDivElement | null>(null);
   const readyRef = useRef(false);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -179,6 +212,32 @@ export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditor
     },
     [onDirtyChange],
   );
+
+  const fitDocumentToMobileViewport = useCallback(() => {
+    if (typeof window === "undefined" || !editorRef.current) return false;
+    if (!window.matchMedia(MOBILE_DOCX_VIEWPORT_QUERY).matches) return false;
+
+    const containerWidth = editorViewportRef.current?.clientWidth ?? window.innerWidth;
+    editorRef.current.setZoom(getLocalDocxMobileFitZoom(containerWidth));
+    return true;
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(MOBILE_DOCX_VIEWPORT_QUERY);
+    const refitAfterViewportModeChange = () => {
+      if (!readyRef.current || !mediaQuery.matches) return;
+      window.requestAnimationFrame(() => {
+        fitDocumentToMobileViewport();
+      });
+    };
+
+    mediaQuery.addEventListener("change", refitAfterViewportModeChange);
+    window.addEventListener("orientationchange", refitAfterViewportModeChange);
+    return () => {
+      mediaQuery.removeEventListener("change", refitAfterViewportModeChange);
+      window.removeEventListener("orientationchange", refitAfterViewportModeChange);
+    };
+  }, [fitDocumentToMobileViewport]);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -224,7 +283,7 @@ export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditor
   }, [copy.cancelled, copy.notReady, copy.saved, file.name, setDirtyState]);
 
   return (
-    <section className="overflow-hidden rounded-[26px] border border-black/[0.07] bg-white shadow-sm">
+    <section className="min-w-0 max-w-full overflow-hidden rounded-[26px] border border-black/[0.07] bg-white shadow-sm">
       <div className="flex flex-col gap-3 border-b border-[#e8eaf2] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-[12px] font-bold text-emerald-700">
@@ -237,19 +296,30 @@ export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditor
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => void saveEditedCopy()}
-          disabled={saving}
-          className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#3b6ef8] px-4 py-2 text-[12px] font-bold text-white transition hover:bg-[#315fdc] disabled:opacity-50"
-        >
-          {saving ? (
-            <Loader2 className="animate-spin" size={16} aria-hidden="true" />
-          ) : (
-            <Download size={16} aria-hidden="true" />
-          )}
-          {copy.save}
-        </button>
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          <button
+            type="button"
+            onClick={() => fitDocumentToMobileViewport()}
+            aria-label={copy.fit}
+            title={copy.fit}
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#dce2f2] bg-white text-[#3657b6] transition hover:bg-[#f5f7ff] sm:hidden"
+          >
+            <ScanLine size={17} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => void saveEditedCopy()}
+            disabled={saving}
+            className="inline-flex min-h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-[#3b6ef8] px-4 py-2 text-[12px] font-bold text-white transition hover:bg-[#315fdc] disabled:opacity-50 sm:flex-none"
+          >
+            {saving ? (
+              <Loader2 className="animate-spin" size={16} aria-hidden="true" />
+            ) : (
+              <Download size={16} aria-hidden="true" />
+            )}
+            <span className="truncate">{copy.save}</span>
+          </button>
+        </div>
       </div>
 
       {message ? (
@@ -263,7 +333,14 @@ export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditor
         </div>
       ) : null}
 
-      <div className="h-[78vh] min-h-[680px] w-full bg-[#edf0f6]">
+      <div className="border-b border-[#e8eaf2] bg-[#f8faff] px-4 py-2 text-[11px] leading-4 text-[#66708f] sm:hidden">
+        {copy.mobileHint}
+      </div>
+
+      <div
+        ref={editorViewportRef}
+        className="h-[72dvh] min-h-[480px] max-h-[820px] w-full min-w-0 overflow-hidden bg-[#edf0f6] sm:h-[78vh] sm:min-h-[680px] sm:max-h-none"
+      >
         <DocxEditor
           ref={editorRef}
           documentBuffer={file}
@@ -274,6 +351,11 @@ export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditor
           onReady={() => {
             readyRef.current = true;
             setDirtyState(false);
+            if (typeof window !== "undefined") {
+              window.requestAnimationFrame(() => {
+                fitDocumentToMobileViewport();
+              });
+            }
           }}
           onChange={() => {
             if (readyRef.current) setDirtyState(true);
