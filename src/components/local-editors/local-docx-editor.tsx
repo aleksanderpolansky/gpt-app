@@ -24,6 +24,17 @@ const MOBILE_DOCX_REFERENCE_WIDTH_PX = 900;
 const MOBILE_DOCX_HORIZONTAL_GUTTER_PX = 20;
 const MOBILE_DOCX_MIN_ZOOM = 0.25;
 const MOBILE_DOCX_MAX_ZOOM = 0.75;
+const DOCX_MAX_ZOOM = 4;
+
+export function getLocalDocxFitZoom(containerWidth: number): number {
+  const safeWidth = Number.isFinite(containerWidth) && containerWidth > 0
+    ? containerWidth
+    : MOBILE_DOCX_REFERENCE_WIDTH_PX;
+  const availableWidth = Math.max(1, safeWidth - MOBILE_DOCX_HORIZONTAL_GUTTER_PX);
+  const rawZoom = availableWidth / MOBILE_DOCX_REFERENCE_WIDTH_PX;
+  const clamped = Math.max(MOBILE_DOCX_MIN_ZOOM, Math.min(DOCX_MAX_ZOOM, rawZoom));
+  return Math.floor(clamped * 100) / 100;
+}
 
 export function getLocalDocxMobileFitZoom(containerWidth: number): number {
   const safeWidth = Number.isFinite(containerWidth) && containerWidth > 0
@@ -204,6 +215,7 @@ export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditor
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editorGeometry, setEditorGeometry] = useState({ width: 0, zoom: 1 });
 
   const setDirtyState = useCallback(
     (next: boolean) => {
@@ -213,14 +225,37 @@ export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditor
     [onDirtyChange],
   );
 
+  const syncEditorGeometry = useCallback(() => {
+    const editor = editorRef.current;
+    const viewport = editorViewportRef.current;
+    if (!editor || !viewport) return;
+
+    const width = viewport.clientWidth;
+    const zoom = editor.getZoom();
+    setEditorGeometry((current) =>
+      current.width === width && Math.abs(current.zoom - zoom) < 0.001
+        ? current
+        : { width, zoom },
+    );
+  }, []);
+
+  const fitDocumentToViewportWidth = useCallback(() => {
+    if (typeof window === "undefined" || !editorRef.current) return false;
+    const containerWidth = editorViewportRef.current?.clientWidth ?? window.innerWidth;
+    editorRef.current.setZoom(getLocalDocxFitZoom(containerWidth));
+    window.requestAnimationFrame(syncEditorGeometry);
+    return true;
+  }, [syncEditorGeometry]);
+
   const fitDocumentToMobileViewport = useCallback(() => {
     if (typeof window === "undefined" || !editorRef.current) return false;
     if (!window.matchMedia(MOBILE_DOCX_VIEWPORT_QUERY).matches) return false;
 
     const containerWidth = editorViewportRef.current?.clientWidth ?? window.innerWidth;
     editorRef.current.setZoom(getLocalDocxMobileFitZoom(containerWidth));
+    window.requestAnimationFrame(syncEditorGeometry);
     return true;
-  }, []);
+  }, [syncEditorGeometry]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(MOBILE_DOCX_VIEWPORT_QUERY);
@@ -238,6 +273,24 @@ export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditor
       window.removeEventListener("orientationchange", refitAfterViewportModeChange);
     };
   }, [fitDocumentToMobileViewport]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    syncEditorGeometry();
+    const viewport = editorViewportRef.current;
+    const observer =
+      typeof ResizeObserver !== "undefined" && viewport
+        ? new ResizeObserver(syncEditorGeometry)
+        : null;
+    if (observer && viewport) observer.observe(viewport);
+    const intervalId = window.setInterval(syncEditorGeometry, 200);
+
+    return () => {
+      observer?.disconnect();
+      window.clearInterval(intervalId);
+    };
+  }, [syncEditorGeometry]);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -282,6 +335,12 @@ export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditor
     }
   }, [copy.cancelled, copy.notReady, copy.saved, file.name, setDirtyState]);
 
+  const fitZoom = editorGeometry.width > 0
+    ? getLocalDocxFitZoom(editorGeometry.width)
+    : 1;
+  const hasHorizontalOverflow =
+    editorGeometry.width > 0 && editorGeometry.zoom > fitZoom + 0.01;
+
   return (
     <section className="min-w-0 max-w-full overflow-hidden rounded-[26px] border border-black/[0.07] bg-white shadow-sm">
       <div className="flex flex-col gap-3 border-b border-[#e8eaf2] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
@@ -299,10 +358,10 @@ export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditor
         <div className="flex w-full items-center gap-2 sm:w-auto">
           <button
             type="button"
-            onClick={() => fitDocumentToMobileViewport()}
+            onClick={() => fitDocumentToViewportWidth()}
             aria-label={copy.fit}
             title={copy.fit}
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#dce2f2] bg-white text-[#3657b6] transition hover:bg-[#f5f7ff] sm:hidden"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#dce2f2] bg-white text-[#3657b6] transition hover:bg-[#f5f7ff]"
           >
             <ScanLine size={17} aria-hidden="true" />
           </button>
@@ -341,8 +400,17 @@ export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditor
         ref={editorViewportRef}
         className="h-[72dvh] min-h-[480px] max-h-[820px] w-full min-w-0 overflow-hidden bg-[#edf0f6] sm:h-[78vh] sm:min-h-[680px] sm:max-h-none"
       >
+        <style>{`
+          .arctor-local-docx-editor-engine.arctor-local-docx-editor--horizontal-overflow
+            div:has(> .paged-editor__pages) {
+            transform-origin: top left !important;
+          }
+        `}</style>
         <DocxEditor
           ref={editorRef}
+          className={`arctor-local-docx-editor-engine${
+            hasHorizontalOverflow ? " arctor-local-docx-editor--horizontal-overflow" : ""
+          }`}
           documentBuffer={file}
           documentName={file.name}
           chrome="embedded"
@@ -353,7 +421,7 @@ export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditor
             setDirtyState(false);
             if (typeof window !== "undefined") {
               window.requestAnimationFrame(() => {
-                fitDocumentToMobileViewport();
+                if (!fitDocumentToMobileViewport()) syncEditorGeometry();
               });
             }
           }}
