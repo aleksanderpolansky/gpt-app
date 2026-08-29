@@ -30,6 +30,7 @@ function shouldRenderPlainPage(pathname: string) {
     pathname.startsWith("/auth") ||
     pathname.startsWith("/api") ||
     pathname.startsWith("/_next") ||
+    pathname === "/value-objects/table" ||
     pathname === "/m" ||
     pathname.startsWith("/m/")
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   ChevronDown,
   ChevronRight,
@@ -556,12 +557,16 @@ export function ValueObjectCatalogViews({
   onValueObjectUpdated,
   onValueObjectCreated,
 }: ValueObjectCatalogViewsProps) {
+  const pathname = usePathname();
+  const standaloneTableWorkspace = pathname === "/value-objects/table";
   const copy = COPY[locale] ?? COPY.en;
   const tableEditCopy = getValueObjectTableEditorCopy(locale);
-  const [viewMode, setViewMode] = useState<ViewMode>("tree");
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    standaloneTableWorkspace ? "table" : "tree",
+  );
   const [expandedIds, setExpandedIds] = useState<Set<string> | null>(null);
   const [insertParentId, setInsertParentId] = useState<string | null>(null);
-  const [tableEditMode, setTableEditMode] = useState(false);
+  const [tableEditMode, setTableEditMode] = useState(standaloneTableWorkspace);
   const [tableEditFeedback, setTableEditFeedback] =
     useState<TableEditFeedback | null>(null);
   const [tableUndoStack, setTableUndoStack] = useState<TableEditHistoryAction[]>([]);

@@ -13,3 +13,24 @@ export function serializeArctorClipboardMatrix(
     .map((row) => row.map((value) => serializeClipboardCell(value)).join("\t"))
     .join("\r\n");
 }
+
+export type ArctorRangeCopySelectionBoundary = {
+  hasNativeSelection: boolean;
+  anchorInsideTable: boolean;
+  focusInsideTable: boolean;
+  selectionInsideEditor: boolean;
+};
+
+export function shouldBypassArctorRangeCopyForNativeSelection(
+  boundary: ArctorRangeCopySelectionBoundary,
+) {
+  if (!boundary.hasNativeSelection) {
+    return false;
+  }
+
+  return (
+    boundary.selectionInsideEditor ||
+    !boundary.anchorInsideTable ||
+    !boundary.focusInsideTable
+  );
+}

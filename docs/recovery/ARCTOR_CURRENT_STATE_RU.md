@@ -924,3 +924,15 @@ T2_3_1 V1_1 убирает зависимость range-copy от keyboard focus
 Paste/write boundaries T2_3 не меняются: только title/description через existing safe ontology/draft PATCH, max 100 writes, prevalidation, best-effort compensation rollback; gray/global/system/unsupported cells остаются non-writable. Smartphone multi-cell range по-прежнему disabled, horizontal swipe/pinch/single-tap editing сохраняются.
 
 Recovery checkpoint: `docs/recovery/ARCTOR_TABLE_VIEWS_T2_3_1_COPY_HOTFIX_V1_1_RU.md`.
+
+## 2026-08-28 — T2_3_2 standalone table workspace
+
+- Базовый commit перед этапом: `6fd99c47044ab13b85c0d1f0a6456bf4b30bc650` (`table-views-t2-3-1-copy-hotfix-v1-1`).
+- Production postcheck T2_3_1 показал: визуальное выделение диапазона работает, но Ctrl+C всё ещё не помещает данные в системный clipboard.
+- Принято архитектурное решение: оставить встроенный Table как быстрый вид и добавить явную кнопку открытия отдельного полноэкранного table workspace в новой вкладке: `/value-objects/table`.
+- Standalone route исключён из GlobalAppShell, поэтому не получает левую навигацию и AI Navigator; это создаёт независимую основу для будущего Spreadsheet mode.
+- В standalone workspace `ValueObjectCatalogViews` стартует сразу в `table` + edit mode; существующие inline editing, mobile horizontal scroll, pinch zoom, Undo/Redo и server-write contracts не обходятся.
+- Дополнительно исправлена обнаруженная граница copy: non-collapsed DOM selection, создаваемая drag-range внутри Tabulator, больше не блокирует range copy. Native text copy сохраняется для input/textarea/editor и выделения вне таблицы.
+- Следующая точка: production postcheck новой вкладки, Ctrl+C -> Notepad/Excel/Google Sheets, затем T2_4 (создание ОН из таблицы) после закрытия clipboard/runtime.
+
+- 2026-08-29: два последовательных pre-mutation release FAIL не затронули `main`: сначала defect runtime fixture, затем LF/CRLF-sensitive anchor `workspace-labels`. V1_2 усиливает patcher LF/CRLF matching, self-test и добавляет replay на реальных worktree bytes до scratch/mutation.

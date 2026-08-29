@@ -6,6 +6,7 @@ import "./arctor-tabulator.css";
 import { useEffect, useRef } from "react";
 
 import { serializeArctorClipboardMatrix } from "./arctor-clipboard";
+import { shouldBypassArctorRangeCopyForNativeSelection } from "./arctor-clipboard";
 
 type TablePrimitive = string | number | boolean | null | undefined;
 
@@ -152,6 +153,14 @@ type ArctorTabulatorProps<T extends object> = {
   onRangeCopied?: (clipboard: string) => void;
   onRangePaste?: (event: ArctorTableRangePasteEvent<T>) => void | Promise<void>;
 };
+
+function getSelectionElement(node: Node | null) {
+  if (!node) {
+    return null;
+  }
+
+  return node instanceof Element ? node : node.parentElement;
+}
 
 function isInteractiveTarget(target: EventTarget | null) {
   if (!(target instanceof Element)) {
@@ -852,7 +861,32 @@ export function ArctorTabulator<T extends object>({
           }
 
           const selection = document.getSelection();
-          if (selection && !selection.isCollapsed) {
+          const hasNativeSelection = Boolean(
+            selection && !selection.isCollapsed,
+          );
+          const anchorElement = getSelectionElement(selection?.anchorNode ?? null);
+          const focusElement = getSelectionElement(selection?.focusNode ?? null);
+          const selectionInsideEditor = [anchorElement, focusElement].some(
+            (element) =>
+              Boolean(
+                element?.closest(
+                  "input,textarea,[contenteditable='true'],.arctor-expanded-cell-editor",
+                ),
+              ),
+          );
+
+          if (
+            shouldBypassArctorRangeCopyForNativeSelection({
+              hasNativeSelection,
+              anchorInsideTable: Boolean(
+                selection?.anchorNode && host.contains(selection.anchorNode),
+              ),
+              focusInsideTable: Boolean(
+                selection?.focusNode && host.contains(selection.focusNode),
+              ),
+              selectionInsideEditor,
+            })
+          ) {
             return;
           }
 
