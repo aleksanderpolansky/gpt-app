@@ -54,16 +54,6 @@ const CREATE_SUPER_OFFER_LABELS: Record<string, string> = {
   cs: "Přidat supernabídku",
 };
 
-const OPEN_TABLE_WORKSPACE_LABELS: Record<string, string> = {
-  en: "Open table workspace ↗",
-  pl: "Otwórz tabelę ↗",
-  ru: "Открыть таблицу ↗",
-  uk: "Відкрити таблицю ↗",
-  de: "Tabelle öffnen ↗",
-  es: "Abrir tabla ↗",
-  cs: "Otevřít tabulku ↗",
-};
-
 export default async function ValueObjectsPage({
   searchParams,
 }: ValueObjectsPageProps) {
@@ -77,24 +67,10 @@ export default async function ValueObjectsPage({
     locale,
   );
   const superOfferHref = buildLocaleAwareHref("/offers/new", locale);
-  const tableWorkspaceHref = buildLocaleAwareHref(
-    "/value-objects/table",
-    locale,
-  );
-
   return (
     <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#f5f6fb] px-3 py-5 text-[#1a1d2e] sm:px-5">
       <div className="mx-auto grid min-w-0 w-full max-w-[1440px] gap-5">
         <div className="flex flex-wrap justify-end gap-2">
-          <Link
-            href={tableWorkspaceHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-full border border-[#cfd8ff] bg-white px-4 py-2 text-[12px] font-semibold text-[#3b6ef8] shadow-sm transition hover:bg-[#f7f9ff]"
-          >
-            {OPEN_TABLE_WORKSPACE_LABELS[locale] ??
-              OPEN_TABLE_WORKSPACE_LABELS.en}
-          </Link>
           <Link
             href={createRootHref}
             className="rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"

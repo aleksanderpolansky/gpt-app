@@ -552,7 +552,13 @@ function roleIcon(role: SemanticRole) {
   return Layers3;
 }
 
-export function ActualValueObjectsList() {
+type ActualValueObjectsListProps = {
+  readonly tableWorkspaceOnly?: boolean;
+};
+
+export function ActualValueObjectsList({
+  tableWorkspaceOnly = false,
+}: ActualValueObjectsListProps = {}) {
   const locale = useInterfaceLocale();
   const copy = COPY[locale] ?? COPY.en;
   const t = useMemo(
@@ -867,8 +873,11 @@ export function ActualValueObjectsList() {
   ];
 
   return (
-    <section className="grid gap-4" aria-label={copy.title}>
-      <header>
+    <section
+      className={tableWorkspaceOnly ? "grid gap-2" : "grid gap-4"}
+      aria-label={copy.title}
+    >
+      <header className={tableWorkspaceOnly ? "hidden" : undefined}>
         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
           {copy.eyebrow}
         </div>
@@ -880,7 +889,13 @@ export function ActualValueObjectsList() {
         </p>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div
+        className={
+          tableWorkspaceOnly
+            ? "hidden"
+            : "grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+        }
+      >
         {[
           [copy.total, counts.total],
           [copy.roots, counts.roots],
@@ -901,7 +916,11 @@ export function ActualValueObjectsList() {
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div
+        className={
+          tableWorkspaceOnly ? "hidden" : "flex flex-wrap items-center gap-2"
+        }
+      >
         {filters.map((filter) => {
           const selected = roleFilter === filter.value;
 
@@ -923,7 +942,13 @@ export function ActualValueObjectsList() {
         })}
       </div>
 
-      <div className="grid gap-3 rounded-[20px] border border-black/[0.07] bg-white p-4 shadow-sm md:grid-cols-[1fr_auto]">
+      <div
+        className={
+          tableWorkspaceOnly
+            ? "hidden"
+            : "grid gap-3 rounded-[20px] border border-black/[0.07] bg-white p-4 shadow-sm md:grid-cols-[1fr_auto]"
+        }
+      >
         <label className="flex min-h-11 items-center gap-2 rounded-xl border border-[#dfe3f1] bg-[#f8fafc] px-3">
           <Search size={16} className="shrink-0 text-[#7c8099]" />
           <input

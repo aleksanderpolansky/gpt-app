@@ -26,6 +26,8 @@ import {
   type ArctorTableRangePasteEvent,
 } from "@/components/tables/arctor-tabulator";
 
+import { StandaloneWorkspaceCloseButton } from "@/components/workspace/standalone-workspace-close-button";
+
 import { ValueObjectMindMap } from "./value-object-mind-map";
 import {
   canEditValueObjectTableCells,
@@ -454,9 +456,41 @@ function roleIcon(role: SemanticRole) {
   return Layers3;
 }
 
+const OPEN_TABLE_WORKSPACE_LABELS: Record<LocaleCode, string> = {
+  en: "Open table workspace ↗",
+  pl: "Otwórz tabelę ↗",
+  ru: "Открыть таблицу ↗",
+  uk: "Відкрити таблицю ↗",
+  de: "Tabelle öffnen ↗",
+  es: "Abrir tabla ↗",
+  cs: "Otevřít tabulku ↗",
+};
+
+const CLOSE_TABLE_LABELS: Record<LocaleCode, string> = {
+  en: "Close table",
+  pl: "Zamknij tabelę",
+  ru: "Закрыть таблицу",
+  uk: "Закрити таблицю",
+  de: "Tabelle schließen",
+  es: "Cerrar tabla",
+  cs: "Zavřít tabulku",
+};
+
 function buildLocaleAwareHref(pathname: string, locale: LocaleCode) {
   if (locale === "en") return pathname;
   return `${pathname}?locale=${encodeURIComponent(locale)}`;
+}
+
+function buildTableWorkspaceHref(locale: LocaleCode) {
+  const returnTo = buildLocaleAwareHref("/value-objects", locale);
+  const params = new URLSearchParams();
+
+  if (locale !== "en") {
+    params.set("locale", locale);
+  }
+
+  params.set("returnTo", returnTo);
+  return `/value-objects/table?${params.toString()}`;
 }
 
 function sortObjects(
@@ -1672,7 +1706,8 @@ export function ValueObjectCatalogViews({
     <div className="grid gap-3">
       <div className="grid gap-2 rounded-[18px] border border-black/[0.07] bg-white p-2.5 shadow-sm">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-          <div className="inline-flex self-start rounded-xl bg-[#f5f6fb] p-1">
+          {!standaloneTableWorkspace ? (
+            <div className="inline-flex self-start rounded-xl bg-[#f5f6fb] p-1">
             <button
               type="button"
               onClick={() => setViewMode("tree")}
@@ -1725,7 +1760,8 @@ export function ValueObjectCatalogViews({
               <Table2 size={15} />
               {copy.table}
             </button>
-          </div>
+            </div>
+          ) : null}
 
           <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:ml-1 lg:flex lg:min-w-0 lg:flex-1 lg:flex-wrap lg:justify-start">
             {renderHierarchyFilters()}
@@ -1733,6 +1769,22 @@ export function ValueObjectCatalogViews({
 
           {viewMode === "table" ? (
             <div className="flex flex-wrap items-center gap-2 lg:shrink-0">
+              {standaloneTableWorkspace ? (
+                <StandaloneWorkspaceCloseButton
+                  label={CLOSE_TABLE_LABELS[locale]}
+                  fallbackHref={buildLocaleAwareHref("/value-objects", locale)}
+                />
+              ) : (
+                <Link
+                  href={buildTableWorkspaceHref(locale)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#cfd8ff] bg-white px-3 py-2 text-[11px] font-semibold text-[#3b6ef8] transition hover:bg-[#f7f9ff]"
+                >
+                  {OPEN_TABLE_WORKSPACE_LABELS[locale]}
+                </Link>
+              )}
+
               {tableEditMode ? (
                 <>
                   <button
@@ -1875,7 +1927,11 @@ export function ValueObjectCatalogViews({
             columns={tableColumns}
             rowKey="id"
             emptyLabel={copy.emptyTable}
-            height="min(68vh, 760px)"
+            height={
+              standaloneTableWorkspace
+                ? "calc(100vh - 138px)"
+                : "min(68vh, 760px)"
+            }
             options={tableOptions}
             editMode={tableEditMode}
             adaptiveTouchEditing={tableEditMode}
