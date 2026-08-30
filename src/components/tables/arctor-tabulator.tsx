@@ -408,7 +408,16 @@ function createExpandedEditor(kind: "input" | "textarea"): TabulatorEditor {
     let viewportListenersAttached = false;
     let visualViewportListenersAttached = false;
     let virtualKeyboardListenerAttached = false;
+    let compactKeyboardFallbackActive = false;
     const keyboardRepositionTimers = new Set<number>();
+    const initialVisualViewportHeight = window.visualViewport?.height ?? null;
+    const initialLayoutViewportHeight = Math.max(
+      1,
+      Math.min(
+        document.documentElement.clientHeight || window.innerHeight || 1,
+        window.innerHeight || document.documentElement.clientHeight || 1,
+      ),
+    );
     const handleVirtualKeyboardGeometryChange = () => sizeAndPosition();
 
     const minWidth = readFiniteNumber(
@@ -505,6 +514,7 @@ function createExpandedEditor(kind: "input" | "textarea"): TabulatorEditor {
       const compactTouch = isCompactTouchEnvironment();
       const margin = compactTouch ? 10 : 12;
       let visibleBottom = viewportTop + viewportHeight;
+      let measuredKeyboardGeometry = false;
 
       if (compactTouch) {
         const keyboardRect = getArctorVirtualKeyboard()?.boundingRect;
@@ -514,6 +524,35 @@ function createExpandedEditor(kind: "input" | "textarea"): TabulatorEditor {
           Number.isFinite(keyboardRect.top)
         ) {
           visibleBottom = Math.min(visibleBottom, keyboardRect.top);
+          measuredKeyboardGeometry = true;
+        }
+
+        const currentVisualViewportHeight =
+          visualViewport?.height ?? initialVisualViewportHeight;
+        const visualViewportShrink =
+          initialVisualViewportHeight != null && currentVisualViewportHeight != null
+            ? initialVisualViewportHeight - currentVisualViewportHeight
+            : 0;
+        const layoutViewportShrink =
+          initialLayoutViewportHeight - layoutViewportHeight;
+
+        const keyboardShrinkThreshold = Math.max(
+          120,
+          initialLayoutViewportHeight * 0.2,
+        );
+        if (
+          visualViewportShrink >= keyboardShrinkThreshold ||
+          layoutViewportShrink >= keyboardShrinkThreshold
+        ) {
+          measuredKeyboardGeometry = true;
+        }
+
+        if (compactKeyboardFallbackActive && !measuredKeyboardGeometry) {
+          const portrait = viewportHeight >= viewportWidth;
+          const fallbackVisibleFraction = portrait ? 0.52 : 0.42;
+          const fallbackBottom =
+            viewportTop + viewportHeight * fallbackVisibleFraction;
+          visibleBottom = Math.min(visibleBottom, fallbackBottom);
         }
       }
 
@@ -603,7 +642,17 @@ function createExpandedEditor(kind: "input" | "textarea"): TabulatorEditor {
 
     function scheduleKeyboardReposition() {
       if (!isCompactTouchEnvironment()) return;
-      for (const delay of [0, 80, 180, 320, 520]) {
+
+      const fallbackTimer = window.setTimeout(() => {
+        keyboardRepositionTimers.delete(fallbackTimer);
+        if (!settled && document.activeElement === editorElement) {
+          compactKeyboardFallbackActive = true;
+          sizeAndPosition();
+        }
+      }, 140);
+      keyboardRepositionTimers.add(fallbackTimer);
+
+      for (const delay of [0, 80, 180, 320, 520, 760]) {
         const timer = window.setTimeout(() => {
           keyboardRepositionTimers.delete(timer);
           if (!settled) sizeAndPosition();
