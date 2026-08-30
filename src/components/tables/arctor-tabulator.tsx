@@ -99,6 +99,19 @@ type TabulatorRangeEventEmitter = {
   ) => void;
 };
 
+type TabulatorCellClickComponent = {
+  getRow: () => { getData: () => unknown };
+  getField: () => string;
+  getValue: () => unknown;
+};
+
+type TabulatorCellClickEmitter = {
+  on: (
+    event: "cellClick",
+    callback: (event: Event, cell: TabulatorCellClickComponent) => void,
+  ) => void;
+};
+
 type TabulatorEditorCellComponent = {
   getElement: () => HTMLElement;
   getValue: () => unknown;
@@ -111,6 +124,12 @@ type TabulatorEditor = (
   cancel: () => void,
   editorParams?: Record<string, unknown>,
 ) => HTMLElement | false;
+
+export type ArctorTableCellClickEvent<T extends object> = {
+  row: T;
+  field: keyof T & string;
+  value: unknown;
+};
 
 export type ArctorTableCellEditedEvent<T extends object> = {
   row: T;
@@ -149,6 +168,7 @@ type ArctorTabulatorProps<T extends object> = {
   allowNativePinchZoom?: boolean;
   rangeClipboard?: boolean;
   onRowClick?: (row: T) => void;
+  onCellClick?: (event: ArctorTableCellClickEvent<T>) => void;
   onCellEdited?: (event: ArctorTableCellEditedEvent<T>) => void | Promise<void>;
   onRangeCopied?: (clipboard: string) => void;
   onRangePaste?: (event: ArctorTableRangePasteEvent<T>) => void | Promise<void>;
@@ -824,12 +844,14 @@ export function ArctorTabulator<T extends object>({
   allowNativePinchZoom = false,
   rangeClipboard = false,
   onRowClick,
+  onCellClick,
   onCellEdited,
   onRangeCopied,
   onRangePaste,
 }: ArctorTabulatorProps<T>) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const onRowClickRef = useRef(onRowClick);
+  const onCellClickRef = useRef(onCellClick);
   const onCellEditedRef = useRef(onCellEdited);
   const onRangeCopiedRef = useRef(onRangeCopied);
   const onRangePasteRef = useRef(onRangePaste);
@@ -837,6 +859,10 @@ export function ArctorTabulator<T extends object>({
   useEffect(() => {
     onRowClickRef.current = onRowClick;
   }, [onRowClick]);
+
+  useEffect(() => {
+    onCellClickRef.current = onCellClick;
+  }, [onCellClick]);
 
   useEffect(() => {
     onCellEditedRef.current = onCellEdited;
@@ -937,6 +963,19 @@ export function ArctorTabulator<T extends object>({
           if (callback) {
             callback(row.getData() as T);
           }
+        });
+      }
+
+      if (onCellClickRef.current) {
+        const cellClickEmitter = instance as unknown as TabulatorCellClickEmitter;
+        cellClickEmitter.on("cellClick", (_event, cell) => {
+          const callback = onCellClickRef.current;
+          if (!callback) return;
+          callback({
+            row: cell.getRow().getData() as T,
+            field: cell.getField() as keyof T & string,
+            value: cell.getValue(),
+          });
         });
       }
 

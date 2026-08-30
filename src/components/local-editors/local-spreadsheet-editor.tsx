@@ -1,17 +1,25 @@
 "use client";
 
 import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
   Download,
   Loader2,
   Maximize2,
   Minimize2,
+  Redo2,
   ShieldCheck,
+  Trash2,
+  Undo2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { LocalEditorStandaloneFrame } from "@/components/local-editors/local-editor-standalone-frame";
 import {
   ArctorTabulator,
+  type ArctorTableCellClickEvent,
   type ArctorTableCellEditedEvent,
   type ArctorTableColumn,
   type ArctorTableRangePasteEvent,
@@ -24,6 +32,7 @@ const MAX_VISIBLE_ROWS = 5000;
 const MAX_VISIBLE_COLUMNS = 128;
 const EXTRA_VISIBLE_ROWS = 20;
 const EXTRA_VISIBLE_COLUMNS = 4;
+const MAX_HISTORY_ENTRIES = 40;
 
 type XlsxModule = typeof import("xlsx");
 type XlsxWorkbook = import("xlsx").WorkBook;
@@ -43,6 +52,27 @@ type SpreadsheetView = {
   sourceColumns: number;
   truncated: boolean;
 };
+
+type SpreadsheetSelection = {
+  rowIndex: number;
+  columnIndex: number;
+};
+
+type WorksheetHistoryEntry = {
+  sheetName: string;
+  before: XlsxWorksheet;
+  after: XlsxWorksheet;
+  beforeSelection: SpreadsheetSelection;
+  afterSelection: SpreadsheetSelection;
+};
+
+type StructuralAction =
+  | "rowAbove"
+  | "rowBelow"
+  | "deleteRow"
+  | "columnLeft"
+  | "columnRight"
+  | "deleteColumn";
 
 type LocalSpreadsheetEditorProps = {
   file: File;
@@ -65,6 +95,17 @@ type SpreadsheetCopy = {
   truncated: string;
   pasteBlocked: string;
   emptyWorkbook: string;
+  selected: string;
+  rowAbove: string;
+  rowBelow: string;
+  deleteRow: string;
+  columnLeft: string;
+  columnRight: string;
+  deleteColumn: string;
+  undo: string;
+  redo: string;
+  structuralBlocked: string;
+  outsideUsedRange: string;
 };
 
 const COPY: Record<LocaleCode, SpreadsheetCopy> = {
@@ -83,6 +124,17 @@ const COPY: Record<LocaleCode, SpreadsheetCopy> = {
     truncated: "The sheet is larger than the current safe editing window. Hidden cells are kept in the workbook but are not shown here.",
     pasteBlocked: "Paste was cancelled because the selected range contains a formula cell.",
     emptyWorkbook: "The workbook has no worksheets.",
+    selected: "Selected",
+    rowAbove: "Insert row above",
+    rowBelow: "Insert row below",
+    deleteRow: "Delete row",
+    columnLeft: "Insert column left",
+    columnRight: "Insert column right",
+    deleteColumn: "Delete column",
+    undo: "Undo",
+    redo: "Redo",
+    structuralBlocked: "Row/column changes are disabled for workbooks containing formulas, merged cells, filters, or named ranges to avoid breaking references.",
+    outsideUsedRange: "Choose a row or column inside the used sheet area.",
   },
   pl: {
     localBadge: "Lokalny edytor XLSX · bez przechowywania arkusza na serwerze",
@@ -99,6 +151,17 @@ const COPY: Record<LocaleCode, SpreadsheetCopy> = {
     truncated: "Arkusz jest większy niż bieżące bezpieczne okno edycji. Ukryte komórki pozostają w skoroszycie, ale nie są tutaj wyświetlane.",
     pasteBlocked: "Wklejanie anulowano, ponieważ zaznaczony zakres zawiera komórkę z formułą.",
     emptyWorkbook: "Skoroszyt nie zawiera arkuszy.",
+    selected: "Wybrano",
+    rowAbove: "Wstaw wiersz powyżej",
+    rowBelow: "Wstaw wiersz poniżej",
+    deleteRow: "Usuń wiersz",
+    columnLeft: "Wstaw kolumnę po lewej",
+    columnRight: "Wstaw kolumnę po prawej",
+    deleteColumn: "Usuń kolumnę",
+    undo: "Cofnij",
+    redo: "Ponów",
+    structuralBlocked: "Zmiany wierszy i kolumn są wyłączone dla skoroszytów z formułami, scalonymi komórkami, filtrami lub nazwanymi zakresami, aby nie uszkodzić odwołań.",
+    outsideUsedRange: "Wybierz wiersz lub kolumnę w używanym obszarze arkusza.",
   },
   ru: {
     localBadge: "Локальный XLSX-редактор · без хранения таблицы на сервере",
@@ -115,6 +178,17 @@ const COPY: Record<LocaleCode, SpreadsheetCopy> = {
     truncated: "Лист больше текущего безопасного окна редактирования. Невидимые ячейки остаются в книге, но здесь не показываются.",
     pasteBlocked: "Вставка отменена: выбранный диапазон содержит ячейку с формулой.",
     emptyWorkbook: "В книге нет листов.",
+    selected: "Выбрано",
+    rowAbove: "Вставить строку выше",
+    rowBelow: "Вставить строку ниже",
+    deleteRow: "Удалить строку",
+    columnLeft: "Вставить столбец слева",
+    columnRight: "Вставить столбец справа",
+    deleteColumn: "Удалить столбец",
+    undo: "Отменить",
+    redo: "Повторить",
+    structuralBlocked: "Изменение строк и столбцов отключено для книг с формулами, объединёнными ячейками, фильтрами или именованными диапазонами, чтобы не повредить ссылки.",
+    outsideUsedRange: "Выберите строку или столбец внутри используемой области листа.",
   },
   uk: {
     localBadge: "Локальний XLSX-редактор · без зберігання таблиці на сервері",
@@ -131,6 +205,17 @@ const COPY: Record<LocaleCode, SpreadsheetCopy> = {
     truncated: "Аркуш більший за поточне безпечне вікно редагування. Невидимі клітинки залишаються в книзі, але тут не показуються.",
     pasteBlocked: "Вставлення скасовано: вибраний діапазон містить клітинку з формулою.",
     emptyWorkbook: "У книзі немає аркушів.",
+    selected: "Вибрано",
+    rowAbove: "Вставити рядок вище",
+    rowBelow: "Вставити рядок нижче",
+    deleteRow: "Видалити рядок",
+    columnLeft: "Вставити стовпець ліворуч",
+    columnRight: "Вставити стовпець праворуч",
+    deleteColumn: "Видалити стовпець",
+    undo: "Скасувати",
+    redo: "Повторити",
+    structuralBlocked: "Зміни рядків і стовпців вимкнено для книг із формулами, об’єднаними клітинками, фільтрами або іменованими діапазонами, щоб не пошкодити посилання.",
+    outsideUsedRange: "Виберіть рядок або стовпець у використаній області аркуша.",
   },
   de: {
     localBadge: "Lokaler XLSX-Editor · keine Tabellenspeicherung auf dem Server",
@@ -147,6 +232,17 @@ const COPY: Record<LocaleCode, SpreadsheetCopy> = {
     truncated: "Das Blatt ist größer als das aktuelle sichere Bearbeitungsfenster. Nicht sichtbare Zellen bleiben in der Arbeitsmappe erhalten.",
     pasteBlocked: "Einfügen wurde abgebrochen, weil der ausgewählte Bereich eine Formelzelle enthält.",
     emptyWorkbook: "Die Arbeitsmappe enthält keine Tabellenblätter.",
+    selected: "Ausgewählt",
+    rowAbove: "Zeile oberhalb einfügen",
+    rowBelow: "Zeile unterhalb einfügen",
+    deleteRow: "Zeile löschen",
+    columnLeft: "Spalte links einfügen",
+    columnRight: "Spalte rechts einfügen",
+    deleteColumn: "Spalte löschen",
+    undo: "Rückgängig",
+    redo: "Wiederholen",
+    structuralBlocked: "Zeilen- und Spaltenänderungen sind bei Arbeitsmappen mit Formeln, verbundenen Zellen, Filtern oder benannten Bereichen deaktiviert, damit Verweise nicht beschädigt werden.",
+    outsideUsedRange: "Wählen Sie eine Zeile oder Spalte innerhalb des verwendeten Blattbereichs.",
   },
   es: {
     localBadge: "Editor XLSX local · sin almacenamiento de la hoja en el servidor",
@@ -163,6 +259,17 @@ const COPY: Record<LocaleCode, SpreadsheetCopy> = {
     truncated: "La hoja supera la ventana segura de edición actual. Las celdas no visibles se conservan en el libro, pero no se muestran aquí.",
     pasteBlocked: "Se canceló el pegado porque el rango seleccionado contiene una celda con fórmula.",
     emptyWorkbook: "El libro no contiene hojas.",
+    selected: "Seleccionado",
+    rowAbove: "Insertar fila arriba",
+    rowBelow: "Insertar fila abajo",
+    deleteRow: "Eliminar fila",
+    columnLeft: "Insertar columna a la izquierda",
+    columnRight: "Insertar columna a la derecha",
+    deleteColumn: "Eliminar columna",
+    undo: "Deshacer",
+    redo: "Rehacer",
+    structuralBlocked: "Los cambios de filas y columnas están desactivados en libros con fórmulas, celdas combinadas, filtros o rangos con nombre para no romper referencias.",
+    outsideUsedRange: "Selecciona una fila o columna dentro del área utilizada de la hoja.",
   },
   cs: {
     localBadge: "Lokální editor XLSX · bez ukládání tabulky na server",
@@ -179,6 +286,17 @@ const COPY: Record<LocaleCode, SpreadsheetCopy> = {
     truncated: "List je větší než aktuální bezpečné editační okno. Skryté buňky zůstávají v sešitu, ale zde se nezobrazují.",
     pasteBlocked: "Vložení bylo zrušeno, protože vybraný rozsah obsahuje buňku se vzorcem.",
     emptyWorkbook: "Sešit neobsahuje žádné listy.",
+    selected: "Vybráno",
+    rowAbove: "Vložit řádek nad",
+    rowBelow: "Vložit řádek pod",
+    deleteRow: "Odstranit řádek",
+    columnLeft: "Vložit sloupec vlevo",
+    columnRight: "Vložit sloupec vpravo",
+    deleteColumn: "Odstranit sloupec",
+    undo: "Zpět",
+    redo: "Znovu",
+    structuralBlocked: "Změny řádků a sloupců jsou u sešitů se vzorci, sloučenými buňkami, filtry nebo pojmenovanými oblastmi vypnuté, aby se nepoškodily odkazy.",
+    outsideUsedRange: "Vyberte řádek nebo sloupec v používané oblasti listu.",
   },
 };
 
@@ -310,6 +428,113 @@ function isFormulaField(row: SpreadsheetRow, field: string): boolean {
   return row.__formulaFields[field] === true;
 }
 
+function cloneWorksheet(sheet: XlsxWorksheet): XlsxWorksheet {
+  return structuredClone(sheet) as XlsxWorksheet;
+}
+
+function isWorksheetCellAddress(key: string): boolean {
+  return /^[A-Z]{1,3}[1-9]\d*$/.test(key);
+}
+
+function workbookHasUnsafeStructuralReferences(workbook: XlsxWorkbook): boolean {
+  const workbookMeta = workbook.Workbook as { Names?: unknown[] } | undefined;
+  if (Array.isArray(workbookMeta?.Names) && workbookMeta.Names.length > 0) {
+    return true;
+  }
+
+  for (const sheetName of workbook.SheetNames) {
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) continue;
+    if (Array.isArray(sheet["!merges"]) && sheet["!merges"].length > 0) return true;
+    if (sheet["!autofilter"]) return true;
+
+    for (const [key, value] of Object.entries(sheet)) {
+      if (!isWorksheetCellAddress(key) || !value || typeof value !== "object") continue;
+      const cell = value as XlsxCell & { F?: string };
+      if (typeof cell.f === "string" || typeof cell.F === "string") return true;
+    }
+  }
+
+  return false;
+}
+
+function shiftWorksheetAxis(
+  xlsx: XlsxModule,
+  sheet: XlsxWorksheet,
+  axis: "row" | "column",
+  index: number,
+  mode: "insert" | "delete",
+): boolean {
+  const range = safeSheetRange(xlsx, sheet);
+  const end = axis === "row" ? range.e.r : range.e.c;
+  const affectsUsedRange = mode === "insert" ? index <= end + 1 : index <= end;
+  if (!affectsUsedRange) return false;
+
+  const sheetRecord = sheet as unknown as Record<string, unknown>;
+  const cells = Object.entries(sheetRecord).filter(([key]) => isWorksheetCellAddress(key));
+  for (const [key] of cells) delete sheetRecord[key];
+
+  for (const [key, value] of cells) {
+    const address = xlsx.utils.decode_cell(key);
+    const coordinate = axis === "row" ? address.r : address.c;
+    if (mode === "delete" && coordinate === index) continue;
+
+    const shifted =
+      mode === "insert"
+        ? coordinate >= index
+          ? coordinate + 1
+          : coordinate
+        : coordinate > index
+          ? coordinate - 1
+          : coordinate;
+
+    if (axis === "row") address.r = shifted;
+    else address.c = shifted;
+    sheetRecord[xlsx.utils.encode_cell(address)] = value;
+  }
+
+  const metadataKey = axis === "row" ? "!rows" : "!cols";
+  const metadata = sheetRecord[metadataKey];
+  if (Array.isArray(metadata)) {
+    const next = [...metadata];
+    if (mode === "insert") next.splice(index, 0, undefined);
+    else next.splice(index, 1);
+    sheetRecord[metadataKey] = next;
+  }
+
+  const nextRange = structuredClone(range);
+  if (axis === "row") {
+    if (mode === "insert") {
+      if (index <= nextRange.s.r) {
+        nextRange.s.r += 1;
+        nextRange.e.r += 1;
+      } else if (index <= nextRange.e.r + 1) {
+        nextRange.e.r += 1;
+      }
+    } else if (index < nextRange.s.r) {
+      nextRange.s.r = Math.max(0, nextRange.s.r - 1);
+      nextRange.e.r = Math.max(nextRange.s.r, nextRange.e.r - 1);
+    } else if (index <= nextRange.e.r) {
+      nextRange.e.r = Math.max(nextRange.s.r, nextRange.e.r - 1);
+    }
+  } else if (mode === "insert") {
+    if (index <= nextRange.s.c) {
+      nextRange.s.c += 1;
+      nextRange.e.c += 1;
+    } else if (index <= nextRange.e.c + 1) {
+      nextRange.e.c += 1;
+    }
+  } else if (index < nextRange.s.c) {
+    nextRange.s.c = Math.max(0, nextRange.s.c - 1);
+    nextRange.e.c = Math.max(nextRange.s.c, nextRange.e.c - 1);
+  } else if (index <= nextRange.e.c) {
+    nextRange.e.c = Math.max(nextRange.s.c, nextRange.e.c - 1);
+  }
+
+  sheet["!ref"] = xlsx.utils.encode_range(nextRange);
+  return true;
+}
+
 export function LocalSpreadsheetEditor({
   file,
   locale,
@@ -334,6 +559,15 @@ export function LocalSpreadsheetEditor({
   });
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const undoHistoryRef = useRef<WorksheetHistoryEntry[]>([]);
+  const redoHistoryRef = useRef<WorksheetHistoryEntry[]>([]);
+  const [undoCount, setUndoCount] = useState(0);
+  const [redoCount, setRedoCount] = useState(0);
+  const [selection, setSelection] = useState<SpreadsheetSelection>({
+    rowIndex: 0,
+    columnIndex: 0,
+  });
+  const [structuralBlocked, setStructuralBlocked] = useState(false);
 
   const setDirtyState = useCallback(
     (next: boolean) => {
@@ -342,6 +576,29 @@ export function LocalSpreadsheetEditor({
     },
     [onDirtyChange],
   );
+
+  const syncHistoryCounts = useCallback(() => {
+    setUndoCount(undoHistoryRef.current.length);
+    setRedoCount(redoHistoryRef.current.length);
+  }, []);
+
+  const pushHistory = useCallback(
+    (entry: WorksheetHistoryEntry) => {
+      undoHistoryRef.current.push(entry);
+      if (undoHistoryRef.current.length > MAX_HISTORY_ENTRIES) {
+        undoHistoryRef.current.shift();
+      }
+      redoHistoryRef.current = [];
+      syncHistoryCounts();
+    },
+    [syncHistoryCounts],
+  );
+
+  const clearHistory = useCallback(() => {
+    undoHistoryRef.current = [];
+    redoHistoryRef.current = [];
+    syncHistoryCounts();
+  }, [syncHistoryCounts]);
 
   const refreshActiveSheet = useCallback(() => {
     const xlsx = xlsxRef.current;
@@ -370,6 +627,7 @@ export function LocalSpreadsheetEditor({
 
         xlsxRef.current = xlsx;
         workbookRef.current = workbook;
+        setStructuralBlocked(workbookHasUnsafeStructuralReferences(workbook));
         const names = [...workbook.SheetNames];
         setSheetNames(names);
         if (!names.length) {
@@ -458,14 +716,24 @@ export function LocalSpreadsheetEditor({
       if (!Number.isInteger(columnIndex) || columnIndex < 0) return;
       const rowIndex = event.row.__rowNumber - 1;
       const address = xlsx.utils.encode_cell({ r: rowIndex, c: columnIndex });
+      const before = cloneWorksheet(sheet);
       const previous = sheet[address] as XlsxCell | undefined;
       sheet[address] = normalizeEditedCellValue(event.value, previous);
       extendSheetReference(xlsx, sheet, rowIndex, columnIndex);
+      const nextSelection = { rowIndex, columnIndex };
+      setSelection(nextSelection);
+      pushHistory({
+        sheetName: activeSheetName,
+        before,
+        after: cloneWorksheet(sheet),
+        beforeSelection: nextSelection,
+        afterSelection: nextSelection,
+      });
       setDirtyState(true);
       setMessage(null);
       setError(null);
     },
-    [activeSheetName, setDirtyState],
+    [activeSheetName, pushHistory, setDirtyState],
   );
 
   const handleRangePaste = useCallback(
@@ -481,6 +749,19 @@ export function LocalSpreadsheetEditor({
         return;
       }
 
+      const before = cloneWorksheet(sheet);
+      let nextSelection = selection;
+      const firstCell = event.cells[0];
+      if (firstCell?.field.startsWith("c")) {
+        const firstColumn = Number(firstCell.field.slice(1));
+        if (Number.isInteger(firstColumn) && firstColumn >= 0) {
+          nextSelection = {
+            rowIndex: firstCell.row.__rowNumber - 1,
+            columnIndex: firstColumn,
+          };
+        }
+      }
+
       for (const cell of event.cells) {
         if (!cell.field.startsWith("c")) continue;
         const columnIndex = Number(cell.field.slice(1));
@@ -492,13 +773,138 @@ export function LocalSpreadsheetEditor({
         extendSheetReference(xlsx, sheet, rowIndex, columnIndex);
       }
 
+      setSelection(nextSelection);
+      pushHistory({
+        sheetName: activeSheetName,
+        before,
+        after: cloneWorksheet(sheet),
+        beforeSelection: nextSelection,
+        afterSelection: nextSelection,
+      });
       setDirtyState(true);
       setError(null);
       setMessage(null);
       setView(buildSpreadsheetView(xlsx, sheet));
     },
-    [activeSheetName, copy.pasteBlocked, setDirtyState],
+    [activeSheetName, copy.pasteBlocked, pushHistory, selection, setDirtyState],
   );
+
+  const handleCellClick = useCallback(
+    (event: ArctorTableCellClickEvent<SpreadsheetRow>) => {
+      const rowIndex = event.row.__rowNumber - 1;
+      if (event.field === "__rowNumber") {
+        setSelection((current) => ({ ...current, rowIndex }));
+        return;
+      }
+      if (!event.field.startsWith("c")) return;
+      const columnIndex = Number(event.field.slice(1));
+      if (!Number.isInteger(columnIndex) || columnIndex < 0) return;
+      setSelection({ rowIndex, columnIndex });
+    },
+    [],
+  );
+
+  const applyStructuralOperation = useCallback(
+    (action: StructuralAction) => {
+      const xlsx = xlsxRef.current;
+      const workbook = workbookRef.current;
+      if (!xlsx || !workbook || !activeSheetName) return;
+      if (structuralBlocked) {
+        setError(copy.structuralBlocked);
+        return;
+      }
+      const sheet = workbook.Sheets[activeSheetName];
+      if (!sheet) return;
+
+      const before = cloneWorksheet(sheet);
+      const beforeSelection = selection;
+      let nextSelection = selection;
+      let changed = false;
+
+      if (action === "rowAbove") {
+        changed = shiftWorksheetAxis(xlsx, sheet, "row", selection.rowIndex, "insert");
+      } else if (action === "rowBelow") {
+        const target = selection.rowIndex + 1;
+        changed = shiftWorksheetAxis(xlsx, sheet, "row", target, "insert");
+        nextSelection = { ...selection, rowIndex: target };
+      } else if (action === "deleteRow") {
+        changed = shiftWorksheetAxis(xlsx, sheet, "row", selection.rowIndex, "delete");
+      } else if (action === "columnLeft") {
+        changed = shiftWorksheetAxis(xlsx, sheet, "column", selection.columnIndex, "insert");
+      } else if (action === "columnRight") {
+        const target = selection.columnIndex + 1;
+        changed = shiftWorksheetAxis(xlsx, sheet, "column", target, "insert");
+        nextSelection = { ...selection, columnIndex: target };
+      } else {
+        changed = shiftWorksheetAxis(xlsx, sheet, "column", selection.columnIndex, "delete");
+      }
+
+      if (!changed) {
+        setError(copy.outsideUsedRange);
+        return;
+      }
+
+      pushHistory({
+        sheetName: activeSheetName,
+        before,
+        after: cloneWorksheet(sheet),
+        beforeSelection,
+        afterSelection: nextSelection,
+      });
+      setSelection(nextSelection);
+      setView(buildSpreadsheetView(xlsx, sheet));
+      setDirtyState(true);
+      setMessage(null);
+      setError(null);
+    },
+    [
+      activeSheetName,
+      copy.outsideUsedRange,
+      copy.structuralBlocked,
+      pushHistory,
+      selection,
+      setDirtyState,
+      structuralBlocked,
+    ],
+  );
+
+  const undoWorkbookChange = useCallback(() => {
+    const xlsx = xlsxRef.current;
+    const workbook = workbookRef.current;
+    const entry = undoHistoryRef.current.pop();
+    if (!xlsx || !workbook || !entry) return;
+
+    const restored = cloneWorksheet(entry.before);
+    workbook.Sheets[entry.sheetName] = restored;
+    redoHistoryRef.current.push(entry);
+    setActiveSheetName(entry.sheetName);
+    setSelection(entry.beforeSelection);
+    setView(buildSpreadsheetView(xlsx, restored));
+    setStructuralBlocked(workbookHasUnsafeStructuralReferences(workbook));
+    setDirtyState(undoHistoryRef.current.length > 0);
+    setMessage(null);
+    setError(null);
+    syncHistoryCounts();
+  }, [setDirtyState, syncHistoryCounts]);
+
+  const redoWorkbookChange = useCallback(() => {
+    const xlsx = xlsxRef.current;
+    const workbook = workbookRef.current;
+    const entry = redoHistoryRef.current.pop();
+    if (!xlsx || !workbook || !entry) return;
+
+    const restored = cloneWorksheet(entry.after);
+    workbook.Sheets[entry.sheetName] = restored;
+    undoHistoryRef.current.push(entry);
+    setActiveSheetName(entry.sheetName);
+    setSelection(entry.afterSelection);
+    setView(buildSpreadsheetView(xlsx, restored));
+    setStructuralBlocked(workbookHasUnsafeStructuralReferences(workbook));
+    setDirtyState(true);
+    setMessage(null);
+    setError(null);
+    syncHistoryCounts();
+  }, [setDirtyState, syncHistoryCounts]);
 
   const saveWorkbook = useCallback(async () => {
     const xlsx = xlsxRef.current;
@@ -521,6 +927,7 @@ export function LocalSpreadsheetEditor({
       });
       if (result.status === "saved") {
         setDirtyState(false);
+        clearHistory();
         setMessage(copy.saved);
       } else {
         setMessage(copy.cancelled);
@@ -530,7 +937,7 @@ export function LocalSpreadsheetEditor({
     } finally {
       setSaving(false);
     }
-  }, [copy.cancelled, copy.saved, file.name, setDirtyState]);
+  }, [clearHistory, copy.cancelled, copy.saved, file.name, setDirtyState]);
 
   const exitStandalone = useCallback(() => setStandalone(false), []);
 
@@ -604,7 +1011,10 @@ export function LocalSpreadsheetEditor({
             <button
               key={name}
               type="button"
-              onClick={() => setActiveSheetName(name)}
+              onClick={() => {
+                setSelection({ rowIndex: 0, columnIndex: 0 });
+                setActiveSheetName(name);
+              }}
               className={
                 name === activeSheetName
                   ? "shrink-0 rounded-lg bg-[#3b6ef8] px-3 py-1.5 text-[12px] font-bold text-white"
@@ -615,6 +1025,42 @@ export function LocalSpreadsheetEditor({
             </button>
           ))}
         </div>
+
+        <div className="mb-2 flex min-h-10 items-center gap-1 overflow-x-auto rounded-xl border border-[#dfe4f1] bg-white p-1">
+          <span className="shrink-0 px-2 text-[11px] font-bold text-[#69728d]">
+            {copy.selected}: {columnLabel(selection.columnIndex)}{selection.rowIndex + 1}
+          </span>
+          <button type="button" onClick={undoWorkbookChange} disabled={undoCount === 0} title={copy.undo} className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg border border-[#dce2f2] px-2.5 text-[11px] font-bold text-[#445477] disabled:opacity-35">
+            <Undo2 size={14} aria-hidden="true" /> {copy.undo}
+          </button>
+          <button type="button" onClick={redoWorkbookChange} disabled={redoCount === 0} title={copy.redo} className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg border border-[#dce2f2] px-2.5 text-[11px] font-bold text-[#445477] disabled:opacity-35">
+            <Redo2 size={14} aria-hidden="true" /> {copy.redo}
+          </button>
+          <button type="button" onClick={() => applyStructuralOperation("rowAbove")} disabled={loading || structuralBlocked} title={copy.rowAbove} className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg border border-[#dce2f2] px-2.5 text-[11px] font-bold text-[#3657b6] disabled:opacity-35">
+            <ArrowUp size={14} aria-hidden="true" /> {copy.rowAbove}
+          </button>
+          <button type="button" onClick={() => applyStructuralOperation("rowBelow")} disabled={loading || structuralBlocked} title={copy.rowBelow} className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg border border-[#dce2f2] px-2.5 text-[11px] font-bold text-[#3657b6] disabled:opacity-35">
+            <ArrowDown size={14} aria-hidden="true" /> {copy.rowBelow}
+          </button>
+          <button type="button" onClick={() => applyStructuralOperation("deleteRow")} disabled={loading || structuralBlocked} title={copy.deleteRow} className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg border border-rose-200 px-2.5 text-[11px] font-bold text-rose-600 disabled:opacity-35">
+            <Trash2 size={14} aria-hidden="true" /> {copy.deleteRow}
+          </button>
+          <button type="button" onClick={() => applyStructuralOperation("columnLeft")} disabled={loading || structuralBlocked} title={copy.columnLeft} className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg border border-[#dce2f2] px-2.5 text-[11px] font-bold text-[#3657b6] disabled:opacity-35">
+            <ArrowLeft size={14} aria-hidden="true" /> {copy.columnLeft}
+          </button>
+          <button type="button" onClick={() => applyStructuralOperation("columnRight")} disabled={loading || structuralBlocked} title={copy.columnRight} className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg border border-[#dce2f2] px-2.5 text-[11px] font-bold text-[#3657b6] disabled:opacity-35">
+            <ArrowRight size={14} aria-hidden="true" /> {copy.columnRight}
+          </button>
+          <button type="button" onClick={() => applyStructuralOperation("deleteColumn")} disabled={loading || structuralBlocked} title={copy.deleteColumn} className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg border border-rose-200 px-2.5 text-[11px] font-bold text-rose-600 disabled:opacity-35">
+            <Trash2 size={14} aria-hidden="true" /> {copy.deleteColumn}
+          </button>
+        </div>
+
+        {structuralBlocked ? (
+          <div className="mb-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold leading-5 text-amber-800">
+            {copy.structuralBlocked}
+          </div>
+        ) : null}
 
         {loading ? (
           <div className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-[#dfe4f1] bg-white text-[13px] font-semibold text-[#69728d]">
@@ -633,10 +1079,11 @@ export function LocalSpreadsheetEditor({
               mobileHorizontalScroll
               allowNativePinchZoom
               rangeClipboard
+              onCellClick={handleCellClick}
               onCellEdited={handleCellEdited}
               onRangePaste={handleRangePaste}
               options={{
-                history: true,
+                history: false,
                 columnHeaderVertAlign: "middle",
               }}
             />
