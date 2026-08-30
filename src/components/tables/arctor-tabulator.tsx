@@ -209,6 +209,20 @@ function isCompactTouchEnvironment() {
   );
 }
 
+type ArctorVirtualKeyboardApi = EventTarget & {
+  readonly boundingRect?: {
+    top: number;
+    height: number;
+  };
+};
+
+function getArctorVirtualKeyboard() {
+  return (
+    (navigator as Navigator & { virtualKeyboard?: ArctorVirtualKeyboardApi })
+      .virtualKeyboard ?? null
+  );
+}
+
 export function parseArctorClipboardMatrix(clipboard: string) {
   const source = clipboard.replace(/^\uFEFF/, "");
   const rows: string[][] = [];
@@ -393,6 +407,9 @@ function createExpandedEditor(kind: "input" | "textarea"): TabulatorEditor {
     let anchorObserver: MutationObserver | null = null;
     let viewportListenersAttached = false;
     let visualViewportListenersAttached = false;
+    let virtualKeyboardListenerAttached = false;
+    const keyboardRepositionTimers = new Set<number>();
+    const handleVirtualKeyboardGeometryChange = () => sizeAndPosition();
 
     const minWidth = readFiniteNumber(
       editorParams?.expandedMinWidth,
@@ -425,6 +442,18 @@ function createExpandedEditor(kind: "input" | "textarea"): TabulatorEditor {
         visualViewport.removeEventListener("scroll", sizeAndPosition);
         visualViewportListenersAttached = false;
       }
+      const virtualKeyboard = getArctorVirtualKeyboard();
+      if (virtualKeyboard && virtualKeyboardListenerAttached) {
+        virtualKeyboard.removeEventListener(
+          "geometrychange",
+          handleVirtualKeyboardGeometryChange,
+        );
+        virtualKeyboardListenerAttached = false;
+      }
+      for (const timer of keyboardRepositionTimers) {
+        window.clearTimeout(timer);
+      }
+      keyboardRepositionTimers.clear();
       if (shell.isConnected) {
         shell.remove();
       }
@@ -454,14 +483,41 @@ function createExpandedEditor(kind: "input" | "textarea"): TabulatorEditor {
       const visualViewport = window.visualViewport;
       const viewportLeft = visualViewport?.offsetLeft ?? 0;
       const viewportTop = visualViewport?.offsetTop ?? 0;
-      const viewportWidth =
-        visualViewport?.width ??
-        Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-      const viewportHeight =
-        visualViewport?.height ??
-        Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+      const layoutViewportWidth = Math.max(
+        document.documentElement.clientWidth,
+        window.innerWidth || 0,
+      );
+      const documentViewportHeight =
+        document.documentElement.clientHeight || window.innerHeight || 1;
+      const windowViewportHeight = window.innerHeight || documentViewportHeight;
+      const layoutViewportHeight = Math.max(
+        1,
+        Math.min(documentViewportHeight, windowViewportHeight),
+      );
+      const viewportWidth = Math.min(
+        visualViewport?.width ?? layoutViewportWidth,
+        layoutViewportWidth,
+      );
+      const viewportHeight = Math.min(
+        visualViewport?.height ?? layoutViewportHeight,
+        layoutViewportHeight,
+      );
       const compactTouch = isCompactTouchEnvironment();
       const margin = compactTouch ? 10 : 12;
+      let visibleBottom = viewportTop + viewportHeight;
+
+      if (compactTouch) {
+        const keyboardRect = getArctorVirtualKeyboard()?.boundingRect;
+        if (
+          keyboardRect &&
+          keyboardRect.height > 0 &&
+          Number.isFinite(keyboardRect.top)
+        ) {
+          visibleBottom = Math.min(visibleBottom, keyboardRect.top);
+        }
+      }
+
+      const effectiveViewportHeight = Math.max(1, visibleBottom - viewportTop);
 
       shell.dataset.mobile = compactTouch ? "true" : "false";
       mobileActions.hidden = !compactTouch;
@@ -474,11 +530,14 @@ function createExpandedEditor(kind: "input" | "textarea"): TabulatorEditor {
         if (kind === "textarea") {
           const mobileMinHeight = Math.min(
             Math.max(150, minHeight),
-            Math.max(150, viewportHeight * 0.34),
+            Math.max(150, effectiveViewportHeight * 0.34),
           );
           const mobileMaxHeight = Math.max(
             mobileMinHeight,
-            Math.min(Math.max(maxHeight, 280), viewportHeight * 0.55),
+            Math.min(
+              Math.max(maxHeight, 280),
+              effectiveViewportHeight * 0.55,
+            ),
           );
           editorElement.style.height = `${mobileMinHeight}px`;
           const naturalHeight = editorElement.scrollHeight + 4;
@@ -495,7 +554,7 @@ function createExpandedEditor(kind: "input" | "textarea"): TabulatorEditor {
         const left = viewportLeft + margin;
         const top = Math.max(
           viewportTop + margin,
-          viewportTop + viewportHeight - shellRect.height - margin,
+          visibleBottom - shellRect.height - margin,
         );
         shell.style.left = `${left}px`;
         shell.style.top = `${top}px`;
@@ -542,6 +601,18 @@ function createExpandedEditor(kind: "input" | "textarea"): TabulatorEditor {
       shell.style.top = `${top}px`;
     }
 
+    function scheduleKeyboardReposition() {
+      if (!isCompactTouchEnvironment()) return;
+      for (const delay of [0, 80, 180, 320, 520]) {
+        const timer = window.setTimeout(() => {
+          keyboardRepositionTimers.delete(timer);
+          if (!settled) sizeAndPosition();
+        }, delay);
+        keyboardRepositionTimers.add(timer);
+      }
+    }
+
+    editorElement.addEventListener("focus", scheduleKeyboardReposition);
     editorElement.addEventListener("keydown", (event) => {
       const keyboardEvent = event as KeyboardEvent;
       keyboardEvent.stopPropagation();
@@ -609,6 +680,15 @@ function createExpandedEditor(kind: "input" | "textarea"): TabulatorEditor {
         visualViewportListenersAttached = true;
       }
 
+      const virtualKeyboard = getArctorVirtualKeyboard();
+      if (virtualKeyboard) {
+        virtualKeyboard.addEventListener(
+          "geometrychange",
+          handleVirtualKeyboardGeometryChange,
+        );
+        virtualKeyboardListenerAttached = true;
+      }
+
       anchorObserver = new MutationObserver(() => {
         if (!anchor.isConnected && !settled) {
           settled = true;
@@ -618,6 +698,7 @@ function createExpandedEditor(kind: "input" | "textarea"): TabulatorEditor {
       anchorObserver.observe(cell.getElement(), { childList: true });
 
       editorElement.focus();
+      scheduleKeyboardReposition();
       const caretPosition = editorElement.value.length;
       editorElement.setSelectionRange(caretPosition, caretPosition);
     });

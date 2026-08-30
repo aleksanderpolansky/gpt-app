@@ -9,7 +9,7 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import {
   activateLocalDocxPrivacyGuard,
@@ -313,6 +313,8 @@ export function LocalEditorPlatform() {
   const [documentRevision, setDocumentRevision] = useState(0);
   const [spreadsheetDirty, setSpreadsheetDirty] = useState(false);
   const [spreadsheetRevision, setSpreadsheetRevision] = useState(0);
+  const spreadsheetRevealRef = useRef<HTMLDivElement | null>(null);
+  const pendingSpreadsheetRevealRef = useRef(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -352,6 +354,7 @@ export function LocalEditorPlatform() {
       if (kind === "spreadsheet") {
         setSpreadsheetDirty(false);
         setSpreadsheetRevision((current) => current + 1);
+        pendingSpreadsheetRevealRef.current = true;
       }
       setFiles((current) => ({ ...current, [kind]: file }));
       setMessage(`${copy.selected}: ${file.name}`);
@@ -400,6 +403,31 @@ export function LocalEditorPlatform() {
 
   const documentFile = files.document;
   const spreadsheetFile = files.spreadsheet;
+
+  useEffect(() => {
+    if (!spreadsheetFile || !pendingSpreadsheetRevealRef.current) return;
+    pendingSpreadsheetRevealRef.current = false;
+
+    const compactViewport =
+      window.innerWidth <= 768 ||
+      window.matchMedia?.("(pointer: coarse)").matches === true;
+    if (!compactViewport) return;
+
+    let secondFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        spreadsheetRevealRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    };
+  }, [spreadsheetFile, spreadsheetRevision]);
 
   useEffect(() => {
     if (!documentFile) releaseLocalDocxPrivacyGuard();
@@ -466,12 +494,14 @@ export function LocalEditorPlatform() {
         ) : null}
 
         {spreadsheetFile ? (
-          <LocalSpreadsheetEditor
-            key={`xlsx:${spreadsheetRevision}`}
-            file={spreadsheetFile}
-            locale={locale}
-            onDirtyChange={setSpreadsheetDirty}
-          />
+          <div ref={spreadsheetRevealRef} className="scroll-mt-24">
+            <LocalSpreadsheetEditor
+              key={`xlsx:${spreadsheetRevision}`}
+              file={spreadsheetFile}
+              locale={locale}
+              onDirtyChange={setSpreadsheetDirty}
+            />
+          </div>
         ) : null}
 
         <section className="grid gap-4 lg:grid-cols-3">
