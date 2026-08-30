@@ -946,7 +946,7 @@ export function LocalSpreadsheetEditor({
       className={
         standalone
           ? "flex h-[100dvh] w-screen min-w-0 flex-col overflow-hidden bg-[#edf0f6]"
-          : "min-w-0 overflow-hidden rounded-[26px] border border-black/[0.07] bg-white shadow-sm"
+          : "w-full max-w-full min-w-0 overflow-hidden rounded-[26px] border border-black/[0.07] bg-white shadow-sm"
       }
     >
       <div className="flex flex-col gap-3 border-b border-[#dde2ee] bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1082,6 +1082,7 @@ export function LocalSpreadsheetEditor({
               onCellClick={handleCellClick}
               onCellEdited={handleCellEdited}
               onRangePaste={handleRangePaste}
+              onRangeSelectionChange={handleCellClick}
               options={{
                 history: false,
                 columnHeaderVertAlign: "middle",

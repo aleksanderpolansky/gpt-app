@@ -441,8 +441,8 @@ export function LocalEditorPlatform() {
   );
 
   return (
-    <main className="min-h-screen bg-[#f5f6fb] px-3 py-5 text-[#1a1d2e] sm:px-5">
-      <div className="mx-auto grid w-full max-w-[1540px] gap-5">
+    <main className="min-h-screen min-w-0 max-w-full overflow-x-hidden bg-[#f5f6fb] px-3 py-5 text-[#1a1d2e] sm:px-5">
+      <div className="mx-auto grid w-full min-w-0 max-w-[1540px] gap-5">
         <section className="rounded-[28px] border border-black/[0.07] bg-white p-5 shadow-sm sm:p-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
@@ -494,7 +494,10 @@ export function LocalEditorPlatform() {
         ) : null}
 
         {spreadsheetFile ? (
-          <div ref={spreadsheetRevealRef} className="scroll-mt-24">
+          <div
+            ref={spreadsheetRevealRef}
+            className="min-w-0 max-w-full scroll-mt-24 overflow-hidden"
+          >
             <LocalSpreadsheetEditor
               key={`xlsx:${spreadsheetRevision}`}
               file={spreadsheetFile}

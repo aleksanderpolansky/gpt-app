@@ -153,6 +153,12 @@ export type ArctorTableRangePasteEvent<T extends object> = {
   truncatedCells: number;
 };
 
+export type ArctorTableRangeSelectionEvent<T extends object> = {
+  row: T;
+  field: keyof T & string;
+  value: unknown;
+};
+
 export type ArctorTableOptions = Record<string, TablePrimitive | object>;
 
 type ArctorTabulatorProps<T extends object> = {
@@ -172,6 +178,7 @@ type ArctorTabulatorProps<T extends object> = {
   onCellEdited?: (event: ArctorTableCellEditedEvent<T>) => void | Promise<void>;
   onRangeCopied?: (clipboard: string) => void;
   onRangePaste?: (event: ArctorTableRangePasteEvent<T>) => void | Promise<void>;
+  onRangeSelectionChange?: (event: ArctorTableRangeSelectionEvent<T>) => void;
 };
 
 function getSelectionElement(node: Node | null) {
@@ -848,6 +855,7 @@ export function ArctorTabulator<T extends object>({
   onCellEdited,
   onRangeCopied,
   onRangePaste,
+  onRangeSelectionChange,
 }: ArctorTabulatorProps<T>) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const onRowClickRef = useRef(onRowClick);
@@ -855,6 +863,7 @@ export function ArctorTabulator<T extends object>({
   const onCellEditedRef = useRef(onCellEdited);
   const onRangeCopiedRef = useRef(onRangeCopied);
   const onRangePasteRef = useRef(onRangePaste);
+  const onRangeSelectionChangeRef = useRef(onRangeSelectionChange);
 
   useEffect(() => {
     onRowClickRef.current = onRowClick;
@@ -875,6 +884,10 @@ export function ArctorTabulator<T extends object>({
   useEffect(() => {
     onRangePasteRef.current = onRangePaste;
   }, [onRangePaste]);
+
+  useEffect(() => {
+    onRangeSelectionChangeRef.current = onRangeSelectionChange;
+  }, [onRangeSelectionChange]);
 
   useEffect(() => {
     let disposed = false;
@@ -1009,13 +1022,25 @@ export function ArctorTabulator<T extends object>({
       if (rangeClipboardActive) {
         const rangeTable = instance as unknown as TabulatorRangeTable;
         const rangeEvents = instance as unknown as TabulatorRangeEventEmitter;
-        const syncRangeCopyArm = () => {
-          rangeCopyArmed = rangeTable.getRanges().length > 0;
+        const syncRangeSelection = () => {
+          const ranges = rangeTable.getRanges();
+          rangeCopyArmed = ranges.length > 0;
+
+          const activeRange = ranges[ranges.length - 1];
+          const startCell = activeRange?.getBounds().start;
+          const callback = onRangeSelectionChangeRef.current;
+          if (!startCell || !callback) return;
+
+          callback({
+            row: startCell.getRow().getData() as T,
+            field: startCell.getField() as keyof T & string,
+            value: startCell.getValue(),
+          });
         };
 
-        rangeEvents.on("rangeAdded", syncRangeCopyArm);
-        rangeEvents.on("rangeChanged", syncRangeCopyArm);
-        rangeEvents.on("rangeRemoved", syncRangeCopyArm);
+        rangeEvents.on("rangeAdded", syncRangeSelection);
+        rangeEvents.on("rangeChanged", syncRangeSelection);
+        rangeEvents.on("rangeRemoved", syncRangeSelection);
 
         copyPointerListener = (event) => {
           const target = event.target;
