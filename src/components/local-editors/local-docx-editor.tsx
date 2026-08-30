@@ -10,9 +10,17 @@ import {
   type DocxEditorProps,
   type DocxEditorRef,
 } from "@casualoffice/docs/react";
-import { Download, Loader2, ScanLine, ShieldCheck } from "lucide-react";
+import {
+  Download,
+  Loader2,
+  Maximize2,
+  Minimize2,
+  ScanLine,
+  ShieldCheck,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { LocalEditorStandaloneFrame } from "@/components/local-editors/local-editor-standalone-frame";
 import { type LocaleCode } from "@/i18n";
 import { saveLocalEditorBlob } from "@/lib/local-editors/local-file-runtime";
 
@@ -60,6 +68,8 @@ type DocxCopy = {
   saved: string;
   cancelled: string;
   fit: string;
+  expand: string;
+  finish: string;
   mobileHint: string;
 };
 
@@ -72,6 +82,8 @@ const DOCX_COPY: Record<LocaleCode, DocxCopy> = {
     saved: "Local DOCX copy saved.",
     cancelled: "Saving was cancelled.",
     fit: "Fit page",
+    expand: "Expand editor",
+    finish: "Finish editing",
     mobileHint: "The document is fitted to the phone width. Use the zoom control to enlarge it when needed.",
   },
   pl: {
@@ -82,6 +94,8 @@ const DOCX_COPY: Record<LocaleCode, DocxCopy> = {
     saved: "Lokalna kopia DOCX została zapisana.",
     cancelled: "Zapisywanie zostało anulowane.",
     fit: "Dopasuj stronę",
+    expand: "Rozwiń edytor",
+    finish: "Zakończ edycję",
     mobileHint: "Dokument jest dopasowany do szerokości telefonu. W razie potrzeby powiększ go kontrolką zoomu.",
   },
   ru: {
@@ -92,6 +106,8 @@ const DOCX_COPY: Record<LocaleCode, DocxCopy> = {
     saved: "Локальная копия DOCX сохранена.",
     cancelled: "Сохранение отменено.",
     fit: "По ширине",
+    expand: "Развернуть редактор",
+    finish: "Завершить редактирование",
     mobileHint: "Документ подогнан по ширине телефона. При необходимости увеличьте его через масштаб редактора.",
   },
   uk: {
@@ -102,6 +118,8 @@ const DOCX_COPY: Record<LocaleCode, DocxCopy> = {
     saved: "Локальну копію DOCX збережено.",
     cancelled: "Збереження скасовано.",
     fit: "За шириною",
+    expand: "Розгорнути редактор",
+    finish: "Завершити редагування",
     mobileHint: "Документ підігнано під ширину телефона. За потреби збільште його через масштаб редактора.",
   },
   de: {
@@ -112,6 +130,8 @@ const DOCX_COPY: Record<LocaleCode, DocxCopy> = {
     saved: "Lokale DOCX-Kopie gespeichert.",
     cancelled: "Speichern wurde abgebrochen.",
     fit: "Seite einpassen",
+    expand: "Editor maximieren",
+    finish: "Bearbeitung beenden",
     mobileHint: "Das Dokument wird an die Telefonbreite angepasst. Bei Bedarf können Sie es über die Zoomsteuerung vergrößern.",
   },
   es: {
@@ -122,6 +142,8 @@ const DOCX_COPY: Record<LocaleCode, DocxCopy> = {
     saved: "Copia DOCX local guardada.",
     cancelled: "Se canceló el guardado.",
     fit: "Ajustar página",
+    expand: "Ampliar editor",
+    finish: "Finalizar edición",
     mobileHint: "El documento se ajusta al ancho del teléfono. Usa el control de zoom para ampliarlo cuando lo necesites.",
   },
   cs: {
@@ -132,6 +154,8 @@ const DOCX_COPY: Record<LocaleCode, DocxCopy> = {
     saved: "Místní kopie DOCX byla uložena.",
     cancelled: "Ukládání bylo zrušeno.",
     fit: "Přizpůsobit stránku",
+    expand: "Rozšířit editor",
+    finish: "Dokončit úpravy",
     mobileHint: "Dokument je přizpůsoben šířce telefonu. V případě potřeby jej zvětšete ovládáním měřítka.",
   },
 };
@@ -216,6 +240,8 @@ export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditor
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editorGeometry, setEditorGeometry] = useState({ width: 0, zoom: 1 });
+  const [standalone, setStandalone] = useState(false);
+  const exitStandalone = useCallback(() => setStandalone(false), []);
 
   const setDirtyState = useCallback(
     (next: boolean) => {
@@ -293,6 +319,15 @@ export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditor
   }, [syncEditorGeometry]);
 
   useEffect(() => {
+    if (typeof window === "undefined" || !readyRef.current) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      fitDocumentToViewportWidth();
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [fitDocumentToViewportWidth, standalone]);
+
+  useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (!dirty) return;
       event.preventDefault();
@@ -342,8 +377,15 @@ export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditor
     editorGeometry.width > 0 && editorGeometry.zoom > fitZoom + 0.01;
 
   return (
-    <section className="min-w-0 max-w-full overflow-hidden rounded-[26px] border border-black/[0.07] bg-white shadow-sm">
-      <div className="flex flex-col gap-3 border-b border-[#e8eaf2] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+    <LocalEditorStandaloneFrame active={standalone} onExit={exitStandalone}>
+      <section
+        className={
+          standalone
+            ? "flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-white"
+            : "min-w-0 max-w-full overflow-hidden rounded-[26px] border border-black/[0.07] bg-white shadow-sm"
+        }
+      >
+      <div className="flex shrink-0 flex-col gap-3 border-b border-[#e8eaf2] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-[12px] font-bold text-emerald-700">
             <ShieldCheck size={16} aria-hidden="true" />
@@ -364,6 +406,29 @@ export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditor
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#dce2f2] bg-white text-[#3657b6] transition hover:bg-[#f5f7ff]"
           >
             <ScanLine size={17} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setStandalone((current) => !current)}
+            aria-pressed={standalone}
+            aria-label={standalone ? copy.finish : copy.expand}
+            title={standalone ? copy.finish : copy.expand}
+            className={
+              standalone
+                ? "inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-[#dce2f2] bg-white px-3 py-2 text-[11px] font-bold text-[#3657b6] transition hover:bg-[#f5f7ff]"
+                : "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#dce2f2] bg-white text-[#3657b6] transition hover:bg-[#f5f7ff] sm:w-auto sm:gap-2 sm:px-3"
+            }
+          >
+            {standalone ? (
+              <Minimize2 size={17} aria-hidden="true" />
+            ) : (
+              <Maximize2 size={17} aria-hidden="true" />
+            )}
+            <span
+              className={standalone ? "whitespace-nowrap" : "hidden whitespace-nowrap sm:inline"}
+            >
+              {standalone ? copy.finish : copy.expand}
+            </span>
           </button>
           <button
             type="button"
@@ -398,11 +463,17 @@ export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditor
 
       <div
         ref={editorViewportRef}
-        className="h-[72dvh] min-h-[480px] max-h-[820px] w-full min-w-0 overflow-hidden bg-[#edf0f6] sm:h-[78vh] sm:min-h-[680px] sm:max-h-none"
+        className={
+          standalone
+            ? "min-h-0 w-full min-w-0 flex-1 overflow-hidden bg-[#edf0f6]"
+            : "h-[72dvh] min-h-[480px] max-h-[820px] w-full min-w-0 overflow-hidden bg-[#edf0f6] sm:h-[78vh] sm:min-h-[680px] sm:max-h-none"
+        }
       >
         <style>{`
           .arctor-local-docx-editor-engine.arctor-local-docx-editor--horizontal-overflow
-            div:has(> .paged-editor__pages) {
+            div:has(> .paged-editor__pages),
+          .arctor-local-docx-editor-engine.arctor-local-docx-editor--horizontal-overflow
+            .paged-editor__pages {
             transform-origin: top left !important;
           }
         `}</style>
@@ -433,6 +504,7 @@ export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditor
           }}
         />
       </div>
-    </section>
+      </section>
+    </LocalEditorStandaloneFrame>
   );
 }
