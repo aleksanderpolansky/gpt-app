@@ -471,9 +471,14 @@ export function LocalDocxEditor({ file, locale, onDirtyChange }: LocalDocxEditor
       >
         <style>{`
           .arctor-local-docx-editor-engine.arctor-local-docx-editor--horizontal-overflow
-            div:has(> .paged-editor__pages),
+            div:has(> .paged-editor__pages) {
+            align-items: flex-start !important;
+            transform-origin: top left !important;
+          }
+
           .arctor-local-docx-editor-engine.arctor-local-docx-editor--horizontal-overflow
             .paged-editor__pages {
+            align-items: flex-start !important;
             transform-origin: top left !important;
           }
         `}</style>
