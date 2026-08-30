@@ -16,6 +16,7 @@ import {
   LocalDocxEditor,
   releaseLocalDocxPrivacyGuard,
 } from "@/components/local-editors/local-docx-editor";
+import { LocalSpreadsheetEditor } from "@/components/local-editors/local-spreadsheet-editor";
 import {
   formatLocalFileSize,
   getLocalEditorPolicy,
@@ -310,6 +311,8 @@ export function LocalEditorPlatform() {
   const [busyKind, setBusyKind] = useState<LocalEditorKind | null>(null);
   const [documentDirty, setDocumentDirty] = useState(false);
   const [documentRevision, setDocumentRevision] = useState(0);
+  const [spreadsheetDirty, setSpreadsheetDirty] = useState(false);
+  const [spreadsheetRevision, setSpreadsheetRevision] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -323,8 +326,14 @@ export function LocalEditorPlatform() {
     return window.confirm(copy.discardWarning);
   }
 
+  function canDiscardSpreadsheet(): boolean {
+    if (!spreadsheetDirty) return true;
+    return window.confirm(copy.discardWarning);
+  }
+
   async function openFile(kind: LocalEditorKind) {
     if (kind === "document" && files.document && !canDiscardDocument()) return;
+    if (kind === "spreadsheet" && files.spreadsheet && !canDiscardSpreadsheet()) return;
 
     setBusyKind(kind);
     setMessage(null);
@@ -340,6 +349,10 @@ export function LocalEditorPlatform() {
         setDocumentDirty(false);
         setDocumentRevision((current) => current + 1);
       }
+      if (kind === "spreadsheet") {
+        setSpreadsheetDirty(false);
+        setSpreadsheetRevision((current) => current + 1);
+      }
       setFiles((current) => ({ ...current, [kind]: file }));
       setMessage(`${copy.selected}: ${file.name}`);
     } catch (openError) {
@@ -350,7 +363,7 @@ export function LocalEditorPlatform() {
   }
 
   async function saveCopy(kind: LocalEditorKind) {
-    if (kind === "document") return;
+    if (kind === "document" || kind === "spreadsheet") return;
     const file = files[kind];
     if (!file) return;
     setBusyKind(kind);
@@ -373,17 +386,20 @@ export function LocalEditorPlatform() {
 
   function clearFile(kind: LocalEditorKind) {
     if (kind === "document" && !canDiscardDocument()) return;
+    if (kind === "spreadsheet" && !canDiscardSpreadsheet()) return;
     setFiles((current) => {
       const next = { ...current };
       delete next[kind];
       return next;
     });
     if (kind === "document") setDocumentDirty(false);
+    if (kind === "spreadsheet") setSpreadsheetDirty(false);
     setMessage(null);
     setError(null);
   }
 
   const documentFile = files.document;
+  const spreadsheetFile = files.spreadsheet;
 
   useEffect(() => {
     if (!documentFile) releaseLocalDocxPrivacyGuard();
@@ -449,12 +465,25 @@ export function LocalEditorPlatform() {
           />
         ) : null}
 
+        {spreadsheetFile ? (
+          <LocalSpreadsheetEditor
+            key={`xlsx:${spreadsheetRevision}`}
+            file={spreadsheetFile}
+            locale={locale}
+            onDirtyChange={setSpreadsheetDirty}
+          />
+        ) : null}
+
         <section className="grid gap-4 lg:grid-cols-3">
           {EDITORS.map(({ kind, icon: Icon }) => {
             const policy = getLocalEditorPolicy(kind);
             const file = files[kind];
             const busy = busyKind === kind;
             const documentActive = kind === "document" && Boolean(file);
+            const spreadsheetActive = kind === "spreadsheet" && Boolean(file);
+            const activeDirty =
+              (documentActive && documentDirty) ||
+              (spreadsheetActive && spreadsheetDirty);
             return (
               <article
                 key={kind}
@@ -484,7 +513,7 @@ export function LocalEditorPlatform() {
                       </div>
                       <div className="mt-1 text-[12px] text-[#767d97]">
                         {formatLocalFileSize(file.size)} · {copy.selected}
-                        {documentActive && documentDirty ? ` · ${copy.unsaved}` : ""}
+                        {activeDirty ? ` · ${copy.unsaved}` : ""}
                       </div>
                     </>
                   ) : (
@@ -503,7 +532,7 @@ export function LocalEditorPlatform() {
                     {file ? copy.openAnother : copy.open}
                   </button>
                   {file ? (
-                    kind === "document" ? (
+                    kind === "document" || kind === "spreadsheet" ? (
                       <button
                         type="button"
                         onClick={() => clearFile(kind)}
