@@ -678,6 +678,7 @@ export function GlobalSidebar({
   const isUserAiProcessingActive =
     currentPathname === "/settings/ai-processing";
   const isUploadedFilesActive = currentPathname === "/uploaded-files";
+  const isLocalEditorsActive = isLocalEditorPrivacyRoute(currentPathname);
   const isSystemAiInstructionsActive =
     currentPathname === "/admin/ai-instructions";
   const isAdminUsersActive = currentPathname === "/admin/users";
@@ -687,6 +688,7 @@ export function GlobalSidebar({
     isDashboardActive ||
     isUserAiProcessingActive ||
     isUploadedFilesActive ||
+    isLocalEditorsActive ||
     isSystemAiInstructionsActive ||
     isAdminUsersActive ||
     isAdminAiBillingActive ||
@@ -792,6 +794,12 @@ export function GlobalSidebar({
             depth={1}
             href={localeHref("/uploaded-files")}
             active={isUploadedFilesActive}
+          />
+          <TreeItem
+            label={t("navigation.localEditors")}
+            depth={1}
+            href={localeHref("/local-editors")}
+            active={isLocalEditorsActive}
           />
           {showAdminNavigation ? (
             <>
