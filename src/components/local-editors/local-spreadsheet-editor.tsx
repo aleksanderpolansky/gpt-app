@@ -1402,6 +1402,7 @@ export function LocalSpreadsheetEditor({
               onRangeSelectionChange={handleCellClick}
               options={{
                 history: false,
+                editTriggerEvent: "dblclick",
                 columnHeaderVertAlign: "middle",
               }}
             />
