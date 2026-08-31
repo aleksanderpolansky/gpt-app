@@ -92,25 +92,16 @@ type TabulatorRangeTable = {
   getRanges: () => TabulatorRangeComponent[];
 };
 
-type TabulatorCellInteractionComponent = {
+type TabulatorCellClickComponent = {
   getRow: () => { getData: () => unknown };
   getField: () => string;
   getValue: () => unknown;
-  getElement: () => HTMLElement;
-  setValue: (value: unknown, mutate?: boolean) => void;
 };
 
 type TabulatorCellClickEmitter = {
   on: (
     event: "cellClick",
-    callback: (event: Event, cell: TabulatorCellInteractionComponent) => void,
-  ) => void;
-};
-
-type TabulatorCellDblClickEmitter = {
-  on: (
-    event: "cellDblClick",
-    callback: (event: Event, cell: TabulatorCellInteractionComponent) => void,
+    callback: (event: Event, cell: TabulatorCellClickComponent) => void,
   ) => void;
 };
 
@@ -791,53 +782,6 @@ function createExpandedEditor(kind: "input" | "textarea"): TabulatorEditor {
   };
 }
 
-type ArctorExpandedEditorDescriptor<T extends object> = {
-  kind: "input" | "textarea";
-  editable: ArctorTableColumn<T>["editable"];
-  editorParams?: Record<string, unknown>;
-};
-
-function openArctorExpandedEditor<T extends object>(
-  cell: TabulatorCellInteractionComponent,
-  descriptor: ArctorExpandedEditorDescriptor<T>,
-) {
-  const editable = descriptor.editable;
-  if (
-    editable === false ||
-    (typeof editable === "function" &&
-      !editable(cell as unknown as ArctorTableCellApi<T>))
-  ) {
-    return false;
-  }
-
-  const factory = createExpandedEditor(descriptor.kind);
-  let rendered = () => {};
-  let anchor: HTMLElement | null = null;
-  const editor = factory(
-    cell,
-    (callback) => {
-      rendered = callback;
-    },
-    (value) => {
-      anchor?.remove();
-      cell.setValue(value, true);
-    },
-    () => {
-      anchor?.remove();
-    },
-    descriptor.editorParams,
-  );
-
-  if (editor === false) {
-    return false;
-  }
-
-  anchor = editor;
-  cell.getElement().appendChild(editor);
-  rendered();
-  return true;
-}
-
 function resolveEditorColumns<T extends object>(
   columns: ArctorTableColumn<T>[],
   compactTouchEditing: boolean,
@@ -871,10 +815,7 @@ function resolveEditorColumns<T extends object>(
         ...(compactTouchEditing && typeof mobileMinWidth !== "number"
           ? { minWidth: 180 }
           : {}),
-        // ARCTor expanded editors are opened by the external cell bridge below.
-        // Keeping Tabulator's own Edit module out of this path avoids its
-        // classList lifecycle crash while preserving CellComponent.setValue().
-        editor: false,
+        editor: createExpandedEditor("input"),
       };
     }
 
@@ -885,10 +826,7 @@ function resolveEditorColumns<T extends object>(
         ...(compactTouchEditing && typeof mobileMinWidth !== "number"
           ? { minWidth: 180 }
           : {}),
-        // ARCTor expanded editors are opened by the external cell bridge below.
-        // Keeping Tabulator's own Edit module out of this path avoids its
-        // classList lifecycle crash while preserving CellComponent.setValue().
-        editor: false,
+        editor: createExpandedEditor("textarea"),
       };
     }
 
@@ -975,23 +913,6 @@ export function ArctorTabulator<T extends object>({
       // smartphone single-cell copy/paste remains available inside the expanded editor.
       const rangeClipboardActive =
         rangeClipboard && editMode && !compactTouchEnvironment;
-      const expandedEditorColumns = new Map<
-        string,
-        ArctorExpandedEditorDescriptor<T>
-      >();
-      for (const column of columns) {
-        if (
-          column.editor === "arctor-expanded-input" ||
-          column.editor === "arctor-expanded-textarea"
-        ) {
-          expandedEditorColumns.set(column.field, {
-            kind:
-              column.editor === "arctor-expanded-textarea" ? "textarea" : "input",
-            editable: column.editable,
-            editorParams: column.editorParams,
-          });
-        }
-      }
       const resolvedColumns = resolveEditorColumns(
         columns,
         compactTouchEditing,
@@ -1051,37 +972,16 @@ export function ArctorTabulator<T extends object>({
         });
       }
 
-      if (
-        onCellClickRef.current ||
-        (compactTouchEditing && expandedEditorColumns.size > 0)
-      ) {
+      if (onCellClickRef.current) {
         const cellClickEmitter = instance as unknown as TabulatorCellClickEmitter;
-        cellClickEmitter.on("cellClick", (event, cell) => {
+        cellClickEmitter.on("cellClick", (_event, cell) => {
           const callback = onCellClickRef.current;
-          callback?.({
+          if (!callback) return;
+          callback({
             row: cell.getRow().getData() as T,
             field: cell.getField() as keyof T & string,
             value: cell.getValue(),
           });
-
-          if (compactTouchEditing) {
-            const descriptor = expandedEditorColumns.get(cell.getField());
-            if (descriptor) {
-              event.stopPropagation();
-              openArctorExpandedEditor<T>(cell, descriptor);
-            }
-          }
-        });
-      }
-
-      if (!compactTouchEditing && expandedEditorColumns.size > 0) {
-        const cellDblClickEmitter =
-          instance as unknown as TabulatorCellDblClickEmitter;
-        cellDblClickEmitter.on("cellDblClick", (event, cell) => {
-          const descriptor = expandedEditorColumns.get(cell.getField());
-          if (!descriptor) return;
-          event.stopPropagation();
-          openArctorExpandedEditor<T>(cell, descriptor);
         });
       }
 

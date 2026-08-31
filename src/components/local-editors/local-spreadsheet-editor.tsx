@@ -1232,6 +1232,14 @@ export function LocalSpreadsheetEditor({
 
   const exitStandalone = useCallback(() => setStandalone(false), []);
 
+  const xlsxTableOptions = useMemo(
+    () => ({
+      history: false,
+      editTriggerEvent: "dblclick",
+      columnHeaderVertAlign: "middle",
+    }),
+    []
+  );
   const content = (
     <section
       className={
@@ -1398,11 +1406,7 @@ export function LocalSpreadsheetEditor({
               onCellClick={handleCellClick}
               onCellEdited={handleCellEdited}
               onRangePaste={handleRangePaste}
-              options={{
-                history: false,
-                editTriggerEvent: "dblclick",
-                columnHeaderVertAlign: "middle",
-              }}
+              options={xlsxTableOptions}
             />
           </div>
         ) : null}
