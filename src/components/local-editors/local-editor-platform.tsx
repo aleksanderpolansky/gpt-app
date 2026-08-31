@@ -17,6 +17,7 @@ import {
   releaseLocalDocxPrivacyGuard,
 } from "@/components/local-editors/local-docx-editor";
 import { LocalSpreadsheetEditor } from "@/components/local-editors/local-spreadsheet-editor";
+import { createBlankDocxFile } from "@/lib/local-editors/blank-docx-template";
 import {
   formatLocalFileSize,
   getLocalEditorPolicy,
@@ -47,6 +48,7 @@ type LocalCopy = {
   spreadsheet: string;
   mindmap: string;
   open: string;
+  newDocument: string;
   newSpreadsheet: string;
   openAnother: string;
   saveCopy: string;
@@ -78,6 +80,7 @@ const EN_COPY: LocalCopy = {
   spreadsheet: "Spreadsheet",
   mindmap: "Mind map",
   open: "Open local file",
+  newDocument: "New blank document",
   newSpreadsheet: "New blank spreadsheet",
   openAnother: "Open another file",
   saveCopy: "Save local copy",
@@ -109,6 +112,7 @@ const PL_COPY: LocalCopy = {
   spreadsheet: "Arkusz kalkulacyjny",
   mindmap: "Mapa myśli",
   open: "Otwórz plik lokalny",
+  newDocument: "Nowy pusty dokument",
   newSpreadsheet: "Nowy pusty arkusz",
   openAnother: "Otwórz inny plik",
   saveCopy: "Zapisz kopię lokalnie",
@@ -140,6 +144,7 @@ const RU_COPY: LocalCopy = {
   spreadsheet: "Электронная таблица",
   mindmap: "Мозговая карта",
   open: "Открыть локальный файл",
+  newDocument: "Новый пустой документ",
   newSpreadsheet: "Новая пустая таблица",
   openAnother: "Открыть другой файл",
   saveCopy: "Сохранить локальную копию",
@@ -171,6 +176,7 @@ const UK_COPY: LocalCopy = {
   spreadsheet: "Електронна таблиця",
   mindmap: "Мапа думок",
   open: "Відкрити локальний файл",
+  newDocument: "Новий порожній документ",
   newSpreadsheet: "Нова порожня таблиця",
   openAnother: "Відкрити інший файл",
   saveCopy: "Зберегти локальну копію",
@@ -202,6 +208,7 @@ const DE_COPY: LocalCopy = {
   spreadsheet: "Tabelle",
   mindmap: "Mindmap",
   open: "Lokale Datei öffnen",
+  newDocument: "Neues leeres Dokument",
   newSpreadsheet: "Neue leere Tabelle",
   openAnother: "Andere Datei öffnen",
   saveCopy: "Lokale Kopie speichern",
@@ -233,6 +240,7 @@ const ES_COPY: LocalCopy = {
   spreadsheet: "Hoja de cálculo",
   mindmap: "Mapa mental",
   open: "Abrir archivo local",
+  newDocument: "Nuevo documento en blanco",
   newSpreadsheet: "Nueva hoja de cálculo vacía",
   openAnother: "Abrir otro archivo",
   saveCopy: "Guardar copia local",
@@ -264,6 +272,7 @@ const CS_COPY: LocalCopy = {
   spreadsheet: "Tabulka",
   mindmap: "Myšlenková mapa",
   open: "Otevřít místní soubor",
+  newDocument: "Nový prázdný dokument",
   newSpreadsheet: "Nová prázdná tabulka",
   openAnother: "Otevřít jiný soubor",
   saveCopy: "Uložit místní kopii",
@@ -384,6 +393,18 @@ export function LocalEditorPlatform() {
     }
   }
 
+  function createBlankDocument() {
+    if (files.document && !canDiscardDocument()) return;
+
+    activateLocalDocxPrivacyGuard();
+    const file = createBlankDocxFile();
+    setMessage(null);
+    setError(null);
+    setDocumentDirty(false);
+    setDocumentRevision((current) => current + 1);
+    setFiles((current) => ({ ...current, document: file }));
+    setMessage(`${copy.selected}: ${file.name}`);
+  }
   function createBlankSpreadsheet() {
     if (files.spreadsheet && !canDiscardSpreadsheet()) return;
 
@@ -602,6 +623,17 @@ export function LocalEditorPlatform() {
                     <FolderOpen size={17} aria-hidden="true" />
                     {file ? copy.openAnother : copy.open}
                   </button>
+                  {kind === "document" ? (
+                    <button
+                      type="button"
+                      onClick={createBlankDocument}
+                      disabled={busy}
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#dce2f2] bg-white px-3 py-2 text-[12px] font-bold text-[#3657b6] disabled:opacity-50"
+                    >
+                      <FileText size={15} aria-hidden="true" />
+                      {copy.newDocument}
+                    </button>
+                  ) : null}
                   {kind === "spreadsheet" ? (
                     <button
                       type="button"
