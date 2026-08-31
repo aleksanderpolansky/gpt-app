@@ -92,13 +92,6 @@ type TabulatorRangeTable = {
   getRanges: () => TabulatorRangeComponent[];
 };
 
-type TabulatorRangeEventEmitter = {
-  on: (
-    event: "rangeAdded" | "rangeChanged" | "rangeRemoved",
-    callback: (range: TabulatorRangeComponent) => void,
-  ) => void;
-};
-
 type TabulatorCellClickComponent = {
   getRow: () => { getData: () => unknown };
   getField: () => string;
@@ -153,12 +146,6 @@ export type ArctorTableRangePasteEvent<T extends object> = {
   truncatedCells: number;
 };
 
-export type ArctorTableRangeSelectionEvent<T extends object> = {
-  row: T;
-  field: keyof T & string;
-  value: unknown;
-};
-
 export type ArctorTableOptions = Record<string, TablePrimitive | object>;
 
 type ArctorTabulatorProps<T extends object> = {
@@ -178,7 +165,6 @@ type ArctorTabulatorProps<T extends object> = {
   onCellEdited?: (event: ArctorTableCellEditedEvent<T>) => void | Promise<void>;
   onRangeCopied?: (clipboard: string) => void;
   onRangePaste?: (event: ArctorTableRangePasteEvent<T>) => void | Promise<void>;
-  onRangeSelectionChange?: (event: ArctorTableRangeSelectionEvent<T>) => void;
 };
 
 function getSelectionElement(node: Node | null) {
@@ -318,7 +304,20 @@ function collectRangePasteCells<T extends object>(
     return null;
   }
 
-  const startCell = activeRange.getBounds().start;
+  let startCell: TabulatorRangeCellComponent;
+  try {
+    const candidate = activeRange.getBounds().start;
+    if (
+      !candidate ||
+      typeof candidate.getRow !== "function" ||
+      typeof candidate.getField !== "function"
+    ) {
+      return null;
+    }
+    startCell = candidate;
+  } catch {
+    return null;
+  }
   const startField = startCell.getField();
   let currentRow: TabulatorRangeRowComponent | false = startCell.getRow();
   let truncatedCells = 0;
@@ -855,7 +854,6 @@ export function ArctorTabulator<T extends object>({
   onCellEdited,
   onRangeCopied,
   onRangePaste,
-  onRangeSelectionChange,
 }: ArctorTabulatorProps<T>) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const onRowClickRef = useRef(onRowClick);
@@ -863,7 +861,6 @@ export function ArctorTabulator<T extends object>({
   const onCellEditedRef = useRef(onCellEdited);
   const onRangeCopiedRef = useRef(onRangeCopied);
   const onRangePasteRef = useRef(onRangePaste);
-  const onRangeSelectionChangeRef = useRef(onRangeSelectionChange);
 
   useEffect(() => {
     onRowClickRef.current = onRowClick;
@@ -884,10 +881,6 @@ export function ArctorTabulator<T extends object>({
   useEffect(() => {
     onRangePasteRef.current = onRangePaste;
   }, [onRangePaste]);
-
-  useEffect(() => {
-    onRangeSelectionChangeRef.current = onRangeSelectionChange;
-  }, [onRangeSelectionChange]);
 
   useEffect(() => {
     let disposed = false;
@@ -1021,32 +1014,16 @@ export function ArctorTabulator<T extends object>({
 
       if (rangeClipboardActive) {
         const rangeTable = instance as unknown as TabulatorRangeTable;
-        const rangeEvents = instance as unknown as TabulatorRangeEventEmitter;
-        const syncRangeSelection = () => {
-          const ranges = rangeTable.getRanges();
-          rangeCopyArmed = ranges.length > 0;
 
-          const activeRange = ranges[ranges.length - 1];
-          const startCell = activeRange?.getBounds().start;
-          const callback = onRangeSelectionChangeRef.current;
-          if (!startCell || !callback) return;
-
-          callback({
-            row: startCell.getRow().getData() as T,
-            field: startCell.getField() as keyof T & string,
-            value: startCell.getValue(),
-          });
-        };
-
-        rangeEvents.on("rangeAdded", syncRangeSelection);
-        rangeEvents.on("rangeChanged", syncRangeSelection);
-        rangeEvents.on("rangeRemoved", syncRangeSelection);
-
+        // Range lifecycle events may fire before Tabulator has finalized the
+        // bounds. Clipboard arming therefore follows pointer ownership only;
+        // range bounds are inspected later, at copy/paste time.
         copyPointerListener = (event) => {
           const target = event.target;
-          if (!(target instanceof Node) || !host.contains(target)) {
-            rangeCopyArmed = false;
-          }
+          rangeCopyArmed =
+            target instanceof Node &&
+            host.contains(target) &&
+            !isInteractiveTarget(target);
         };
 
         copyListener = (event) => {
@@ -1091,9 +1068,16 @@ export function ArctorTabulator<T extends object>({
             return;
           }
 
-          const matrix = activeRange
-            .getStructuredCells()
-            .map((row) => row.map((cell) => cell.getValue()));
+          let structuredCells: TabulatorRangeCellComponent[][];
+          try {
+            structuredCells = activeRange.getStructuredCells();
+          } catch {
+            rangeCopyArmed = false;
+            return;
+          }
+          const matrix = structuredCells.map((row) =>
+            row.map((cell) => cell.getValue()),
+          );
           const clipboard = serializeArctorClipboardMatrix(matrix);
 
           clipboardData.setData("text/plain", clipboard);

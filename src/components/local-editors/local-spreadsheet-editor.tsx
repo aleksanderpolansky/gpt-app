@@ -825,7 +825,6 @@ export function LocalSpreadsheetEditor({
         field: "__rowNumber",
         width: 58,
         minWidth: 58,
-        frozen: true,
         hozAlign: "right",
         headerHozAlign: "center",
         editable: false,
@@ -1399,7 +1398,6 @@ export function LocalSpreadsheetEditor({
               onCellClick={handleCellClick}
               onCellEdited={handleCellEdited}
               onRangePaste={handleRangePaste}
-              onRangeSelectionChange={handleCellClick}
               options={{
                 history: false,
                 editTriggerEvent: "dblclick",
