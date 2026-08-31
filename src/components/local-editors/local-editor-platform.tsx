@@ -16,8 +16,10 @@ import {
   LocalDocxEditor,
   releaseLocalDocxPrivacyGuard,
 } from "@/components/local-editors/local-docx-editor";
+import { LocalMindMapEditor } from "@/components/local-editors/local-mindmap-editor";
 import { LocalSpreadsheetEditor } from "@/components/local-editors/local-spreadsheet-editor";
 import { createBlankDocxFile } from "@/lib/local-editors/blank-docx-template";
+import { createBlankMindMapFile } from "@/lib/local-editors/local-mindmap-format";
 import {
   formatLocalFileSize,
   getLocalEditorPolicy,
@@ -50,6 +52,7 @@ type LocalCopy = {
   open: string;
   newDocument: string;
   newSpreadsheet: string;
+  newMindmap: string;
   openAnother: string;
   saveCopy: string;
   clear: string;
@@ -61,6 +64,7 @@ type LocalCopy = {
   runtimeReady: string;
   spreadsheetReady: string;
   documentReady: string;
+  mindmapReady: string;
   discardWarning: string;
   unsaved: string;
 };
@@ -82,6 +86,7 @@ const EN_COPY: LocalCopy = {
   open: "Open local file",
   newDocument: "New blank document",
   newSpreadsheet: "New blank spreadsheet",
+  newMindmap: "New blank mind map",
   openAnother: "Open another file",
   saveCopy: "Save local copy",
   clear: "Clear from memory",
@@ -93,6 +98,7 @@ const EN_COPY: LocalCopy = {
   runtimeReady: "Local file runtime ready; editing engine attaches in a later release.",
   spreadsheetReady: "XLSX editor active above.",
   documentReady: "DOCX editing engine active below.",
+  mindmapReady: "Mind-map editor active above.",
   discardWarning: "This document has unsaved changes. Discard them?",
   unsaved: "unsaved changes",
 };
@@ -114,6 +120,7 @@ const PL_COPY: LocalCopy = {
   open: "Otwórz plik lokalny",
   newDocument: "Nowy pusty dokument",
   newSpreadsheet: "Nowy pusty arkusz",
+  newMindmap: "Nowa pusta mapa myśli",
   openAnother: "Otwórz inny plik",
   saveCopy: "Zapisz kopię lokalnie",
   clear: "Usuń z pamięci",
@@ -125,6 +132,7 @@ const PL_COPY: LocalCopy = {
   runtimeReady: "Lokalny moduł plików jest gotowy; silnik edycji zostanie podłączony w kolejnym wydaniu.",
   spreadsheetReady: "Edytor XLSX jest aktywny powyżej.",
   documentReady: "Edytor DOCX jest aktywny poniżej.",
+  mindmapReady: "Edytor map myśli jest aktywny powyżej.",
   discardWarning: "Dokument zawiera niezapisane zmiany. Odrzucić je?",
   unsaved: "niezapisane zmiany",
 };
@@ -146,6 +154,7 @@ const RU_COPY: LocalCopy = {
   open: "Открыть локальный файл",
   newDocument: "Новый пустой документ",
   newSpreadsheet: "Новая пустая таблица",
+  newMindmap: "Новая пустая мозговая карта",
   openAnother: "Открыть другой файл",
   saveCopy: "Сохранить локальную копию",
   clear: "Удалить из памяти",
@@ -157,6 +166,7 @@ const RU_COPY: LocalCopy = {
   runtimeReady: "Локальный файловый runtime готов; движок редактирования подключается следующим релизом.",
   spreadsheetReady: "XLSX-редактор активен выше.",
   documentReady: "DOCX-редактор активен ниже.",
+  mindmapReady: "Редактор мозговых карт активен выше.",
   discardWarning: "В документе есть несохранённые изменения. Отбросить их?",
   unsaved: "несохранённые изменения",
 };
@@ -178,6 +188,7 @@ const UK_COPY: LocalCopy = {
   open: "Відкрити локальний файл",
   newDocument: "Новий порожній документ",
   newSpreadsheet: "Нова порожня таблиця",
+  newMindmap: "Нова порожня мапа думок",
   openAnother: "Відкрити інший файл",
   saveCopy: "Зберегти локальну копію",
   clear: "Видалити з пам’яті",
@@ -189,6 +200,7 @@ const UK_COPY: LocalCopy = {
   runtimeReady: "Локальний файловий runtime готовий; рушій редагування буде підключено в наступному релізі.",
   spreadsheetReady: "XLSX-редактор активний вище.",
   documentReady: "DOCX-редактор активний нижче.",
+  mindmapReady: "Редактор мап думок активний вище.",
   discardWarning: "У документі є незбережені зміни. Відкинути їх?",
   unsaved: "незбережені зміни",
 };
@@ -210,6 +222,7 @@ const DE_COPY: LocalCopy = {
   open: "Lokale Datei öffnen",
   newDocument: "Neues leeres Dokument",
   newSpreadsheet: "Neue leere Tabelle",
+  newMindmap: "Neue leere Mindmap",
   openAnother: "Andere Datei öffnen",
   saveCopy: "Lokale Kopie speichern",
   clear: "Aus dem Speicher entfernen",
@@ -221,6 +234,7 @@ const DE_COPY: LocalCopy = {
   runtimeReady: "Die lokale Dateilaufzeit ist bereit; die Bearbeitungs-Engine wird in einer späteren Version angebunden.",
   spreadsheetReady: "Der XLSX-Editor ist oben aktiv.",
   documentReady: "Der DOCX-Editor ist unten aktiv.",
+  mindmapReady: "Der Mindmap-Editor ist oben aktiv.",
   discardWarning: "Dieses Dokument enthält ungespeicherte Änderungen. Verwerfen?",
   unsaved: "ungespeicherte Änderungen",
 };
@@ -242,6 +256,7 @@ const ES_COPY: LocalCopy = {
   open: "Abrir archivo local",
   newDocument: "Nuevo documento en blanco",
   newSpreadsheet: "Nueva hoja de cálculo vacía",
+  newMindmap: "Nuevo mapa mental en blanco",
   openAnother: "Abrir otro archivo",
   saveCopy: "Guardar copia local",
   clear: "Eliminar de la memoria",
@@ -253,6 +268,7 @@ const ES_COPY: LocalCopy = {
   runtimeReady: "El runtime local de archivos está listo; el motor de edición se conectará en una versión posterior.",
   spreadsheetReady: "El editor XLSX está activo arriba.",
   documentReady: "El editor DOCX está activo abajo.",
+  mindmapReady: "El editor de mapas mentales está activo arriba.",
   discardWarning: "Este documento tiene cambios sin guardar. ¿Descartarlos?",
   unsaved: "cambios sin guardar",
 };
@@ -274,6 +290,7 @@ const CS_COPY: LocalCopy = {
   open: "Otevřít místní soubor",
   newDocument: "Nový prázdný dokument",
   newSpreadsheet: "Nová prázdná tabulka",
+  newMindmap: "Nová prázdná myšlenková mapa",
   openAnother: "Otevřít jiný soubor",
   saveCopy: "Uložit místní kopii",
   clear: "Odstranit z paměti",
@@ -285,6 +302,7 @@ const CS_COPY: LocalCopy = {
   runtimeReady: "Lokální souborový runtime je připraven; editační jádro bude připojeno v některé z dalších verzí.",
   spreadsheetReady: "Editor XLSX je aktivní výše.",
   documentReady: "Editor DOCX je aktivní níže.",
+  mindmapReady: "Editor myšlenkových map je aktivní výše.",
   discardWarning: "Dokument obsahuje neuložené změny. Zahodit je?",
   unsaved: "neuložené změny",
 };
@@ -341,6 +359,8 @@ export function LocalEditorPlatform() {
   const [documentRevision, setDocumentRevision] = useState(0);
   const [spreadsheetDirty, setSpreadsheetDirty] = useState(false);
   const [spreadsheetRevision, setSpreadsheetRevision] = useState(0);
+  const [mindmapDirty, setMindmapDirty] = useState(false);
+  const [mindmapRevision, setMindmapRevision] = useState(0);
   const spreadsheetRevealRef = useRef<HTMLDivElement | null>(null);
   const pendingSpreadsheetRevealRef = useRef(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -361,9 +381,15 @@ export function LocalEditorPlatform() {
     return window.confirm(copy.discardWarning);
   }
 
+  function canDiscardMindmap(): boolean {
+    if (!mindmapDirty) return true;
+    return window.confirm(copy.discardWarning);
+  }
+
   async function openFile(kind: LocalEditorKind) {
     if (kind === "document" && files.document && !canDiscardDocument()) return;
     if (kind === "spreadsheet" && files.spreadsheet && !canDiscardSpreadsheet()) return;
+    if (kind === "mindmap" && files.mindmap && !canDiscardMindmap()) return;
 
     setBusyKind(kind);
     setMessage(null);
@@ -383,6 +409,10 @@ export function LocalEditorPlatform() {
         setSpreadsheetDirty(false);
         setSpreadsheetRevision((current) => current + 1);
         pendingSpreadsheetRevealRef.current = true;
+      }
+      if (kind === "mindmap") {
+        setMindmapDirty(false);
+        setMindmapRevision((current) => current + 1);
       }
       setFiles((current) => ({ ...current, [kind]: file }));
       setMessage(`${copy.selected}: ${file.name}`);
@@ -420,6 +450,17 @@ export function LocalEditorPlatform() {
     setMessage(`${copy.selected}: ${file.name}`);
   }
 
+  function createBlankMindMap() {
+    if (files.mindmap && !canDiscardMindmap()) return;
+
+    const file = createBlankMindMapFile(copy.mindmap);
+    setMessage(null);
+    setError(null);
+    setMindmapDirty(false);
+    setMindmapRevision((current) => current + 1);
+    setFiles((current) => ({ ...current, mindmap: file }));
+    setMessage(`${copy.selected}: ${file.name}`);
+  }
   async function saveCopy(kind: LocalEditorKind) {
     if (kind === "document" || kind === "spreadsheet") return;
     const file = files[kind];
@@ -445,6 +486,7 @@ export function LocalEditorPlatform() {
   function clearFile(kind: LocalEditorKind) {
     if (kind === "document" && !canDiscardDocument()) return;
     if (kind === "spreadsheet" && !canDiscardSpreadsheet()) return;
+    if (kind === "mindmap" && !canDiscardMindmap()) return;
     setFiles((current) => {
       const next = { ...current };
       delete next[kind];
@@ -452,12 +494,14 @@ export function LocalEditorPlatform() {
     });
     if (kind === "document") setDocumentDirty(false);
     if (kind === "spreadsheet") setSpreadsheetDirty(false);
+    if (kind === "mindmap") setMindmapDirty(false);
     setMessage(null);
     setError(null);
   }
 
   const documentFile = files.document;
   const spreadsheetFile = files.spreadsheet;
+  const mindmapFile = files.mindmap;
 
   useEffect(() => {
     if (!spreadsheetFile || !pendingSpreadsheetRevealRef.current) return;
@@ -562,6 +606,14 @@ export function LocalEditorPlatform() {
           </div>
         ) : null}
 
+        {mindmapFile ? (
+          <LocalMindMapEditor
+            key={`mindmap:${mindmapRevision}`}
+            file={mindmapFile}
+            locale={locale}
+            onDirtyChange={setMindmapDirty}
+          />
+        ) : null}
         <section className="grid gap-4 lg:grid-cols-3">
           {EDITORS.map(({ kind, icon: Icon }) => {
             const policy = getLocalEditorPolicy(kind);
@@ -569,9 +621,11 @@ export function LocalEditorPlatform() {
             const busy = busyKind === kind;
             const documentActive = kind === "document" && Boolean(file);
             const spreadsheetActive = kind === "spreadsheet" && Boolean(file);
+            const mindmapActive = kind === "mindmap" && Boolean(file);
             const activeDirty =
               (documentActive && documentDirty) ||
-              (spreadsheetActive && spreadsheetDirty);
+              (spreadsheetActive && spreadsheetDirty) ||
+              (mindmapActive && mindmapDirty);
             return (
               <article
                 key={kind}
@@ -594,7 +648,7 @@ export function LocalEditorPlatform() {
                     ? copy.documentReady
                     : kind === "spreadsheet"
                       ? copy.spreadsheetReady
-                      : `${copy.nextStep}: ${copy.runtimeReady}`}
+                      : copy.mindmapReady}
                 </p>
 
                 <div className="mt-5 flex-1 rounded-2xl border border-dashed border-[#d9deec] bg-[#fafbfe] p-4">
@@ -645,8 +699,19 @@ export function LocalEditorPlatform() {
                       {copy.newSpreadsheet}
                     </button>
                   ) : null}
+                  {kind === "mindmap" ? (
+                    <button
+                      type="button"
+                      onClick={createBlankMindMap}
+                      disabled={busy}
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#dce2f2] bg-white px-3 py-2 text-[12px] font-bold text-[#3657b6] disabled:opacity-50"
+                    >
+                      <Network size={15} aria-hidden="true" />
+                      {copy.newMindmap}
+                    </button>
+                  ) : null}
                   {file ? (
-                    kind === "document" || kind === "spreadsheet" ? (
+                    kind === "document" || kind === "spreadsheet" || kind === "mindmap" ? (
                       <button
                         type="button"
                         onClick={() => clearFile(kind)}
