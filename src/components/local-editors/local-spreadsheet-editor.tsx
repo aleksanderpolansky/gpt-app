@@ -28,11 +28,17 @@ import { type LocaleCode } from "@/i18n";
 import { saveLocalEditorBlob } from "@/lib/local-editors/local-file-runtime";
 
 const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const ARCTOR_BLANK_SPREADSHEET_MIME = "application/x-arctor-local-xlsx-template";
 const MAX_VISIBLE_ROWS = 5000;
 const MAX_VISIBLE_COLUMNS = 128;
 const EXTRA_VISIBLE_ROWS = 20;
 const EXTRA_VISIBLE_COLUMNS = 4;
 const MAX_HISTORY_ENTRIES = 40;
+const MAX_BULK_STRUCTURE_COUNT = 50;
+const BULK_STRUCTURE_COUNTS = Array.from(
+  { length: MAX_BULK_STRUCTURE_COUNT },
+  (_, index) => index + 1,
+);
 
 type XlsxModule = typeof import("xlsx");
 type XlsxWorkbook = import("xlsx").WorkBook;
@@ -106,6 +112,16 @@ type SpreadsheetCopy = {
   redo: string;
   structuralBlocked: string;
   outsideUsedRange: string;
+  newSheet: string;
+  renameSheet: string;
+  deleteSheet: string;
+  structureCount: string;
+  sheetNamePrompt: string;
+  invalidSheetName: string;
+  duplicateSheetName: string;
+  cannotDeleteLastSheet: string;
+  sheetHistoryReset: string;
+  sheetStructureBlocked: string;
 };
 
 const COPY: Record<LocaleCode, SpreadsheetCopy> = {
@@ -135,6 +151,16 @@ const COPY: Record<LocaleCode, SpreadsheetCopy> = {
     redo: "Redo",
     structuralBlocked: "Row/column changes are disabled for workbooks containing formulas, merged cells, filters, or named ranges to avoid breaking references.",
     outsideUsedRange: "Choose a row or column inside the used sheet area.",
+    newSheet: "New sheet",
+    renameSheet: "Rename sheet",
+    deleteSheet: "Delete sheet",
+    structureCount: "Count",
+    sheetNamePrompt: "Sheet name",
+    invalidSheetName: "Use 1–31 characters and do not use : \\ / ? * [ ].",
+    duplicateSheetName: "A sheet with that name already exists.",
+    cannotDeleteLastSheet: "The last worksheet cannot be deleted.",
+    sheetHistoryReset: "Sheet structure changed. Undo history was reset.",
+    sheetStructureBlocked: "Rename/delete is disabled while the workbook contains formulas, merged cells, filters, or named ranges.",
   },
   pl: {
     localBadge: "Lokalny edytor XLSX · bez przechowywania arkusza na serwerze",
@@ -162,6 +188,16 @@ const COPY: Record<LocaleCode, SpreadsheetCopy> = {
     redo: "Ponów",
     structuralBlocked: "Zmiany wierszy i kolumn są wyłączone dla skoroszytów z formułami, scalonymi komórkami, filtrami lub nazwanymi zakresami, aby nie uszkodzić odwołań.",
     outsideUsedRange: "Wybierz wiersz lub kolumnę w używanym obszarze arkusza.",
+    newSheet: "Nowy arkusz",
+    renameSheet: "Zmień nazwę",
+    deleteSheet: "Usuń arkusz",
+    structureCount: "Liczba",
+    sheetNamePrompt: "Nazwa arkusza",
+    invalidSheetName: "Użyj 1–31 znaków i nie używaj : \\ / ? * [ ].",
+    duplicateSheetName: "Arkusz o tej nazwie już istnieje.",
+    cannotDeleteLastSheet: "Nie można usunąć ostatniego arkusza.",
+    sheetHistoryReset: "Zmieniono strukturę arkuszy. Historia cofania została wyzerowana.",
+    sheetStructureBlocked: "Zmiana nazwy/usuwanie jest wyłączone, gdy skoroszyt zawiera formuły, scalone komórki, filtry lub nazwane zakresy.",
   },
   ru: {
     localBadge: "Локальный XLSX-редактор · без хранения таблицы на сервере",
@@ -189,6 +225,16 @@ const COPY: Record<LocaleCode, SpreadsheetCopy> = {
     redo: "Повторить",
     structuralBlocked: "Изменение строк и столбцов отключено для книг с формулами, объединёнными ячейками, фильтрами или именованными диапазонами, чтобы не повредить ссылки.",
     outsideUsedRange: "Выберите строку или столбец внутри используемой области листа.",
+    newSheet: "Новый лист",
+    renameSheet: "Переименовать лист",
+    deleteSheet: "Удалить лист",
+    structureCount: "Количество",
+    sheetNamePrompt: "Название листа",
+    invalidSheetName: "Используйте 1–31 символ и не используйте : \\ / ? * [ ].",
+    duplicateSheetName: "Лист с таким названием уже существует.",
+    cannotDeleteLastSheet: "Нельзя удалить последний лист.",
+    sheetHistoryReset: "Структура листов изменена. История отмены сброшена.",
+    sheetStructureBlocked: "Переименование и удаление отключены, пока книга содержит формулы, объединённые ячейки, фильтры или именованные диапазоны.",
   },
   uk: {
     localBadge: "Локальний XLSX-редактор · без зберігання таблиці на сервері",
@@ -216,6 +262,16 @@ const COPY: Record<LocaleCode, SpreadsheetCopy> = {
     redo: "Повторити",
     structuralBlocked: "Зміни рядків і стовпців вимкнено для книг із формулами, об’єднаними клітинками, фільтрами або іменованими діапазонами, щоб не пошкодити посилання.",
     outsideUsedRange: "Виберіть рядок або стовпець у використаній області аркуша.",
+    newSheet: "Новий аркуш",
+    renameSheet: "Перейменувати аркуш",
+    deleteSheet: "Видалити аркуш",
+    structureCount: "Кількість",
+    sheetNamePrompt: "Назва аркуша",
+    invalidSheetName: "Використовуйте 1–31 символ і не використовуйте : \\ / ? * [ ].",
+    duplicateSheetName: "Аркуш із такою назвою вже існує.",
+    cannotDeleteLastSheet: "Не можна видалити останній аркуш.",
+    sheetHistoryReset: "Структуру аркушів змінено. Історію скасування очищено.",
+    sheetStructureBlocked: "Перейменування та видалення вимкнено, поки книга містить формули, об’єднані клітинки, фільтри або іменовані діапазони.",
   },
   de: {
     localBadge: "Lokaler XLSX-Editor · keine Tabellenspeicherung auf dem Server",
@@ -243,6 +299,16 @@ const COPY: Record<LocaleCode, SpreadsheetCopy> = {
     redo: "Wiederholen",
     structuralBlocked: "Zeilen- und Spaltenänderungen sind bei Arbeitsmappen mit Formeln, verbundenen Zellen, Filtern oder benannten Bereichen deaktiviert, damit Verweise nicht beschädigt werden.",
     outsideUsedRange: "Wählen Sie eine Zeile oder Spalte innerhalb des verwendeten Blattbereichs.",
+    newSheet: "Neues Blatt",
+    renameSheet: "Blatt umbenennen",
+    deleteSheet: "Blatt löschen",
+    structureCount: "Anzahl",
+    sheetNamePrompt: "Blattname",
+    invalidSheetName: "Verwenden Sie 1–31 Zeichen und nicht : \\ / ? * [ ].",
+    duplicateSheetName: "Ein Blatt mit diesem Namen existiert bereits.",
+    cannotDeleteLastSheet: "Das letzte Arbeitsblatt kann nicht gelöscht werden.",
+    sheetHistoryReset: "Die Blattstruktur wurde geändert. Der Rückgängig-Verlauf wurde zurückgesetzt.",
+    sheetStructureBlocked: "Umbenennen/Löschen ist deaktiviert, solange die Arbeitsmappe Formeln, verbundene Zellen, Filter oder benannte Bereiche enthält.",
   },
   es: {
     localBadge: "Editor XLSX local · sin almacenamiento de la hoja en el servidor",
@@ -270,6 +336,16 @@ const COPY: Record<LocaleCode, SpreadsheetCopy> = {
     redo: "Rehacer",
     structuralBlocked: "Los cambios de filas y columnas están desactivados en libros con fórmulas, celdas combinadas, filtros o rangos con nombre para no romper referencias.",
     outsideUsedRange: "Selecciona una fila o columna dentro del área utilizada de la hoja.",
+    newSheet: "Nueva hoja",
+    renameSheet: "Renombrar hoja",
+    deleteSheet: "Eliminar hoja",
+    structureCount: "Cantidad",
+    sheetNamePrompt: "Nombre de la hoja",
+    invalidSheetName: "Usa entre 1 y 31 caracteres y no uses : \\ / ? * [ ].",
+    duplicateSheetName: "Ya existe una hoja con ese nombre.",
+    cannotDeleteLastSheet: "No se puede eliminar la última hoja.",
+    sheetHistoryReset: "Cambió la estructura de hojas. Se reinició el historial de deshacer.",
+    sheetStructureBlocked: "Renombrar/eliminar está desactivado mientras el libro contenga fórmulas, celdas combinadas, filtros o rangos con nombre.",
   },
   cs: {
     localBadge: "Lokální editor XLSX · bez ukládání tabulky na server",
@@ -297,6 +373,16 @@ const COPY: Record<LocaleCode, SpreadsheetCopy> = {
     redo: "Znovu",
     structuralBlocked: "Změny řádků a sloupců jsou u sešitů se vzorci, sloučenými buňkami, filtry nebo pojmenovanými oblastmi vypnuté, aby se nepoškodily odkazy.",
     outsideUsedRange: "Vyberte řádek nebo sloupec v používané oblasti listu.",
+    newSheet: "Nový list",
+    renameSheet: "Přejmenovat list",
+    deleteSheet: "Odstranit list",
+    structureCount: "Počet",
+    sheetNamePrompt: "Název listu",
+    invalidSheetName: "Použijte 1–31 znaků a nepoužívejte : \\ / ? * [ ].",
+    duplicateSheetName: "List s tímto názvem již existuje.",
+    cannotDeleteLastSheet: "Poslední list nelze odstranit.",
+    sheetHistoryReset: "Struktura listů se změnila. Historie zpět byla vymazána.",
+    sheetStructureBlocked: "Přejmenování/odstranění je vypnuto, pokud sešit obsahuje vzorce, sloučené buňky, filtry nebo pojmenované oblasti.",
   },
 };
 
@@ -432,6 +518,58 @@ function cloneWorksheet(sheet: XlsxWorksheet): XlsxWorksheet {
   return structuredClone(sheet) as XlsxWorksheet;
 }
 
+function isArctorBlankWorkbookFile(file: File): boolean {
+  return file.size === 0 && file.type === ARCTOR_BLANK_SPREADSHEET_MIME;
+}
+
+function createBlankWorkbook(xlsx: XlsxModule): XlsxWorkbook {
+  const workbook = xlsx.utils.book_new();
+  const sheet = xlsx.utils.aoa_to_sheet([[]]);
+  xlsx.utils.book_append_sheet(workbook, sheet, "Sheet1");
+  return workbook;
+}
+
+function isValidSheetName(name: string): boolean {
+  return (
+    name.length >= 1 &&
+    name.length <= 31 &&
+    !/[:\\/?*\[\]]/.test(name) &&
+    !name.startsWith("'") &&
+    !name.endsWith("'")
+  );
+}
+
+function nextAvailableSheetName(sheetNames: string[]): string {
+  const used = new Set(sheetNames.map((name) => name.toLocaleLowerCase()));
+  for (let index = 1; index <= 9999; index += 1) {
+    const candidate = `Sheet${index}`;
+    if (!used.has(candidate.toLocaleLowerCase())) return candidate;
+  }
+  return `Sheet-${Date.now()}`;
+}
+
+function updateWorkbookSheetMetadataName(
+  workbook: XlsxWorkbook,
+  index: number,
+  name: string,
+) {
+  const workbookMeta = workbook.Workbook as
+    | { Sheets?: Array<Record<string, unknown> & { name?: string }> }
+    | undefined;
+  const sheets = workbookMeta?.Sheets;
+  if (!Array.isArray(sheets) || !sheets[index]) return;
+  sheets[index] = { ...sheets[index], name };
+}
+
+function removeWorkbookSheetMetadata(workbook: XlsxWorkbook, index: number) {
+  const workbookMeta = workbook.Workbook as
+    | { Sheets?: Array<Record<string, unknown> & { name?: string }> }
+    | undefined;
+  const sheets = workbookMeta?.Sheets;
+  if (!Array.isArray(sheets) || index < 0 || index >= sheets.length) return;
+  sheets.splice(index, 1);
+}
+
 function isWorksheetCellAddress(key: string): boolean {
   return /^[A-Z]{1,3}[1-9]\d*$/.test(key);
 }
@@ -561,6 +699,7 @@ export function LocalSpreadsheetEditor({
   const [error, setError] = useState<string | null>(null);
   const undoHistoryRef = useRef<WorksheetHistoryEntry[]>([]);
   const redoHistoryRef = useRef<WorksheetHistoryEntry[]>([]);
+  const historyBaseDirtyRef = useRef(false);
   const [undoCount, setUndoCount] = useState(0);
   const [redoCount, setRedoCount] = useState(0);
   const [selection, setSelection] = useState<SpreadsheetSelection>({
@@ -568,6 +707,7 @@ export function LocalSpreadsheetEditor({
     columnIndex: 0,
   });
   const [structuralBlocked, setStructuralBlocked] = useState(false);
+  const [structuralCount, setStructuralCount] = useState(1);
 
   const setDirtyState = useCallback(
     (next: boolean) => {
@@ -594,11 +734,15 @@ export function LocalSpreadsheetEditor({
     [syncHistoryCounts],
   );
 
-  const clearHistory = useCallback(() => {
-    undoHistoryRef.current = [];
-    redoHistoryRef.current = [];
-    syncHistoryCounts();
-  }, [syncHistoryCounts]);
+  const clearHistory = useCallback(
+    (baseDirty = false) => {
+      undoHistoryRef.current = [];
+      redoHistoryRef.current = [];
+      historyBaseDirtyRef.current = baseDirty;
+      syncHistoryCounts();
+    },
+    [syncHistoryCounts],
+  );
 
   const refreshActiveSheet = useCallback(() => {
     const xlsx = xlsxRef.current;
@@ -615,14 +759,16 @@ export function LocalSpreadsheetEditor({
     async function openWorkbook() {
       try {
         const xlsx = await import("xlsx");
-        const bytes = await file.arrayBuffer();
-        const workbook = xlsx.read(bytes, {
-          type: "array",
-          cellDates: true,
-          cellFormula: true,
-          cellNF: true,
-          cellStyles: true,
-        });
+        const blankWorkbook = isArctorBlankWorkbookFile(file);
+        const workbook = blankWorkbook
+          ? createBlankWorkbook(xlsx)
+          : xlsx.read(await file.arrayBuffer(), {
+              type: "array",
+              cellDates: true,
+              cellFormula: true,
+              cellNF: true,
+              cellStyles: true,
+            });
         if (cancelled) return;
 
         xlsxRef.current = xlsx;
@@ -640,6 +786,8 @@ export function LocalSpreadsheetEditor({
         setActiveSheetName(names[0]);
         const firstSheet = workbook.Sheets[names[0]];
         if (firstSheet) setView(buildSpreadsheetView(xlsx, firstSheet));
+        historyBaseDirtyRef.current = blankWorkbook;
+        if (blankWorkbook) setDirtyState(true);
       } catch (openError) {
         if (!cancelled) {
           setError(openError instanceof Error ? openError.message : String(openError));
@@ -819,29 +967,58 @@ export function LocalSpreadsheetEditor({
       const before = cloneWorksheet(sheet);
       const beforeSelection = selection;
       let nextSelection = selection;
+      const count = Math.max(1, Math.min(MAX_BULK_STRUCTURE_COUNT, structuralCount));
+      const repeatAxisShift = (
+        axis: "row" | "column",
+        index: number,
+        mode: "insert" | "delete",
+      ) => {
+        for (let step = 0; step < count; step += 1) {
+          if (!shiftWorksheetAxis(xlsx, sheet, axis, index, mode)) return false;
+        }
+        return true;
+      };
       let changed = false;
 
       if (action === "rowAbove") {
-        changed = shiftWorksheetAxis(xlsx, sheet, "row", selection.rowIndex, "insert");
+        changed = repeatAxisShift("row", selection.rowIndex, "insert");
       } else if (action === "rowBelow") {
         const target = selection.rowIndex + 1;
-        changed = shiftWorksheetAxis(xlsx, sheet, "row", target, "insert");
+        changed = repeatAxisShift("row", target, "insert");
         nextSelection = { ...selection, rowIndex: target };
       } else if (action === "deleteRow") {
-        changed = shiftWorksheetAxis(xlsx, sheet, "row", selection.rowIndex, "delete");
+        changed = repeatAxisShift("row", selection.rowIndex, "delete");
       } else if (action === "columnLeft") {
-        changed = shiftWorksheetAxis(xlsx, sheet, "column", selection.columnIndex, "insert");
+        changed = repeatAxisShift("column", selection.columnIndex, "insert");
       } else if (action === "columnRight") {
         const target = selection.columnIndex + 1;
-        changed = shiftWorksheetAxis(xlsx, sheet, "column", target, "insert");
+        changed = repeatAxisShift("column", target, "insert");
         nextSelection = { ...selection, columnIndex: target };
       } else {
-        changed = shiftWorksheetAxis(xlsx, sheet, "column", selection.columnIndex, "delete");
+        changed = repeatAxisShift("column", selection.columnIndex, "delete");
       }
 
       if (!changed) {
+        workbook.Sheets[activeSheetName] = before;
+        setView(buildSpreadsheetView(xlsx, before));
         setError(copy.outsideUsedRange);
         return;
+      }
+
+      const nextView = buildSpreadsheetView(xlsx, sheet);
+      if (action === "deleteRow") {
+        nextSelection = {
+          ...nextSelection,
+          rowIndex: Math.min(nextSelection.rowIndex, Math.max(0, nextView.sourceRows - 1)),
+        };
+      } else if (action === "deleteColumn") {
+        nextSelection = {
+          ...nextSelection,
+          columnIndex: Math.min(
+            nextSelection.columnIndex,
+            Math.max(0, nextView.sourceColumns - 1),
+          ),
+        };
       }
 
       pushHistory({
@@ -852,7 +1029,7 @@ export function LocalSpreadsheetEditor({
         afterSelection: nextSelection,
       });
       setSelection(nextSelection);
-      setView(buildSpreadsheetView(xlsx, sheet));
+      setView(nextView);
       setDirtyState(true);
       setMessage(null);
       setError(null);
@@ -865,8 +1042,123 @@ export function LocalSpreadsheetEditor({
       selection,
       setDirtyState,
       structuralBlocked,
+      structuralCount,
     ],
   );
+
+  const addSheet = useCallback(() => {
+    const xlsx = xlsxRef.current;
+    const workbook = workbookRef.current;
+    if (!xlsx || !workbook) return;
+
+    const name = nextAvailableSheetName(workbook.SheetNames);
+    const sheet = xlsx.utils.aoa_to_sheet([[]]);
+    xlsx.utils.book_append_sheet(workbook, sheet, name);
+    setSheetNames([...workbook.SheetNames]);
+    setActiveSheetName(name);
+    setSelection({ rowIndex: 0, columnIndex: 0 });
+    setView(buildSpreadsheetView(xlsx, sheet));
+    setStructuralBlocked(workbookHasUnsafeStructuralReferences(workbook));
+    clearHistory(true);
+    setDirtyState(true);
+    setMessage(copy.sheetHistoryReset);
+    setError(null);
+  }, [clearHistory, copy.sheetHistoryReset, setDirtyState]);
+
+  const renameActiveSheet = useCallback(() => {
+    const workbook = workbookRef.current;
+    if (!workbook || !activeSheetName) return;
+    if (structuralBlocked) {
+      setError(copy.sheetStructureBlocked);
+      return;
+    }
+
+    const prompted = window.prompt(copy.sheetNamePrompt, activeSheetName);
+    if (prompted == null) return;
+    const nextName = prompted.trim();
+    if (nextName === activeSheetName) return;
+    if (!isValidSheetName(nextName)) {
+      setError(copy.invalidSheetName);
+      return;
+    }
+    if (
+      workbook.SheetNames.some(
+        (name) =>
+          name !== activeSheetName &&
+          name.toLocaleLowerCase() === nextName.toLocaleLowerCase(),
+      )
+    ) {
+      setError(copy.duplicateSheetName);
+      return;
+    }
+
+    const index = workbook.SheetNames.indexOf(activeSheetName);
+    const sheet = workbook.Sheets[activeSheetName];
+    if (index < 0 || !sheet) return;
+    delete workbook.Sheets[activeSheetName];
+    workbook.Sheets[nextName] = sheet;
+    workbook.SheetNames[index] = nextName;
+    updateWorkbookSheetMetadataName(workbook, index, nextName);
+    setSheetNames([...workbook.SheetNames]);
+    setActiveSheetName(nextName);
+    clearHistory(true);
+    setDirtyState(true);
+    setMessage(copy.sheetHistoryReset);
+    setError(null);
+  }, [
+    activeSheetName,
+    clearHistory,
+    copy.duplicateSheetName,
+    copy.invalidSheetName,
+    copy.sheetHistoryReset,
+    copy.sheetNamePrompt,
+    copy.sheetStructureBlocked,
+    setDirtyState,
+    structuralBlocked,
+  ]);
+
+  const deleteActiveSheet = useCallback(() => {
+    const xlsx = xlsxRef.current;
+    const workbook = workbookRef.current;
+    if (!xlsx || !workbook || !activeSheetName) return;
+    if (structuralBlocked) {
+      setError(copy.sheetStructureBlocked);
+      return;
+    }
+    if (workbook.SheetNames.length <= 1) {
+      setError(copy.cannotDeleteLastSheet);
+      return;
+    }
+    if (!window.confirm(`${copy.deleteSheet}: ${activeSheetName}?`)) return;
+
+    const index = workbook.SheetNames.indexOf(activeSheetName);
+    if (index < 0) return;
+    delete workbook.Sheets[activeSheetName];
+    workbook.SheetNames.splice(index, 1);
+    removeWorkbookSheetMetadata(workbook, index);
+    const nextName = workbook.SheetNames[Math.min(index, workbook.SheetNames.length - 1)];
+    const nextSheet = nextName ? workbook.Sheets[nextName] : undefined;
+    if (!nextName || !nextSheet) return;
+
+    setSheetNames([...workbook.SheetNames]);
+    setActiveSheetName(nextName);
+    setSelection({ rowIndex: 0, columnIndex: 0 });
+    setView(buildSpreadsheetView(xlsx, nextSheet));
+    setStructuralBlocked(workbookHasUnsafeStructuralReferences(workbook));
+    clearHistory(true);
+    setDirtyState(true);
+    setMessage(copy.sheetHistoryReset);
+    setError(null);
+  }, [
+    activeSheetName,
+    clearHistory,
+    copy.cannotDeleteLastSheet,
+    copy.deleteSheet,
+    copy.sheetHistoryReset,
+    copy.sheetStructureBlocked,
+    setDirtyState,
+    structuralBlocked,
+  ]);
 
   const undoWorkbookChange = useCallback(() => {
     const xlsx = xlsxRef.current;
@@ -881,7 +1173,7 @@ export function LocalSpreadsheetEditor({
     setSelection(entry.beforeSelection);
     setView(buildSpreadsheetView(xlsx, restored));
     setStructuralBlocked(workbookHasUnsafeStructuralReferences(workbook));
-    setDirtyState(undoHistoryRef.current.length > 0);
+    setDirtyState(historyBaseDirtyRef.current || undoHistoryRef.current.length > 0);
     setMessage(null);
     setError(null);
     syncHistoryCounts();
@@ -926,8 +1218,8 @@ export function LocalSpreadsheetEditor({
         suggestedName: file.name,
       });
       if (result.status === "saved") {
+        clearHistory(false);
         setDirtyState(false);
-        clearHistory();
         setMessage(copy.saved);
       } else {
         setMessage(copy.cancelled);
@@ -1024,12 +1316,37 @@ export function LocalSpreadsheetEditor({
               {name}
             </button>
           ))}
+          <span className="mx-1 h-6 w-px shrink-0 bg-[#e1e5ef]" />
+          <button type="button" onClick={addSheet} title={copy.newSheet} className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-lg border border-[#dce2f2] px-2.5 text-[11px] font-bold text-[#3657b6]">
+            {copy.newSheet}
+          </button>
+          <button type="button" onClick={renameActiveSheet} disabled={!activeSheetName || structuralBlocked} title={copy.renameSheet} className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-lg border border-[#dce2f2] px-2.5 text-[11px] font-bold text-[#445477] disabled:opacity-35">
+            {copy.renameSheet}
+          </button>
+          <button type="button" onClick={deleteActiveSheet} disabled={sheetNames.length <= 1 || structuralBlocked} title={copy.deleteSheet} className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-lg border border-rose-200 px-2.5 text-[11px] font-bold text-rose-600 disabled:opacity-35">
+            <Trash2 size={14} aria-hidden="true" /> {copy.deleteSheet}
+          </button>
         </div>
 
         <div className="mb-2 flex min-h-10 items-center gap-1 overflow-x-auto rounded-xl border border-[#dfe4f1] bg-white p-1">
           <span className="shrink-0 px-2 text-[11px] font-bold text-[#69728d]">
             {copy.selected}: {columnLabel(selection.columnIndex)}{selection.rowIndex + 1}
           </span>
+          <label className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg border border-[#dce2f2] px-2 text-[11px] font-bold text-[#69728d]">
+            <span>{copy.structureCount}</span>
+            <select
+              value={structuralCount}
+              onChange={(event) => setStructuralCount(Number(event.target.value))}
+              className="bg-transparent text-[11px] font-bold text-[#3657b6] outline-none"
+              aria-label={copy.structureCount}
+            >
+              {BULK_STRUCTURE_COUNTS.map((count) => (
+                <option key={count} value={count}>
+                  {count}
+                </option>
+              ))}
+            </select>
+          </label>
           <button type="button" onClick={undoWorkbookChange} disabled={undoCount === 0} title={copy.undo} className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg border border-[#dce2f2] px-2.5 text-[11px] font-bold text-[#445477] disabled:opacity-35">
             <Undo2 size={14} aria-hidden="true" /> {copy.undo}
           </button>

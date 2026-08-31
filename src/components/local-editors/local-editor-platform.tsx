@@ -30,6 +30,9 @@ import {
 
 import { getLocaleSearchParam, type LocaleCode } from "@/i18n";
 
+const ARCTOR_BLANK_SPREADSHEET_MIME = "application/x-arctor-local-xlsx-template";
+const ARCTOR_BLANK_SPREADSHEET_NAME = "ARCTor-spreadsheet.xlsx";
+
 type LocalCopy = {
   title: string;
   subtitle: string;
@@ -44,6 +47,7 @@ type LocalCopy = {
   spreadsheet: string;
   mindmap: string;
   open: string;
+  newSpreadsheet: string;
   openAnother: string;
   saveCopy: string;
   clear: string;
@@ -53,6 +57,7 @@ type LocalCopy = {
   saved: string;
   nextStep: string;
   runtimeReady: string;
+  spreadsheetReady: string;
   documentReady: string;
   discardWarning: string;
   unsaved: string;
@@ -73,6 +78,7 @@ const EN_COPY: LocalCopy = {
   spreadsheet: "Spreadsheet",
   mindmap: "Mind map",
   open: "Open local file",
+  newSpreadsheet: "New blank spreadsheet",
   openAnother: "Open another file",
   saveCopy: "Save local copy",
   clear: "Clear from memory",
@@ -82,6 +88,7 @@ const EN_COPY: LocalCopy = {
   saved: "Local copy saved.",
   nextStep: "Editor engine",
   runtimeReady: "Local file runtime ready; editing engine attaches in a later release.",
+  spreadsheetReady: "XLSX editor active above.",
   documentReady: "DOCX editing engine active below.",
   discardWarning: "This document has unsaved changes. Discard them?",
   unsaved: "unsaved changes",
@@ -102,6 +109,7 @@ const PL_COPY: LocalCopy = {
   spreadsheet: "Arkusz kalkulacyjny",
   mindmap: "Mapa myśli",
   open: "Otwórz plik lokalny",
+  newSpreadsheet: "Nowy pusty arkusz",
   openAnother: "Otwórz inny plik",
   saveCopy: "Zapisz kopię lokalnie",
   clear: "Usuń z pamięci",
@@ -111,6 +119,7 @@ const PL_COPY: LocalCopy = {
   saved: "Kopia lokalna została zapisana.",
   nextStep: "Silnik edytora",
   runtimeReady: "Lokalny moduł plików jest gotowy; silnik edycji zostanie podłączony w kolejnym wydaniu.",
+  spreadsheetReady: "Edytor XLSX jest aktywny powyżej.",
   documentReady: "Edytor DOCX jest aktywny poniżej.",
   discardWarning: "Dokument zawiera niezapisane zmiany. Odrzucić je?",
   unsaved: "niezapisane zmiany",
@@ -131,6 +140,7 @@ const RU_COPY: LocalCopy = {
   spreadsheet: "Электронная таблица",
   mindmap: "Мозговая карта",
   open: "Открыть локальный файл",
+  newSpreadsheet: "Новая пустая таблица",
   openAnother: "Открыть другой файл",
   saveCopy: "Сохранить локальную копию",
   clear: "Удалить из памяти",
@@ -140,6 +150,7 @@ const RU_COPY: LocalCopy = {
   saved: "Локальная копия сохранена.",
   nextStep: "Движок редактора",
   runtimeReady: "Локальный файловый runtime готов; движок редактирования подключается следующим релизом.",
+  spreadsheetReady: "XLSX-редактор активен выше.",
   documentReady: "DOCX-редактор активен ниже.",
   discardWarning: "В документе есть несохранённые изменения. Отбросить их?",
   unsaved: "несохранённые изменения",
@@ -160,6 +171,7 @@ const UK_COPY: LocalCopy = {
   spreadsheet: "Електронна таблиця",
   mindmap: "Мапа думок",
   open: "Відкрити локальний файл",
+  newSpreadsheet: "Нова порожня таблиця",
   openAnother: "Відкрити інший файл",
   saveCopy: "Зберегти локальну копію",
   clear: "Видалити з пам’яті",
@@ -169,6 +181,7 @@ const UK_COPY: LocalCopy = {
   saved: "Локальну копію збережено.",
   nextStep: "Рушій редактора",
   runtimeReady: "Локальний файловий runtime готовий; рушій редагування буде підключено в наступному релізі.",
+  spreadsheetReady: "XLSX-редактор активний вище.",
   documentReady: "DOCX-редактор активний нижче.",
   discardWarning: "У документі є незбережені зміни. Відкинути їх?",
   unsaved: "незбережені зміни",
@@ -189,6 +202,7 @@ const DE_COPY: LocalCopy = {
   spreadsheet: "Tabelle",
   mindmap: "Mindmap",
   open: "Lokale Datei öffnen",
+  newSpreadsheet: "Neue leere Tabelle",
   openAnother: "Andere Datei öffnen",
   saveCopy: "Lokale Kopie speichern",
   clear: "Aus dem Speicher entfernen",
@@ -198,6 +212,7 @@ const DE_COPY: LocalCopy = {
   saved: "Lokale Kopie gespeichert.",
   nextStep: "Editor-Engine",
   runtimeReady: "Die lokale Dateilaufzeit ist bereit; die Bearbeitungs-Engine wird in einer späteren Version angebunden.",
+  spreadsheetReady: "Der XLSX-Editor ist oben aktiv.",
   documentReady: "Der DOCX-Editor ist unten aktiv.",
   discardWarning: "Dieses Dokument enthält ungespeicherte Änderungen. Verwerfen?",
   unsaved: "ungespeicherte Änderungen",
@@ -218,6 +233,7 @@ const ES_COPY: LocalCopy = {
   spreadsheet: "Hoja de cálculo",
   mindmap: "Mapa mental",
   open: "Abrir archivo local",
+  newSpreadsheet: "Nueva hoja de cálculo vacía",
   openAnother: "Abrir otro archivo",
   saveCopy: "Guardar copia local",
   clear: "Eliminar de la memoria",
@@ -227,6 +243,7 @@ const ES_COPY: LocalCopy = {
   saved: "Copia local guardada.",
   nextStep: "Motor del editor",
   runtimeReady: "El runtime local de archivos está listo; el motor de edición se conectará en una versión posterior.",
+  spreadsheetReady: "El editor XLSX está activo arriba.",
   documentReady: "El editor DOCX está activo abajo.",
   discardWarning: "Este documento tiene cambios sin guardar. ¿Descartarlos?",
   unsaved: "cambios sin guardar",
@@ -247,6 +264,7 @@ const CS_COPY: LocalCopy = {
   spreadsheet: "Tabulka",
   mindmap: "Myšlenková mapa",
   open: "Otevřít místní soubor",
+  newSpreadsheet: "Nová prázdná tabulka",
   openAnother: "Otevřít jiný soubor",
   saveCopy: "Uložit místní kopii",
   clear: "Odstranit z paměti",
@@ -256,6 +274,7 @@ const CS_COPY: LocalCopy = {
   saved: "Místní kopie byla uložena.",
   nextStep: "Jádro editoru",
   runtimeReady: "Lokální souborový runtime je připraven; editační jádro bude připojeno v některé z dalších verzí.",
+  spreadsheetReady: "Editor XLSX je aktivní výše.",
   documentReady: "Editor DOCX je aktivní níže.",
   discardWarning: "Dokument obsahuje neuložené změny. Zahodit je?",
   unsaved: "neuložené změny",
@@ -363,6 +382,21 @@ export function LocalEditorPlatform() {
     } finally {
       setBusyKind(null);
     }
+  }
+
+  function createBlankSpreadsheet() {
+    if (files.spreadsheet && !canDiscardSpreadsheet()) return;
+
+    const file = new File([], ARCTOR_BLANK_SPREADSHEET_NAME, {
+      type: ARCTOR_BLANK_SPREADSHEET_MIME,
+    });
+    setMessage(null);
+    setError(null);
+    setSpreadsheetDirty(false);
+    setSpreadsheetRevision((current) => current + 1);
+    pendingSpreadsheetRevealRef.current = true;
+    setFiles((current) => ({ ...current, spreadsheet: file }));
+    setMessage(`${copy.selected}: ${file.name}`);
   }
 
   async function saveCopy(kind: LocalEditorKind) {
@@ -535,7 +569,11 @@ export function LocalEditorPlatform() {
                   {editorLabel(kind, copy)}
                 </h2>
                 <p className="mt-1 text-[12px] text-[#7a8099]">
-                  {kind === "document" ? copy.documentReady : `${copy.nextStep}: ${copy.runtimeReady}`}
+                  {kind === "document"
+                    ? copy.documentReady
+                    : kind === "spreadsheet"
+                      ? copy.spreadsheetReady
+                      : `${copy.nextStep}: ${copy.runtimeReady}`}
                 </p>
 
                 <div className="mt-5 flex-1 rounded-2xl border border-dashed border-[#d9deec] bg-[#fafbfe] p-4">
@@ -564,6 +602,17 @@ export function LocalEditorPlatform() {
                     <FolderOpen size={17} aria-hidden="true" />
                     {file ? copy.openAnother : copy.open}
                   </button>
+                  {kind === "spreadsheet" ? (
+                    <button
+                      type="button"
+                      onClick={createBlankSpreadsheet}
+                      disabled={busy}
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#dce2f2] bg-white px-3 py-2 text-[12px] font-bold text-[#3657b6] disabled:opacity-50"
+                    >
+                      <FileSpreadsheet size={15} aria-hidden="true" />
+                      {copy.newSpreadsheet}
+                    </button>
+                  ) : null}
                   {file ? (
                     kind === "document" || kind === "spreadsheet" ? (
                       <button
