@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { getLocaleSearchParam, type LocaleCode } from "@/i18n";
+import { CuratorWorkPanel } from "./curator-work-panel";
 
 type Measurement = {
   parameterCode: string;
@@ -33,6 +34,8 @@ type JourneyEvent = {
   labelRu: string;
   labelEn: string;
   provenance: string;
+  resultSummaryRu: string | null;
+  resultSummaryEn: string | null;
 };
 
 type CuratorSignal = {
@@ -126,7 +129,7 @@ const COPY: Record<LocaleCode, Copy> = {
     warning: "Предупреждение анализа",
     queueCount: "В очереди",
     scannedCount: "Проверено сигналов",
-    readonly: "Сейчас очередь только для чтения: решения куратора будут следующим этапом.",
+    readonly: "Действия куратора сохраняются в фактической истории пути. ОН, связи, параметры и типовые активности на этом этапе ещё не изменяются.",
   },
   en: {
     eyebrow: "ARCTOR · REALITY CURATOR",
@@ -156,7 +159,7 @@ const COPY: Record<LocaleCode, Copy> = {
     warning: "Analysis warning",
     queueCount: "In queue",
     scannedCount: "Signals scanned",
-    readonly: "The queue is read-only for now; curator decisions are the next stage.",
+    readonly: "Curator actions are recorded in the actual path history. Observation objects, relations, parameters and typical activities are not changed at this stage.",
   },
   pl: {
     eyebrow: "ARCTOR · KURATOR MODELU",
@@ -186,7 +189,7 @@ const COPY: Record<LocaleCode, Copy> = {
     warning: "Ostrzeżenie analizy",
     queueCount: "W kolejce",
     scannedCount: "Sprawdzono sygnałów",
-    readonly: "Na razie kolejka jest tylko do odczytu; decyzje kuratora będą następnym etapem.",
+    readonly: "Działania kuratora są zapisywane w historii rzeczywiście wykonanej ścieżki. Obiekty, relacje, parametry i aktywności typowe nie są jeszcze zmieniane.",
   },
   uk: {
     eyebrow: "ARCTOR · КУРАТОР МОДЕЛІ",
@@ -216,7 +219,7 @@ const COPY: Record<LocaleCode, Copy> = {
     warning: "Попередження аналізу",
     queueCount: "У черзі",
     scannedCount: "Перевірено сигналів",
-    readonly: "Наразі черга лише для читання; рішення куратора будуть наступним етапом.",
+    readonly: "Дії куратора записуються у фактичній історії шляху. Об’єкти, зв’язки, параметри та типові активності на цьому етапі ще не змінюються.",
   },
   de: {
     eyebrow: "ARCTOR · MODELLKURATOR",
@@ -246,7 +249,7 @@ const COPY: Record<LocaleCode, Copy> = {
     warning: "Analysewarnung",
     queueCount: "In der Warteschlange",
     scannedCount: "Signale geprüft",
-    readonly: "Die Warteschlange ist vorerst schreibgeschützt; Kuratorenentscheidungen folgen im nächsten Schritt.",
+    readonly: "Kuratorenaktionen werden im tatsächlich durchlaufenen Verlauf gespeichert. Objekte, Beziehungen, Parameter und typische Aktivitäten werden in diesem Schritt noch nicht geändert.",
   },
   es: {
     eyebrow: "ARCTOR · CURADOR DEL MODELO",
@@ -276,7 +279,7 @@ const COPY: Record<LocaleCode, Copy> = {
     warning: "Advertencia del análisis",
     queueCount: "En cola",
     scannedCount: "Señales revisadas",
-    readonly: "Por ahora la cola es de solo lectura; las decisiones del curador serán la siguiente etapa.",
+    readonly: "Las acciones del curador se registran en el historial real del proceso. Los objetos, relaciones, parámetros y actividades típicas todavía no se modifican en esta etapa.",
   },
   cs: {
     eyebrow: "ARCTOR · KURÁTOR MODELU",
@@ -306,7 +309,7 @@ const COPY: Record<LocaleCode, Copy> = {
     warning: "Varování analýzy",
     queueCount: "Ve frontě",
     scannedCount: "Zkontrolováno signálů",
-    readonly: "Fronta je zatím jen pro čtení; rozhodnutí kurátora budou dalším krokem.",
+    readonly: "Akce kurátora se zapisují do historie skutečně provedené cesty. Objekty, vazby, parametry a typické aktivity se v této fázi ještě nemění.",
   },
 };
 
@@ -370,6 +373,9 @@ function journeyProvenanceLabel(value: string, locale: LocaleCode) {
   }
   if (value === "runtime_durable_evidence") {
     return locale === "ru" ? "зафиксировано системой" : "recorded by the system";
+  }
+  if (value === "curator_action") {
+    return locale === "ru" ? "действие куратора" : "curator action";
   }
   return value;
 }
@@ -572,6 +578,11 @@ export function RealityCuratorSignalsClient() {
                           {locale === "ru" && item.checklistStepNameSnapshotRu ? (
                             <div className="mt-1 text-[11px] leading-4 text-[#697089]">{item.checklistStepNameSnapshotRu}</div>
                           ) : null}
+                          {(locale === "ru" ? item.resultSummaryRu : item.resultSummaryEn) ? (
+                            <div className="mt-1 text-[11px] font-semibold leading-4 text-[#4b5563]">
+                              {locale === "ru" ? item.resultSummaryRu : item.resultSummaryEn}
+                            </div>
+                          ) : null}
                         </div>
                       </li>
                     ))}
@@ -580,6 +591,13 @@ export function RealityCuratorSignalsClient() {
                   <div className="mt-2 text-xs text-[#8b90a5]">{JOURNEY_EMPTY[locale]}</div>
                 )}
               </div>
+
+              <CuratorWorkPanel
+                signalId={signal.signalId}
+                journey={signal.journey ?? []}
+                locale={locale}
+                onChanged={() => void load(true)}
+              />
 
               {signal.candidateLoadWarning ? (
                 <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">

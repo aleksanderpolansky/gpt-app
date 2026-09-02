@@ -15,7 +15,9 @@ export type RealityCuratorJourneyEventCode =
   | "activity_event_saved"
   | "background_analysis_completed"
   | "missing_typical_activity_detected"
-  | "curator_queue_registered";
+  | "curator_queue_registered"
+  | "curator_work_started"
+  | "existing_typical_activity_checked";
 
 export type RealityCuratorJourneyEvent = {
   eventCode: RealityCuratorJourneyEventCode;
@@ -27,6 +29,8 @@ export type RealityCuratorJourneyEvent = {
   labelRu: string;
   labelEn: string;
   provenance: string;
+  resultSummaryRu: string | null;
+  resultSummaryEn: string | null;
 };
 
 type JsonRecord = Record<string, unknown>;
@@ -98,6 +102,26 @@ const EVENT_DEFINITIONS: readonly EventDefinition[] = [
     labelRu: "Сигнал передан в рабочую очередь куратора",
     labelEn: "Signal entered the curator work queue",
   },
+  {
+    eventCode: "curator_work_started",
+    processingStage: "validate",
+    severity: "notice",
+    stageCode: "curator_work",
+    checklistStepCode: null,
+    checklistStepNameSnapshotRu: null,
+    labelRu: "Куратор взял сигнал в работу",
+    labelEn: "Curator started work with the signal",
+  },
+  {
+    eventCode: "existing_typical_activity_checked",
+    processingStage: "validate",
+    severity: "notice",
+    stageCode: "existing_typical_activity_check",
+    checklistStepCode: null,
+    checklistStepNameSnapshotRu: null,
+    labelRu: "Проверено наличие подходящей типовой активности",
+    labelEn: "Existing typical activities were checked",
+  },
 ] as const;
 
 const EVENT_DEFINITION_BY_CODE = new Map(
@@ -107,6 +131,14 @@ const EVENT_DEFINITION_BY_CODE = new Map(
 const EVENT_SEQUENCE = new Map(
   EVENT_DEFINITIONS.map((item, index) => [item.eventCode, index] as const),
 );
+
+const AUTOMATIC_JOURNEY_EVENT_CODES = new Set<RealityCuratorJourneyEventCode>([
+  "candidate_signal_registered",
+  "activity_event_saved",
+  "background_analysis_completed",
+  "missing_typical_activity_detected",
+  "curator_queue_registered",
+]);
 
 function asRecord(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -268,7 +300,7 @@ export async function ensureMissingTypicalActivityJourney(input: {
   );
   const eventAt = isoOrFallback(eventRow.created_at, analyzedAt);
 
-  const timestamps: Record<RealityCuratorJourneyEventCode, string> = {
+  const timestamps: Partial<Record<RealityCuratorJourneyEventCode, string>> = {
     candidate_signal_registered: signalAt,
     activity_event_saved: eventAt,
     background_analysis_completed: analyzedAt,
@@ -280,12 +312,17 @@ export async function ensureMissingTypicalActivityJourney(input: {
   let duplicates = 0;
 
   for (const definition of EVENT_DEFINITIONS) {
+    if (!AUTOMATIC_JOURNEY_EVENT_CODES.has(definition.eventCode)) continue;
+    const occurredAt = timestamps[definition.eventCode];
+    if (!occurredAt) {
+      throw new Error(`REALITY_CURATOR_JOURNEY_AUTOMATIC_TIMESTAMP_MISSING:${definition.eventCode}`);
+    }
     const result = await appendRealityCuratorJourneyEvent({
       userId: input.userId,
       rawSignalId: input.rawSignalId,
       activityEventId: input.activityEventId,
       eventCode: definition.eventCode,
-      occurredAt: timestamps[definition.eventCode],
+      occurredAt,
       provenance: input.provenance,
       extraMetadata: {
         sourceContract: "ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1",
@@ -353,6 +390,8 @@ export async function readRealityCuratorJourneysBySignalIds(
       labelRu: text(metadata.labelRu) || definition.labelRu,
       labelEn: text(metadata.labelEn) || definition.labelEn,
       provenance: text(metadata.provenance) || "unknown",
+      resultSummaryRu: text(metadata.resultSummaryRu) || null,
+      resultSummaryEn: text(metadata.resultSummaryEn) || null,
     });
   }
 

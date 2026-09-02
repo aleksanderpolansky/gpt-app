@@ -1,0 +1,146 @@
+import { NextResponse } from "next/server";
+
+import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
+import { supabase } from "../../../../../../../lib/supabase";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+const ROUTE_MARKER = "reality-curator-template-check-v1" as const;
+const BASIC_CONTRACT = "ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1" as const;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const LIMIT = 500;
+
+type JsonRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): JsonRecord {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as JsonRecord)
+    : {};
+}
+
+function text(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+export async function GET(request: Request) {
+  const guard = await requirePlatformAdmin();
+  if (!guard.ok) return platformAdminErrorResponse(guard, ROUTE_MARKER);
+
+  const signalId = text(new URL(request.url).searchParams.get("signalId"));
+  if (!UUID_RE.test(signalId)) {
+    return NextResponse.json(
+      { ok: false, routeMarker: ROUTE_MARKER, error: "signalId is invalid" },
+      { status: 400 },
+    );
+  }
+
+  const { data: signalRows, error: signalError } = await supabase
+    .from("raw_activity_signals")
+    .select("id,user_id,source_type,idempotency_key,normalized_preview_json,output_event_id")
+    .eq("id", signalId)
+    .limit(1);
+
+  if (signalError) {
+    return NextResponse.json(
+      { ok: false, routeMarker: ROUTE_MARKER, error: signalError.message },
+      { status: 500 },
+    );
+  }
+  const signal = signalRows?.[0];
+  if (!signal) {
+    return NextResponse.json(
+      { ok: false, routeMarker: ROUTE_MARKER, error: "Signal not found" },
+      { status: 404 },
+    );
+  }
+
+  const normalized = asRecord(signal.normalized_preview_json);
+  const analysis = asRecord(normalized.basicIntakeAnalysisV1);
+  const candidates = Array.isArray(analysis.templateCandidates)
+    ? analysis.templateCandidates
+    : [];
+  const eligible =
+    signal.source_type === "manual_chat" &&
+    text(signal.idempotency_key).startsWith("activity_ai_lab_quick_capture:") &&
+    analysis.contract === BASIC_CONTRACT &&
+    analysis.status === "completed" &&
+    analysis.noSuitableTypicalActivity === true &&
+    candidates.length === 0;
+
+  if (!eligible) {
+    return NextResponse.json(
+      { ok: false, routeMarker: ROUTE_MARKER, error: "Signal is not eligible" },
+      { status: 409 },
+    );
+  }
+
+  const activityEventId = text(analysis.activityEventId) || text(signal.output_event_id);
+  if (!activityEventId) {
+    return NextResponse.json(
+      { ok: false, routeMarker: ROUTE_MARKER, error: "Activity event is missing" },
+      { status: 409 },
+    );
+  }
+
+  const { data: eventRows, error: eventError } = await supabase
+    .from("activity_events")
+    .select("id,acting_as_actor_id")
+    .eq("id", activityEventId)
+    .eq("user_id", signal.user_id)
+    .limit(1);
+
+  if (eventError) {
+    return NextResponse.json(
+      { ok: false, routeMarker: ROUTE_MARKER, error: eventError.message },
+      { status: 500 },
+    );
+  }
+  const actorId = text(eventRows?.[0]?.acting_as_actor_id);
+  if (!actorId) {
+    return NextResponse.json(
+      { ok: false, routeMarker: ROUTE_MARKER, error: "Activity profile is missing" },
+      { status: 409 },
+    );
+  }
+
+  const { data: templateRows, error: templateError } = await supabase
+    .from("activity_templates")
+    .select("id,title,short_title,template_group,updated_at")
+    .eq("owner_user_id", signal.user_id)
+    .eq("owner_actor_id", actorId)
+    .eq("template_scope", "user")
+    .eq("status", "active")
+    .eq("is_active", true)
+    .order("updated_at", { ascending: false })
+    .limit(LIMIT);
+
+  if (templateError) {
+    return NextResponse.json(
+      { ok: false, routeMarker: ROUTE_MARKER, error: templateError.message },
+      { status: 500 },
+    );
+  }
+
+  const templates = (templateRows ?? []).map((item) => ({
+    id: item.id,
+    title: text(item.title),
+    shortTitle: text(item.short_title) || null,
+    templateGroup: text(item.template_group) || null,
+    updatedAt: text(item.updated_at) || null,
+  }));
+
+  return NextResponse.json({
+    ok: true,
+    routeMarker: ROUTE_MARKER,
+    signalId,
+    templates,
+    count: templates.length,
+    truncated: templates.length >= LIMIT,
+    scope: "current_profile",
+    readOnly: true,
+  });
+}
