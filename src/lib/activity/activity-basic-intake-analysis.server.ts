@@ -1,6 +1,8 @@
 import { Buffer } from "node:buffer";
 import crypto from "node:crypto";
 
+import { ensureMissingTypicalActivityJourney } from "@/lib/reality-curator/journey-log.server";
+
 import {
   runAiJsonWithUsageMetadata,
   type RunAiJsonUsageMetadata,
@@ -814,6 +816,25 @@ async function writeAnalysisState(input: {
   if (error) {
     throw new Error(`BASIC_INTAKE_SIGNAL_UPDATE_FAILED:${error.message}`);
   }
+
+  if (input.analysis.status === "completed") {
+    const activityEventId = text(input.analysis.activityEventId);
+    if (activityEventId) {
+      await ensureMissingTypicalActivityJourney({
+        userId: input.appUserId,
+        rawSignalId: input.signalId,
+        activityEventId,
+        analysis: input.analysis,
+        provenance: "runtime_durable_evidence",
+      }).catch((journeyError) => {
+        console.error(
+          "REALITY_CURATOR_JOURNEY_ENSURE_FAILED",
+          input.signalId,
+          journeyError,
+        );
+      });
+    }
+  }
 }
 
 export async function markBasicActivityIntakeFailureV1(input: {
@@ -881,6 +902,19 @@ export async function analyzeBasicActivityIntakeV1(input: {
     existing.status === "completed" &&
     existing.activityEventId === input.activityEventId
   ) {
+    await ensureMissingTypicalActivityJourney({
+      userId: input.appUserId,
+      rawSignalId: input.signalId,
+      activityEventId: input.activityEventId,
+      analysis: existing,
+      provenance: "runtime_durable_evidence",
+    }).catch((journeyError) => {
+      console.error(
+        "REALITY_CURATOR_JOURNEY_SELF_HEAL_FAILED",
+        input.signalId,
+        journeyError,
+      );
+    });
     return existing;
   }
 

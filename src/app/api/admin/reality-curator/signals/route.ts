@@ -5,6 +5,7 @@ import {
   requirePlatformAdmin,
 } from "@/lib/admin/require-platform-admin";
 import { supabase } from "../../../../../../lib/supabase";
+import { readRealityCuratorJourneysBySignalIds } from "@/lib/reality-curator/journey-log.server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -167,15 +168,24 @@ export async function GET(request: Request) {
     .map(buildCuratorSignal)
     .filter((item): item is NonNullable<typeof item> => item !== null);
 
+  const journeyBySignalId = await readRealityCuratorJourneysBySignalIds(
+    signals.map((signal) => signal.signalId),
+  );
+  const signalsWithJourney = signals.map((signal) => ({
+    ...signal,
+    journey: journeyBySignalId[signal.signalId] ?? [],
+  }));
+
   return NextResponse.json(
     {
       ok: true,
       routeMarker: ROUTE_MARKER,
       queueContract: "ARCTOR_REALITY_CURATOR_LIVE_SIGNAL_QUEUE_V1",
+      journeyContract: "ARCTOR_REALITY_CURATOR_JOURNEY_V1",
       signalKind: "missing_typical_activity",
-      signals,
+      signals: signalsWithJourney,
       counts: {
-        visible: signals.length,
+        visible: signalsWithJourney.length,
         scanned: scannedRows.length,
         scanLimit: limit,
       },
