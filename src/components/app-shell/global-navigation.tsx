@@ -679,6 +679,7 @@ export function GlobalSidebar({
     currentPathname === "/settings/ai-processing";
   const isUploadedFilesActive = currentPathname === "/uploaded-files";
   const isLocalEditorsActive = isLocalEditorPrivacyRoute(currentPathname);
+  const isRealityCuratorActive = currentPathname.startsWith("/admin/reality-curator");
   const isSystemAiInstructionsActive =
     currentPathname === "/admin/ai-instructions";
   const isAdminUsersActive = currentPathname === "/admin/users";
@@ -689,6 +690,7 @@ export function GlobalSidebar({
     isUserAiProcessingActive ||
     isUploadedFilesActive ||
     isLocalEditorsActive ||
+    isRealityCuratorActive ||
     isSystemAiInstructionsActive ||
     isAdminUsersActive ||
     isAdminAiBillingActive ||
@@ -803,6 +805,14 @@ export function GlobalSidebar({
           />
           {showAdminNavigation ? (
             <>
+              {adminCanEdit ? (
+                <TreeItem
+                  label={t("navigation.realityCurator")}
+                  depth={1}
+                  href={localeHref("/admin/reality-curator/signals")}
+                  active={isRealityCuratorActive}
+                />
+              ) : null}
               <TreeItem
                 label={t("navigation.systemAiInstructions")}
                 depth={1}
