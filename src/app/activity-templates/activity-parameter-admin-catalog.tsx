@@ -7,6 +7,14 @@ import {
   getActivityUnitLabel,
   type ActivityParameterLocale,
 } from "@/lib/activity/activity-parameter-presentation";
+import {
+  getActivityAggregationLabel,
+  getActivityDimensionLabel,
+  getActivityParameterShowInactiveLabel,
+  getActivityValueTypeLabel,
+  getActivityWindowLabel,
+  withTechnicalCode,
+} from "@/lib/activity/activity-parameter-vocabulary";
 
 type DefinitionItem = {
   id: string;
@@ -98,21 +106,18 @@ type Copy = {
 const COPY: Record<ActivityParameterLocale, Copy> = {
   en: { title:"Parameter catalog", intro:"System parameters used by observation objects and activity templates. Technical code is generated once and never changes.", create:"New parameter", search:"Search parameters…", active:"Active", retired:"Inactive", edit:"Edit", noItems:"No parameters found.", technicalCode:"Technical code", generatedCode:"Generated automatically after creation", usage:"Uses", locked:"Semantics locked", unlocked:"Editable", name:"Name", description:"Description", dimension:"Dimension", valueType:"Value type", canonicalUnit:"Canonical unit", allowedUnits:"Allowed units (comma-separated)", aggregation:"Aggregation", window:"Default window", allowNegative:"Allow negative values", save:"Save", saving:"Saving…", cancel:"Cancel", deactivate:"Deactivate", activate:"Activate", semanticLockHelp:"This parameter is already used. Its meaning cannot be rewritten; create a new parameter for different semantics. Activation status remains editable.", created:"Parameter created.", updated:"Parameter updated." },
   pl: { title:"Katalog parametrów", intro:"Parametry systemowe używane przez obiekty obserwacji i aktywności typowe. Kod techniczny powstaje raz i później się nie zmienia.", create:"Nowy parametr", search:"Szukaj parametrów…", active:"Aktywny", retired:"Nieaktywny", edit:"Edytuj", noItems:"Nie znaleziono parametrów.", technicalCode:"Kod techniczny", generatedCode:"Zostanie wygenerowany automatycznie po utworzeniu", usage:"Użycia", locked:"Semantyka zablokowana", unlocked:"Można edytować", name:"Nazwa", description:"Opis", dimension:"Wymiar", valueType:"Typ wartości", canonicalUnit:"Jednostka kanoniczna", allowedUnits:"Dozwolone jednostki (po przecinku)", aggregation:"Agregacja", window:"Domyślne okno", allowNegative:"Dopuść wartości ujemne", save:"Zapisz", saving:"Zapisywanie…", cancel:"Anuluj", deactivate:"Dezaktywuj", activate:"Aktywuj", semanticLockHelp:"Parametr jest już używany. Nie można przepisać jego znaczenia; dla innej semantyki utwórz nowy parametr. Status aktywności nadal można zmieniać.", created:"Utworzono parametr.", updated:"Zaktualizowano parametr." },
-  ru: { title:"Каталог параметров", intro:"Системные параметры для объектов наблюдения и типовых активностей. Технический код создаётся один раз и затем не меняется.", create:"Новый параметр", search:"Поиск параметров…", active:"Активен", retired:"Неактивен", edit:"Изменить", noItems:"Параметры не найдены.", technicalCode:"Технический код", generatedCode:"Будет создан автоматически после сохранения", usage:"Использований", locked:"Смысл заблокирован", unlocked:"Можно редактировать", name:"Название", description:"Описание", dimension:"Измерение", valueType:"Тип значения", canonicalUnit:"Каноническая единица", allowedUnits:"Допустимые единицы (через запятую)", aggregation:"Агрегация", window:"Окно по умолчанию", allowNegative:"Разрешить отрицательные значения", save:"Сохранить", saving:"Сохраняю…", cancel:"Отмена", deactivate:"Деактивировать", activate:"Активировать", semanticLockHelp:"Параметр уже используется. Его смысловые поля нельзя переписывать; для нового смысла создайте новый параметр. Статус активности менять можно.", created:"Параметр создан.", updated:"Параметр обновлён." },
+  ru: { title:"Каталог параметров", intro:"Системные параметры для объектов наблюдения и типовых активностей. Технический код создаётся один раз и затем не меняется.", create:"Новый параметр", search:"Поиск параметров…", active:"Активен", retired:"Неактивен", edit:"Изменить", noItems:"Параметры не найдены.", technicalCode:"Технический код", generatedCode:"Будет создан автоматически после сохранения", usage:"Использований", locked:"Смысл заблокирован", unlocked:"Можно редактировать", name:"Название", description:"Описание", dimension:"Размерность", valueType:"Тип значения", canonicalUnit:"Каноническая единица", allowedUnits:"Допустимые единицы (через запятую)", aggregation:"Агрегация", window:"Окно по умолчанию", allowNegative:"Разрешить отрицательные значения", save:"Сохранить", saving:"Сохраняю…", cancel:"Отмена", deactivate:"Деактивировать", activate:"Активировать", semanticLockHelp:"Параметр уже используется. Его смысловые поля нельзя переписывать; для нового смысла создайте новый параметр. Статус активности менять можно.", created:"Параметр создан.", updated:"Параметр обновлён." },
   uk: { title:"Каталог параметрів", intro:"Системні параметри для об’єктів спостереження й типових активностей. Технічний код створюється один раз і далі не змінюється.", create:"Новий параметр", search:"Пошук параметрів…", active:"Активний", retired:"Неактивний", edit:"Змінити", noItems:"Параметрів не знайдено.", technicalCode:"Технічний код", generatedCode:"Буде створено автоматично після збереження", usage:"Використань", locked:"Семантика заблокована", unlocked:"Можна редагувати", name:"Назва", description:"Опис", dimension:"Вимір", valueType:"Тип значення", canonicalUnit:"Канонічна одиниця", allowedUnits:"Допустимі одиниці (через кому)", aggregation:"Агрегація", window:"Типове вікно", allowNegative:"Дозволити від’ємні значення", save:"Зберегти", saving:"Зберігаю…", cancel:"Скасувати", deactivate:"Деактивувати", activate:"Активувати", semanticLockHelp:"Параметр уже використовується. Його смислові поля не можна переписувати; для іншого змісту створіть новий параметр. Статус активності можна змінювати.", created:"Параметр створено.", updated:"Параметр оновлено." },
   de: { title:"Parameterkatalog", intro:"Systemparameter für Beobachtungsobjekte und typische Aktivitäten. Der technische Code wird einmal erzeugt und bleibt danach unveränderlich.", create:"Neuer Parameter", search:"Parameter suchen…", active:"Aktiv", retired:"Inaktiv", edit:"Bearbeiten", noItems:"Keine Parameter gefunden.", technicalCode:"Technischer Code", generatedCode:"Wird beim Erstellen automatisch erzeugt", usage:"Verwendungen", locked:"Semantik gesperrt", unlocked:"Bearbeitbar", name:"Name", description:"Beschreibung", dimension:"Dimension", valueType:"Werttyp", canonicalUnit:"Kanonische Einheit", allowedUnits:"Zulässige Einheiten (Komma-getrennt)", aggregation:"Aggregation", window:"Standardfenster", allowNegative:"Negative Werte erlauben", save:"Speichern", saving:"Speichern…", cancel:"Abbrechen", deactivate:"Deaktivieren", activate:"Aktivieren", semanticLockHelp:"Dieser Parameter wird bereits verwendet. Seine Semantik darf nicht überschrieben werden; für eine andere Bedeutung bitte einen neuen Parameter anlegen. Der Aktivstatus bleibt änderbar.", created:"Parameter erstellt.", updated:"Parameter aktualisiert." },
   es: { title:"Catálogo de parámetros", intro:"Parámetros del sistema para objetos de observación y actividades típicas. El código técnico se genera una vez y no cambia después.", create:"Nuevo parámetro", search:"Buscar parámetros…", active:"Activo", retired:"Inactivo", edit:"Editar", noItems:"No se encontraron parámetros.", technicalCode:"Código técnico", generatedCode:"Se generará automáticamente al crear", usage:"Usos", locked:"Semántica bloqueada", unlocked:"Editable", name:"Nombre", description:"Descripción", dimension:"Dimensión", valueType:"Tipo de valor", canonicalUnit:"Unidad canónica", allowedUnits:"Unidades permitidas (separadas por comas)", aggregation:"Agregación", window:"Ventana predeterminada", allowNegative:"Permitir valores negativos", save:"Guardar", saving:"Guardando…", cancel:"Cancelar", deactivate:"Desactivar", activate:"Activar", semanticLockHelp:"Este parámetro ya se utiliza. No se puede reescribir su semántica; cree un parámetro nuevo para otro significado. El estado de activación sí puede cambiarse.", created:"Parámetro creado.", updated:"Parámetro actualizado." },
   cs: { title:"Katalog parametrů", intro:"Systémové parametry pro objekty pozorování a typické aktivity. Technický kód se vytvoří jednou a potom se nemění.", create:"Nový parametr", search:"Hledat parametry…", active:"Aktivní", retired:"Neaktivní", edit:"Upravit", noItems:"Nebyly nalezeny žádné parametry.", technicalCode:"Technický kód", generatedCode:"Vygeneruje se automaticky při vytvoření", usage:"Použití", locked:"Sémantika uzamčena", unlocked:"Lze upravit", name:"Název", description:"Popis", dimension:"Rozměr", valueType:"Typ hodnoty", canonicalUnit:"Kanonická jednotka", allowedUnits:"Povolené jednotky (oddělené čárkou)", aggregation:"Agregace", window:"Výchozí okno", allowNegative:"Povolit záporné hodnoty", save:"Uložit", saving:"Ukládání…", cancel:"Zrušit", deactivate:"Deaktivovat", activate:"Aktivovat", semanticLockHelp:"Parametr se již používá. Jeho sémantiku nelze přepsat; pro jiný význam vytvořte nový parametr. Stav aktivace lze stále měnit.", created:"Parametr vytvořen.", updated:"Parametr aktualizován." },
 };
 
-function formatCode(value: string): string {
-  return value.replace(/_/gu, " ");
-}
-
 export function ActivityParameterAdminCatalog({ locale }: { locale: ActivityParameterLocale }) {
   const copy = COPY[locale] ?? COPY.en;
   const [definitions, setDefinitions] = useState<DefinitionItem[]>([]);
   const [search, setSearch] = useState("");
+  const [showRetired, setShowRetired] = useState(false);
   const [editing, setEditing] = useState<DefinitionItem | null>(null);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -145,15 +150,17 @@ export function ActivityParameterAdminCatalog({ locale }: { locale: ActivityPara
 
   const filtered = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
-    if (!query) return definitions;
     return definitions.filter((item) => {
+      if (!showRetired && item.status !== "active") return false;
+      if (!query) return true;
       const presentation = getActivityParameterPresentation(item.parameterCode, locale, item.title, item.description);
-      return [presentation.title, item.title, item.parameterCode, item.dimensionCode, item.canonicalUnitCode]
+      const dimensionLabel = getActivityDimensionLabel(item.dimensionCode, locale);
+      return [presentation.title, item.title, item.parameterCode, dimensionLabel, item.dimensionCode, item.canonicalUnitCode]
         .join(" ")
         .toLocaleLowerCase()
         .includes(query);
     });
-  }, [definitions, locale, search]);
+  }, [definitions, locale, search, showRetired]);
 
   function beginCreate() {
     setEditing(null);
@@ -266,7 +273,13 @@ export function ActivityParameterAdminCatalog({ locale }: { locale: ActivityPara
         </button>
       </div>
 
-      <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={copy.search} className="mt-4 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#3b6ef8]" />
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={copy.search} className="min-w-[220px] flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#3b6ef8]" />
+        <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-600">
+          <input type="checkbox" checked={showRetired} onChange={(event) => setShowRetired(event.target.checked)} />
+          <span>{getActivityParameterShowInactiveLabel(locale)}</span>
+        </label>
+      </div>
 
       {error ? <div className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">{error}</div> : null}
       {message ? <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">{message}</div> : null}
@@ -283,7 +296,7 @@ export function ActivityParameterAdminCatalog({ locale }: { locale: ActivityPara
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${item.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{item.status === "active" ? copy.active : copy.retired}</span>
                   </div>
                   <p className="mt-1 break-all font-mono text-[10px] text-slate-400">{item.parameterCode}</p>
-                  <p className="mt-1 text-[11px] text-slate-500">{getActivityUnitLabel(item.canonicalUnitCode, locale)} · {formatCode(item.dimensionCode)} · {copy.usage}: {item.usageCount}</p>
+                  <p className="mt-1 text-[11px] text-slate-500">{getActivityUnitLabel(item.canonicalUnitCode, locale)} · {getActivityDimensionLabel(item.dimensionCode, locale)} · {copy.usage}: {item.usageCount}</p>
                   <p className={`mt-1 text-[10px] font-semibold ${item.semanticLocked ? "text-amber-700" : "text-slate-400"}`}>{item.semanticLocked ? copy.locked : copy.unlocked}</p>
                 </div>
                 <div className="flex shrink-0 flex-col gap-1.5">
@@ -302,12 +315,12 @@ export function ActivityParameterAdminCatalog({ locale }: { locale: ActivityPara
             <label className="block sm:col-span-2"><span className="text-xs font-medium">{copy.name}</span><input value={form.title} disabled={semanticLocked} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50" /></label>
             <label className="block sm:col-span-2"><span className="text-xs font-medium">{copy.description}</span><textarea rows={2} value={form.description} disabled={semanticLocked} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50" /></label>
             <div className="sm:col-span-2"><p className="text-xs font-medium">{copy.technicalCode}</p><p className="mt-1 rounded-xl bg-slate-50 px-3 py-2 font-mono text-xs text-slate-500">{editing?.parameterCode ?? copy.generatedCode}</p></div>
-            <label className="block"><span className="text-xs font-medium">{copy.dimension}</span><select value={form.dimensionCode} disabled={semanticLocked} onChange={(event) => setForm((current) => ({ ...current, dimensionCode: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50">{DIMENSIONS.map((code) => <option key={code} value={code}>{formatCode(code)}</option>)}</select></label>
-            <label className="block"><span className="text-xs font-medium">{copy.valueType}</span><select value={form.valueTypeCode} disabled={semanticLocked} onChange={(event) => setForm((current) => ({ ...current, valueTypeCode: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50">{VALUE_TYPES.map((code) => <option key={code} value={code}>{formatCode(code)}</option>)}</select></label>
+            <label className="block"><span className="text-xs font-medium">{copy.dimension}</span><select value={form.dimensionCode} disabled={semanticLocked} onChange={(event) => setForm((current) => ({ ...current, dimensionCode: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50">{DIMENSIONS.map((code) => <option key={code} value={code}>{withTechnicalCode(getActivityDimensionLabel(code, locale), code)}</option>)}</select></label>
+            <label className="block"><span className="text-xs font-medium">{copy.valueType}</span><select value={form.valueTypeCode} disabled={semanticLocked} onChange={(event) => setForm((current) => ({ ...current, valueTypeCode: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50">{VALUE_TYPES.map((code) => <option key={code} value={code}>{withTechnicalCode(getActivityValueTypeLabel(code, locale), code)}</option>)}</select></label>
             <label className="block"><span className="text-xs font-medium">{copy.canonicalUnit}</span><input value={form.canonicalUnitCode} disabled={semanticLocked} onChange={(event) => setForm((current) => ({ ...current, canonicalUnitCode: event.target.value.toLowerCase() }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-mono text-sm disabled:bg-slate-50" /></label>
             <label className="block"><span className="text-xs font-medium">{copy.allowedUnits}</span><input value={form.allowedUnitCodes} disabled={semanticLocked} onChange={(event) => setForm((current) => ({ ...current, allowedUnitCodes: event.target.value.toLowerCase() }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-mono text-sm disabled:bg-slate-50" /></label>
-            <label className="block"><span className="text-xs font-medium">{copy.aggregation}</span><select value={form.aggregationMethodCode} disabled={semanticLocked} onChange={(event) => setForm((current) => ({ ...current, aggregationMethodCode: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50">{AGGREGATIONS.map((code) => <option key={code} value={code}>{formatCode(code)}</option>)}</select></label>
-            <label className="block"><span className="text-xs font-medium">{copy.window}</span><select value={form.defaultWindowCode} disabled={semanticLocked} onChange={(event) => setForm((current) => ({ ...current, defaultWindowCode: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50">{WINDOWS.map((code) => <option key={code} value={code}>{formatCode(code)}</option>)}</select></label>
+            <label className="block"><span className="text-xs font-medium">{copy.aggregation}</span><select value={form.aggregationMethodCode} disabled={semanticLocked} onChange={(event) => setForm((current) => ({ ...current, aggregationMethodCode: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50">{AGGREGATIONS.map((code) => <option key={code} value={code}>{withTechnicalCode(getActivityAggregationLabel(code, locale), code)}</option>)}</select></label>
+            <label className="block"><span className="text-xs font-medium">{copy.window}</span><select value={form.defaultWindowCode} disabled={semanticLocked} onChange={(event) => setForm((current) => ({ ...current, defaultWindowCode: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50">{WINDOWS.map((code) => <option key={code} value={code}>{withTechnicalCode(getActivityWindowLabel(code, locale), code)}</option>)}</select></label>
             <label className="flex items-center gap-2 sm:col-span-2"><input type="checkbox" checked={form.allowNegative} disabled={semanticLocked} onChange={(event) => setForm((current) => ({ ...current, allowNegative: event.target.checked }))} /><span className="text-xs font-medium">{copy.allowNegative}</span></label>
           </div>
           {semanticLocked ? <div className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">{copy.semanticLockHelp}</div> : null}
