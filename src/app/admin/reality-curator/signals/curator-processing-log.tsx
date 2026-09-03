@@ -117,6 +117,8 @@ export function CuratorProcessingLog({ data, locale }: Props) {
         </div>
       </div>
 
+      <div data-reality-curator-next-step-anchor className="mt-3" />
+
       <div className="mt-3 space-y-3">
         {data.blocks.map((block) => (
           <section key={block.code} className="rounded-2xl border border-[#e3e8f3] bg-white p-4">

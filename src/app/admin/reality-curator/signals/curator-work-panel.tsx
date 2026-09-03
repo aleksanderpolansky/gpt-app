@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import type { LocaleCode } from "@/i18n";
 
@@ -46,6 +47,7 @@ type WorkCopy = {
   takeHint: string;
   checkTitle: string;
   checkHint: string;
+  decisionHint: string;
   loadActivities: string;
   loadingActivities: string;
   filterPlaceholder: string;
@@ -66,9 +68,10 @@ const COPY: Record<LocaleCode, WorkCopy> = {
     nextStep: "Следующий шаг куратора",
     takeIntoWork: "Взять в работу",
     takingIntoWork: "Сохраняем…",
-    takeHint: "После нажатия система запишет в историю, кто и когда начал работу с этим сигналом.",
+    takeHint: "Возьмите сигнал в работу, если готовы начать разбор. Система зафиксирует куратора и время, после чего покажет только следующий обязательный шаг.",
     checkTitle: "Определение типовой активности",
-    checkHint: "Сначала проверьте, не существует ли уже подходящая типовая активность в текущем профиле. Это отделяет пробел модели от ошибки распознавания.",
+    checkHint: "На этом шаге нужно выяснить, существует ли уже подходящий шаблон. Сначала покажите активности профиля; при необходимости откройте полный каталог в отдельной вкладке. Это отделяет реальный пробел модели от ошибки распознавания.",
+    decisionHint: "Завершите шаг одним из двух решений: выберите найденную активность и подтвердите её либо зафиксируйте, что подходящего шаблона нет. В комментарии кратко укажите основание решения.",
     loadActivities: "Показать существующие активности",
     loadingActivities: "Загружаем…",
     filterPlaceholder: "Фильтр по названию…",
@@ -87,9 +90,10 @@ const COPY: Record<LocaleCode, WorkCopy> = {
     nextStep: "Next curator step",
     takeIntoWork: "Take into work",
     takingIntoWork: "Saving…",
-    takeHint: "The history will record who started work with this signal and when.",
+    takeHint: "Take the signal into work when you are ready to review it. The system records the curator and time, then shows only the next required step.",
     checkTitle: "Check existing typical activities",
-    checkHint: "First verify whether a suitable typical activity already exists in the current profile.",
+    checkHint: "Determine whether a suitable template already exists. First load the profile activities; if needed, open the full catalog in a new tab. This separates a real model gap from a recognition error.",
+    decisionHint: "Finish this step with one decision: confirm the selected matching activity or record that no suitable template exists. Briefly explain the basis in the comment.",
     loadActivities: "Show existing activities",
     loadingActivities: "Loading…",
     filterPlaceholder: "Filter by title…",
@@ -108,9 +112,10 @@ const COPY: Record<LocaleCode, WorkCopy> = {
     nextStep: "Następny krok kuratora",
     takeIntoWork: "Podejmij sprawę",
     takingIntoWork: "Zapisywanie…",
-    takeHint: "Historia zapisze, kto i kiedy rozpoczął pracę nad tym sygnałem.",
+    takeHint: "Podejmij sygnał, gdy jesteś gotowy rozpocząć analizę. System zapisze kuratora i czas, a następnie pokaże tylko kolejny wymagany krok.",
     checkTitle: "Sprawdzenie istniejących aktywności typowych",
-    checkHint: "Najpierw sprawdź, czy odpowiednia aktywność typowa już istnieje w bieżącym profilu.",
+    checkHint: "Ustal, czy odpowiedni szablon już istnieje. Najpierw wczytaj aktywności profilu; w razie potrzeby otwórz pełny katalog w nowej karcie. To oddziela rzeczywistą lukę modelu od błędu rozpoznania.",
+    decisionHint: "Zakończ krok jedną decyzją: potwierdź wybraną pasującą aktywność albo zapisz, że odpowiedniego szablonu nie ma. Krótko uzasadnij decyzję w komentarzu.",
     loadActivities: "Pokaż istniejące aktywności",
     loadingActivities: "Ładowanie…",
     filterPlaceholder: "Filtruj po nazwie…",
@@ -129,9 +134,10 @@ const COPY: Record<LocaleCode, WorkCopy> = {
     nextStep: "Наступний крок куратора",
     takeIntoWork: "Взяти в роботу",
     takingIntoWork: "Зберігаємо…",
-    takeHint: "Історія зафіксує, хто і коли почав роботу з цим сигналом.",
+    takeHint: "Візьміть сигнал у роботу, коли готові почати розбір. Система зафіксує куратора й час, а потім покаже лише наступний обов’язковий крок.",
     checkTitle: "Перевірка наявних типових активностей",
-    checkHint: "Спочатку перевірте, чи вже існує відповідна типова активність у поточному профілі.",
+    checkHint: "З’ясуйте, чи вже існує відповідний шаблон. Спочатку завантажте активності профілю; за потреби відкрийте повний каталог у новій вкладці. Це відокремлює реальний пробіл моделі від помилки розпізнавання.",
+    decisionHint: "Завершіть крок одним рішенням: підтвердьте вибрану відповідну активність або зафіксуйте, що відповідного шаблону немає. Коротко поясніть підставу в коментарі.",
     loadActivities: "Показати наявні активності",
     loadingActivities: "Завантажуємо…",
     filterPlaceholder: "Фільтр за назвою…",
@@ -150,9 +156,10 @@ const COPY: Record<LocaleCode, WorkCopy> = {
     nextStep: "Nächster Kuratorenschritt",
     takeIntoWork: "In Bearbeitung nehmen",
     takingIntoWork: "Speichern…",
-    takeHint: "Der Verlauf speichert, wer die Bearbeitung begonnen hat und wann.",
+    takeHint: "Nehmen Sie das Signal in Bearbeitung, wenn Sie mit der Prüfung beginnen können. Das System speichert Kurator und Zeitpunkt und zeigt danach nur den nächsten Pflichtschritt.",
     checkTitle: "Vorhandene typische Aktivitäten prüfen",
-    checkHint: "Prüfen Sie zuerst, ob im aktuellen Profil bereits eine passende typische Aktivität existiert.",
+    checkHint: "Klären Sie, ob bereits eine passende Vorlage existiert. Laden Sie zuerst die Aktivitäten des Profils; öffnen Sie bei Bedarf den vollständigen Katalog in einem neuen Tab. So wird eine echte Modelllücke von einem Erkennungsfehler getrennt.",
+    decisionHint: "Beenden Sie den Schritt mit genau einer Entscheidung: die ausgewählte passende Aktivität bestätigen oder festhalten, dass keine passende Vorlage existiert. Begründen Sie dies kurz im Kommentar.",
     loadActivities: "Vorhandene Aktivitäten anzeigen",
     loadingActivities: "Laden…",
     filterPlaceholder: "Nach Titel filtern…",
@@ -171,9 +178,10 @@ const COPY: Record<LocaleCode, WorkCopy> = {
     nextStep: "Siguiente paso del curador",
     takeIntoWork: "Tomar en trabajo",
     takingIntoWork: "Guardando…",
-    takeHint: "El historial registrará quién inició el trabajo con esta señal y cuándo.",
+    takeHint: "Tome la señal en trabajo cuando esté listo para revisarla. El sistema registrará al curador y la hora y después mostrará solo el siguiente paso obligatorio.",
     checkTitle: "Comprobar actividades típicas existentes",
-    checkHint: "Primero compruebe si ya existe una actividad típica adecuada en el perfil actual.",
+    checkHint: "Determine si ya existe una plantilla adecuada. Primero cargue las actividades del perfil; si hace falta, abra el catálogo completo en una pestaña nueva. Esto separa una laguna real del modelo de un error de reconocimiento.",
+    decisionHint: "Finalice el paso con una sola decisión: confirme la actividad seleccionada o registre que no existe una plantilla adecuada. Explique brevemente el motivo en el comentario.",
     loadActivities: "Mostrar actividades existentes",
     loadingActivities: "Cargando…",
     filterPlaceholder: "Filtrar por título…",
@@ -192,9 +200,10 @@ const COPY: Record<LocaleCode, WorkCopy> = {
     nextStep: "Další krok kurátora",
     takeIntoWork: "Převzít do práce",
     takingIntoWork: "Ukládání…",
-    takeHint: "Historie zaznamená, kdo a kdy začal se signálem pracovat.",
+    takeHint: "Převezměte signál do práce, až budete připraveni zahájit kontrolu. Systém zaznamená kurátora a čas a potom zobrazí pouze další povinný krok.",
     checkTitle: "Kontrola existujících typických aktivit",
-    checkHint: "Nejprve ověřte, zda v aktuálním profilu již existuje vhodná typická aktivita.",
+    checkHint: "Zjistěte, zda již existuje vhodná šablona. Nejprve načtěte aktivity profilu; podle potřeby otevřete celý katalog v nové kartě. Tím oddělíte skutečnou mezeru modelu od chyby rozpoznání.",
+    decisionHint: "Dokončete krok jediným rozhodnutím: potvrďte vybranou odpovídající aktivitu, nebo zaznamenejte, že vhodná šablona neexistuje. Stručně uveďte důvod v komentáři.",
     loadActivities: "Zobrazit existující aktivity",
     loadingActivities: "Načítání…",
     filterPlaceholder: "Filtrovat podle názvu…",
@@ -247,6 +256,21 @@ export function CuratorWorkPanel({ signalId, journey, locale, onChanged }: Props
   const [comment, setComment] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [truncated, setTruncated] = useState(false);
+  const placeholderRef = useRef<HTMLDivElement | null>(null);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const placeholder = placeholderRef.current;
+    if (!placeholder) return;
+
+    const anchors = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-reality-curator-next-step-anchor]"),
+    );
+    const preceding = anchors.filter((anchor) =>
+      Boolean(anchor.compareDocumentPosition(placeholder) & Node.DOCUMENT_POSITION_FOLLOWING),
+    );
+    setPortalTarget(preceding.at(-1) ?? null);
+  }, [signalId, journey]);
 
   const workStarted = journey.some((item) => item.eventCode === "curator_work_started");
   const checkEvent = journey.find((item) => item.eventCode === "existing_typical_activity_checked");
@@ -302,20 +326,20 @@ export function CuratorWorkPanel({ signalId, journey, locale, onChanged }: Props
     }
   };
 
+  let content: ReactNode;
+
   if (checkCompleted) {
-    return (
-      <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
+    content = (
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
         <div className="text-sm font-extrabold text-emerald-900">{copy.completed}</div>
         {resultSummary(checkEvent, locale) ? (
           <div className="mt-1 text-sm leading-5 text-emerald-800">{resultSummary(checkEvent, locale)}</div>
         ) : null}
       </div>
     );
-  }
-
-  if (!workStarted) {
-    return (
-      <div className="mt-4 rounded-2xl border border-[#dce3f5] bg-[#f8faff] p-4">
+  } else if (!workStarted) {
+    content = (
+      <div className="rounded-2xl border border-[#dce3f5] bg-[#f8faff] p-4">
         <div className="text-sm font-extrabold text-[#263044]">{copy.nextStep}</div>
         <div className="mt-1 text-xs leading-5 text-[#727991]">{copy.takeHint}</div>
         <button
@@ -329,113 +353,125 @@ export function CuratorWorkPanel({ signalId, journey, locale, onChanged }: Props
         {error ? <div className="mt-2 text-xs text-red-700">{copy.error} {error}</div> : null}
       </div>
     );
+  } else {
+    const selected = templates?.find((item) => item.id === selectedTemplateId) ?? null;
+
+    content = (
+      <div className="rounded-2xl border border-[#dce3f5] bg-[#f8faff] p-4">
+        <div className="text-sm font-extrabold text-[#263044]">{copy.checkTitle}</div>
+        <div className="mt-1 text-xs leading-5 text-[#727991]">{copy.checkHint}</div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={loadingTemplates || busy}
+            onClick={() => void loadTemplates()}
+            className="inline-flex h-10 items-center rounded-xl border border-[#cfd8ef] bg-white px-3 text-sm font-bold text-[#34405a] disabled:opacity-50"
+          >
+            {loadingTemplates ? copy.loadingActivities : copy.loadActivities}
+          </button>
+          <Link
+            href={`/activity-templates?locale=${locale}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-10 items-center rounded-xl border border-[#cfd8ef] bg-white px-3 text-sm font-bold text-[#34405a]"
+          >
+            {copy.openActivities}
+          </Link>
+        </div>
+
+        {templates ? (
+          <div className="mt-3 space-y-3">
+            <input
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+              placeholder={copy.filterPlaceholder}
+              className="h-10 w-full rounded-xl border border-[#d8def0] bg-white px-3 text-sm outline-none"
+            />
+            {truncated ? <div className="text-xs text-amber-700">{copy.limited}</div> : null}
+            {filtered.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-[#d8def0] bg-white px-3 py-4 text-xs text-[#7c8099]">
+                {copy.noActivities}
+              </div>
+            ) : (
+              <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                {filtered.map((item) => {
+                  const selectedRow = selectedTemplateId === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setSelectedTemplateId(item.id)}
+                      className={`w-full rounded-xl border px-3 py-2.5 text-left ${selectedRow ? "border-[#3b6ef8] bg-[#eef3ff]" : "border-[#e3e8f3] bg-white"}`}
+                    >
+                      <div className="text-sm font-bold text-[#263044]">{item.title}</div>
+                      <div className="mt-1 text-[11px] text-[#7c8099]">
+                        {[item.shortTitle, item.templateGroup].filter(Boolean).join(" · ") || "—"}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {selected ? (
+              <div className="rounded-xl bg-white px-3 py-2 text-xs text-[#4b5563]">
+                <span className="font-bold">{copy.selected}: </span>{selected.title}
+              </div>
+            ) : null}
+            <label className="block">
+              <div className="mb-1 text-xs font-bold text-[#4b5563]">{COMMENT_LABEL[locale]}</div>
+              <textarea
+                value={comment}
+                onChange={(event) => setComment(event.target.value.slice(0, 1500))}
+                placeholder={COMMENT_PLACEHOLDER[locale]}
+                rows={3}
+                className="w-full resize-y rounded-xl border border-[#d8def0] bg-white px-3 py-2 text-sm outline-none"
+              />
+              <div className="mt-1 text-right text-[10px] text-[#9ca3b8]">{comment.length}/1500</div>
+            </label>
+            <div className="rounded-xl border border-[#e1e6f3] bg-white px-3 py-2.5 text-xs leading-5 text-[#5f6679]">
+              {copy.decisionHint}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={busy || !selectedTemplateId}
+                onClick={() => void postAction({
+                  action: "complete_activity_check",
+                  result: "found",
+                  templateId: selectedTemplateId,
+                  comment,
+                })}
+                className="inline-flex min-h-10 items-center rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-40"
+              >
+                {busy ? copy.saving : copy.saveFound}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void postAction({
+                  action: "complete_activity_check",
+                  result: "not_found",
+                  comment,
+                })}
+                className="inline-flex min-h-10 items-center rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-900 disabled:opacity-40"
+              >
+                {busy ? copy.saving : copy.saveNotFound}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {error ? <div className="mt-2 text-xs text-red-700">{copy.error} {error}</div> : null}
+      </div>
+    );
   }
 
-  const selected = templates?.find((item) => item.id === selectedTemplateId) ?? null;
-
   return (
-    <div className="mt-4 rounded-2xl border border-[#dce3f5] bg-[#f8faff] p-4">
-      <div className="text-sm font-extrabold text-[#263044]">{copy.checkTitle}</div>
-      <div className="mt-1 text-xs leading-5 text-[#727991]">{copy.checkHint}</div>
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={loadingTemplates || busy}
-          onClick={() => void loadTemplates()}
-          className="inline-flex h-10 items-center rounded-xl border border-[#cfd8ef] bg-white px-3 text-sm font-bold text-[#34405a] disabled:opacity-50"
-        >
-          {loadingTemplates ? copy.loadingActivities : copy.loadActivities}
-        </button>
-        <Link
-          href={`/activity-templates?locale=${locale}`}
-          className="inline-flex h-10 items-center rounded-xl border border-[#cfd8ef] bg-white px-3 text-sm font-bold text-[#34405a]"
-        >
-          {copy.openActivities}
-        </Link>
-      </div>
-
-      {templates ? (
-        <div className="mt-3 space-y-3">
-          <input
-            value={filter}
-            onChange={(event) => setFilter(event.target.value)}
-            placeholder={copy.filterPlaceholder}
-            className="h-10 w-full rounded-xl border border-[#d8def0] bg-white px-3 text-sm outline-none"
-          />
-          {truncated ? <div className="text-xs text-amber-700">{copy.limited}</div> : null}
-          {filtered.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-[#d8def0] bg-white px-3 py-4 text-xs text-[#7c8099]">
-              {copy.noActivities}
-            </div>
-          ) : (
-            <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
-              {filtered.map((item) => {
-                const selectedRow = selectedTemplateId === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setSelectedTemplateId(item.id)}
-                    className={`w-full rounded-xl border px-3 py-2.5 text-left ${selectedRow ? "border-[#3b6ef8] bg-[#eef3ff]" : "border-[#e3e8f3] bg-white"}`}
-                  >
-                    <div className="text-sm font-bold text-[#263044]">{item.title}</div>
-                    <div className="mt-1 text-[11px] text-[#7c8099]">
-                      {[item.shortTitle, item.templateGroup].filter(Boolean).join(" · ") || "—"}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          <div className="text-xs leading-5 text-[#727991]">{copy.selectHint}</div>
-          {selected ? (
-            <div className="rounded-xl bg-white px-3 py-2 text-xs text-[#4b5563]">
-              <span className="font-bold">{copy.selected}: </span>{selected.title}
-            </div>
-          ) : null}
-          <label className="block">
-            <div className="mb-1 text-xs font-bold text-[#4b5563]">{COMMENT_LABEL[locale]}</div>
-            <textarea
-              value={comment}
-              onChange={(event) => setComment(event.target.value.slice(0, 1500))}
-              placeholder={COMMENT_PLACEHOLDER[locale]}
-              rows={3}
-              className="w-full resize-y rounded-xl border border-[#d8def0] bg-white px-3 py-2 text-sm outline-none"
-            />
-            <div className="mt-1 text-right text-[10px] text-[#9ca3b8]">{comment.length}/1500</div>
-          </label>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={busy || !selectedTemplateId}
-              onClick={() => void postAction({
-                action: "complete_activity_check",
-                result: "found",
-                templateId: selectedTemplateId,
-                comment,
-              })}
-              className="inline-flex min-h-10 items-center rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-40"
-            >
-              {busy ? copy.saving : copy.saveFound}
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void postAction({
-                action: "complete_activity_check",
-                result: "not_found",
-                comment,
-              })}
-              className="inline-flex min-h-10 items-center rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-900 disabled:opacity-40"
-            >
-              {busy ? copy.saving : copy.saveNotFound}
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {error ? <div className="mt-2 text-xs text-red-700">{copy.error} {error}</div> : null}
-    </div>
+    <>
+      <div ref={placeholderRef} className="hidden" aria-hidden="true" />
+      {portalTarget ? createPortal(content, portalTarget) : null}
+    </>
   );
+
 }
