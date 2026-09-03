@@ -110,9 +110,7 @@ export async function GET(request: Request) {
   const { data: templateRows, error: templateError } = await supabase
     .from("activity_templates")
     .select("id,title,short_title,template_group,updated_at")
-    .eq("owner_user_id", signal.user_id)
-    .eq("owner_actor_id", actorId)
-    .eq("template_scope", "user")
+    .eq("template_scope", "system")
     .eq("status", "active")
     .eq("is_active", true)
     .order("updated_at", { ascending: false })
@@ -140,7 +138,7 @@ export async function GET(request: Request) {
     templates,
     count: templates.length,
     truncated: templates.length >= LIMIT,
-    scope: "current_profile",
+    scope: "platform_system",
     readOnly: true,
   });
 }

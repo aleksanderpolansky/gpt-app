@@ -31,10 +31,11 @@ export type CuratorProcessingLogEvent = {
   selectedTemplateId: string | null;
   selectedTemplateTitle: string | null;
   activityCheckResult: string | null;
+  parameterCheckResult: string | null;
 };
 
 export type CuratorProcessingLogBlock = {
-  code: "activity_intake" | "work_acceptance" | "typical_activity" | "other";
+  code: "activity_intake" | "work_acceptance" | "typical_activity" | "parameter_check" | "other";
   titleRu: string;
   titleEn: string;
   latestAt: string;
@@ -134,6 +135,9 @@ function blockCode(eventCode: string): CuratorProcessingLogBlock["code"] {
   if (eventCode === "existing_typical_activity_checked") {
     return "typical_activity";
   }
+  if (eventCode === "related_parameter_catalog_checked") {
+    return "parameter_check";
+  }
   return "other";
 }
 
@@ -146,6 +150,9 @@ function blockTitle(code: CuratorProcessingLogBlock["code"]) {
   }
   if (code === "typical_activity") {
     return { ru: "Определение типовой активности", en: "Typical activity determination" };
+  }
+  if (code === "parameter_check") {
+    return { ru: "Проверка параметров и измерений", en: "Parameter and measurement check" };
   }
   return { ru: "Дальнейшая обработка", en: "Further processing" };
 }
@@ -236,11 +243,35 @@ function summarizeBlock(input: {
     };
   }
 
+  if (input.code === "parameter_check") {
+    const event = input.events.find(
+      (item) => item.eventCode === "related_parameter_catalog_checked",
+    );
+    return {
+      ru: event?.resultSummaryRu || "Проверка системного каталога параметров и измерений завершена.",
+      en: event?.resultSummaryEn || "The system parameter and measurement catalog check was completed.",
+      comment: event?.curatorComment || null,
+    };
+  }
+
   return {
     ru: newest?.resultSummaryRu || newest?.labelRu || "Выполнено действие по обработке сигнала.",
     en: newest?.resultSummaryEn || newest?.labelEn || "A signal-processing action was completed.",
     comment: newest?.curatorComment || null,
   };
+}
+
+
+function normalizeResultSummary(eventCode: string, value: unknown, locale: "ru" | "en") {
+  const raw = text(value);
+  if (eventCode !== "existing_typical_activity_checked") return raw;
+  if (locale === "ru" && raw === "Подходящей типовой активности в текущем профиле не найдено.") {
+    return "Подходящей системной типовой активности на платформе не найдено.";
+  }
+  if (locale === "en" && raw === "No suitable typical activity was found in the current profile.") {
+    return "No suitable system typical activity was found on the platform.";
+  }
+  return raw;
 }
 
 export async function readCuratorProcessingLogs(
@@ -308,8 +339,8 @@ export async function readCuratorProcessingLogs(
       checklistStepNameSnapshotRu: text(metadata.checklistStepNameSnapshotRu) || null,
       labelRu: text(metadata.labelRu) || null,
       labelEn: text(metadata.labelEn) || null,
-      resultSummaryRu: text(metadata.resultSummaryRu) || null,
-      resultSummaryEn: text(metadata.resultSummaryEn) || null,
+      resultSummaryRu: normalizeResultSummary(eventCode, metadata.resultSummaryRu, "ru") || null,
+      resultSummaryEn: normalizeResultSummary(eventCode, metadata.resultSummaryEn, "en") || null,
       actorAppUserId,
       actorDisplayName,
       actorRole: text(metadata.curatorRole) || null,
@@ -317,6 +348,7 @@ export async function readCuratorProcessingLogs(
       selectedTemplateId: text(metadata.selectedTemplateId) || null,
       selectedTemplateTitle: text(metadata.selectedTemplateTitle) || null,
       activityCheckResult: text(metadata.activityCheckResult) || null,
+      parameterCheckResult: text(metadata.parameterCheckResult) || null,
     };
     const list = rowsBySignal.get(signalId) ?? [];
     list.push(event);
@@ -372,16 +404,23 @@ export async function readCuratorProcessingLogs(
     const typicalEvent = events.find(
       (event) => event.eventCode === "existing_typical_activity_checked",
     );
-    const currentStageRu = typicalEvent
-      ? "Определение типовой активности завершено"
-      : workEvent
-        ? "Определение типовой активности"
-        : "Ожидает принятия в работу";
-    const currentStageEn = typicalEvent
-      ? "Typical activity determination completed"
-      : workEvent
-        ? "Typical activity determination"
-        : "Waiting to be taken into work";
+    const parameterEvent = events.find(
+      (event) => event.eventCode === "related_parameter_catalog_checked",
+    );
+    const currentStageRu = parameterEvent
+      ? "Проверка параметров и измерений завершена"
+      : typicalEvent
+        ? "Проверка параметров и измерений"
+        : workEvent
+          ? "Определение типовой активности"
+          : "Ожидает принятия в работу";
+    const currentStageEn = parameterEvent
+      ? "Parameter and measurement check completed"
+      : typicalEvent
+        ? "Parameter and measurement check"
+        : workEvent
+          ? "Typical activity determination"
+          : "Waiting to be taken into work";
     const last = events[0] ?? null;
 
     output[signal.signalId] = {
