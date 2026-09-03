@@ -3,6 +3,15 @@ export type ActivityParameterLocale = "en" | "pl" | "ru" | "uk" | "de" | "es" | 
 type ParameterPresentation = { readonly title: string; readonly description: string };
 
 const SYSTEM_PARAMETER_TITLES: Record<string, Record<ActivityParameterLocale, string>> = {
+  "count": {
+    en: "Count",
+    pl: "Liczba",
+    ru: "Количество",
+    uk: "Кількість",
+    de: "Anzahl",
+    es: "Cantidad",
+    cs: "Počet",
+  },
   "duration": {
     en: "Duration",
     pl: "Czas trwania",
@@ -356,6 +365,18 @@ const SYSTEM_PARAMETER_TITLES: Record<string, Record<ActivityParameterLocale, st
   },
 };
 
+const SYSTEM_PARAMETER_DESCRIPTIONS: Readonly<Record<string, Readonly<Record<ActivityParameterLocale, string>>>> = {
+  count: {
+    en: "Number of discrete units, actions, events or objects; what is being counted is defined by the linked leaf observation object.",
+    pl: "Liczba dyskretnych jednostek, działań, zdarzeń lub obiektów; przedmiot zliczania określa powiązany liściowy obiekt obserwacji.",
+    ru: "Число дискретных единиц, действий, событий или объектов; предмет подсчёта определяется связанным листовым объектом наблюдения.",
+    uk: "Кількість дискретних одиниць, дій, подій або об’єктів; предмет підрахунку визначається пов’язаним листовим об’єктом спостереження.",
+    de: "Anzahl diskreter Einheiten, Handlungen, Ereignisse oder Objekte; was gezählt wird, wird durch das verknüpfte Blatt-Beobachtungsobjekt bestimmt.",
+    es: "Número de unidades discretas, acciones, eventos u objetos; lo que se cuenta lo define el objeto de observación hoja vinculado.",
+    cs: "Počet diskrétních jednotek, akcí, událostí nebo objektů; co se počítá, určuje propojený listový objekt pozorování.",
+  },
+};
+
 const DESCRIPTION_PREFIX: Record<ActivityParameterLocale, string> = {
   en: "Measured or recorded value",
   pl: "Wartość mierzona lub rejestrowana",
@@ -416,9 +437,10 @@ export function getActivityParameterPresentation(
   }
 
   const title = titles[locale] ?? titles.en ?? fallbackTitle;
+  const descriptions = SYSTEM_PARAMETER_DESCRIPTIONS[parameterCode];
   return {
     title,
-    description: `${DESCRIPTION_PREFIX[locale] ?? DESCRIPTION_PREFIX.en}: ${title}.`,
+    description: descriptions?.[locale] ?? descriptions?.en ?? `${DESCRIPTION_PREFIX[locale] ?? DESCRIPTION_PREFIX.en}: ${title}.`,
   };
 }
 

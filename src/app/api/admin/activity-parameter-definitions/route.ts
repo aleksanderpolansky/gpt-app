@@ -182,59 +182,23 @@ function readSemanticInput(body: Record<string, unknown>): SemanticInput {
   };
 }
 
-const CYRILLIC_TRANSLITERATION: Readonly<Record<string, string>> = {
-  а: "a", б: "b", в: "v", г: "g", ґ: "g", д: "d", е: "e", ё: "e",
-  є: "ie", ж: "zh", з: "z", и: "i", і: "i", ї: "i", й: "i", к: "k",
-  л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t",
-  у: "u", ф: "f", х: "kh", ц: "ts", ч: "ch", ш: "sh", щ: "shch",
-  ы: "y", э: "e", ю: "yu", я: "ya", ь: "", ъ: "",
-};
-
-function transliterateCyrillic(value: string): string {
-  return [...value.toLowerCase()]
-    .map((character) => CYRILLIC_TRANSLITERATION[character] ?? character)
-    .join("");
+function readParameterCode(body: Record<string, unknown>): string {
+  const parameterCode = asTrimmedString(body.parameterCode).toLowerCase();
+  if (!TECHNICAL_CODE_RE.test(parameterCode)) {
+    throw new Error("Technical code must be 2-80 characters: lowercase ASCII letters, digits and underscores, starting with a letter.");
+  }
+  return parameterCode;
 }
 
-function baseParameterCode(title: string): string {
-  const transliterated = transliterateCyrillic(title)
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/gu, "")
-    .replace(/[^a-z0-9]+/gu, "_")
-    .replace(/^_+|_+$/gu, "")
-    .replace(/_+/gu, "_");
-  let base = transliterated.replace(/^[^a-z]+/u, "");
-
-  if (!base) base = "parameter";
-  if (base.length > 70) base = base.slice(0, 70).replace(/_+$/u, "");
-  if (base.length < 2) base = `${base || "p"}_value`;
-  return base;
-}
-
-async function generateUniqueParameterCode(title: string): Promise<string> {
-  const base = baseParameterCode(title);
+async function systemParameterCodeExists(parameterCode: string): Promise<boolean> {
   const { data, error } = await supabase
     .from("value_object_parameter_definitions")
-    .select("parameter_code")
+    .select("id")
     .eq("scope_code", "system")
-    .limit(5000);
-
+    .eq("parameter_code", parameterCode)
+    .limit(1);
   if (error) throw new Error(error.message);
-
-  const used = new Set(
-    ((data ?? []) as Array<{ parameter_code: string }>).map((row) => row.parameter_code),
-  );
-
-  for (let index = 1; index <= 9999; index += 1) {
-    const suffix = index === 1 ? "" : `_${index}`;
-    const maxBaseLength = 80 - suffix.length;
-    const candidate = `${base.slice(0, maxBaseLength)}${suffix}`;
-    if (TECHNICAL_CODE_RE.test(candidate) && !used.has(candidate)) {
-      return candidate;
-    }
-  }
-
-  throw new Error("Could not generate a unique parameter code.");
+  return (data ?? []).length > 0;
 }
 
 function asAllowedUnitCodes(value: unknown): string[] {
@@ -374,7 +338,18 @@ export async function POST(request: Request) {
   try {
     const body = asObject(await request.json());
     const input = readSemanticInput(body);
-    const parameterCode = await generateUniqueParameterCode(input.title);
+    const parameterCode = readParameterCode(body);
+    if (await systemParameterCodeExists(parameterCode)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          routeMarker: ROUTE_MARKER,
+          errorCode: "PARAMETER_CODE_ALREADY_EXISTS",
+          error: "This system parameter technical code already exists. Reuse or reactivate the existing parameter instead of creating a duplicate.",
+        },
+        { status: 409 },
+      );
+    }
     const { data, error } = await supabase
       .from("value_object_parameter_definitions")
       .insert({
