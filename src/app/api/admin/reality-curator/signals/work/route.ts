@@ -24,6 +24,7 @@ type WorkRequest = {
   signalId?: unknown;
   result?: unknown;
   templateId?: unknown;
+  comment?: unknown;
 };
 
 type EligibleSignal = {
@@ -104,6 +105,8 @@ function adminMetadata(guard: Awaited<ReturnType<typeof requirePlatformAdmin>>) 
     curatorAppUserId: guard.appUser.id,
     curatorAdminId: guard.platformAdmin.id,
     curatorRole: guard.platformAdmin.role,
+    curatorNameSnapshot: guard.appUser.name,
+    curatorEmailSnapshot: guard.appUser.email,
   };
 }
 
@@ -183,6 +186,13 @@ export async function POST(request: Request) {
       }
 
       const checkResult = text(body.result);
+      const curatorComment = text(body.comment);
+      if (curatorComment.length > 1500) {
+        return NextResponse.json(
+          { ok: false, routeMarker: ROUTE_MARKER, error: "comment is too long" },
+          { status: 400 },
+        );
+      }
       if (checkResult !== "found" && checkResult !== "not_found") {
         return NextResponse.json(
           { ok: false, routeMarker: ROUTE_MARKER, error: "result is invalid" },
@@ -252,6 +262,7 @@ export async function POST(request: Request) {
           selectedTemplateId,
           selectedTemplateTitle,
           selectedTemplateGroup,
+          curatorComment: curatorComment || null,
           resultSummaryRu,
           resultSummaryEn,
         },

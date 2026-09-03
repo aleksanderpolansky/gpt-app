@@ -12,6 +12,7 @@ import {
 
 import { getLocaleSearchParam, type LocaleCode } from "@/i18n";
 import { CuratorWorkPanel } from "./curator-work-panel";
+import { CuratorProcessingLog, type CuratorProcessingLogData } from "./curator-processing-log";
 
 type Measurement = {
   parameterCode: string;
@@ -57,6 +58,7 @@ type CuratorSignal = {
   candidateLoadWarning: string | null;
   measurements: Measurement[];
   journey: JourneyEvent[];
+  processingLog: CuratorProcessingLogData;
 };
 
 type QueueResponse = {
@@ -341,45 +343,6 @@ function formatMeasurement(item: Measurement) {
   return `${item.label || item.parameterCode}: ${value}${item.unit ? ` ${item.unit}` : ""}`;
 }
 
-const JOURNEY_TITLE: Record<LocaleCode, string> = {
-  ru: "Фактически пройденный путь",
-  en: "Actual completed path",
-  pl: "Faktycznie zrealizowana ścieżka",
-  uk: "Фактично пройдений шлях",
-  de: "Tatsächlich durchlaufener Weg",
-  es: "Ruta realmente completada",
-  cs: "Skutečně dokončená cesta",
-};
-
-const JOURNEY_EMPTY: Record<LocaleCode, string> = {
-  ru: "Журнал пути ещё не сформирован.",
-  en: "The journey log has not been created yet.",
-  pl: "Dziennik ścieżki nie został jeszcze utworzony.",
-  uk: "Журнал шляху ще не сформовано.",
-  de: "Das Wegprotokoll wurde noch nicht erstellt.",
-  es: "El registro de la ruta aún no se ha creado.",
-  cs: "Záznam cesty ještě nebyl vytvořen.",
-};
-
-function journeyEventLabel(item: JourneyEvent, locale: LocaleCode) {
-  return locale === "ru" ? item.labelRu : item.labelEn;
-}
-
-function journeyProvenanceLabel(value: string, locale: LocaleCode) {
-  if (value === "release_backfill_durable_evidence") {
-    return locale === "ru"
-      ? "восстановлено по сохранённым фактическим данным"
-      : "reconstructed from durable evidence";
-  }
-  if (value === "runtime_durable_evidence") {
-    return locale === "ru" ? "зафиксировано системой" : "recorded by the system";
-  }
-  if (value === "curator_action") {
-    return locale === "ru" ? "действие куратора" : "curator action";
-  }
-  return value;
-}
-
 export function RealityCuratorSignalsClient() {
   const [locale, setLocale] = useState<LocaleCode>("en");
   const [payload, setPayload] = useState<QueueResponse | null>(null);
@@ -552,45 +515,7 @@ export function RealityCuratorSignalsClient() {
                 )}
               </div>
 
-              <div className="mt-4 border-t border-[#eceef5] pt-4">
-                <div className="text-xs font-extrabold text-[#33384f]">{JOURNEY_TITLE[locale]}</div>
-                {(signal.journey ?? []).length > 0 ? (
-                  <ol className="mt-3 space-y-2.5">
-                    {(signal.journey ?? []).map((item, index) => (
-                      <li key={`${signal.signalId}:${item.eventCode}`} className="flex gap-3">
-                        <div className="flex flex-col items-center">
-                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
-                            <CheckCircle2 size={15} />
-                          </span>
-                          {index < (signal.journey ?? []).length - 1 ? <span className="mt-1 h-full min-h-5 w-px bg-emerald-100" /> : null}
-                        </div>
-                        <div className="min-w-0 flex-1 pb-1">
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                            <span className="text-sm font-bold text-[#263044]">{journeyEventLabel(item, locale)}</span>
-                            <span className="font-mono text-[10px] text-[#8990a7]">{item.eventCode}</span>
-                          </div>
-                          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[#7c8099]">
-                            <span>{formatDate(item.occurredAt, locale)}</span>
-                            <span>v{item.checklistVersion}</span>
-                            {item.checklistStepCode ? <span>{locale === "ru" ? "шаг" : "step"} {item.checklistStepCode}</span> : null}
-                            <span>{journeyProvenanceLabel(item.provenance, locale)}</span>
-                          </div>
-                          {locale === "ru" && item.checklistStepNameSnapshotRu ? (
-                            <div className="mt-1 text-[11px] leading-4 text-[#697089]">{item.checklistStepNameSnapshotRu}</div>
-                          ) : null}
-                          {(locale === "ru" ? item.resultSummaryRu : item.resultSummaryEn) ? (
-                            <div className="mt-1 text-[11px] font-semibold leading-4 text-[#4b5563]">
-                              {locale === "ru" ? item.resultSummaryRu : item.resultSummaryEn}
-                            </div>
-                          ) : null}
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
-                ) : (
-                  <div className="mt-2 text-xs text-[#8b90a5]">{JOURNEY_EMPTY[locale]}</div>
-                )}
-              </div>
+              <CuratorProcessingLog data={signal.processingLog} locale={locale} />
 
               <CuratorWorkPanel
                 signalId={signal.signalId}

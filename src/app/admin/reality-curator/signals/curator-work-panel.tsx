@@ -67,7 +67,7 @@ const COPY: Record<LocaleCode, WorkCopy> = {
     takeIntoWork: "Взять в работу",
     takingIntoWork: "Сохраняем…",
     takeHint: "После нажатия система запишет в историю, кто и когда начал работу с этим сигналом.",
-    checkTitle: "Проверка существующих типовых активностей",
+    checkTitle: "Определение типовой активности",
     checkHint: "Сначала проверьте, не существует ли уже подходящая типовая активность в текущем профиле. Это отделяет пробел модели от ошибки распознавания.",
     loadActivities: "Показать существующие активности",
     loadingActivities: "Загружаем…",
@@ -75,10 +75,10 @@ const COPY: Record<LocaleCode, WorkCopy> = {
     noActivities: "Активных типовых активностей в текущем профиле не найдено.",
     selectHint: "Если подходящая активность есть, выберите её. Если нет — зафиксируйте отсутствие.",
     selected: "Выбрано",
-    saveFound: "Подходящая активность найдена",
-    saveNotFound: "Подходящей активности нет",
+    saveFound: "Определить выбранную активность",
+    saveNotFound: "Зафиксировать отсутствие активности",
     saving: "Сохраняем результат…",
-    completed: "Проверка существующих типовых активностей завершена",
+    completed: "Определение типовой активности завершено",
     openActivities: "Открыть раздел типовых активностей",
     error: "Не удалось сохранить действие куратора.",
     limited: "Показаны последние 500 активных типовых активностей профиля.",
@@ -211,6 +211,26 @@ const COPY: Record<LocaleCode, WorkCopy> = {
   },
 };
 
+const COMMENT_LABEL: Record<LocaleCode, string> = {
+  ru: "Комментарий к решению",
+  en: "Decision comment",
+  pl: "Komentarz do decyzji",
+  uk: "Коментар до рішення",
+  de: "Kommentar zur Entscheidung",
+  es: "Comentario de la decisión",
+  cs: "Komentář k rozhodnutí",
+};
+
+const COMMENT_PLACEHOLDER: Record<LocaleCode, string> = {
+  ru: "Например: активность определена как тестовая и дальнейшая обработка не требуется…",
+  en: "For example: this is a test activity and no further processing is required…",
+  pl: "Np.: aktywność jest testowa i nie wymaga dalszego przetwarzania…",
+  uk: "Наприклад: активність тестова й не потребує подальшої обробки…",
+  de: "Zum Beispiel: Testaktivität, keine weitere Bearbeitung erforderlich…",
+  es: "Por ejemplo: actividad de prueba; no requiere más tratamiento…",
+  cs: "Například: testovací aktivita; další zpracování není potřeba…",
+};
+
 function resultSummary(item: JourneyItem | undefined, locale: LocaleCode) {
   if (!item) return null;
   if (locale === "ru") return item.resultSummaryRu || item.resultSummaryEn || null;
@@ -224,6 +244,7 @@ export function CuratorWorkPanel({ signalId, journey, locale, onChanged }: Props
   const [templates, setTemplates] = useState<TemplateItem[] | null>(null);
   const [filter, setFilter] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [comment, setComment] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [truncated, setTruncated] = useState(false);
 
@@ -373,6 +394,17 @@ export function CuratorWorkPanel({ signalId, journey, locale, onChanged }: Props
               <span className="font-bold">{copy.selected}: </span>{selected.title}
             </div>
           ) : null}
+          <label className="block">
+            <div className="mb-1 text-xs font-bold text-[#4b5563]">{COMMENT_LABEL[locale]}</div>
+            <textarea
+              value={comment}
+              onChange={(event) => setComment(event.target.value.slice(0, 1500))}
+              placeholder={COMMENT_PLACEHOLDER[locale]}
+              rows={3}
+              className="w-full resize-y rounded-xl border border-[#d8def0] bg-white px-3 py-2 text-sm outline-none"
+            />
+            <div className="mt-1 text-right text-[10px] text-[#9ca3b8]">{comment.length}/1500</div>
+          </label>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -381,6 +413,7 @@ export function CuratorWorkPanel({ signalId, journey, locale, onChanged }: Props
                 action: "complete_activity_check",
                 result: "found",
                 templateId: selectedTemplateId,
+                comment,
               })}
               className="inline-flex min-h-10 items-center rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-40"
             >
@@ -392,6 +425,7 @@ export function CuratorWorkPanel({ signalId, journey, locale, onChanged }: Props
               onClick={() => void postAction({
                 action: "complete_activity_check",
                 result: "not_found",
+                comment,
               })}
               className="inline-flex min-h-10 items-center rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-900 disabled:opacity-40"
             >

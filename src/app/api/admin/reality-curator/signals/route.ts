@@ -6,6 +6,7 @@ import {
 } from "@/lib/admin/require-platform-admin";
 import { supabase } from "../../../../../../lib/supabase";
 import { readRealityCuratorJourneysBySignalIds } from "@/lib/reality-curator/journey-log.server";
+import { readCuratorProcessingLogs } from "@/lib/reality-curator/processing-log.server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -99,6 +100,8 @@ function buildCuratorSignal(row: RawActivitySignalRow) {
   return {
     kind: "missing_typical_activity" as const,
     status: "new" as const,
+    sourceType: row.source_type,
+    idempotencyKey: row.idempotency_key,
     signalId: row.id,
     activityEventId,
     userId: row.user_id,
@@ -176,6 +179,20 @@ export async function GET(request: Request) {
     journey: journeyBySignalId[signal.signalId] ?? [],
   }));
 
+  const processingLogBySignalId = await readCuratorProcessingLogs(
+    signalsWithJourney.map((signal) => ({
+      signalId: signal.signalId,
+      userId: signal.userId,
+      sourceText: signal.sourceText,
+      sourceType: signal.sourceType,
+      idempotencyKey: signal.idempotencyKey,
+    })),
+  );
+  const signalsWithProcessingLog = signalsWithJourney.map((signal) => ({
+    ...signal,
+    processingLog: processingLogBySignalId[signal.signalId],
+  }));
+
   return NextResponse.json(
     {
       ok: true,
@@ -183,9 +200,9 @@ export async function GET(request: Request) {
       queueContract: "ARCTOR_REALITY_CURATOR_LIVE_SIGNAL_QUEUE_V1",
       journeyContract: "ARCTOR_REALITY_CURATOR_JOURNEY_V1",
       signalKind: "missing_typical_activity",
-      signals: signalsWithJourney,
+      signals: signalsWithProcessingLog,
       counts: {
-        visible: signalsWithJourney.length,
+        visible: signalsWithProcessingLog.length,
         scanned: scannedRows.length,
         scanLimit: limit,
       },
