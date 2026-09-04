@@ -18,15 +18,17 @@ import { supabase } from "../../../../../../../lib/supabase";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const ROUTE_MARKER = "reality-curator-object-bootstrap-v1-3" as const;
+const ROUTE_MARKER = "reality-curator-object-bootstrap-v1-5" as const;
 const BASIC_CONTRACT = "ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1" as const;
 const PROCESSOR_NAME = "reality_curator_journey" as const;
 const PROCESSOR_VERSION = "1" as const;
 const PARAMETER_EVENT_CODE = "related_parameter_catalog_checked" as const;
+const PARAMETER_SELECTED_EVENT_CODE = "typical_activity_parameter_selected" as const;
+const PARAMETER_SET_EVENT_CODE = "typical_activity_parameter_set_confirmed" as const;
 const DECISION_EVENT_CODE = "measurable_object_decision_recorded" as const;
 const CREATED_EVENT_CODE = "observation_object_created" as const;
 const DECISION_CONTRACT = "ARCTOR_REALITY_CURATOR_MEASURABLE_OBJECT_V1" as const;
-const CREATION_CONTRACT = "ARCTOR_REALITY_MODEL_CURATOR_DUAL_SCOPE_BOOTSTRAP_V1_3" as const;
+const CREATION_CONTRACT = "ARCTOR_REALITY_MODEL_CURATOR_ACTIVITY_TEMPLATE_BUILDER_V1_5" as const;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CANONICAL_KEY_RE = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
@@ -100,6 +102,7 @@ type WorkBody = {
   action?: unknown;
   signalId?: unknown;
   locale?: unknown;
+  parameterDefinitionId?: unknown;
   result?: unknown;
   selectedValueObjectId?: unknown;
   comment?: unknown;
@@ -176,12 +179,20 @@ function parameterCheckLogId(signalId: string) {
   return stableUuid(`ARCTOR_REALITY_CURATOR_PARAMETER_CHECK_V1|${signalId}|${PARAMETER_EVENT_CODE}`);
 }
 
-function decisionLogId(signalId: string) {
-  return stableUuid(`${DECISION_CONTRACT}|${signalId}|${DECISION_EVENT_CODE}`);
+function decisionLogId(signalId: string, parameterDefinitionId: string) {
+  return stableUuid(
+    `${DECISION_CONTRACT}|${signalId}|${parameterDefinitionId}|${DECISION_EVENT_CODE}`,
+  );
 }
 
-function creationLogId(signalId: string, valueObjectId: string) {
-  return stableUuid(`${CREATION_CONTRACT}|${signalId}|${CREATED_EVENT_CODE}|${valueObjectId}`);
+function creationLogId(
+  signalId: string,
+  parameterDefinitionId: string,
+  valueObjectId: string,
+) {
+  return stableUuid(
+    `${CREATION_CONTRACT}|${signalId}|${parameterDefinitionId}|${CREATED_EVENT_CODE}|${valueObjectId}`,
+  );
 }
 
 function errorResponse(errorCode: string, error: string, status: number) {
@@ -277,11 +288,78 @@ async function assertParameterCheckCompleted(signal: EligibleSignal) {
   if (!data?.[0]) throw new Error("CURATOR_OBJECT_PARAMETER_GATE_REQUIRED");
 }
 
-async function readDecisionState(signalId: string): Promise<DecisionState> {
+async function assertParameterSetReady(
+  signal: EligibleSignal,
+  parameterDefinitionId: string,
+) {
+  const [selectedResult, confirmedResult, definitionResult] = await Promise.all([
+    supabase
+      .from("activity_processing_logs")
+      .select("id")
+      .eq("raw_signal_id", signal.id)
+      .eq("processor_name", PROCESSOR_NAME)
+      .eq("processor_version", PROCESSOR_VERSION)
+      .contains("metadata_json", {
+        eventCode: PARAMETER_SELECTED_EVENT_CODE,
+        parameterDefinitionId,
+      })
+      .limit(1),
+    supabase
+      .from("activity_processing_logs")
+      .select("id")
+      .eq("raw_signal_id", signal.id)
+      .eq("processor_name", PROCESSOR_NAME)
+      .eq("processor_version", PROCESSOR_VERSION)
+      .contains("metadata_json", { eventCode: PARAMETER_SET_EVENT_CODE })
+      .limit(1),
+    supabase
+      .from("value_object_parameter_definitions")
+      .select("id,parameter_code,title,status,scope_code")
+      .eq("id", parameterDefinitionId)
+      .eq("scope_code", "system")
+      .limit(1),
+  ]);
+
+  if (selectedResult.error) {
+    throw new Error(
+      `CURATOR_OBJECT_PARAMETER_SELECTION_GATE_READ_FAILED:${selectedResult.error.message}`,
+    );
+  }
+  if (confirmedResult.error) {
+    throw new Error(
+      `CURATOR_OBJECT_PARAMETER_SET_GATE_READ_FAILED:${confirmedResult.error.message}`,
+    );
+  }
+  if (definitionResult.error) {
+    throw new Error(
+      `CURATOR_OBJECT_PARAMETER_DEFINITION_READ_FAILED:${definitionResult.error.message}`,
+    );
+  }
+  if (!confirmedResult.data?.[0]) {
+    throw new Error("CURATOR_OBJECT_PARAMETER_SET_GATE_REQUIRED");
+  }
+  if (!selectedResult.data?.[0]) {
+    throw new Error("CURATOR_OBJECT_PARAMETER_SELECTION_GATE_REQUIRED");
+  }
+  const parameter = definitionResult.data?.[0];
+  if (!parameter || parameter.status !== "active") {
+    throw new Error("CURATOR_OBJECT_PARAMETER_NOT_ACTIVE");
+  }
+  return {
+    id: parameter.id,
+    parameterCode: text(parameter.parameter_code),
+    title: text(parameter.title),
+  };
+}
+
+async function readDecisionState(
+  signalId: string,
+  parameterDefinitionId: string,
+): Promise<DecisionState> {
   const { data, error } = await supabase
     .from("activity_processing_logs")
     .select("id,metadata_json")
-    .eq("id", decisionLogId(signalId))
+    .eq("id", decisionLogId(signalId, parameterDefinitionId))
     .eq("raw_signal_id", signalId)
     .eq("processor_name", PROCESSOR_NAME)
     .eq("processor_version", PROCESSOR_VERSION)
@@ -307,14 +385,20 @@ async function readDecisionState(signalId: string): Promise<DecisionState> {
   };
 }
 
-async function readCreationStates(signalId: string): Promise<CreationState[]> {
+async function readCreationStates(
+  signalId: string,
+  parameterDefinitionId: string,
+): Promise<CreationState[]> {
   const { data, error } = await supabase
     .from("activity_processing_logs")
     .select("id,metadata_json,created_at")
     .eq("raw_signal_id", signalId)
     .eq("processor_name", PROCESSOR_NAME)
     .eq("processor_version", PROCESSOR_VERSION)
-    .contains("metadata_json", { eventCode: CREATED_EVENT_CODE })
+    .contains("metadata_json", {
+      eventCode: CREATED_EVENT_CODE,
+      parameterDefinitionId,
+    })
     .order("created_at", { ascending: true })
     .limit(100);
   if (error) throw new Error(`CURATOR_OBJECT_CREATION_LOG_READ_FAILED:${error.message}`);
@@ -493,10 +577,11 @@ async function buildState(
   signal: EligibleSignal,
   actor: ResolvedActorContext,
   locale: string,
+  parameterDefinitionId: string,
 ) {
   const [decision, creations, options] = await Promise.all([
-    readDecisionState(signal.id),
-    readCreationStates(signal.id),
+    readDecisionState(signal.id, parameterDefinitionId),
+    readCreationStates(signal.id, parameterDefinitionId),
     readOptions(actor, locale),
   ]);
   const targetLeaf = [...creations].reverse().find((item) => item.completedTargetLeaf) ?? null;
@@ -935,12 +1020,17 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const signalId = text(url.searchParams.get("signalId"));
   const locale = normalizeLocale(url.searchParams.get("locale"));
+  const parameterDefinitionId = text(url.searchParams.get("parameterDefinitionId"));
   if (!UUID_RE.test(signalId)) return errorResponse("CURATOR_OBJECT_SIGNAL_ID_INVALID", "signalId is invalid", 400);
+  if (!UUID_RE.test(parameterDefinitionId)) return errorResponse("CURATOR_OBJECT_PARAMETER_ID_INVALID", "parameterDefinitionId is invalid", 400);
   try {
     const actor = await resolveCurrentActor(guard);
     const signal = await readEligibleSignal(signalId);
     await assertParameterCheckCompleted(signal);
-    return NextResponse.json(await buildState(signal, actor, locale));
+    await assertParameterSetReady(signal, parameterDefinitionId);
+    return NextResponse.json(
+      await buildState(signal, actor, locale, parameterDefinitionId),
+    );
   } catch (error) {
     if (error instanceof ActorContextError) return errorResponse(error.code, error.message, error.status);
     const message = error instanceof Error ? error.message : String(error);
@@ -960,17 +1050,27 @@ export async function POST(request: Request) {
   }
   const signalId = text(body.signalId);
   const locale = normalizeLocale(body.locale);
+  const parameterDefinitionId = text(body.parameterDefinitionId);
   if (!UUID_RE.test(signalId)) return errorResponse("CURATOR_OBJECT_SIGNAL_ID_INVALID", "signalId is invalid", 400);
+  if (!UUID_RE.test(parameterDefinitionId)) return errorResponse("CURATOR_OBJECT_PARAMETER_ID_INVALID", "parameterDefinitionId is invalid", 400);
 
   try {
     const actor = await resolveCurrentActor(guard);
     const signal = await readEligibleSignal(signalId);
     await assertParameterCheckCompleted(signal);
+    const parameter = await assertParameterSetReady(
+      signal,
+      parameterDefinitionId,
+    );
     const action = text(body.action);
 
     if (action === "record_object_decision") {
-      const previous = await readDecisionState(signal.id);
-      if (previous.completed) return NextResponse.json(await buildState(signal, actor, locale));
+      const previous = await readDecisionState(signal.id, parameterDefinitionId);
+      if (previous.completed) {
+        return NextResponse.json(
+          await buildState(signal, actor, locale, parameterDefinitionId),
+        );
+      }
       const result = text(body.result);
       const comment = text(body.comment);
       if (!DECISIONS.has(result)) return errorResponse("CURATOR_OBJECT_DECISION_INVALID", "result is invalid", 400);
@@ -987,7 +1087,7 @@ export async function POST(request: Request) {
       }
       const summary = decisionSummary(result, selectedTitle);
       await appendLog({
-        id: decisionLogId(signal.id),
+        id: decisionLogId(signal.id, parameterDefinitionId),
         signal,
         guard,
         eventCode: DECISION_EVENT_CODE,
@@ -1002,19 +1102,29 @@ export async function POST(request: Request) {
           objectDecisionResult: result,
           selectedValueObjectId,
           selectedValueObjectTitle: selectedTitle,
+          parameterDefinitionId: parameter.id,
+          parameterCode: parameter.parameterCode,
+          parameterTitle: parameter.title,
         },
       });
-      return NextResponse.json(await buildState(signal, actor, locale));
+      return NextResponse.json(
+        await buildState(signal, actor, locale, parameterDefinitionId),
+      );
     }
 
     if (action === "create_observation_object") {
-      const decision = await readDecisionState(signal.id);
+      const decision = await readDecisionState(signal.id, parameterDefinitionId);
       if (!decision.completed || decision.result !== "new_leaf_required") {
         return errorResponse("CURATOR_OBJECT_NEW_LEAF_DECISION_REQUIRED", "The curator must first record that a new leaf is required", 409);
       }
-      const existingCreations = await readCreationStates(signal.id);
+      const existingCreations = await readCreationStates(
+        signal.id,
+        parameterDefinitionId,
+      );
       if (existingCreations.some((item) => item.completedTargetLeaf)) {
-        return NextResponse.json(await buildState(signal, actor, locale));
+        return NextResponse.json(
+          await buildState(signal, actor, locale, parameterDefinitionId),
+        );
       }
 
       const scope = text(body.scope);
@@ -1101,7 +1211,11 @@ export async function POST(request: Request) {
 
       const completedTargetLeaf = role === "leaf";
       await appendLog({
-        id: creationLogId(signal.id, created.valueObjectId),
+        id: creationLogId(
+          signal.id,
+          parameterDefinitionId,
+          created.valueObjectId,
+        ),
         signal,
         guard,
         eventCode: CREATED_EVENT_CODE,
@@ -1128,9 +1242,14 @@ export async function POST(request: Request) {
           privateOwnerActorId: scope === "private" ? actor.actorId : null,
           systemOwnerless: scope === "system",
           systemPublished: false,
+          parameterDefinitionId: parameter.id,
+          parameterCode: parameter.parameterCode,
+          parameterTitle: parameter.title,
         },
       });
-      return NextResponse.json(await buildState(signal, actor, locale));
+      return NextResponse.json(
+        await buildState(signal, actor, locale, parameterDefinitionId),
+      );
     }
 
     return errorResponse("CURATOR_OBJECT_ACTION_INVALID", "action is invalid", 400);

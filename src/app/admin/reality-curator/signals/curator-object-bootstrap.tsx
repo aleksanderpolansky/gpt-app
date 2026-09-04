@@ -64,6 +64,9 @@ type BootstrapState = {
 type Props = {
   signalId: string;
   locale: LocaleCode;
+  parameterDefinitionId: string;
+  parameterTitle: string;
+  parameterCode: string;
   onChanged: () => void;
 };
 
@@ -125,6 +128,7 @@ type Copy = {
   openCatalog: string;
   loading: string;
   loadError: string;
+  parameterContext: string;
 };
 
 const EN: Copy = {
@@ -185,6 +189,7 @@ const EN: Copy = {
   openCatalog: "Open observation objects",
   loading: "Loading the next step…",
   loadError: "Could not load or save the curator step.",
+  parameterContext: "Parameter being configured",
 };
 
 const RU: Copy = {
@@ -246,6 +251,7 @@ const RU: Copy = {
   openCatalog: "Открыть объекты наблюдения",
   loading: "Загружаем следующий шаг…",
   loadError: "Не удалось загрузить или сохранить шаг куратора.",
+  parameterContext: "Настраиваем параметр",
 };
 
 const COPY: Record<LocaleCode, Copy> = {
@@ -286,7 +292,14 @@ function roleLabel(role: NodeRoleCode | null, copy: Copy) {
   return "—";
 }
 
-export function CuratorObjectBootstrap({ signalId, locale, onChanged }: Props) {
+export function CuratorObjectBootstrap({
+  signalId,
+  locale,
+  parameterDefinitionId,
+  parameterTitle,
+  parameterCode,
+  onChanged,
+}: Props) {
   const copy = COPY[locale] ?? COPY.en;
   const [state, setState] = useState<BootstrapState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -312,7 +325,7 @@ export function CuratorObjectBootstrap({ signalId, locale, onChanged }: Props) {
   useEffect(() => {
     const controller = new AbortController();
     const requestUrl =
-      `/api/admin/reality-curator/signals/object-bootstrap?signalId=${encodeURIComponent(signalId)}&locale=${encodeURIComponent(locale)}`;
+      `/api/admin/reality-curator/signals/object-bootstrap?signalId=${encodeURIComponent(signalId)}&locale=${encodeURIComponent(locale)}&parameterDefinitionId=${encodeURIComponent(parameterDefinitionId)}`;
 
     void fetch(requestUrl, {
       method: "GET",
@@ -347,7 +360,7 @@ export function CuratorObjectBootstrap({ signalId, locale, onChanged }: Props) {
     return () => {
       controller.abort();
     };
-  }, [locale, signalId]);
+  }, [locale, parameterDefinitionId, signalId]);
 
   async function post(body: Record<string, unknown>) {
     setBusy(true);
@@ -356,7 +369,12 @@ export function CuratorObjectBootstrap({ signalId, locale, onChanged }: Props) {
       const response = await fetch("/api/admin/reality-curator/signals/object-bootstrap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signalId, locale, ...body }),
+        body: JSON.stringify({
+          signalId,
+          locale,
+          parameterDefinitionId,
+          ...body,
+        }),
       });
       const payload = (await response.json().catch(() => null)) as BootstrapState | null;
       if (!response.ok || !payload?.ok) {
@@ -444,6 +462,11 @@ export function CuratorObjectBootstrap({ signalId, locale, onChanged }: Props) {
     );
     return (
       <div className="rounded-2xl border border-[#dce3f5] bg-[#f8faff] p-4">
+        <div className="mb-3 rounded-xl border border-[#d8def0] bg-white px-3 py-2 text-xs text-[#5f6679]">
+          <span className="font-extrabold text-[#34405a]">{copy.parameterContext}: </span>
+          <span className="font-bold text-[#263044]">{parameterTitle}</span>
+          <span className="ml-1 font-mono text-[#65708d]">· {parameterCode}</span>
+        </div>
         <div className="text-sm font-extrabold text-[#263044]">{copy.title}</div>
         <div className="mt-1 text-xs leading-5 text-[#727991]">{copy.hint}</div>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -513,6 +536,11 @@ export function CuratorObjectBootstrap({ signalId, locale, onChanged }: Props) {
 
   return (
     <div className="rounded-2xl border border-[#dce3f5] bg-[#f8faff] p-4">
+      <div className="mb-4 rounded-xl border border-[#d8def0] bg-white px-3 py-2 text-xs text-[#5f6679]">
+        <span className="font-extrabold text-[#34405a]">{copy.parameterContext}: </span>
+        <span className="font-bold text-[#263044]">{parameterTitle}</span>
+        <span className="ml-1 font-mono text-[#65708d]">· {parameterCode}</span>
+      </div>
       {history.length ? (
         <div className="mb-4 rounded-xl border border-[#d8def0] bg-white p-3">
           <div className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#65708d]">{copy.pathHistory}</div>

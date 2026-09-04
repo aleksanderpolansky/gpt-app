@@ -35,7 +35,7 @@ export type CuratorProcessingLogEvent = {
 };
 
 export type CuratorProcessingLogBlock = {
-  code: "activity_intake" | "work_acceptance" | "typical_activity" | "parameter_check" | "object_definition" | "other";
+  code: "activity_intake" | "work_acceptance" | "typical_activity" | "parameter_check" | "template_parameters" | "object_definition" | "other";
   titleRu: string;
   titleEn: string;
   latestAt: string;
@@ -139,6 +139,12 @@ function blockCode(eventCode: string): CuratorProcessingLogBlock["code"] {
     return "parameter_check";
   }
   if (
+    eventCode === "typical_activity_parameter_selected" ||
+    eventCode === "typical_activity_parameter_set_confirmed"
+  ) {
+    return "template_parameters";
+  }
+  if (
     eventCode === "measurable_object_decision_recorded" ||
     eventCode === "observation_object_created"
   ) {
@@ -159,6 +165,9 @@ function blockTitle(code: CuratorProcessingLogBlock["code"]) {
   }
   if (code === "parameter_check") {
     return { ru: "Проверка параметров и измерений", en: "Parameter and measurement check" };
+  }
+  if (code === "template_parameters") {
+    return { ru: "Параметры типовой активности", en: "Typical activity parameters" };
   }
   if (code === "object_definition") {
     return { ru: "Определение измеримого объекта", en: "Measurable object determination" };
@@ -259,6 +268,25 @@ function summarizeBlock(input: {
     return {
       ru: event?.resultSummaryRu || "Проверка системного каталога параметров и измерений завершена.",
       en: event?.resultSummaryEn || "The system parameter and measurement catalog check was completed.",
+      comment: event?.curatorComment || null,
+    };
+  }
+
+  if (input.code === "template_parameters") {
+    const confirmed = input.events.find(
+      (item) => item.eventCode === "typical_activity_parameter_set_confirmed",
+    );
+    const selected = input.events.find(
+      (item) => item.eventCode === "typical_activity_parameter_selected",
+    );
+    const event = confirmed || selected || input.events[0];
+    return {
+      ru:
+        event?.resultSummaryRu ||
+        "Формируется обязательный набор параметров проектируемой типовой активности.",
+      en:
+        event?.resultSummaryEn ||
+        "The required parameter set for the typical-activity draft is being formed.",
       comment: event?.curatorComment || null,
     };
   }
@@ -431,6 +459,12 @@ export async function readCuratorProcessingLogs(
     const parameterEvent = events.find(
       (event) => event.eventCode === "related_parameter_catalog_checked",
     );
+    const parameterSelectedEvent = events.find(
+      (event) => event.eventCode === "typical_activity_parameter_selected",
+    );
+    const parameterSetEvent = events.find(
+      (event) => event.eventCode === "typical_activity_parameter_set_confirmed",
+    );
     const objectDecisionEvent = events.find(
       (event) => event.eventCode === "measurable_object_decision_recorded",
     );
@@ -441,24 +475,28 @@ export async function readCuratorProcessingLogs(
       ? "Построение измеримого объекта"
       : objectDecisionEvent
         ? "Определение измеримого объекта завершено"
-        : parameterEvent
+        : parameterSetEvent
           ? "Определение измеримого объекта"
-          : typicalEvent
-            ? "Проверка параметров и измерений"
-            : workEvent
-              ? "Определение типовой активности"
-              : "Ожидает принятия в работу";
+          : parameterSelectedEvent || parameterEvent
+            ? "Формирование параметров типовой активности"
+            : typicalEvent
+              ? "Проверка параметров и измерений"
+              : workEvent
+                ? "Определение типовой активности"
+                : "Ожидает принятия в работу";
     const currentStageEn = objectCreatedEvent
       ? "Measurable object path construction"
       : objectDecisionEvent
         ? "Measurable object determination completed"
-        : parameterEvent
+        : parameterSetEvent
           ? "Measurable object determination"
-          : typicalEvent
-            ? "Parameter and measurement check"
-            : workEvent
-              ? "Typical activity determination"
-              : "Waiting to be taken into work";
+          : parameterSelectedEvent || parameterEvent
+            ? "Typical activity parameter formation"
+            : typicalEvent
+              ? "Parameter and measurement check"
+              : workEvent
+                ? "Typical activity determination"
+                : "Waiting to be taken into work";
     const last = events[0] ?? null;
 
     output[signal.signalId] = {

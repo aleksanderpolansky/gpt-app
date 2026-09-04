@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 
 import type { LocaleCode } from "@/i18n";
 
-import { CuratorObjectBootstrap } from "./curator-object-bootstrap";
+import { CuratorTemplateParameters } from "./curator-template-parameters";
 
 type JourneyItem = {
   eventCode: string;
@@ -494,7 +494,7 @@ export function CuratorWorkPanel({ signalId, journey, locale, onChanged }: Props
               <div className="mt-1 text-sm leading-5 text-emerald-800">{parameterSummary}</div>
             ) : null}
           </div>
-          <CuratorObjectBootstrap
+          <CuratorTemplateParameters
             signalId={signalId}
             locale={locale}
             onChanged={onChanged}
