@@ -9,6 +9,7 @@ import {
   hasCompletedTypicalActivitySearch,
 } from "@/lib/activity/basic-intake-analysis-state";
 import { safeCreateActivityProcessingLog } from "../../../lib/activity/activityProcessingLogs";
+import { loadSystemTypicalActivityCatalogV1 } from "@/lib/activity/typical-activity-catalog.server";
 
 import {
   runAiJsonWithUsageMetadata,
@@ -35,7 +36,6 @@ export { ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1 } from "@/lib/activity/basic-i
 
 const MODEL_TIER = "nano";
 const MAX_ACTIVE_TEMPLATES = 5000;
-const TEMPLATE_PAGE_SIZE = 500;
 const MAX_CANDIDATES_SENT = 24;
 const MAX_CANDIDATES_PREFILTERED = 96;
 const MAX_TEMPLATE_MATCHES = 5;
@@ -243,38 +243,14 @@ function candidateScore(sourceText: string, template: TemplateRow): number {
 }
 
 async function loadCandidateTemplates(input: {
-  appUserId: string;
-  actorId: string;
   sourceText: string;
 }): Promise<Candidate[]> {
-  const templates: TemplateRow[] = [];
+  const templates = await loadSystemTypicalActivityCatalogV1({
+    limit: MAX_ACTIVE_TEMPLATES + 1,
+  });
 
-  for (let from = 0; from <= MAX_ACTIVE_TEMPLATES; from += TEMPLATE_PAGE_SIZE) {
-    const to = Math.min(from + TEMPLATE_PAGE_SIZE - 1, MAX_ACTIVE_TEMPLATES);
-    const requestedRows = to - from + 1;
-
-    const { data, error } = await supabase
-      .from("activity_templates")
-      .select("id,title,short_title,template_group,updated_at")
-      .eq("owner_user_id", input.appUserId)
-      .eq("owner_actor_id", input.actorId)
-      .eq("template_scope", "user")
-      .eq("status", "active")
-      .eq("is_active", true)
-      .order("updated_at", { ascending: false })
-      .range(from, to);
-
-    if (error) {
-      throw new Error(`BASIC_INTAKE_TEMPLATE_READ_FAILED:${error.message}`);
-    }
-
-    const page = (data ?? []) as TemplateRow[];
-    if (from === MAX_ACTIVE_TEMPLATES && page.length > 0) {
-      throw new Error("BASIC_INTAKE_ACTIVE_TEMPLATE_LIMIT_EXCEEDED");
-    }
-
-    templates.push(...page);
-    if (page.length < requestedRows) break;
+  if (templates.length > MAX_ACTIVE_TEMPLATES) {
+    throw new Error("BASIC_INTAKE_ACTIVE_TEMPLATE_LIMIT_EXCEEDED");
   }
 
   const rankedCandidates = templates
@@ -296,8 +272,6 @@ async function loadCandidateTemplates(input: {
   const { data: profileRowsRaw, error: profileRowsError } = await supabase
     .from("activity_template_impact_profiles_v1")
     .select("id,template_id")
-    .eq("owner_user_id", input.appUserId)
-    .eq("owner_actor_id", input.actorId)
     .eq("status", "active")
     .in("template_id", templateIds);
 
@@ -319,7 +293,7 @@ async function loadCandidateTemplates(input: {
   const profileIds = profileRows.map((profile) => profile.id);
   const { data: linkRowsRaw, error: linkRowsError } = await supabase
     .from("activity_template_profile_object_links_v1")
-    .select("profile_id")
+    .select("profile_id,target_value_object_id")
     .in("profile_id", profileIds);
 
   if (linkRowsError) {
@@ -328,12 +302,51 @@ async function loadCandidateTemplates(input: {
     );
   }
 
-  const linkedProfileIds = new Set(
-    (linkRowsRaw ?? []).map((row) => String(row.profile_id)),
+  const linkRows = (linkRowsRaw ?? []) as Array<{
+    profile_id: string;
+    target_value_object_id: string;
+  }>;
+
+  const linkedObjectIds = Array.from(
+    new Set(linkRows.map((row) => String(row.target_value_object_id))),
   );
+  if (linkedObjectIds.length === 0) {
+    return [];
+  }
+
+  const { data: globalObjectsRaw, error: globalObjectsError } = await supabase
+    .from("value_objects")
+    .select("id")
+    .in("id", linkedObjectIds)
+    .eq("scope_code", "global")
+    .eq("status", "active");
+
+  if (globalObjectsError) {
+    throw new Error(
+      `BASIC_INTAKE_SYSTEM_OBJECT_ELIGIBILITY_READ_FAILED:${globalObjectsError.message}`,
+    );
+  }
+
+  const globalObjectIds = new Set(
+    (globalObjectsRaw ?? []).map((row) => String(row.id)),
+  );
+  const linksByProfile = new Map<string, string[]>();
+  for (const row of linkRows) {
+    const profileId = String(row.profile_id);
+    const current = linksByProfile.get(profileId) ?? [];
+    current.push(String(row.target_value_object_id));
+    linksByProfile.set(profileId, current);
+  }
+
   const eligibleTemplateIds = new Set(
     profileRows
-      .filter((profile) => linkedProfileIds.has(profile.id))
+      .filter((profile) => {
+        const objectIds = linksByProfile.get(profile.id) ?? [];
+        return (
+          objectIds.length > 0 &&
+          objectIds.every((objectId) => globalObjectIds.has(objectId))
+        );
+      })
       .map((profile) => profile.template_id),
   );
 
@@ -1203,8 +1216,6 @@ export async function analyzeBasicActivityIntakeV1(input: {
   let candidateLoadWarning: string | null = null;
   try {
     candidates = await loadCandidateTemplates({
-      appUserId: input.appUserId,
-      actorId: input.actorId,
       sourceText,
     });
   } catch (error) {

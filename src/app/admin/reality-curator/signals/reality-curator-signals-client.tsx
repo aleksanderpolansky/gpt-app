@@ -103,6 +103,7 @@ type Copy = {
   locale: string;
   direction: string;
   analysisMode: string;
+  technicalDetails: string;
   warning: string;
   queueCount: string;
   scannedCount: string;
@@ -139,6 +140,7 @@ const COPY: Record<LocaleCode, Copy> = {
     locale: "Язык / часовой пояс",
     direction: "Направление времени",
     analysisMode: "Режим анализа",
+    technicalDetails: "Технические детали",
     warning: "Предупреждение анализа",
     queueCount: "В очереди",
     scannedCount: "Проверено сигналов",
@@ -171,6 +173,7 @@ const COPY: Record<LocaleCode, Copy> = {
     locale: "Locale / time zone",
     direction: "Temporal direction",
     analysisMode: "Analysis mode",
+    technicalDetails: "Technical details",
     warning: "Analysis warning",
     queueCount: "In queue",
     scannedCount: "Signals scanned",
@@ -203,6 +206,7 @@ const COPY: Record<LocaleCode, Copy> = {
     locale: "Język / strefa czasowa",
     direction: "Kierunek czasu",
     analysisMode: "Tryb analizy",
+    technicalDetails: "Szczegóły techniczne",
     warning: "Ostrzeżenie analizy",
     queueCount: "W kolejce",
     scannedCount: "Sprawdzono sygnałów",
@@ -235,6 +239,7 @@ const COPY: Record<LocaleCode, Copy> = {
     locale: "Мова / часовий пояс",
     direction: "Напрям часу",
     analysisMode: "Режим аналізу",
+    technicalDetails: "Технічні деталі",
     warning: "Попередження аналізу",
     queueCount: "У черзі",
     scannedCount: "Перевірено сигналів",
@@ -267,6 +272,7 @@ const COPY: Record<LocaleCode, Copy> = {
     locale: "Sprache / Zeitzone",
     direction: "Zeitrichtung",
     analysisMode: "Analysemodus",
+    technicalDetails: "Technische Details",
     warning: "Analysewarnung",
     queueCount: "In der Warteschlange",
     scannedCount: "Signale geprüft",
@@ -299,6 +305,7 @@ const COPY: Record<LocaleCode, Copy> = {
     locale: "Idioma / zona horaria",
     direction: "Dirección temporal",
     analysisMode: "Modo de análisis",
+    technicalDetails: "Detalles técnicos",
     warning: "Advertencia del análisis",
     queueCount: "En cola",
     scannedCount: "Señales revisadas",
@@ -331,6 +338,7 @@ const COPY: Record<LocaleCode, Copy> = {
     locale: "Jazyk / časové pásmo",
     direction: "Časový směr",
     analysisMode: "Režim analýzy",
+    technicalDetails: "Technické podrobnosti",
     warning: "Varování analýzy",
     queueCount: "Ve frontě",
     scannedCount: "Zkontrolováno signálů",
@@ -561,14 +569,25 @@ export function RealityCuratorSignalsClient() {
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <Meta label={copy.userId} value={signal.userId} />
-                <Meta label={copy.signalId} value={signal.signalId} />
-                <Meta label={copy.eventId} value={signal.activityEventId ?? "—"} />
-                <Meta label={copy.locale} value={[signal.locale, signal.timeZone].filter(Boolean).join(" · ") || "—"} />
-                <Meta label={copy.direction} value={signal.temporalDirection ?? "—"} />
-                <Meta label={copy.analysisMode} value={signal.analysisMode ?? "—"} />
-              </div>
+              <details className="group mt-4 rounded-xl border border-[#e3e8f3] bg-[#f8faff]">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-xs font-extrabold text-[#4a5268]">
+                  <span>{copy.technicalDetails}</span>
+                  <span
+                    aria-hidden="true"
+                    className="text-[#7c8099] transition-transform group-open:rotate-180"
+                  >
+                    ▾
+                  </span>
+                </summary>
+                <div className="grid gap-3 border-t border-[#e3e8f3] p-3 md:grid-cols-2 xl:grid-cols-4">
+                  <Meta label={copy.userId} value={signal.userId} />
+                  <Meta label={copy.signalId} value={signal.signalId} />
+                  <Meta label={copy.eventId} value={signal.activityEventId ?? "—"} />
+                  <Meta label={copy.locale} value={[signal.locale, signal.timeZone].filter(Boolean).join(" · ") || "—"} />
+                  <Meta label={copy.direction} value={signal.temporalDirection ?? "—"} />
+                  <Meta label={copy.analysisMode} value={signal.analysisMode ?? "—"} />
+                </div>
+              </details>
 
               <div className="mt-4 border-t border-[#eceef5] pt-4">
                 <div className="text-xs font-extrabold text-[#33384f]">{copy.measurements}</div>

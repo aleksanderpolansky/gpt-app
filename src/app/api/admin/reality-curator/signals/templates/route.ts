@@ -4,14 +4,19 @@ import {
   platformAdminErrorResponse,
   requirePlatformAdmin,
 } from "@/lib/admin/require-platform-admin";
-import { supabase } from "../../../../../../../lib/supabase";
 import { isConfirmedMissingTypicalActivityAnalysis } from "@/lib/activity/basic-intake-analysis-state";
+import {
+  ARCTOR_SYSTEM_TYPICAL_ACTIVITY_CATALOG_V1,
+  loadSystemTypicalActivityCatalogV1,
+} from "@/lib/activity/typical-activity-catalog.server";
+import { supabase } from "../../../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const ROUTE_MARKER = "reality-curator-template-check-v1" as const;
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ROUTE_MARKER = "reality-curator-template-check-v2" as const;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const LIMIT = 500;
 
 type JsonRecord = Record<string, unknown>;
@@ -40,7 +45,9 @@ export async function GET(request: Request) {
 
   const { data: signalRows, error: signalError } = await supabase
     .from("raw_activity_signals")
-    .select("id,user_id,source_type,idempotency_key,normalized_preview_json,output_event_id")
+    .select(
+      "id,user_id,source_type,idempotency_key,normalized_preview_json,output_event_id",
+    )
     .eq("id", signalId)
     .limit(1);
 
@@ -50,6 +57,7 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
+
   const signal = signalRows?.[0];
   if (!signal) {
     return NextResponse.json(
@@ -62,20 +70,31 @@ export async function GET(request: Request) {
   const analysis = asRecord(normalized.basicIntakeAnalysisV1);
   const eligible =
     signal.source_type === "manual_chat" &&
-    text(signal.idempotency_key).startsWith("activity_ai_lab_quick_capture:") &&
+    text(signal.idempotency_key).startsWith(
+      "activity_ai_lab_quick_capture:",
+    ) &&
     isConfirmedMissingTypicalActivityAnalysis(analysis);
 
   if (!eligible) {
     return NextResponse.json(
-      { ok: false, routeMarker: ROUTE_MARKER, error: "Signal is not eligible" },
+      {
+        ok: false,
+        routeMarker: ROUTE_MARKER,
+        error: "Signal is not eligible",
+      },
       { status: 409 },
     );
   }
 
-  const activityEventId = text(analysis.activityEventId) || text(signal.output_event_id);
+  const activityEventId =
+    text(analysis.activityEventId) || text(signal.output_event_id);
   if (!activityEventId) {
     return NextResponse.json(
-      { ok: false, routeMarker: ROUTE_MARKER, error: "Activity event is missing" },
+      {
+        ok: false,
+        routeMarker: ROUTE_MARKER,
+        error: "Activity event is missing",
+      },
       { status: 409 },
     );
   }
@@ -93,46 +112,51 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
-  const actorId = text(eventRows?.[0]?.acting_as_actor_id);
-  if (!actorId) {
+
+  if (!text(eventRows?.[0]?.acting_as_actor_id)) {
     return NextResponse.json(
-      { ok: false, routeMarker: ROUTE_MARKER, error: "Activity profile is missing" },
+      {
+        ok: false,
+        routeMarker: ROUTE_MARKER,
+        error: "Activity profile is missing",
+      },
       { status: 409 },
     );
   }
 
-  const { data: templateRows, error: templateError } = await supabase
-    .from("activity_templates")
-    .select("id,title,short_title,template_group,updated_at")
-    .eq("template_scope", "system")
-    .eq("status", "active")
-    .eq("is_active", true)
-    .order("updated_at", { ascending: false })
-    .limit(LIMIT);
+  try {
+    const rows = await loadSystemTypicalActivityCatalogV1({ limit: LIMIT });
 
-  if (templateError) {
+    const templates = rows.map((item) => ({
+      id: item.id,
+      title: item.title,
+      shortTitle: item.short_title,
+      templateGroup: item.template_group || null,
+      updatedAt: item.updated_at,
+    }));
+
+    return NextResponse.json({
+      ok: true,
+      routeMarker: ROUTE_MARKER,
+      signalId,
+      templates,
+      count: templates.length,
+      truncated: templates.length >= LIMIT,
+      scope: "system",
+      catalogContract: ARCTOR_SYSTEM_TYPICAL_ACTIVITY_CATALOG_V1,
+      readOnly: true,
+    });
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, routeMarker: ROUTE_MARKER, error: templateError.message },
+      {
+        ok: false,
+        routeMarker: ROUTE_MARKER,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Typical-activity catalog read failed",
+      },
       { status: 500 },
     );
   }
-
-  const templates = (templateRows ?? []).map((item) => ({
-    id: item.id,
-    title: text(item.title),
-    shortTitle: text(item.short_title) || null,
-    templateGroup: text(item.template_group) || null,
-    updatedAt: text(item.updated_at) || null,
-  }));
-
-  return NextResponse.json({
-    ok: true,
-    routeMarker: ROUTE_MARKER,
-    signalId,
-    templates,
-    count: templates.length,
-    truncated: templates.length >= LIMIT,
-    scope: "platform_system",
-    readOnly: true,
-  });
 }
