@@ -18,9 +18,9 @@ export const ARCTOR_NAVIGATOR_MODEL_CATALOG_V1 =
   "ARCTOR_NAVIGATOR_MODEL_CATALOG_V1" as const;
 
 export const NAVIGATOR_MODEL_CATALOG_VERIFIED_AT =
-  "2026-08-19T13:00:00.000Z" as const;
+  "2026-09-04T00:00:00.000Z" as const;
 export const NAVIGATOR_MODEL_AUTO_SEED_EXPIRES_AT =
-  "2026-08-26T23:59:59.999Z" as const;
+  "2026-09-11T23:59:59.999Z" as const;
 
 const SOURCE_URL = "https://developers.openai.com/api/docs/models";
 
@@ -59,9 +59,9 @@ export const NAVIGATOR_MODEL_CATALOG: Record<
     shortLabel: "Sol",
     caption: "max",
     reasoningEffort: "max",
-    inputUsdPer1m: 5,
-    cachedInputUsdPer1m: 0.5,
-    outputUsdPer1m: 30,
+    inputUsdPer1m: 4,
+    cachedInputUsdPer1m: 0.4,
+    outputUsdPer1m: 20,
     sourceUrl: SOURCE_URL,
   },
 };

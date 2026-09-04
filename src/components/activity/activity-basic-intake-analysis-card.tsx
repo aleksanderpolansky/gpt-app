@@ -41,7 +41,16 @@ type IntakeAnalysis = {
   noSuitableTypicalActivity?: boolean;
   typicalActivitiesHref?: string;
   analysisMode?: string;
-  providerAvailable?: boolean;
+  providerAvailable?: boolean | null;
+  providerAttempted?: boolean;
+  providerCompleted?: boolean;
+  providerState?: string;
+  modelUnavailable?: boolean;
+  providerFailureCode?: string;
+  failureStage?: string | null;
+  typicalActivitySearchStatus?: string;
+  fullAiAnalysisCompleted?: boolean;
+  retryable?: boolean;
 };
 
 type IntakeAnalysisResponse = {
@@ -63,6 +72,10 @@ const COPY: Record<Locale, {
   end: string;
   duration: string;
   fallback: string;
+  searchIncomplete: string;
+  retry: string;
+  retrying: string;
+  retryFailed: string;
 }> = {
   ru: {
     completed: "Завершенная активность",
@@ -77,7 +90,11 @@ const COPY: Record<Locale, {
     start: "Начало",
     end: "Завершение",
     duration: "Длительность",
-    fallback: "Базовая модель временно недоступна. Показаны только безопасно извлечённые сервером параметры и очевидные совпадения.",
+    fallback: "Полный AI-анализ не завершён. Показаны только безопасно извлечённые сервером данные; результат поиска типовой активности пока не считается завершённым.",
+    searchIncomplete: "Поиск типовой активности не завершён. Активность ожидает повторного AI-анализа.",
+    retry: "Повторить AI-анализ",
+    retrying: "Повторный AI-анализ…",
+    retryFailed: "Не удалось повторить AI-анализ.",
   },
   en: {
     completed: "Completed activity",
@@ -92,7 +109,11 @@ const COPY: Record<Locale, {
     start: "Start",
     end: "End",
     duration: "Duration",
-    fallback: "The basic model is temporarily unavailable. Only server-safe parameters and obvious matches are shown.",
+    fallback: "The full AI analysis is not complete. Only server-safe data is shown; the typical-activity search is not considered complete yet.",
+    searchIncomplete: "The typical-activity search is incomplete. This activity is waiting for another AI analysis.",
+    retry: "Retry AI analysis",
+    retrying: "Retrying AI analysis…",
+    retryFailed: "Could not retry the AI analysis.",
   },
   pl: {
     completed: "Zakończona aktywność",
@@ -107,7 +128,11 @@ const COPY: Record<Locale, {
     start: "Początek",
     end: "Koniec",
     duration: "Czas trwania",
-    fallback: "Model podstawowy jest chwilowo niedostępny. Pokazano tylko bezpiecznie wyodrębnione parametry i oczywiste dopasowania.",
+    fallback: "Pełna analiza AI nie została ukończona. Pokazano tylko dane bezpiecznie wyodrębnione przez serwer; wyszukiwanie typowej aktywności nie jest jeszcze uznane za zakończone.",
+    searchIncomplete: "Wyszukiwanie typowej aktywności nie zostało ukończone. Aktywność oczekuje na ponowną analizę AI.",
+    retry: "Ponów analizę AI",
+    retrying: "Ponawianie analizy AI…",
+    retryFailed: "Nie udało się ponowić analizy AI.",
   },
   uk: {
     completed: "Завершена активність",
@@ -122,7 +147,11 @@ const COPY: Record<Locale, {
     start: "Початок",
     end: "Завершення",
     duration: "Тривалість",
-    fallback: "Базова модель тимчасово недоступна. Показано лише безпечно виділені сервером параметри та очевидні збіги.",
+    fallback: "Повний AI-аналіз не завершено. Показано лише безпечно виділені сервером дані; пошук типової активності ще не вважається завершеним.",
+    searchIncomplete: "Пошук типової активності не завершено. Активність очікує повторного AI-аналізу.",
+    retry: "Повторити AI-аналіз",
+    retrying: "Повторний AI-аналіз…",
+    retryFailed: "Не вдалося повторити AI-аналіз.",
   },
   de: {
     completed: "Abgeschlossene Aktivität",
@@ -137,7 +166,11 @@ const COPY: Record<Locale, {
     start: "Start",
     end: "Ende",
     duration: "Dauer",
-    fallback: "Das Basismodell ist vorübergehend nicht verfügbar. Es werden nur serverseitig sicher erkannte Parameter und eindeutige Treffer angezeigt.",
+    fallback: "Die vollständige KI-Analyse ist nicht abgeschlossen. Es werden nur serverseitig sicher erkannte Daten angezeigt; die Suche nach einer typischen Aktivität gilt noch nicht als abgeschlossen.",
+    searchIncomplete: "Die Suche nach einer typischen Aktivität ist nicht abgeschlossen. Die Aktivität wartet auf eine erneute KI-Analyse.",
+    retry: "KI-Analyse erneut ausführen",
+    retrying: "KI-Analyse wird erneut ausgeführt…",
+    retryFailed: "Die KI-Analyse konnte nicht erneut ausgeführt werden.",
   },
   es: {
     completed: "Actividad completada",
@@ -152,7 +185,11 @@ const COPY: Record<Locale, {
     start: "Inicio",
     end: "Fin",
     duration: "Duración",
-    fallback: "El modelo básico no está disponible temporalmente. Solo se muestran parámetros seguros y coincidencias evidentes detectados por el servidor.",
+    fallback: "El análisis completo de IA no ha finalizado. Solo se muestran datos extraídos de forma segura por el servidor; la búsqueda de actividad típica aún no se considera terminada.",
+    searchIncomplete: "La búsqueda de actividad típica no ha finalizado. La actividad espera un nuevo análisis de IA.",
+    retry: "Repetir análisis de IA",
+    retrying: "Repitiendo análisis de IA…",
+    retryFailed: "No se pudo repetir el análisis de IA.",
   },
   cs: {
     completed: "Dokončená aktivita",
@@ -167,7 +204,11 @@ const COPY: Record<Locale, {
     start: "Začátek",
     end: "Konec",
     duration: "Doba trvání",
-    fallback: "Základní model je dočasně nedostupný. Zobrazeny jsou pouze bezpečně zjištěné parametry a zjevné shody.",
+    fallback: "Úplná AI analýza není dokončena. Zobrazena jsou pouze bezpečně serverem zjištěná data; hledání typické aktivity se zatím nepovažuje za dokončené.",
+    searchIncomplete: "Hledání typické aktivity není dokončeno. Aktivita čeká na opakovanou AI analýzu.",
+    retry: "Opakovat AI analýzu",
+    retrying: "Opakuje se AI analýza…",
+    retryFailed: "AI analýzu se nepodařilo zopakovat.",
   },
 };
 
@@ -293,10 +334,19 @@ export function ActivityBasicIntakeAnalysisCard({
   readonly analysis: IntakeAnalysis | null | undefined;
   readonly locale: Locale;
 }) {
-  if (!analysis) return null;
+  const [retryResult, setRetryResult] = useState<IntakeAnalysis | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState(false);
+  const displayedAnalysis =
+    analysis &&
+    retryResult?.activityEventId === analysis?.activityEventId
+      ? retryResult
+      : analysis;
+
+  if (!displayedAnalysis) return null;
 
   const ui = COPY[locale];
-  const status = analysis.status;
+  const status = displayedAnalysis.status;
 
   if (status === "pending") {
     return (
@@ -316,15 +366,15 @@ export function ActivityBasicIntakeAnalysisCard({
 
   if (status !== "completed") return null;
 
-  const measurements = Array.isArray(analysis.measurements)
-    ? analysis.measurements
+  const measurements = Array.isArray(displayedAnalysis.measurements)
+    ? displayedAnalysis.measurements
     : [];
-  const candidates = Array.isArray(analysis.templateCandidates)
-    ? analysis.templateCandidates.filter(
+  const candidates = Array.isArray(displayedAnalysis.templateCandidates)
+    ? displayedAnalysis.templateCandidates.filter(
         (candidate) => typeof candidate.title === "string" && candidate.title.trim(),
       )
     : [];
-  const timing = analysis.serverTiming ?? {};
+  const timing = displayedAnalysis.serverTiming ?? {};
   const startLabel = formatDateTime(timing.startedAt, locale);
   const endLabel = formatDateTime(timing.endedAt, locale);
   const duration =
@@ -335,15 +385,78 @@ export function ActivityBasicIntakeAnalysisCard({
         )} min`
       : null;
   const typicalHref = buildLocaleHref(
-    analysis.typicalActivitiesHref || "/activity-templates",
+    displayedAnalysis.typicalActivitiesHref || "/activity-templates",
     locale,
   );
+  const searchCompleted =
+    displayedAnalysis.analysisMode === "nano_model" &&
+    displayedAnalysis.providerAvailable === true &&
+    displayedAnalysis.fullAiAnalysisCompleted === true &&
+    displayedAnalysis.typicalActivitySearchStatus === "completed";
+  const canRetry =
+    displayedAnalysis.retryable === true &&
+    typeof displayedAnalysis.activityEventId === "string" &&
+    Boolean(displayedAnalysis.activityEventId.trim());
+
+  const handleRetry = async () => {
+    const activityEventId = displayedAnalysis.activityEventId?.trim();
+    if (!activityEventId || retrying) return;
+
+    setRetrying(true);
+    setRetryError(false);
+    try {
+      const response = await fetch("/api/activity/intake-analysis", {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ activityEventId }),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            analysis?: IntakeAnalysis;
+            error?: string;
+          }
+        | null;
+
+      if (!response.ok || payload?.ok !== true || !payload.analysis) {
+        throw new Error(payload?.error || `Retry failed: ${response.status}`);
+      }
+
+      setRetryResult(payload.analysis);
+    } catch {
+      setRetryError(true);
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   return (
     <div className="mt-3 rounded-xl border border-[#dbe3f6] bg-white p-3 shadow-[0_1px_2px_rgba(32,45,80,0.04)]">
-      {analysis.analysisMode === "safe_server_fallback" ? (
+      {displayedAnalysis.analysisMode === "safe_server_fallback" ? (
         <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-relaxed text-amber-800">
           {ui.fallback}
+        </div>
+      ) : null}
+      {canRetry ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            disabled={retrying}
+            onClick={() => void handleRetry()}
+            className="rounded-lg border border-[#b9c9ff] bg-[#f5f8ff] px-3 py-2 text-xs font-black text-[#3158c8] disabled:cursor-wait disabled:opacity-60"
+          >
+            {retrying ? ui.retrying : ui.retry}
+          </button>
+          {retryError ? (
+            <span className="text-xs font-semibold text-rose-700">
+              {ui.retryFailed}
+            </span>
+          ) : null}
         </div>
       ) : null}
       <div className="text-[11px] font-black uppercase tracking-[0.12em] text-[#3b6ef8]">
@@ -401,7 +514,9 @@ export function ActivityBasicIntakeAnalysisCard({
           </div>
         ) : (
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-            <span className="font-semibold text-[#667091]">{ui.noCandidate}</span>
+            <span className="font-semibold text-[#667091]">
+              {searchCompleted ? ui.noCandidate : ui.searchIncomplete}
+            </span>
             <Link
               href={typicalHref}
               className="font-black text-[#3b6ef8] underline-offset-4 hover:underline"

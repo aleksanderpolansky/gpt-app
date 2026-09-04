@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
 import { supabase } from "../../../../../lib/supabase";
+import { analyzeBasicActivityIntakeV1 } from "@/lib/activity/activity-basic-intake-analysis.server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const CONTRACT = "ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1";
 const UUID_RE =
@@ -18,6 +20,13 @@ type SignalRow = {
   normalized_preview_json: unknown;
   processing_status: string;
   updated_at: string;
+};
+
+type RetrySignalRow = {
+  id: string;
+  output_event_id: string | null;
+  normalized_preview_json: unknown;
+  metadata_json: unknown;
 };
 
 function asRecord(value: unknown): JsonRecord {
@@ -46,6 +55,162 @@ function readEventIds(request: Request) {
   }
 
   return ids;
+}
+
+function normalizeLocale(value: unknown) {
+  return value === "en" ||
+    value === "pl" ||
+    value === "ru" ||
+    value === "uk" ||
+    value === "de" ||
+    value === "es" ||
+    value === "cs"
+    ? value
+    : "ru";
+}
+
+function normalizeTimeZone(value: unknown) {
+  const candidate = text(value) || "UTC";
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: candidate }).format(new Date(0));
+    return candidate;
+  } catch {
+    return "UTC";
+  }
+}
+
+function isRetryableAnalysis(value: JsonRecord, activityEventId: string) {
+  if (
+    value.contract !== CONTRACT ||
+    value.activityEventId !== activityEventId
+  ) {
+    return false;
+  }
+
+  if (value.retryable !== true) return false;
+
+  return (
+    value.analysisMode === "safe_server_fallback" ||
+    value.status === "failed" ||
+    value.typicalActivitySearchStatus !== "completed"
+  );
+}
+
+export async function POST(request: Request) {
+  const { appUser, errorResponse } = await getActivityUserContext();
+  if (errorResponse) return errorResponse;
+  if (!appUser) {
+    return NextResponse.json(
+      { ok: false, error: "User context not found" },
+      { status: 500 },
+    );
+  }
+
+  let body: JsonRecord;
+  try {
+    body = asRecord(await request.json());
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: "Invalid request body" },
+      { status: 400 },
+    );
+  }
+
+  const activityEventId = text(body.activityEventId);
+  if (!UUID_RE.test(activityEventId)) {
+    return NextResponse.json(
+      { ok: false, error: "activityEventId is invalid" },
+      { status: 400 },
+    );
+  }
+
+  const { data: signalData, error: signalError } = await supabase
+    .from("raw_activity_signals")
+    .select("id,output_event_id,normalized_preview_json,metadata_json")
+    .eq("user_id", appUser.id)
+    .eq("source_type", "manual_chat")
+    .eq("output_event_id", activityEventId)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (signalError) {
+    return NextResponse.json(
+      { ok: false, error: signalError.message },
+      { status: 500 },
+    );
+  }
+
+  if (!signalData) {
+    return NextResponse.json(
+      { ok: false, error: "Retryable intake signal not found" },
+      { status: 404 },
+    );
+  }
+
+  const signal = signalData as RetrySignalRow;
+  const normalized = asRecord(signal.normalized_preview_json);
+  const existing = asRecord(normalized.basicIntakeAnalysisV1);
+
+  if (!isRetryableAnalysis(existing, activityEventId)) {
+    return NextResponse.json({
+      ok: true,
+      retried: false,
+      analysis: existing,
+    });
+  }
+
+  const { data: activityData, error: activityError } = await supabase
+    .from("activity_events")
+    .select("id,acting_as_actor_id")
+    .eq("id", activityEventId)
+    .eq("user_id", appUser.id)
+    .maybeSingle();
+
+  if (activityError) {
+    return NextResponse.json(
+      { ok: false, error: activityError.message },
+      { status: 500 },
+    );
+  }
+
+  const actorId = text(activityData?.acting_as_actor_id);
+  if (!activityData || !actorId) {
+    return NextResponse.json(
+      { ok: false, error: "Activity actor not found" },
+      { status: 404 },
+    );
+  }
+
+  const metadata = asRecord(signal.metadata_json);
+  const locale = normalizeLocale(metadata.locale);
+  const timeZone = normalizeTimeZone(metadata.timeZone);
+
+  try {
+    const analysis = await analyzeBasicActivityIntakeV1({
+      appUserId: appUser.id,
+      actorId,
+      signalId: signal.id,
+      activityEventId,
+      locale,
+      timeZone,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      retried: true,
+      analysis,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json(
+      {
+        ok: false,
+        error: message.slice(0, 500),
+      },
+      { status: 500 },
+    );
+  }
 }
 
 export async function GET(request: Request) {
