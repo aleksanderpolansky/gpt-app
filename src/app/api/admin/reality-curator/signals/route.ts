@@ -7,14 +7,19 @@ import {
 import { supabase } from "../../../../../../lib/supabase";
 import { readRealityCuratorJourneysBySignalIds } from "@/lib/reality-curator/journey-log.server";
 import { readCuratorProcessingLogs } from "@/lib/reality-curator/processing-log.server";
+import {
+  isConfirmedMissingTypicalActivityAnalysis,
+} from "@/lib/activity/basic-intake-analysis-state";
+import { readCuratorModelAvailabilitySummary } from "@/lib/reality-curator/model-availability-summary.server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const ROUTE_MARKER = "reality-curator-live-signals-v1" as const;
-const CONTRACT = "ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1" as const;
 const MAX_SCAN_LIMIT = 500;
 const DEFAULT_SCAN_LIMIT = 200;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type JsonRecord = Record<string, unknown>;
 
@@ -78,17 +83,7 @@ function buildCuratorSignal(row: RawActivitySignalRow) {
   const metadata = asRecord(row.metadata_json);
   const normalized = asRecord(row.normalized_preview_json);
   const analysis = asRecord(normalized.basicIntakeAnalysisV1);
-  const templateCandidates = Array.isArray(analysis.templateCandidates)
-    ? analysis.templateCandidates
-    : [];
-
-  const isCompletedNoMatch =
-    analysis.contract === CONTRACT &&
-    analysis.status === "completed" &&
-    analysis.noSuitableTypicalActivity === true &&
-    templateCandidates.length === 0;
-
-  if (!isCompletedNoMatch) return null;
+  if (!isConfirmedMissingTypicalActivityAnalysis(analysis)) return null;
 
   const activityEventId =
     text(analysis.activityEventId) || text(row.output_event_id) || null;
@@ -145,6 +140,19 @@ export async function GET(request: Request) {
     );
   }
 
+  const visitId =
+    new URL(request.url).searchParams.get("visitId")?.trim() ?? "";
+  if (visitId && !UUID_RE.test(visitId)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        routeMarker: ROUTE_MARKER,
+        error: "visitId must be a UUID when provided",
+      },
+      { status: 400 },
+    );
+  }
+
   const { data, error } = await supabase
     .from("raw_activity_signals")
     .select(
@@ -193,6 +201,11 @@ export async function GET(request: Request) {
     processingLog: processingLogBySignalId[signal.signalId],
   }));
 
+  const modelAvailability = await readCuratorModelAvailabilitySummary({
+    curatorAppUserId: guard.appUser.id,
+    visitId: visitId || null,
+  });
+
   return NextResponse.json(
     {
       ok: true,
@@ -206,6 +219,7 @@ export async function GET(request: Request) {
         scanned: scannedRows.length,
         scanLimit: limit,
       },
+      modelAvailability,
       readOnly: true,
     },
     { status: 200 },

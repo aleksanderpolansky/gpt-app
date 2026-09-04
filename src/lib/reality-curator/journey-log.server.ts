@@ -2,6 +2,7 @@ import { Buffer } from "node:buffer";
 import crypto from "node:crypto";
 
 import { supabase } from "../../../lib/supabase";
+import { isConfirmedMissingTypicalActivityAnalysis } from "@/lib/activity/basic-intake-analysis-state";
 
 export const ARCTOR_REALITY_CURATOR_JOURNEY_V1 =
   "ARCTOR_REALITY_CURATOR_JOURNEY_V1" as const;
@@ -250,15 +251,7 @@ export async function ensureMissingTypicalActivityJourney(input: {
   analysis: JsonRecord;
   provenance?: string;
 }) {
-  const templateCandidates = Array.isArray(input.analysis.templateCandidates)
-    ? input.analysis.templateCandidates
-    : [];
-
-  if (
-    input.analysis.status !== "completed" ||
-    input.analysis.noSuitableTypicalActivity !== true ||
-    templateCandidates.length !== 0
-  ) {
+  if (!isConfirmedMissingTypicalActivityAnalysis(input.analysis)) {
     return { eligible: false, appended: 0, duplicates: 0 };
   }
 

@@ -11,12 +11,12 @@ import {
   readRealityCuratorJourneysBySignalIds,
 } from "@/lib/reality-curator/journey-log.server";
 import { supabase } from "../../../../../../../lib/supabase";
+import { isConfirmedMissingTypicalActivityAnalysis } from "@/lib/activity/basic-intake-analysis-state";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const ROUTE_MARKER = "reality-curator-work-v1" as const;
-const BASIC_CONTRACT = "ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1" as const;
 const PARAMETER_EVENT_CODE = "related_parameter_catalog_checked" as const;
 const JOURNEY_PROCESSOR_NAME = "reality_curator_journey" as const;
 const JOURNEY_PROCESSOR_VERSION = "1" as const;
@@ -88,14 +88,10 @@ async function readEligibleSignal(signalId: string): Promise<EligibleSignal> {
 
   const normalized = asRecord(signal.normalized_preview_json);
   const analysis = asRecord(normalized.basicIntakeAnalysisV1);
-  const candidates = Array.isArray(analysis.templateCandidates) ? analysis.templateCandidates : [];
   const eligible =
     signal.source_type === "manual_chat" &&
     text(signal.idempotency_key).startsWith("activity_ai_lab_quick_capture:") &&
-    analysis.contract === BASIC_CONTRACT &&
-    analysis.status === "completed" &&
-    analysis.noSuitableTypicalActivity === true &&
-    candidates.length === 0;
+    isConfirmedMissingTypicalActivityAnalysis(analysis);
   if (!eligible) throw new Error("CURATOR_WORK_SIGNAL_NOT_ELIGIBLE");
 
   const activityEventId = text(analysis.activityEventId) || text(signal.output_event_id);

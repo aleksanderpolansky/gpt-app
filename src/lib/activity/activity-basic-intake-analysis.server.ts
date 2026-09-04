@@ -2,6 +2,13 @@ import { Buffer } from "node:buffer";
 import crypto from "node:crypto";
 
 import { ensureMissingTypicalActivityJourney } from "@/lib/reality-curator/journey-log.server";
+import {
+  ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1,
+  BASIC_INTAKE_MODEL_AVAILABILITY_PROCESSOR,
+  BASIC_INTAKE_MODEL_AVAILABILITY_PROCESSOR_VERSION,
+  hasCompletedTypicalActivitySearch,
+} from "@/lib/activity/basic-intake-analysis-state";
+import { safeCreateActivityProcessingLog } from "../../../lib/activity/activityProcessingLogs";
 
 import {
   runAiJsonWithUsageMetadata,
@@ -21,8 +28,7 @@ import {
 } from "../../../lib/ai/contextManifest";
 import { supabase } from "../../../lib/supabase";
 
-export const ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1 =
-  "ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1" as const;
+export { ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1 } from "@/lib/activity/basic-intake-analysis-state";
 
 const MODEL_TIER = "nano";
 const MAX_ACTIVE_TEMPLATES = 5000;
@@ -864,6 +870,9 @@ export async function markBasicActivityIntakeFailureV1(input: {
       activityEventId: input.activityEventId,
       failedAt: new Date().toISOString(),
       errorCode: message.slice(0, 220),
+      typicalActivitySearchStatus: "failed",
+      fullAiAnalysisCompleted: false,
+      retryable: true,
       factsWritten: 0,
       automaticTemplateBinding: false,
     },
@@ -898,8 +907,7 @@ export async function analyzeBasicActivityIntakeV1(input: {
   const normalizedPreview = asRecord(signalData.normalized_preview_json);
   const existing = asRecord(normalizedPreview.basicIntakeAnalysisV1);
   if (
-    existing.contract === ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1 &&
-    existing.status === "completed" &&
+    hasCompletedTypicalActivitySearch(existing) &&
     existing.activityEventId === input.activityEventId
   ) {
     await ensureMissingTypicalActivityJourney({
@@ -978,15 +986,23 @@ export async function analyzeBasicActivityIntakeV1(input: {
     text(activityMetadata.quickCaptureTemporalDirection) ||
     (activity.activity_role_code === "planned" ? "future" : "past");
 
-  const fallbackAnalysis = async (error: unknown) => {
+  let providerCallStarted = false;
+  let providerCallCompleted = false;
+
+  const fallbackAnalysis = async (
+    error: unknown,
+    typicalActivitySearchStatus: "not_run" | "failed",
+  ) => {
     const message = error instanceof Error ? error.message : String(error);
     const providerFailureCode = message.split(":", 1)[0].slice(0, 120);
+    const modelUnavailable = !providerCallCompleted;
     const templateCandidates = deterministicTemplateFallback(candidates);
+    const analyzedAt = new Date().toISOString();
     const analysis = {
       contract: ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1,
       status: "completed",
       activityEventId: activity.id,
-      analyzedAt: new Date().toISOString(),
+      analyzedAt,
       temporalDirection,
       serverTiming: {
         role: activity.activity_role_code,
@@ -996,13 +1012,16 @@ export async function analyzeBasicActivityIntakeV1(input: {
       },
       measurements: deterministicMeasurements,
       templateCandidates,
-      noSuitableTypicalActivity: templateCandidates.length === 0,
+      typicalActivitySearchStatus,
+      fullAiAnalysisCompleted: false,
+      retryable: true,
       typicalActivitiesHref: "/activity-templates",
       analysisMode: "safe_server_fallback",
-      providerAvailable: false,
+      providerAvailable: providerCallCompleted,
+      modelUnavailable,
       providerFailureCode,
       candidateLoadWarning,
-      providerCalls: 0,
+      providerCalls: providerCallStarted ? 1 : 0,
       factsWritten: 0,
       automaticTemplateBinding: false,
     };
@@ -1014,6 +1033,34 @@ export async function analyzeBasicActivityIntakeV1(input: {
       analysis,
     });
 
+    if (modelUnavailable) {
+      await safeCreateActivityProcessingLog({
+        userId: input.appUserId,
+        rawSignalId: input.signalId,
+        activityEventId: activity.id,
+        processorName: BASIC_INTAKE_MODEL_AVAILABILITY_PROCESSOR,
+        processorVersion: BASIC_INTAKE_MODEL_AVAILABILITY_PROCESSOR_VERSION,
+        processingStage: "error",
+        processingStatus: "failed",
+        severity: "warning",
+        message:
+          "Basic activity intake AI analysis unavailable; safe server fallback stored.",
+        metadata: {
+          contract: ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1,
+          eventCode: "model_unavailable",
+          analysisMode: "safe_server_fallback",
+          typicalActivitySearchStatus,
+          providerFailureCode,
+          candidateLoadWarning,
+          modelUnavailable: true,
+          retryable: true,
+        },
+        startedAt: analyzedAt,
+        finishedAt: analyzedAt,
+        durationMs: 0,
+      });
+    }
+
     return analysis;
   };
 
@@ -1021,7 +1068,7 @@ export async function analyzeBasicActivityIntakeV1(input: {
   try {
     model = await resolveNanoModel();
   } catch (error) {
-    return fallbackAnalysis(error);
+    return fallbackAnalysis(error, "not_run");
   }
 
   const schema = modelSchema();
@@ -1153,6 +1200,7 @@ Hard rules:
       },
     });
 
+    providerCallStarted = true;
     const response = await runAiJsonWithUsageMetadata<ModelOutput>({
       system,
       user,
@@ -1169,6 +1217,7 @@ Hard rules:
       reasoningEffort: "low",
       outputTokenCeiling: MAX_OUTPUT_TOKENS,
     });
+    providerCallCompleted = true;
 
     await markAiContextManifestProviderCompleted(manifestId, response.outputText);
     await finalizeUsage({
@@ -1186,6 +1235,7 @@ Hard rules:
       candidates,
     );
 
+    const typicalActivitySearchCompleted = !candidateLoadWarning;
     const analysis = {
       contract: ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1,
       status: "completed",
@@ -1200,7 +1250,14 @@ Hard rules:
       },
       measurements,
       templateCandidates,
-      noSuitableTypicalActivity: templateCandidates.length === 0,
+      ...(typicalActivitySearchCompleted
+        ? { noSuitableTypicalActivity: templateCandidates.length === 0 }
+        : {}),
+      typicalActivitySearchStatus: typicalActivitySearchCompleted
+        ? "completed"
+        : "failed",
+      fullAiAnalysisCompleted: typicalActivitySearchCompleted,
+      retryable: !typicalActivitySearchCompleted,
       typicalActivitiesHref: "/activity-templates",
       analysisMode: "nano_model",
       providerAvailable: true,
@@ -1238,6 +1295,9 @@ Hard rules:
     if (usageEventId) await markUsageFailed(usageEventId);
     if (manifestId) await markAiContextManifestFailed(manifestId, error);
     if (analysisExecutionId) await failAiAnalysisExecution(analysisExecutionId, error);
-    return fallbackAnalysis(error);
+    return fallbackAnalysis(
+      error,
+      providerCallStarted ? "failed" : "not_run",
+    );
   }
 }

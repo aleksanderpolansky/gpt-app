@@ -99,9 +99,19 @@ function isEligible(row) {
   const candidates = Array.isArray(analysis.templateCandidates)
     ? analysis.templateCandidates
     : [];
+  const explicitSearchStatus = text(analysis.typicalActivitySearchStatus);
+  const searchCompleted =
+    explicitSearchStatus
+      ? explicitSearchStatus === "completed"
+      : analysis.analysisMode === "nano_model" &&
+        analysis.providerAvailable === true;
   return (
     analysis.contract === BASIC_ANALYSIS_CONTRACT &&
     analysis.status === "completed" &&
+    analysis.analysisMode === "nano_model" &&
+    analysis.providerAvailable === true &&
+    !text(analysis.candidateLoadWarning) &&
+    searchCompleted &&
     analysis.noSuitableTypicalActivity === true &&
     candidates.length === 0 &&
     Boolean(text(analysis.activityEventId) || text(row.output_event_id))
@@ -308,6 +318,9 @@ function selfTest() {
         analyzedAt: "2026-09-02T17:01:00.000Z",
         templateCandidates: [],
         noSuitableTypicalActivity: true,
+        analysisMode: "nano_model",
+        providerAvailable: true,
+        typicalActivitySearchStatus: "completed",
       },
     },
   };

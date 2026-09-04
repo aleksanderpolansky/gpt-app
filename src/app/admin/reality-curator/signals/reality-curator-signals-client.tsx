@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -70,6 +70,13 @@ type QueueResponse = {
     scanned?: number;
     scanLimit?: number;
   };
+  modelAvailability?: {
+    visitId?: string;
+    previousVisitAt?: string | null;
+    currentVisitAt?: string;
+    unavailableSincePreviousVisit?: number;
+    outstandingActivityCount?: number;
+  };
   readOnly?: boolean;
 };
 
@@ -99,6 +106,10 @@ type Copy = {
   warning: string;
   queueCount: string;
   scannedCount: string;
+  modelAvailabilityMessage: (
+    unavailableCount: number,
+    outstandingActivityCount: number,
+  ) => string;
   readonly: string;
 };
 
@@ -131,6 +142,8 @@ const COPY: Record<LocaleCode, Copy> = {
     warning: "Предупреждение анализа",
     queueCount: "В очереди",
     scannedCount: "Проверено сигналов",
+    modelAvailabilityMessage: (unavailableCount, outstandingActivityCount) =>
+      `С последнего визита куратора модель была недоступна ${unavailableCount} раз. Не обработано ${outstandingActivityCount} активностей.`,
     readonly: "Действия куратора сохраняются в фактической истории пути. ОН, связи, параметры и типовые активности на этом этапе ещё не изменяются.",
   },
   en: {
@@ -161,6 +174,8 @@ const COPY: Record<LocaleCode, Copy> = {
     warning: "Analysis warning",
     queueCount: "In queue",
     scannedCount: "Signals scanned",
+    modelAvailabilityMessage: (unavailableCount, outstandingActivityCount) =>
+      `Since the curator's previous visit, the model was unavailable ${unavailableCount} times. ${outstandingActivityCount} activities remain unprocessed.`,
     readonly: "Curator actions are recorded in the actual path history. Observation objects, relations, parameters and typical activities are not changed at this stage.",
   },
   pl: {
@@ -191,6 +206,8 @@ const COPY: Record<LocaleCode, Copy> = {
     warning: "Ostrzeżenie analizy",
     queueCount: "W kolejce",
     scannedCount: "Sprawdzono sygnałów",
+    modelAvailabilityMessage: (unavailableCount, outstandingActivityCount) =>
+      `Od poprzedniej wizyty kuratora model był niedostępny ${unavailableCount} razy. Nie przetworzono ${outstandingActivityCount} aktywności.`,
     readonly: "Działania kuratora są zapisywane w historii rzeczywiście wykonanej ścieżki. Obiekty, relacje, parametry i aktywności typowe nie są jeszcze zmieniane.",
   },
   uk: {
@@ -221,6 +238,8 @@ const COPY: Record<LocaleCode, Copy> = {
     warning: "Попередження аналізу",
     queueCount: "У черзі",
     scannedCount: "Перевірено сигналів",
+    modelAvailabilityMessage: (unavailableCount, outstandingActivityCount) =>
+      `З часу попереднього візиту куратора модель була недоступна ${unavailableCount} разів. Не оброблено ${outstandingActivityCount} активностей.`,
     readonly: "Дії куратора записуються у фактичній історії шляху. Об’єкти, зв’язки, параметри та типові активності на цьому етапі ще не змінюються.",
   },
   de: {
@@ -251,6 +270,8 @@ const COPY: Record<LocaleCode, Copy> = {
     warning: "Analysewarnung",
     queueCount: "In der Warteschlange",
     scannedCount: "Signale geprüft",
+    modelAvailabilityMessage: (unavailableCount, outstandingActivityCount) =>
+      `Seit dem vorherigen Besuch des Kurators war das Modell ${unavailableCount}-mal nicht verfügbar. ${outstandingActivityCount} Aktivitäten sind noch nicht verarbeitet.`,
     readonly: "Kuratorenaktionen werden im tatsächlich durchlaufenen Verlauf gespeichert. Objekte, Beziehungen, Parameter und typische Aktivitäten werden in diesem Schritt noch nicht geändert.",
   },
   es: {
@@ -281,6 +302,8 @@ const COPY: Record<LocaleCode, Copy> = {
     warning: "Advertencia del análisis",
     queueCount: "En cola",
     scannedCount: "Señales revisadas",
+    modelAvailabilityMessage: (unavailableCount, outstandingActivityCount) =>
+      `Desde la visita anterior del curador, el modelo no estuvo disponible ${unavailableCount} veces. Quedan ${outstandingActivityCount} actividades sin procesar.`,
     readonly: "Las acciones del curador se registran en el historial real del proceso. Los objetos, relaciones, parámetros y actividades típicas todavía no se modifican en esta etapa.",
   },
   cs: {
@@ -311,6 +334,8 @@ const COPY: Record<LocaleCode, Copy> = {
     warning: "Varování analýzy",
     queueCount: "Ve frontě",
     scannedCount: "Zkontrolováno signálů",
+    modelAvailabilityMessage: (unavailableCount, outstandingActivityCount) =>
+      `Od předchozí návštěvy kurátora byl model ${unavailableCount}krát nedostupný. Nezpracováno zůstává ${outstandingActivityCount} aktivit.`,
     readonly: "Akce kurátora se zapisují do historie skutečně provedené cesty. Objekty, vazby, parametry a typické aktivity se v této fázi ještě nemění.",
   },
 };
@@ -344,6 +369,7 @@ function formatMeasurement(item: Measurement) {
 }
 
 export function RealityCuratorSignalsClient() {
+  const visitIdRef = useRef<string | null>(null);
   const [locale, setLocale] = useState<LocaleCode>("en");
   const [payload, setPayload] = useState<QueueResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -366,13 +392,26 @@ export function RealityCuratorSignalsClient() {
     else setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/admin/reality-curator/signals?limit=500", {
-        method: "GET",
-        cache: "no-store",
+      if (!visitIdRef.current) {
+        visitIdRef.current = globalThis.crypto.randomUUID();
+      }
+      const query = new URLSearchParams({
+        limit: "500",
+        visitId: visitIdRef.current,
       });
+      const response = await fetch(
+        `/api/admin/reality-curator/signals?${query.toString()}`,
+        {
+          method: "GET",
+          cache: "no-store",
+        },
+      );
       const data = (await response.json().catch(() => null)) as QueueResponse | null;
       if (!response.ok || !data?.ok) {
         throw new Error(data?.error || `HTTP_${response.status}`);
+      }
+      if (data.modelAvailability?.visitId) {
+        visitIdRef.current = data.modelAvailability.visitId;
       }
       setPayload(data);
     } catch (cause) {
@@ -435,7 +474,19 @@ export function RealityCuratorSignalsClient() {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        {payload?.modelAvailability ? (
+          <div className="mt-5 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+            <div className="font-semibold leading-6">
+              {copy.modelAvailabilityMessage(
+                payload.modelAvailability.unavailableSincePreviousVisit ?? 0,
+                payload.modelAvailability.outstandingActivityCount ?? 0,
+              )}
+            </div>
+          </div>
+        ) : null}
+
+        <div className={payload?.modelAvailability ? "mt-3 grid gap-3 sm:grid-cols-2" : "mt-5 grid gap-3 sm:grid-cols-2"}>
           <div className="rounded-2xl border border-[#e3e8f8] bg-[#f8faff] px-4 py-3">
             <div className="text-xs font-semibold text-[#7c8099]">{copy.queueCount}</div>
             <div className="mt-1 text-2xl font-extrabold text-[#1a1d2e]">{payload?.counts?.visible ?? 0}</div>

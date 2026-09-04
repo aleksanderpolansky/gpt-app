@@ -5,12 +5,12 @@ import {
   requirePlatformAdmin,
 } from "@/lib/admin/require-platform-admin";
 import { supabase } from "../../../../../../../lib/supabase";
+import { isConfirmedMissingTypicalActivityAnalysis } from "@/lib/activity/basic-intake-analysis-state";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const ROUTE_MARKER = "reality-curator-template-check-v1" as const;
-const BASIC_CONTRACT = "ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1" as const;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const LIMIT = 500;
 
@@ -60,16 +60,10 @@ export async function GET(request: Request) {
 
   const normalized = asRecord(signal.normalized_preview_json);
   const analysis = asRecord(normalized.basicIntakeAnalysisV1);
-  const candidates = Array.isArray(analysis.templateCandidates)
-    ? analysis.templateCandidates
-    : [];
   const eligible =
     signal.source_type === "manual_chat" &&
     text(signal.idempotency_key).startsWith("activity_ai_lab_quick_capture:") &&
-    analysis.contract === BASIC_CONTRACT &&
-    analysis.status === "completed" &&
-    analysis.noSuitableTypicalActivity === true &&
-    candidates.length === 0;
+    isConfirmedMissingTypicalActivityAnalysis(analysis);
 
   if (!eligible) {
     return NextResponse.json(
