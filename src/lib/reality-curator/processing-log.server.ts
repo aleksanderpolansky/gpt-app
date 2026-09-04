@@ -24,6 +24,7 @@ export type CuratorProcessingLogEvent = {
   labelEn: string | null;
   resultSummaryRu: string | null;
   resultSummaryEn: string | null;
+  analysisTrigger: "initial" | "retry" | null;
   actorAppUserId: string | null;
   actorDisplayName: string | null;
   actorRole: string | null;
@@ -35,7 +36,16 @@ export type CuratorProcessingLogEvent = {
 };
 
 export type CuratorProcessingLogBlock = {
-  code: "activity_intake" | "work_acceptance" | "typical_activity" | "parameter_check" | "template_parameters" | "object_definition" | "other";
+  code:
+    | "activity_capture"
+    | "background_analysis"
+    | "curator_queue"
+    | "work_acceptance"
+    | "typical_activity"
+    | "parameter_check"
+    | "template_parameters"
+    | "object_definition"
+    | "other";
   titleRu: string;
   titleEn: string;
   latestAt: string;
@@ -122,12 +132,18 @@ function sourceChannel(input: CuratorProcessingLogInput) {
 function blockCode(eventCode: string): CuratorProcessingLogBlock["code"] {
   if (
     eventCode === "candidate_signal_registered" ||
-    eventCode === "activity_event_saved" ||
-    eventCode === "background_analysis_completed" ||
-    eventCode === "missing_typical_activity_detected" ||
-    eventCode === "curator_queue_registered"
+    eventCode === "activity_event_saved"
   ) {
-    return "activity_intake";
+    return "activity_capture";
+  }
+  if (
+    eventCode === "background_analysis_completed" ||
+    eventCode === "missing_typical_activity_detected"
+  ) {
+    return "background_analysis";
+  }
+  if (eventCode === "curator_queue_registered") {
+    return "curator_queue";
   }
   if (eventCode === "curator_work_started" || eventCode === "curator_work_transferred") {
     return "work_acceptance";
@@ -154,8 +170,14 @@ function blockCode(eventCode: string): CuratorProcessingLogBlock["code"] {
 }
 
 function blockTitle(code: CuratorProcessingLogBlock["code"]) {
-  if (code === "activity_intake") {
+  if (code === "activity_capture") {
     return { ru: "Добавление активности", en: "Activity added" };
+  }
+  if (code === "background_analysis") {
+    return { ru: "AI-анализ активности", en: "Activity AI analysis" };
+  }
+  if (code === "curator_queue") {
+    return { ru: "Передача в очередь куратора", en: "Curator queue handoff" };
   }
   if (code === "work_acceptance") {
     return { ru: "Приём в работу", en: "Taken into work" };
@@ -187,25 +209,59 @@ function summarizeBlock(input: {
   const actor = newest?.actorDisplayName || "Куратор";
   const actorEn = newest?.actorDisplayName || "Curator";
 
-  if (input.code === "activity_intake") {
+  if (input.code === "activity_capture") {
+    return {
+      ru: `Пользователь ${input.sourceUserDisplayName} добавил активность: «${input.signal.sourceText}». Способ добавления — ${input.sourceChannelRu}.`,
+      en: `User ${input.sourceUserDisplayName} added an activity: “${input.signal.sourceText}”. Source — ${input.sourceChannelEn}.`,
+      comment: null,
+    };
+  }
+
+  if (input.code === "background_analysis") {
+    const analysisEvent = input.events.find(
+      (event) => event.eventCode === "background_analysis_completed",
+    );
     const missing = input.events.some(
       (event) => event.eventCode === "missing_typical_activity_detected",
     );
-    const queued = input.events.some(
+    const retry = analysisEvent?.analysisTrigger === "retry";
+    const analysisRu =
+      analysisEvent?.resultSummaryRu ||
+      (retry
+        ? "Повторный AI-анализ активности завершён."
+        : "AI-анализ активности завершён.");
+    const analysisEn =
+      analysisEvent?.resultSummaryEn ||
+      (retry
+        ? "AI re-analysis of the activity was completed."
+        : "The activity AI analysis was completed.");
+    return {
+      ru: `${analysisRu}${
+        missing
+          ? " Подходящая типовая активность по результату завершённого поиска не найдена."
+          : ""
+      }`,
+      en: `${analysisEn}${
+        missing
+          ? " No suitable typical activity was found by the completed search."
+          : ""
+      }`,
+      comment: null,
+    };
+  }
+
+  if (input.code === "curator_queue") {
+    const queueEvent = input.events.find(
       (event) => event.eventCode === "curator_queue_registered",
     );
-    const suffixRu = missing
-      ? " Подходящая типовая активность автоматически не найдена."
-      : "";
-    const queueRu = queued ? " Сигнал передан куратору модели." : "";
-    const suffixEn = missing
-      ? " No suitable typical activity was found automatically."
-      : "";
-    const queueEn = queued ? " The signal was sent to the model curator." : "";
     return {
-      ru: `Пользователь ${input.sourceUserDisplayName} добавил активность: «${input.signal.sourceText}». Способ добавления — ${input.sourceChannelRu}.${suffixRu}${queueRu}`,
-      en: `User ${input.sourceUserDisplayName} added an activity: “${input.signal.sourceText}”. Source — ${input.sourceChannelEn}.${suffixEn}${queueEn}`,
-      comment: null,
+      ru:
+        queueEvent?.resultSummaryRu ||
+        "Сигнал передан в рабочую очередь куратора модели.",
+      en:
+        queueEvent?.resultSummaryEn ||
+        "The signal was sent to the model curator work queue.",
+      comment: queueEvent?.curatorComment || null,
     };
   }
 
@@ -393,6 +449,10 @@ export async function readCuratorProcessingLogs(
       labelEn: text(metadata.labelEn) || null,
       resultSummaryRu: normalizeResultSummary(eventCode, metadata.resultSummaryRu, "ru") || null,
       resultSummaryEn: normalizeResultSummary(eventCode, metadata.resultSummaryEn, "en") || null,
+      analysisTrigger:
+        metadata.analysisTrigger === "initial" || metadata.analysisTrigger === "retry"
+          ? metadata.analysisTrigger
+          : null,
       actorAppUserId,
       actorDisplayName,
       actorRole: text(metadata.curatorRole) || null,

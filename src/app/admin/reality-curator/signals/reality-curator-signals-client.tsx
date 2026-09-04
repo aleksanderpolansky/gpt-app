@@ -363,9 +363,28 @@ function formatDate(value: string, locale: LocaleCode) {
   }).format(date);
 }
 
-function formatMeasurement(item: Measurement) {
+const REPETITION_UNIT_LABELS: Record<LocaleCode, string> = {
+  ru: "повт.",
+  pl: "powt.",
+  en: "reps",
+  uk: "повт.",
+  de: "Wdh.",
+  es: "rep.",
+  cs: "opak.",
+};
+
+function localizedMeasurementUnit(unit: string, locale: LocaleCode) {
+  const code = unit.trim().toLowerCase();
+  if (["repetition", "repetitions", "rep", "reps"].includes(code)) {
+    return REPETITION_UNIT_LABELS[locale];
+  }
+  return code;
+}
+
+function formatMeasurement(item: Measurement, locale: LocaleCode) {
   const value = item.valueNumeric ?? item.valueText ?? "—";
-  return `${item.label || item.parameterCode}: ${value}${item.unit ? ` ${item.unit}` : ""}`;
+  const unit = item.unit ? localizedMeasurementUnit(item.unit, locale) : "";
+  return `${item.label || item.parameterCode}: ${value}${unit ? ` ${unit}` : ""}`;
 }
 
 export function RealityCuratorSignalsClient() {
@@ -557,7 +576,7 @@ export function RealityCuratorSignalsClient() {
                   <div className="mt-2 flex flex-wrap gap-2">
                     {signal.measurements.map((item, index) => (
                       <span key={`${signal.signalId}:${item.parameterCode}:${index}`} className="rounded-full bg-[#eef2ff] px-3 py-1.5 text-xs font-semibold text-[#4055a8]">
-                        {formatMeasurement(item)}
+                        {formatMeasurement(item, locale)}
                       </span>
                     ))}
                   </div>

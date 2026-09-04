@@ -194,6 +194,7 @@ export async function POST(request: Request) {
       activityEventId,
       locale,
       timeZone,
+      analysisTrigger: "retry",
     });
 
     return NextResponse.json({

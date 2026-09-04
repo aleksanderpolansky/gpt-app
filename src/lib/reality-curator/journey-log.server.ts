@@ -259,6 +259,8 @@ export async function ensureMissingTypicalActivityJourney(input: {
     input.analysis.analyzedAt,
     new Date().toISOString(),
   );
+  const analysisTrigger =
+    text(input.analysis.analysisTrigger) === "retry" ? "retry" : "initial";
 
   const [{ data: signalRow, error: signalError }, { data: eventRow, error: eventError }] =
     await Promise.all([
@@ -310,6 +312,17 @@ export async function ensureMissingTypicalActivityJourney(input: {
     if (!occurredAt) {
       throw new Error(`REALITY_CURATOR_JOURNEY_AUTOMATIC_TIMESTAMP_MISSING:${definition.eventCode}`);
     }
+    const retryAnalysisMetadata =
+      definition.eventCode === "background_analysis_completed" &&
+      analysisTrigger === "retry"
+        ? {
+            labelRu: "Повторный AI-анализ завершён",
+            labelEn: "AI re-analysis completed",
+            resultSummaryRu: "Повторный AI-анализ активности завершён.",
+            resultSummaryEn: "AI re-analysis of the activity was completed.",
+          }
+        : {};
+
     const result = await appendRealityCuratorJourneyEvent({
       userId: input.userId,
       rawSignalId: input.rawSignalId,
@@ -319,6 +332,8 @@ export async function ensureMissingTypicalActivityJourney(input: {
       provenance: input.provenance,
       extraMetadata: {
         sourceContract: "ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1",
+        analysisTrigger,
+        ...retryAnalysisMetadata,
       },
     });
     if (result.duplicate) duplicates += 1;

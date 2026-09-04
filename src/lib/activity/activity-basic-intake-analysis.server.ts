@@ -145,6 +145,8 @@ type BasicIntakeFailureStage =
   | "post_provider"
   | "outer_failure";
 
+type BasicIntakeAnalysisTrigger = "initial" | "retry";
+
 function asRecord(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as JsonRecord)
@@ -506,6 +508,21 @@ function mergeMeasurements(
   return output.slice(0, MAX_MEASUREMENTS);
 }
 
+function normalizeMeasurementUnit(
+  value: unknown,
+  measureType: MeasureType,
+  parameterCode: string,
+) {
+  const raw = text(value).toLowerCase();
+  if (
+    (measureType === "repetitions" || parameterCode === "repetition_count") &&
+    ["repetition", "repetitions", "rep", "reps"].includes(raw)
+  ) {
+    return "repetition";
+  }
+  return raw;
+}
+
 function validateMeasurements(
   raw: unknown,
   sourceText: string,
@@ -520,7 +537,11 @@ function validateMeasurements(
     const parameterCode = text(item.parameterCode).toLowerCase();
     const label = text(item.label);
     const measureType = text(item.measureType) as MeasureType;
-    const unit = text(item.unit).toLowerCase();
+    const unit = normalizeMeasurementUnit(
+      item.unit,
+      measureType,
+      parameterCode,
+    );
     const valueNumeric = finiteNumber(item.valueNumeric);
     const valueText = item.valueText === null ? null : text(item.valueText) || null;
     const rawFragment = text(item.rawFragment);
@@ -1092,7 +1113,11 @@ export async function analyzeBasicActivityIntakeV1(input: {
   activityEventId: string;
   locale: string;
   timeZone: string;
+  analysisTrigger?: BasicIntakeAnalysisTrigger;
 }) {
+  const analysisTrigger: BasicIntakeAnalysisTrigger =
+    input.analysisTrigger === "retry" ? "retry" : "initial";
+
   const { data: signalData, error: signalError } = await supabase
     .from("raw_activity_signals")
     .select("id,user_id,output_event_id,normalized_preview_json")
@@ -1140,6 +1165,7 @@ export async function analyzeBasicActivityIntakeV1(input: {
       contract: ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1,
       status: "pending",
       activityEventId: input.activityEventId,
+      analysisTrigger,
       startedAt: new Date().toISOString(),
       factsWritten: 0,
       automaticTemplateBinding: false,
@@ -1238,6 +1264,7 @@ export async function analyzeBasicActivityIntakeV1(input: {
       retryable: true,
       typicalActivitiesHref: "/activity-templates",
       analysisMode: "safe_server_fallback",
+      analysisTrigger,
       providerAvailable: providerResponseReceived ? true : providerCallStarted ? false : null,
       providerAttempted: providerCallStarted,
       providerCompleted: providerCallCompleted,
@@ -1508,6 +1535,7 @@ Hard rules:
       retryable: !typicalActivitySearchCompleted,
       typicalActivitiesHref: "/activity-templates",
       analysisMode: "nano_model",
+      analysisTrigger,
       providerAvailable: true,
       providerAttempted: true,
       providerCompleted: true,

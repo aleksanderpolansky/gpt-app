@@ -248,7 +248,10 @@ function formatMeasurement(measurement: Measurement, locale: Locale) {
         )
       : measurement.valueText?.trim() || "—";
   const unitCode = measurement.unit?.trim().toLowerCase() || "";
-  const unit = UNIT_LABELS[locale][unitCode] ?? unitCode;
+  const canonicalUnitCode = ["repetition", "repetitions", "rep", "reps"].includes(unitCode)
+    ? "repetition"
+    : unitCode;
+  const unit = UNIT_LABELS[locale][canonicalUnitCode] ?? canonicalUnitCode;
   return unit ? `${value} ${unit}` : value;
 }
 
