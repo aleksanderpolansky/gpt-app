@@ -17,6 +17,7 @@ type LocalizableValueObject = {
   canonical_key?: string | null;
   title?: string | null;
   description?: string | null;
+  metadata_json?: unknown;
 };
 
 type CatalogEntry = {
@@ -43,6 +44,45 @@ function cleanText(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+function runtimeDraftEntry(valueObject: LocalizableValueObject): CatalogEntry | null {
+  const metadata =
+    valueObject.metadata_json &&
+    typeof valueObject.metadata_json === "object" &&
+    !Array.isArray(valueObject.metadata_json)
+      ? (valueObject.metadata_json as Record<string, unknown>)
+      : null;
+  const draftRaw = metadata?.curator_system_draft_v1;
+  const draft =
+    draftRaw && typeof draftRaw === "object" && !Array.isArray(draftRaw)
+      ? (draftRaw as Record<string, unknown>)
+      : null;
+  const localizationsRaw = draft?.localizations;
+  const localizations =
+    localizationsRaw &&
+    typeof localizationsRaw === "object" &&
+    !Array.isArray(localizationsRaw)
+      ? (localizationsRaw as Record<string, unknown>)
+      : null;
+  if (!localizations) return null;
+
+  const title: Partial<Record<GlobalSystemValueObjectLocale, string>> = {};
+  const description: Partial<Record<GlobalSystemValueObjectLocale, string>> = {};
+  for (const locale of GLOBAL_SYSTEM_VALUE_OBJECT_LOCALES) {
+    const raw = localizations[locale];
+    const item =
+      raw && typeof raw === "object" && !Array.isArray(raw)
+        ? (raw as Record<string, unknown>)
+        : null;
+    const localizedTitle = cleanText(item?.title);
+    const localizedDescription = cleanText(item?.description);
+    if (localizedTitle) title[locale] = localizedTitle;
+    if (localizedDescription) description[locale] = localizedDescription;
+  }
+  return Object.keys(title).length || Object.keys(description).length
+    ? { title, description }
+    : null;
+}
+
 export function localizeGlobalSystemValueObject<T extends LocalizableValueObject>(
   valueObject: T,
   localeValue: unknown,
@@ -52,9 +92,10 @@ export function localizeGlobalSystemValueObject<T extends LocalizableValueObject
     return valueObject;
   }
 
-  const entry = (
+  const staticEntry = (
     localizationCatalog.objects as Record<string, CatalogEntry | undefined>
   )[canonicalKey];
+  const entry = staticEntry ?? runtimeDraftEntry(valueObject);
   if (!entry) {
     return valueObject;
   }

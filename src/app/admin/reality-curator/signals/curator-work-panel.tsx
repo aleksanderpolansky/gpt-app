@@ -6,6 +6,8 @@ import { createPortal } from "react-dom";
 
 import type { LocaleCode } from "@/i18n";
 
+import { CuratorObjectBootstrap } from "./curator-object-bootstrap";
+
 type JourneyItem = {
   eventCode: string;
   resultSummaryRu?: string | null;
@@ -485,11 +487,18 @@ export function CuratorWorkPanel({ signalId, journey, locale, onChanged }: Props
       );
     } else if (parameterCheck?.completed) {
       content = (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
-          <div className="text-sm font-extrabold text-emerald-900">{parameterCopy.completed}</div>
-          {parameterSummary ? (
-            <div className="mt-1 text-sm leading-5 text-emerald-800">{parameterSummary}</div>
-          ) : null}
+        <div className="space-y-3">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
+            <div className="text-sm font-extrabold text-emerald-900">{parameterCopy.completed}</div>
+            {parameterSummary ? (
+              <div className="mt-1 text-sm leading-5 text-emerald-800">{parameterSummary}</div>
+            ) : null}
+          </div>
+          <CuratorObjectBootstrap
+            signalId={signalId}
+            locale={locale}
+            onChanged={onChanged}
+          />
         </div>
       );
     } else {

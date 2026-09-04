@@ -35,7 +35,7 @@ export type CuratorProcessingLogEvent = {
 };
 
 export type CuratorProcessingLogBlock = {
-  code: "activity_intake" | "work_acceptance" | "typical_activity" | "parameter_check" | "other";
+  code: "activity_intake" | "work_acceptance" | "typical_activity" | "parameter_check" | "object_definition" | "other";
   titleRu: string;
   titleEn: string;
   latestAt: string;
@@ -138,6 +138,12 @@ function blockCode(eventCode: string): CuratorProcessingLogBlock["code"] {
   if (eventCode === "related_parameter_catalog_checked") {
     return "parameter_check";
   }
+  if (
+    eventCode === "measurable_object_decision_recorded" ||
+    eventCode === "observation_object_created"
+  ) {
+    return "object_definition";
+  }
   return "other";
 }
 
@@ -153,6 +159,9 @@ function blockTitle(code: CuratorProcessingLogBlock["code"]) {
   }
   if (code === "parameter_check") {
     return { ru: "Проверка параметров и измерений", en: "Parameter and measurement check" };
+  }
+  if (code === "object_definition") {
+    return { ru: "Определение измеримого объекта", en: "Measurable object determination" };
   }
   return { ru: "Дальнейшая обработка", en: "Further processing" };
 }
@@ -250,6 +259,21 @@ function summarizeBlock(input: {
     return {
       ru: event?.resultSummaryRu || "Проверка системного каталога параметров и измерений завершена.",
       en: event?.resultSummaryEn || "The system parameter and measurement catalog check was completed.",
+      comment: event?.curatorComment || null,
+    };
+  }
+
+  if (input.code === "object_definition") {
+    const created = input.events.find(
+      (item) => item.eventCode === "observation_object_created",
+    );
+    const decision = input.events.find(
+      (item) => item.eventCode === "measurable_object_decision_recorded",
+    );
+    const event = created || decision || input.events[0];
+    return {
+      ru: event?.resultSummaryRu || "Решение по измеримому объекту зафиксировано.",
+      en: event?.resultSummaryEn || "The measurable-object decision was recorded.",
       comment: event?.curatorComment || null,
     };
   }
@@ -407,20 +431,34 @@ export async function readCuratorProcessingLogs(
     const parameterEvent = events.find(
       (event) => event.eventCode === "related_parameter_catalog_checked",
     );
-    const currentStageRu = parameterEvent
-      ? "Проверка параметров и измерений завершена"
-      : typicalEvent
-        ? "Проверка параметров и измерений"
-        : workEvent
-          ? "Определение типовой активности"
-          : "Ожидает принятия в работу";
-    const currentStageEn = parameterEvent
-      ? "Parameter and measurement check completed"
-      : typicalEvent
-        ? "Parameter and measurement check"
-        : workEvent
-          ? "Typical activity determination"
-          : "Waiting to be taken into work";
+    const objectDecisionEvent = events.find(
+      (event) => event.eventCode === "measurable_object_decision_recorded",
+    );
+    const objectCreatedEvent = events.find(
+      (event) => event.eventCode === "observation_object_created",
+    );
+    const currentStageRu = objectCreatedEvent
+      ? "Построение измеримого объекта"
+      : objectDecisionEvent
+        ? "Определение измеримого объекта завершено"
+        : parameterEvent
+          ? "Определение измеримого объекта"
+          : typicalEvent
+            ? "Проверка параметров и измерений"
+            : workEvent
+              ? "Определение типовой активности"
+              : "Ожидает принятия в работу";
+    const currentStageEn = objectCreatedEvent
+      ? "Measurable object path construction"
+      : objectDecisionEvent
+        ? "Measurable object determination completed"
+        : parameterEvent
+          ? "Measurable object determination"
+          : typicalEvent
+            ? "Parameter and measurement check"
+            : workEvent
+              ? "Typical activity determination"
+              : "Waiting to be taken into work";
     const last = events[0] ?? null;
 
     output[signal.signalId] = {
