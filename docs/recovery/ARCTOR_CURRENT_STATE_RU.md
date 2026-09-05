@@ -947,3 +947,15 @@ Code commit: `34d08384f5183a2aac28bca1537e75489dc6c5d4`.
 Текущая БД всё ещё содержит legacy `facet_code/object_kind_code` и P1C guards, поэтому create endpoint временно заполняет compatibility values серверно и только для storage-инвариантов. Для трёх root «Systems and Structures / States and Needs / Actions and Processes» direct-child compatibility соответствует `ENTITY / STATE / PROCESS`; куратор этих значений не выбирает. Неизвестный direct-root fail-closed.
 
 SQL/DB schema не менялись. Live acceptance production после push обязателен. Следующая предметная точка — вернуться к `подтянулся 10 раз`, построить leaf и связать `count`, затем проверить `duration`.
+
+## 2026-09-05 — ARCTOR_CURATOR_AUTO_CANONICAL_KEY_V1
+
+- Предыдущий facetless curator UI получил live acceptance на production: Semantic facet отсутствует.
+- Baseline нового этапа: `main @ 2dd8c55841efa38d23d9f7a35057b478b8d1ef66`.
+- Code commit: `fd8d4b52e39e6188d023601fe1ea3636a9cf591a`.
+- `canonical_key` остаётся внутренним стабильным идентификатором, но исключён из ручного authoring Куратора.
+- Сервер генерирует `system.<english_slug>.<10-hex-sha256>` из structural role + parent id + English title; значение фиксируется при создании и не пересчитывается при последующем rename/reparent.
+- Это технический ключ, а не новая онтология/semantic facet.
+- SQL/schema/существующие canonical keys не менялись.
+- Live acceptance: создать `Діяльність людини / Human activity` без поля canonical key; затем продолжить путь к `Pull-up` и назначить `count`, после чего проверить `duration`.
+- Подробный checkpoint: `docs/recovery/ARCTOR_CURATOR_AUTO_CANONICAL_KEY_V1_RU_20260905.md`.

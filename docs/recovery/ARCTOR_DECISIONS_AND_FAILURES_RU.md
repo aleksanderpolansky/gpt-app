@@ -839,3 +839,14 @@ Code commit: `34d08384f5183a2aac28bca1537e75489dc6c5d4`
 - 18:46 V1: false FAIL на нормальном Git STDERR во время `fetch`; source/DB mutations отсутствовали.
 - 18:50 V1.0.1: allowlist остановил commit из-за загрязнения `git diff --name-only` предупреждением LF/CRLF; один residue-файл остался в worktree.
 - V1.0.2: native streams разделены; allowlist переведён на porcelain status; rollback усилен byte snapshot; auto-recovery разрешён только для точного известного residue path+hash.
+
+## DECISION_CURATOR_CANONICAL_KEY_SERVER_GENERATED_20260905
+
+Дата: 2026-09-05
+Code commit: `fd8d4b52e39e6188d023601fe1ea3636a9cf591a`
+
+Решение: `canonical_key` остаётся обязательным техническим идентификатором системного ОН, но не является предметным решением Куратора. Ручное поле удаляется из create workflow; ключ генерируется сервером детерминированно.
+
+Формат v1: `system.<english_slug>.<10-hex-sha256>`. Hash seed включает structural role, parent id/ROOT и English title. Это обеспечивает стабильный retry и не требует от меняющегося персонала знания технических namespace.
+
+Ключ не является semantic facet, object kind или полным путём дерева. После создания он не меняется автоматически. Существующие ключи не мигрируются этим релизом.
