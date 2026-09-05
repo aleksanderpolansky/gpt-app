@@ -183,6 +183,15 @@ function roleLabel(role: NodeRoleCode | null, copy: Copy) {
   return "—";
 }
 
+type LocalizedFieldLabels = {
+  title: string;
+  description: string;
+  titleEn: string;
+  descriptionEn: string;
+};
+
+const LOCALIZED_FIELD_LABELS: Record<LocaleCode, LocalizedFieldLabels> = {"en":{"title":"Name","description":"Definition","titleEn":"English name","descriptionEn":"English definition"},"ru":{"title":"Название","description":"Определение","titleEn":"Название на английском","descriptionEn":"Определение на английском"},"pl":{"title":"Nazwa","description":"Definicja","titleEn":"Nazwa angielska","descriptionEn":"Definicja angielska"},"uk":{"title":"Назва","description":"Визначення","titleEn":"Англійська назва","descriptionEn":"Англійське визначення"},"de":{"title":"Name","description":"Definition","titleEn":"Englischer Name","descriptionEn":"Englische Definition"},"es":{"title":"Nombre","description":"Definición","titleEn":"Nombre en inglés","descriptionEn":"Definición en inglés"},"cs":{"title":"Název","description":"Definice","titleEn":"Anglický název","descriptionEn":"Anglická definice"}};
+
 export function CuratorObjectBootstrap({
   signalId,
   locale,
@@ -192,6 +201,7 @@ export function CuratorObjectBootstrap({
   onChanged,
 }: Props) {
   const copy = COPY[locale] ?? COPY.en;
+  const fieldLabels = LOCALIZED_FIELD_LABELS[locale] ?? LOCALIZED_FIELD_LABELS.en;
   const [state, setState] = useState<BootstrapState | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -204,8 +214,8 @@ export function CuratorObjectBootstrap({
   const [parentId, setParentId] = useState("");
   const [facetCode, setFacetCode] = useState("");
   const [canonicalKey, setCanonicalKey] = useState("");
-  const [titleRu, setTitleRu] = useState("");
-  const [descriptionRu, setDescriptionRu] = useState("");
+  const [localizedTitle, setLocalizedTitle] = useState("");
+  const [localizedDescription, setLocalizedDescription] = useState("");
   const [titleEn, setTitleEn] = useState("");
   const [descriptionEn, setDescriptionEn] = useState("");
   const [relation, setRelation] = useState("");
@@ -275,8 +285,8 @@ export function CuratorObjectBootstrap({
       setRelation("");
       setCreationComment("");
       setCanonicalKey("");
-      setTitleRu("");
-      setDescriptionRu("");
+      setLocalizedTitle("");
+      setLocalizedDescription("");
       setTitleEn("");
       setDescriptionEn("");
       onChanged();
@@ -319,10 +329,9 @@ export function CuratorObjectBootstrap({
 
     return Boolean(
       systemKeyValid &&
-        titleRu.trim() &&
-        descriptionRu.trim() &&
-        titleEn.trim() &&
-        descriptionEn.trim(),
+        localizedTitle.trim() &&
+        localizedDescription.trim() &&
+        (locale === "en" || (titleEn.trim() && descriptionEn.trim())),
     );
   })();
 
@@ -485,11 +494,11 @@ export function CuratorObjectBootstrap({
 
           <>
             <label className="block text-xs font-bold text-[#4b5563]">{copy.canonicalKey}<input value={canonicalKey} onChange={(event) => setCanonicalKey(event.target.value.toLowerCase().slice(0, 160))} placeholder="action.walking.step_count" className="mt-1 h-11 w-full rounded-xl border border-[#d8def0] bg-white px-3 font-mono text-sm outline-none" /><span className="mt-1 block font-normal text-[#7c8099]">{copy.canonicalKeyHint}</span></label>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-xs font-bold text-[#4b5563]">{copy.titleRu}<input value={titleRu} onChange={(event) => setTitleRu(event.target.value.slice(0, 180))} className="mt-1 h-11 w-full rounded-xl border border-[#d8def0] bg-white px-3 text-sm outline-none" /></label>
-              <label className="block text-xs font-bold text-[#4b5563]">{copy.titleEn}<input value={titleEn} onChange={(event) => setTitleEn(event.target.value.slice(0, 180))} className="mt-1 h-11 w-full rounded-xl border border-[#d8def0] bg-white px-3 text-sm outline-none" /></label>
-              <label className="block text-xs font-bold text-[#4b5563]">{copy.descriptionRu}<textarea value={descriptionRu} onChange={(event) => setDescriptionRu(event.target.value.slice(0, 4000))} rows={3} className="mt-1 w-full resize-y rounded-xl border border-[#d8def0] bg-white px-3 py-2 text-sm outline-none" /></label>
-              <label className="block text-xs font-bold text-[#4b5563]">{copy.descriptionEn}<textarea value={descriptionEn} onChange={(event) => setDescriptionEn(event.target.value.slice(0, 4000))} rows={3} className="mt-1 w-full resize-y rounded-xl border border-[#d8def0] bg-white px-3 py-2 text-sm outline-none" /></label>
+            <div className={`grid gap-3 ${locale === "en" ? "" : "sm:grid-cols-2"}`}>
+              <label className="block text-xs font-bold text-[#4b5563]">{fieldLabels.title}<input value={localizedTitle} onChange={(event) => setLocalizedTitle(event.target.value.slice(0, 180))} className="mt-1 h-11 w-full rounded-xl border border-[#d8def0] bg-white px-3 text-sm outline-none" /></label>
+              {locale !== "en" ? <label className="block text-xs font-bold text-[#4b5563]">{fieldLabels.titleEn}<input value={titleEn} onChange={(event) => setTitleEn(event.target.value.slice(0, 180))} className="mt-1 h-11 w-full rounded-xl border border-[#d8def0] bg-white px-3 text-sm outline-none" /></label> : null}
+              <label className="block text-xs font-bold text-[#4b5563]">{fieldLabels.description}<textarea value={localizedDescription} onChange={(event) => setLocalizedDescription(event.target.value.slice(0, 4000))} rows={3} className="mt-1 w-full resize-y rounded-xl border border-[#d8def0] bg-white px-3 py-2 text-sm outline-none" /></label>
+              {locale !== "en" ? <label className="block text-xs font-bold text-[#4b5563]">{fieldLabels.descriptionEn}<textarea value={descriptionEn} onChange={(event) => setDescriptionEn(event.target.value.slice(0, 4000))} rows={3} className="mt-1 w-full resize-y rounded-xl border border-[#d8def0] bg-white px-3 py-2 text-sm outline-none" /></label> : null}
             </div>
           </>
 
@@ -512,10 +521,10 @@ export function CuratorObjectBootstrap({
               parentValueObjectId: nodeRole === "root" ? null : parentId,
               facetCode: needsFacet ? facetCode : null,
               canonicalKey,
-              titleRu,
-              descriptionRu,
-              titleEn,
-              descriptionEn,
+              localizedTitle,
+              localizedDescription,
+              titleEn: locale === "en" ? localizedTitle : titleEn,
+              descriptionEn: locale === "en" ? localizedDescription : descriptionEn,
               hierarchyRelationCode: nodeRole === "root" ? null : relation,
               comment: creationComment,
             })}

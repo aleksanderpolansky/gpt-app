@@ -19,7 +19,7 @@ import { isConfirmedMissingTypicalActivityAnalysis } from "@/lib/activity/basic-
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const ROUTE_MARKER = "reality-curator-object-bootstrap-v1-6-system-only" as const;
+const ROUTE_MARKER = "reality-curator-object-bootstrap-v1-7-locale-aware-fields" as const;
 const PROCESSOR_NAME = "reality_curator_journey" as const;
 const PROCESSOR_VERSION = "1" as const;
 const PARAMETER_EVENT_CODE = "related_parameter_catalog_checked" as const;
@@ -28,7 +28,7 @@ const PARAMETER_SET_EVENT_CODE = "typical_activity_parameter_set_confirmed" as c
 const DECISION_EVENT_CODE = "measurable_object_decision_recorded" as const;
 const CREATED_EVENT_CODE = "observation_object_created" as const;
 const DECISION_CONTRACT = "ARCTOR_REALITY_CURATOR_MEASURABLE_OBJECT_V1" as const;
-const CREATION_CONTRACT = "ARCTOR_REALITY_MODEL_CURATOR_ACTIVITY_TEMPLATE_BUILDER_V1_5" as const;
+const CREATION_CONTRACT = "ARCTOR_REALITY_MODEL_CURATOR_ACTIVITY_TEMPLATE_BUILDER_V1_6_LOCALE_AWARE" as const;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CANONICAL_KEY_RE = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
@@ -66,6 +66,8 @@ const FACET_ORDER = [
 type JsonRecord = Record<string, unknown>;
 type ScopeCode = "private" | "system";
 type NodeRoleCode = "root" | "intermediate" | "leaf";
+const CURATOR_LOCALES = ["en", "pl", "ru", "uk", "de", "es", "cs"] as const;
+type CuratorLocale = (typeof CURATOR_LOCALES)[number];
 
 type EligibleSignal = {
   id: string;
@@ -113,8 +115,8 @@ type WorkBody = {
   title?: unknown;
   description?: unknown;
   canonicalKey?: unknown;
-  titleRu?: unknown;
-  descriptionRu?: unknown;
+  localizedTitle?: unknown;
+  localizedDescription?: unknown;
   titleEn?: unknown;
   descriptionEn?: unknown;
   hierarchyRelationCode?: unknown;
@@ -150,10 +152,10 @@ function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function normalizeLocale(value: unknown): string {
+function normalizeLocale(value: unknown): CuratorLocale {
   const locale = text(value).toLowerCase();
-  return ["en", "pl", "ru", "uk", "de", "es", "cs"].includes(locale)
-    ? locale
+  return CURATOR_LOCALES.includes(locale as CuratorLocale)
+    ? (locale as CuratorLocale)
     : "en";
 }
 
@@ -699,8 +701,9 @@ async function createSystemObject(input: {
   parent: ParentRow | null;
   requestedFacet: string;
   canonicalKey: string;
-  titleRu: string;
-  descriptionRu: string;
+  locale: CuratorLocale;
+  localizedTitle: string;
+  localizedDescription: string;
   titleEn: string;
   descriptionEn: string;
   hierarchyRelationCode: string;
@@ -718,8 +721,9 @@ async function createSystemObject(input: {
     facetCode: semantic.facetCode,
     objectKindCode: semantic.objectKindCode,
     hierarchyRelationCode: input.role === "root" ? null : input.hierarchyRelationCode,
-    titleRu: input.titleRu,
-    descriptionRu: input.descriptionRu,
+    locale: input.locale,
+    localizedTitle: input.localizedTitle,
+    localizedDescription: input.localizedDescription,
     titleEn: input.titleEn,
     descriptionEn: input.descriptionEn,
   };
@@ -750,8 +754,16 @@ async function createSystemObject(input: {
       existing.facet_code === semantic.facetCode &&
       existing.origin_type_code === "system_model";
     if (!replay) throw new Error("CURATOR_SYSTEM_CANONICAL_KEY_ALREADY_EXISTS");
-    return { valueObjectId, canonicalKey: input.canonicalKey, title: input.titleRu, replay: true };
+    return { valueObjectId, canonicalKey: input.canonicalKey, title: input.localizedTitle, replay: true };
   }
+
+  const draftLocalizations: Record<string, { title: string; description: string }> = {
+    en: { title: input.titleEn, description: input.descriptionEn },
+  };
+  draftLocalizations[input.locale] = {
+    title: input.localizedTitle,
+    description: input.localizedDescription,
+  };
 
   const metadataJson = {
     system_hidden_from_observation_ui: true,
@@ -765,10 +777,7 @@ async function createSystemObject(input: {
       createdAt: new Date().toISOString(),
       publicationState: "draft_not_published",
       nodeRole: input.role,
-      localizations: {
-        ru: { title: input.titleRu, description: input.descriptionRu },
-        en: { title: input.titleEn, description: input.descriptionEn },
-      },
+      localizations: draftLocalizations,
     },
   };
 
@@ -819,7 +828,7 @@ async function createSystemObject(input: {
       const replayRow = replayRows?.[0];
       const replayMeta = asRecord(asRecord(replayRow?.metadata_json).curator_system_draft_v1);
       if (replayRow?.id === valueObjectId && text(replayMeta.requestHash) === hash) {
-        return { valueObjectId, canonicalKey: input.canonicalKey, title: input.titleRu, replay: true };
+        return { valueObjectId, canonicalKey: input.canonicalKey, title: input.localizedTitle, replay: true };
       }
     }
     throw new Error(`CURATOR_SYSTEM_CREATE_FAILED:${insertError.code ?? "DB"}:${insertError.message}`);
@@ -863,7 +872,7 @@ async function createSystemObject(input: {
   ) {
     throw new Error("CURATOR_SYSTEM_POSTCHECK_STATE_INVALID");
   }
-  return { valueObjectId, canonicalKey: input.canonicalKey, title: input.titleRu, replay: false };
+  return { valueObjectId, canonicalKey: input.canonicalKey, title: input.localizedTitle, replay: false };
 }
 
 function roleNameRu(role: NodeRoleCode) {
@@ -1031,13 +1040,15 @@ export async function POST(request: Request) {
       }
 
       const canonicalKey = text(body.canonicalKey).toLowerCase();
-      const titleRu = text(body.titleRu);
-      const descriptionRu = text(body.descriptionRu);
-      const titleEn = text(body.titleEn);
-      const descriptionEn = text(body.descriptionEn);
+      const localizedTitle = text(body.localizedTitle);
+      const localizedDescription = text(body.localizedDescription);
+      const titleEn = locale === "en" ? localizedTitle : text(body.titleEn);
+      const descriptionEn = locale === "en" ? localizedDescription : text(body.descriptionEn);
       if (!canonicalKey || canonicalKey.length > 160 || !CANONICAL_KEY_RE.test(canonicalKey)) return errorResponse("CURATOR_SYSTEM_CANONICAL_KEY_INVALID", "canonicalKey must be lowercase ASCII segments separated by dot, underscore or hyphen", 400);
-      if (!titleRu || !titleEn || titleRu.length > 180 || titleEn.length > 180) return errorResponse("CURATOR_SYSTEM_TITLE_INVALID", "RU and EN titles are required and must be 180 characters or fewer", 400);
-      if (!descriptionRu || !descriptionEn || descriptionRu.length > 4000 || descriptionEn.length > 4000) return errorResponse("CURATOR_SYSTEM_DESCRIPTION_INVALID", "RU and EN definitions are required and must be 4000 characters or fewer", 400);
+      if (!localizedTitle || localizedTitle.length > 180) return errorResponse("CURATOR_SYSTEM_LOCALIZED_TITLE_INVALID", "The title in the selected locale is required and must be 180 characters or fewer", 400);
+      if (!localizedDescription || localizedDescription.length > 4000) return errorResponse("CURATOR_SYSTEM_LOCALIZED_DESCRIPTION_INVALID", "The definition in the selected locale is required and must be 4000 characters or fewer", 400);
+      if (!titleEn || titleEn.length > 180) return errorResponse("CURATOR_SYSTEM_ENGLISH_TITLE_INVALID", "The English title is required and must be 180 characters or fewer", 400);
+      if (!descriptionEn || descriptionEn.length > 4000) return errorResponse("CURATOR_SYSTEM_ENGLISH_DESCRIPTION_INVALID", "The English definition is required and must be 4000 characters or fewer", 400);
       const created = await createSystemObject({
         signal,
         guard,
@@ -1045,13 +1056,15 @@ export async function POST(request: Request) {
         parent,
         requestedFacet,
         canonicalKey,
-        titleRu,
-        descriptionRu,
+        locale,
+        localizedTitle,
+        localizedDescription,
         titleEn,
         descriptionEn,
         hierarchyRelationCode,
       });
-      const resultSummaryRu = `Создан системный ${roleNameRu(role)} ОН-черновик «${titleRu}» (${canonicalKey}). Он ownerless, скрыт из обычного каталога и не опубликован автоматически.`;
+      const titleForRussianLog = locale === "ru" ? localizedTitle : titleEn;
+      const resultSummaryRu = `Создан системный ${roleNameRu(role)} ОН-черновик «${titleForRussianLog}» (${canonicalKey}). Он ownerless, скрыт из обычного каталога и не опубликован автоматически.`;
       const resultSummaryEn = `Ownerless System ${roleNameEn(role)} draft “${titleEn}” (${canonicalKey}) was created. It is hidden from the ordinary catalog and was not published automatically.`;
 
       const completedTargetLeaf = role === "leaf";
@@ -1079,6 +1092,11 @@ export async function POST(request: Request) {
           createdValueObjectId: created.valueObjectId,
           createdCanonicalKey: created.canonicalKey,
           createdTitle: created.title,
+          creationLocale: locale,
+          createdLocalizedTitle: localizedTitle,
+          createdLocalizedDescription: localizedDescription,
+          createdEnglishTitle: titleEn,
+          createdEnglishDescription: descriptionEn,
           parentValueObjectId: parent?.id ?? null,
           facetCode: role === "root" ? "DOMAIN" : text(parent?.ontology_node_role_code) === "root" ? requestedFacet : text(parent?.facet_code),
           hierarchyRelationCode: role === "root" ? null : hierarchyRelationCode,
