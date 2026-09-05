@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   getActivityParameterPresentation,
@@ -116,6 +116,21 @@ const COPY: Record<ActivityParameterLocale, Copy> = {
   cs: { title:"Katalog parametrů", intro:"Systémové parametry pro objekty pozorování a typické aktivity. Technický kód se zadá jednou při vytvoření parametru a potom se nemění.", create:"Nový parametr", search:"Hledat parametry…", active:"Aktivní", retired:"Neaktivní", edit:"Upravit", noItems:"Nebyly nalezeny žádné parametry.", technicalCode:"Technický kód", generatedCode:"Vygeneruje se automaticky při vytvoření", usage:"Použití", locked:"Sémantika uzamčena", unlocked:"Lze upravit", name:"Název", description:"Popis", dimension:"Rozměr", valueType:"Typ hodnoty", canonicalUnit:"Kanonická jednotka", allowedUnits:"Povolené jednotky (oddělené čárkou)", aggregation:"Agregace", window:"Výchozí okno", allowNegative:"Povolit záporné hodnoty", save:"Uložit", saving:"Ukládání…", cancel:"Zrušit", deactivate:"Deaktivovat", activate:"Aktivovat", semanticLockHelp:"Parametr se již používá. Jeho sémantiku nelze přepsat; pro jiný význam vytvořte nový parametr. Stav aktivace lze stále měnit.", created:"Parametr vytvořen.", updated:"Parametr aktualizován." },
 };
 
+
+const DELETE_COPY: Readonly<Record<ActivityParameterLocale, {
+  button: string;
+  confirm: string;
+  deleted: string;
+}>> = {
+  en: { button: "Delete", confirm: "Permanently delete inactive unused parameter \"{name}\"?", deleted: "Parameter deleted." },
+  pl: { button: "Usuń", confirm: "Trwale usunąć nieaktywny, nieużywany parametr \"{name}\"?", deleted: "Parametr usunięty." },
+  ru: { button: "Удалить", confirm: "Навсегда удалить неактивный неиспользуемый параметр «{name}»?", deleted: "Параметр удалён." },
+  uk: { button: "Видалити", confirm: "Назавжди видалити неактивний невикористовуваний параметр «{name}»?", deleted: "Параметр видалено." },
+  de: { button: "Löschen", confirm: "Inaktiven unbenutzten Parameter \"{name}\" dauerhaft löschen?", deleted: "Parameter gelöscht." },
+  es: { button: "Eliminar", confirm: "¿Eliminar permanentemente el parámetro inactivo y no utilizado \"{name}\"?", deleted: "Parámetro eliminado." },
+  cs: { button: "Smazat", confirm: "Trvale smazat neaktivní nepoužívaný parametr \"{name}\"?", deleted: "Parametr smazán." },
+};
+
 const TECHNICAL_CODE_HELP: Readonly<Record<ActivityParameterLocale, string>> = {
   en: "Stable system identifier: lowercase Latin letters, digits and underscores; start with a letter. It cannot be changed after creation.",
   pl: "Stały identyfikator systemowy: małe litery łacińskie, cyfry i podkreślenia; musi zaczynać się literą. Po utworzeniu nie można go zmienić.",
@@ -137,6 +152,8 @@ export function ActivityParameterAdminCatalog({ locale }: { locale: ActivityPara
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const formRef = useRef<HTMLDivElement | null>(null);
+  const deleteCopy = DELETE_COPY[locale] ?? DELETE_COPY.en;
 
   const load = useCallback(async () => {
     const response = await fetch("/api/admin/activity-parameter-definitions", { cache: "no-store" });
@@ -175,12 +192,19 @@ export function ActivityParameterAdminCatalog({ locale }: { locale: ActivityPara
     });
   }, [definitions, locale, search, showRetired]);
 
+  function revealForm() {
+    window.setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  }
+
   function beginCreate() {
     setEditing(null);
     setCreating(true);
     setForm(EMPTY_FORM);
     setError("");
     setMessage("");
+    revealForm();
   }
 
   function beginEdit(item: DefinitionItem) {
@@ -200,6 +224,7 @@ export function ActivityParameterAdminCatalog({ locale }: { locale: ActivityPara
     });
     setError("");
     setMessage("");
+    revealForm();
   }
 
   function closeForm() {
@@ -272,6 +297,41 @@ export function ActivityParameterAdminCatalog({ locale }: { locale: ActivityPara
     }
   }
 
+  async function deleteRetired(item: DefinitionItem) {
+    if (item.status !== "retired" || item.usageCount !== 0) return;
+
+    const name = getActivityParameterPresentation(
+      item.parameterCode,
+      locale,
+      item.title,
+      item.description,
+    ).title;
+    if (!window.confirm(deleteCopy.confirm.replace("{name}", name))) return;
+
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/admin/activity-parameter-definitions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: item.id }),
+      });
+      const payload = await response.json();
+      if (!response.ok || payload?.ok !== true) {
+        throw new Error(payload?.error || payload?.errorMessage || "Delete failed");
+      }
+      await load();
+      window.dispatchEvent(new CustomEvent("arctor:activity-parameter-catalog-changed"));
+      setMessage(deleteCopy.deleted);
+      if (editing?.id === item.id) closeForm();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Delete failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const formVisible = creating || editing !== null;
   const semanticLocked = editing?.semanticLocked === true;
 
@@ -316,6 +376,16 @@ export function ActivityParameterAdminCatalog({ locale }: { locale: ActivityPara
                 <div className="flex shrink-0 flex-col gap-1.5">
                   <button type="button" onClick={() => beginEdit(item)} className="rounded-lg border border-slate-200 px-2 py-1.5 text-[11px] font-semibold text-slate-600">{copy.edit}</button>
                   <button type="button" disabled={busy} onClick={() => void toggleStatus(item)} className="rounded-lg border border-slate-200 px-2 py-1.5 text-[11px] font-semibold text-slate-600 disabled:opacity-50">{item.status === "active" ? copy.deactivate : copy.activate}</button>
+                  {item.status === "retired" && item.usageCount === 0 ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void deleteRetired(item)}
+                      className="rounded-lg border border-red-200 px-2 py-1.5 text-[11px] font-semibold text-red-600 disabled:opacity-50"
+                    >
+                      {deleteCopy.button}
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </article>
@@ -324,7 +394,7 @@ export function ActivityParameterAdminCatalog({ locale }: { locale: ActivityPara
       </div>
 
       {formVisible ? (
-        <div className="mt-5 border-t border-slate-100 pt-4">
+        <div ref={formRef} className="mt-5 scroll-mt-24 border-t border-slate-100 pt-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block sm:col-span-2"><span className="text-xs font-medium">{copy.name}</span><input value={form.title} disabled={semanticLocked} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50" /></label>
             <label className="block sm:col-span-2"><span className="text-xs font-medium">{copy.description}</span><textarea rows={2} value={form.description} disabled={semanticLocked} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50" /></label>

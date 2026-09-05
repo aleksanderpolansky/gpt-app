@@ -99,6 +99,9 @@ type SemanticInput = {
 type Usage = {
   valueObjectAssignmentCount: number;
   activityTemplateUsageCount: number;
+  factCapturePreferenceCount: number;
+  activityEventMeasureCount: number;
+  activityObjectFactCount: number;
 };
 
 function asObject(value: unknown): Record<string, unknown> {
@@ -210,11 +213,23 @@ function asAllowedUnitCodes(value: unknown): string[] {
 async function readUsage(ids: readonly string[]): Promise<Map<string, Usage>> {
   const result = new Map<string, Usage>();
   for (const id of ids) {
-    result.set(id, { valueObjectAssignmentCount: 0, activityTemplateUsageCount: 0 });
+    result.set(id, {
+      valueObjectAssignmentCount: 0,
+      activityTemplateUsageCount: 0,
+      factCapturePreferenceCount: 0,
+      activityEventMeasureCount: 0,
+      activityObjectFactCount: 0,
+    });
   }
   if (ids.length === 0) return result;
 
-  const [assignmentResult, templateResult] = await Promise.all([
+  const [
+    assignmentResult,
+    templateResult,
+    preferenceResult,
+    measureResult,
+    factResult,
+  ] = await Promise.all([
     supabase
       .from("value_object_parameter_assignments")
       .select("parameter_definition_id")
@@ -223,10 +238,25 @@ async function readUsage(ids: readonly string[]): Promise<Map<string, Usage>> {
       .from("activity_template_profile_parameters_v2")
       .select("parameter_definition_id")
       .in("parameter_definition_id", [...ids]),
+    supabase
+      .from("fact_capture_precision_preferences")
+      .select("parameter_definition_id")
+      .in("parameter_definition_id", [...ids]),
+    supabase
+      .from("activity_event_measures")
+      .select("parameter_definition_id")
+      .in("parameter_definition_id", [...ids]),
+    supabase
+      .from("activity_object_facts")
+      .select("parameter_definition_id")
+      .in("parameter_definition_id", [...ids]),
   ]);
 
   if (assignmentResult.error) throw new Error(assignmentResult.error.message);
   if (templateResult.error) throw new Error(templateResult.error.message);
+  if (preferenceResult.error) throw new Error(preferenceResult.error.message);
+  if (measureResult.error) throw new Error(measureResult.error.message);
+  if (factResult.error) throw new Error(factResult.error.message);
 
   for (const row of (assignmentResult.data ?? []) as Array<{ parameter_definition_id: string }>) {
     const usage = result.get(row.parameter_definition_id);
@@ -236,12 +266,28 @@ async function readUsage(ids: readonly string[]): Promise<Map<string, Usage>> {
     const usage = result.get(row.parameter_definition_id);
     if (usage) usage.activityTemplateUsageCount += 1;
   }
+  for (const row of (preferenceResult.data ?? []) as Array<{ parameter_definition_id: string }>) {
+    const usage = result.get(row.parameter_definition_id);
+    if (usage) usage.factCapturePreferenceCount += 1;
+  }
+  for (const row of (measureResult.data ?? []) as Array<{ parameter_definition_id: string }>) {
+    const usage = result.get(row.parameter_definition_id);
+    if (usage) usage.activityEventMeasureCount += 1;
+  }
+  for (const row of (factResult.data ?? []) as Array<{ parameter_definition_id: string }>) {
+    const usage = result.get(row.parameter_definition_id);
+    if (usage) usage.activityObjectFactCount += 1;
+  }
 
   return result;
 }
-
 function mapDefinition(row: DefinitionRow, usage: Usage) {
-  const usageCount = usage.valueObjectAssignmentCount + usage.activityTemplateUsageCount;
+  const usageCount =
+    usage.valueObjectAssignmentCount +
+    usage.activityTemplateUsageCount +
+    usage.factCapturePreferenceCount +
+    usage.activityEventMeasureCount +
+    usage.activityObjectFactCount;
   return {
     id: row.id,
     parameterSeriesId: row.parameter_series_id,
@@ -265,10 +311,12 @@ function mapDefinition(row: DefinitionRow, usage: Usage) {
     usageCount,
     valueObjectAssignmentCount: usage.valueObjectAssignmentCount,
     activityTemplateUsageCount: usage.activityTemplateUsageCount,
+    factCapturePreferenceCount: usage.factCapturePreferenceCount,
+    activityEventMeasureCount: usage.activityEventMeasureCount,
+    activityObjectFactCount: usage.activityObjectFactCount,
     semanticLocked: usageCount > 0,
   };
 }
-
 function semanticChanged(row: DefinitionRow, input: SemanticInput): boolean {
   const oldUnits = asAllowedUnitCodes(row.allowed_unit_codes).slice().sort();
   const newUnits = input.allowedUnitCodes.slice().sort();
@@ -313,7 +361,7 @@ export async function GET() {
     const rows = (data ?? []) as unknown as DefinitionRow[];
     const usage = await readUsage(rows.map((row) => row.id));
     const definitions = rows
-      .map((row) => mapDefinition(row, usage.get(row.id) ?? { valueObjectAssignmentCount: 0, activityTemplateUsageCount: 0 }))
+      .map((row) => mapDefinition(row, usage.get(row.id) ?? { valueObjectAssignmentCount: 0, activityTemplateUsageCount: 0, factCapturePreferenceCount: 0, activityEventMeasureCount: 0, activityObjectFactCount: 0 }))
       .sort((left, right) => {
         if (left.status !== right.status) return left.status === "active" ? -1 : 1;
         return left.dimensionCode.localeCompare(right.dimensionCode) || left.title.localeCompare(right.title);
@@ -381,7 +429,7 @@ export async function POST(request: Request) {
     if (error) throw new Error(error.message);
     const row = data as unknown as DefinitionRow;
     return NextResponse.json(
-      { ok: true, routeMarker: ROUTE_MARKER, definition: mapDefinition(row, { valueObjectAssignmentCount: 0, activityTemplateUsageCount: 0 }) },
+      { ok: true, routeMarker: ROUTE_MARKER, definition: mapDefinition(row, { valueObjectAssignmentCount: 0, activityTemplateUsageCount: 0, factCapturePreferenceCount: 0, activityEventMeasureCount: 0, activityObjectFactCount: 0 }) },
       { status: 201 },
     );
   } catch (error) {
@@ -447,7 +495,7 @@ export async function PUT(request: Request) {
     if (hasSemanticPayload) {
       const input = readSemanticInput(body);
       const usageMap = await readUsage([id]);
-      const usage = usageMap.get(id) ?? { valueObjectAssignmentCount: 0, activityTemplateUsageCount: 0 };
+      const usage = usageMap.get(id) ?? { valueObjectAssignmentCount: 0, activityTemplateUsageCount: 0, factCapturePreferenceCount: 0, activityEventMeasureCount: 0, activityObjectFactCount: 0 };
       const usageCount = usage.valueObjectAssignmentCount + usage.activityTemplateUsageCount;
 
       if (usageCount > 0 && semanticChanged(current, input)) {
@@ -490,11 +538,131 @@ export async function PUT(request: Request) {
     return NextResponse.json({
       ok: true,
       routeMarker: ROUTE_MARKER,
-      definition: mapDefinition(row, usageMap.get(id) ?? { valueObjectAssignmentCount: 0, activityTemplateUsageCount: 0 }),
+      definition: mapDefinition(row, usageMap.get(id) ?? { valueObjectAssignmentCount: 0, activityTemplateUsageCount: 0, factCapturePreferenceCount: 0, activityEventMeasureCount: 0, activityObjectFactCount: 0 }),
     });
   } catch (error) {
     return NextResponse.json(
       { ok: false, routeMarker: ROUTE_MARKER, error: error instanceof Error ? error.message : "Parameter update failed" },
+      { status: 400 },
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  const guard = await requirePlatformAdmin();
+  if (!guard.ok) return platformAdminErrorResponse(guard, ROUTE_MARKER);
+
+  try {
+    const body = asObject(await request.json());
+    const id = asTrimmedString(body.id);
+    if (!id) throw new Error("Parameter id is required.");
+
+    const current = await readSystemDefinition(id);
+    if (!current) {
+      return NextResponse.json(
+        { ok: false, routeMarker: ROUTE_MARKER, error: "System parameter not found." },
+        { status: 404 },
+      );
+    }
+
+    if (current.parameter_code === "process_count") {
+      return NextResponse.json(
+        {
+          ok: false,
+          routeMarker: ROUTE_MARKER,
+          errorCode: "PROTECTED_SYSTEM_PARAMETER",
+          error: "The protected internal process_count parameter cannot be deleted.",
+        },
+        { status: 409 },
+      );
+    }
+
+    if (current.status !== "retired") {
+      return NextResponse.json(
+        {
+          ok: false,
+          routeMarker: ROUTE_MARKER,
+          errorCode: "ONLY_RETIRED_PARAMETER_CAN_BE_DELETED",
+          error: "Deactivate the parameter before deleting it.",
+        },
+        { status: 409 },
+      );
+    }
+
+    const usageMap = await readUsage([id]);
+    const usage = usageMap.get(id) ?? { valueObjectAssignmentCount: 0, activityTemplateUsageCount: 0, factCapturePreferenceCount: 0, activityEventMeasureCount: 0, activityObjectFactCount: 0 };
+    const usageCount =
+      usage.valueObjectAssignmentCount +
+      usage.activityTemplateUsageCount +
+      usage.factCapturePreferenceCount +
+      usage.activityEventMeasureCount +
+      usage.activityObjectFactCount;
+
+    if (usageCount > 0) {
+      return NextResponse.json(
+        {
+          ok: false,
+          routeMarker: ROUTE_MARKER,
+          errorCode: "PARAMETER_IN_USE_CANNOT_DELETE",
+          error: "This retired parameter is still referenced and cannot be deleted.",
+          usageCount,
+        },
+        { status: 409 },
+      );
+    }
+
+    const { data, error } = await supabase
+      .from("value_object_parameter_definitions")
+      .delete()
+      .eq("id", id)
+      .eq("scope_code", "system")
+      .eq("status", "retired")
+      .neq("parameter_code", "process_count")
+      .select("id,parameter_code")
+      .maybeSingle();
+
+    if (error) {
+      if (error.code === "23503") {
+        return NextResponse.json(
+          {
+            ok: false,
+            routeMarker: ROUTE_MARKER,
+            errorCode: "PARAMETER_DELETE_BLOCKED_BY_REFERENCE",
+            error: "A database reference still protects this parameter from deletion.",
+          },
+          { status: 409 },
+        );
+      }
+      throw new Error(error.message);
+    }
+
+    if (!data) {
+      return NextResponse.json(
+        {
+          ok: false,
+          routeMarker: ROUTE_MARKER,
+          errorCode: "PARAMETER_DELETE_STATE_CHANGED",
+          error: "The parameter state changed before deletion. Reload the catalog and try again.",
+        },
+        { status: 409 },
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      routeMarker: ROUTE_MARKER,
+      deleted: {
+        id: String(data.id),
+        parameterCode: String(data.parameter_code),
+      },
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        routeMarker: ROUTE_MARKER,
+        error: error instanceof Error ? error.message : "Parameter deletion failed",
+      },
       { status: 400 },
     );
   }
