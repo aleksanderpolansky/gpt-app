@@ -19,7 +19,7 @@ import { isConfirmedMissingTypicalActivityAnalysis } from "@/lib/activity/basic-
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const ROUTE_MARKER = "reality-curator-object-bootstrap-v1-8-facetless-curator-ui" as const;
+const ROUTE_MARKER = "reality-curator-object-bootstrap-v1-9-auto-canonical-key" as const;
 const PROCESSOR_NAME = "reality_curator_journey" as const;
 const PROCESSOR_VERSION = "1" as const;
 const PARAMETER_EVENT_CODE = "related_parameter_catalog_checked" as const;
@@ -28,10 +28,9 @@ const PARAMETER_SET_EVENT_CODE = "typical_activity_parameter_set_confirmed" as c
 const DECISION_EVENT_CODE = "measurable_object_decision_recorded" as const;
 const CREATED_EVENT_CODE = "observation_object_created" as const;
 const DECISION_CONTRACT = "ARCTOR_REALITY_CURATOR_MEASURABLE_OBJECT_V1" as const;
-const CREATION_CONTRACT = "ARCTOR_REALITY_MODEL_CURATOR_ACTIVITY_TEMPLATE_BUILDER_V1_7_FACETLESS_UI" as const;
+const CREATION_CONTRACT = "ARCTOR_REALITY_MODEL_CURATOR_ACTIVITY_TEMPLATE_BUILDER_V1_8_AUTO_CANONICAL_KEY" as const;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const CANONICAL_KEY_RE = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
 const RELATIONS = new Set(["part_of", "is_a", "aspect_of", "subprocess_of"]);
 const NODE_ROLES = new Set(["root", "intermediate", "leaf"]);
 const DECISIONS = new Set([
@@ -103,7 +102,6 @@ type WorkBody = {
   parentValueObjectId?: unknown;
   title?: unknown;
   description?: unknown;
-  canonicalKey?: unknown;
   localizedTitle?: unknown;
   localizedDescription?: unknown;
   titleEn?: unknown;
@@ -146,6 +144,42 @@ function normalizeLocale(value: unknown): CuratorLocale {
   return CURATOR_LOCALES.includes(locale as CuratorLocale)
     ? (locale as CuratorLocale)
     : "en";
+}
+/**
+ * canonical_key is a stable technical identifier, not a curator-authored semantic
+ * classification. The curator supplies the human meaning; the server derives a
+ * deterministic storage key from the English name plus structural creation context.
+ * The opaque hash suffix prevents naming-style drift and makes retries stable.
+ */
+function generateCanonicalKey(input: {
+  role: NodeRoleCode;
+  parentId: string | null;
+  titleEn: string;
+}): string {
+  const normalized = input.titleEn
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  let slug = normalized
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_+/g, "_");
+  if (!slug) slug = "object";
+
+  const digest = crypto
+    .createHash("sha256")
+    .update(
+      `ARCTOR_CURATOR_CANONICAL_KEY_V1|${input.role}|${input.parentId ?? "ROOT"}|${input.titleEn.trim().toLowerCase()}`,
+      "utf8",
+    )
+    .digest("hex")
+    .slice(0, 10);
+
+  const prefix = "system.";
+  const suffix = `.${digest}`;
+  const maxSlugLength = Math.max(1, 160 - prefix.length - suffix.length);
+  slug = slug.slice(0, maxSlugLength).replace(/_+$/g, "") || "object";
+  return `${prefix}${slug}${suffix}`;
 }
 
 /**
@@ -768,6 +802,7 @@ async function createSystemObject(input: {
       curatorRole: input.guard.platformAdmin.role,
       createdAt: new Date().toISOString(),
       publicationState: "draft_not_published",
+      canonicalKeyMode: "server_generated_v1",
       nodeRole: input.role,
       localizations: draftLocalizations,
     },
@@ -1027,16 +1062,19 @@ export async function POST(request: Request) {
         }
       }
 
-      const canonicalKey = text(body.canonicalKey).toLowerCase();
       const localizedTitle = text(body.localizedTitle);
       const localizedDescription = text(body.localizedDescription);
       const titleEn = locale === "en" ? localizedTitle : text(body.titleEn);
       const descriptionEn = locale === "en" ? localizedDescription : text(body.descriptionEn);
-      if (!canonicalKey || canonicalKey.length > 160 || !CANONICAL_KEY_RE.test(canonicalKey)) return errorResponse("CURATOR_SYSTEM_CANONICAL_KEY_INVALID", "canonicalKey must be lowercase ASCII segments separated by dot, underscore or hyphen", 400);
       if (!localizedTitle || localizedTitle.length > 180) return errorResponse("CURATOR_SYSTEM_LOCALIZED_TITLE_INVALID", "The title in the selected locale is required and must be 180 characters or fewer", 400);
       if (!localizedDescription || localizedDescription.length > 4000) return errorResponse("CURATOR_SYSTEM_LOCALIZED_DESCRIPTION_INVALID", "The definition in the selected locale is required and must be 4000 characters or fewer", 400);
       if (!titleEn || titleEn.length > 180) return errorResponse("CURATOR_SYSTEM_ENGLISH_TITLE_INVALID", "The English title is required and must be 180 characters or fewer", 400);
       if (!descriptionEn || descriptionEn.length > 4000) return errorResponse("CURATOR_SYSTEM_ENGLISH_DESCRIPTION_INVALID", "The English definition is required and must be 4000 characters or fewer", 400);
+      const canonicalKey = generateCanonicalKey({
+        role,
+        parentId: parent?.id ?? null,
+        titleEn,
+      });
       const created = await createSystemObject({
         signal,
         guard,
@@ -1078,6 +1116,7 @@ export async function POST(request: Request) {
           createdNodeRole: role,
           createdValueObjectId: created.valueObjectId,
           createdCanonicalKey: created.canonicalKey,
+          canonicalKeyMode: "server_generated_v1",
           createdTitle: created.title,
           creationLocale: locale,
           createdLocalizedTitle: localizedTitle,
