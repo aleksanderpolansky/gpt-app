@@ -19,7 +19,7 @@ import { isConfirmedMissingTypicalActivityAnalysis } from "@/lib/activity/basic-
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const ROUTE_MARKER = "reality-curator-object-bootstrap-v1-5" as const;
+const ROUTE_MARKER = "reality-curator-object-bootstrap-v1-6-system-only" as const;
 const PROCESSOR_NAME = "reality_curator_journey" as const;
 const PROCESSOR_VERSION = "1" as const;
 const PARAMETER_EVENT_CODE = "related_parameter_catalog_checked" as const;
@@ -498,20 +498,10 @@ async function readFacetOptions() {
   return FACET_ORDER.filter((facet) => active.has(facet));
 }
 
-async function readOptions(actor: ResolvedActorContext, locale: string) {
+async function readOptions(locale: string) {
   const parentSelect = "id,title,description,canonical_key,facet_code,branch_type_code,root_value_object_id,ontology_node_role_code,scope_code,owner_user_id,owner_actor_id,origin_type_code,status";
   const leafSelect = "id,title,description,canonical_key,facet_code,scope_code";
-  const [privateParentsResult, systemParentsResult, privateLeavesResult, systemLeavesResult, facets] = await Promise.all([
-    supabase
-      .from("value_objects")
-      .select(parentSelect)
-      .eq("scope_code", "actor")
-      .eq("owner_user_id", actor.appUserId)
-      .eq("owner_actor_id", actor.actorId)
-      .eq("status", "active")
-      .in("ontology_node_role_code", ["root", "intermediate"])
-      .order("title", { ascending: true })
-      .limit(2000),
+  const [systemParentsResult, systemLeavesResult, facets] = await Promise.all([
     supabase
       .from("value_objects")
       .select(parentSelect)
@@ -521,16 +511,6 @@ async function readOptions(actor: ResolvedActorContext, locale: string) {
       .eq("origin_type_code", "system_model")
       .in("status", ["draft", "active"])
       .in("ontology_node_role_code", ["root", "intermediate"])
-      .order("title", { ascending: true })
-      .limit(2000),
-    supabase
-      .from("value_objects")
-      .select(leafSelect)
-      .eq("scope_code", "actor")
-      .eq("owner_user_id", actor.appUserId)
-      .eq("owner_actor_id", actor.actorId)
-      .eq("status", "active")
-      .eq("ontology_node_role_code", "leaf")
       .order("title", { ascending: true })
       .limit(2000),
     supabase
@@ -547,24 +527,18 @@ async function readOptions(actor: ResolvedActorContext, locale: string) {
     readFacetOptions(),
   ]);
   for (const [name, result] of [
-    ["privateParents", privateParentsResult],
     ["systemParents", systemParentsResult],
-    ["privateLeaves", privateLeavesResult],
     ["systemLeaves", systemLeavesResult],
   ] as const) {
-    if (result.error) throw new Error(`CURATOR_OBJECT_OPTIONS_READ_FAILED:${name}:${result.error.message}`);
+    if (result.error) {
+      throw new Error(`CURATOR_OBJECT_OPTIONS_READ_FAILED:${name}:${result.error.message}`);
+    }
   }
-  const privateParents = (privateParentsResult.data ?? []) as ParentRow[];
   const systemParents = (systemParentsResult.data ?? []) as ParentRow[];
-  const privateLeaves = (privateLeavesResult.data ?? []) as LeafOptionRow[];
   const systemLeaves = (systemLeavesResult.data ?? []) as LeafOptionRow[];
   return {
-    privateParents: privateParents.map((row) => toOption(row, locale)),
     systemParents: systemParents.map((row) => toOption(row, locale)),
-    existingLeaves: [
-      ...systemLeaves.map((row) => toOption(row, locale)),
-      ...privateLeaves.map((row) => toOption(row, locale)),
-    ],
+    existingLeaves: systemLeaves.map((row) => toOption(row, locale)),
     facetOptions: facets,
   };
 }
@@ -578,7 +552,7 @@ async function buildState(
   const [decision, creations, options] = await Promise.all([
     readDecisionState(signal.id, parameterDefinitionId),
     readCreationStates(signal.id, parameterDefinitionId),
-    readOptions(actor, locale),
+    readOptions(locale),
   ]);
   const targetLeaf = [...creations].reverse().find((item) => item.completedTargetLeaf) ?? null;
   return {
@@ -598,30 +572,20 @@ async function buildState(
   };
 }
 
-async function readAllowedExistingLeaf(
-  valueObjectId: string,
-  actor: ResolvedActorContext,
-) {
+async function readAllowedExistingLeaf(valueObjectId: string) {
   const { data, error } = await supabase
     .from("value_objects")
     .select("id,title,canonical_key,scope_code,owner_user_id,owner_actor_id,origin_type_code,status,ontology_node_role_code")
     .eq("id", valueObjectId)
+    .eq("scope_code", "global")
+    .is("owner_user_id", null)
+    .is("owner_actor_id", null)
+    .eq("origin_type_code", "system_model")
+    .eq("status", "active")
+    .eq("ontology_node_role_code", "leaf")
     .limit(1);
   if (error) throw new Error(`CURATOR_OBJECT_EXISTING_LEAF_READ_FAILED:${error.message}`);
-  const row = data?.[0];
-  if (!row || row.status !== "active" || row.ontology_node_role_code !== "leaf") return null;
-  if (
-    row.scope_code === "global" &&
-    row.owner_user_id === null &&
-    row.owner_actor_id === null &&
-    row.origin_type_code === "system_model"
-  ) return row;
-  if (
-    row.scope_code === "actor" &&
-    row.owner_user_id === actor.appUserId &&
-    row.owner_actor_id === actor.actorId
-  ) return row;
-  return null;
+  return data?.[0] ?? null;
 }
 
 function decisionSummary(result: string, title: string | null) {
@@ -651,38 +615,27 @@ function decisionSummary(result: string, title: string | null) {
 
 async function readParent(input: {
   parentId: string;
-  scope: ScopeCode;
-  actor: ResolvedActorContext;
   childRole: NodeRoleCode;
 }) {
-  let query = supabase
+  const { data, error } = await supabase
     .from("value_objects")
     .select("id,title,description,canonical_key,facet_code,branch_type_code,root_value_object_id,ontology_node_role_code,scope_code,owner_user_id,owner_actor_id,origin_type_code,status")
     .eq("id", input.parentId)
+    .eq("scope_code", "global")
+    .is("owner_user_id", null)
+    .is("owner_actor_id", null)
+    .eq("origin_type_code", "system_model")
+    .in("status", ["draft", "active"])
     .limit(1);
-  if (input.scope === "private") {
-    query = query
-      .eq("scope_code", "actor")
-      .eq("owner_user_id", input.actor.appUserId)
-      .eq("owner_actor_id", input.actor.actorId)
-      .eq("status", "active");
-  } else {
-    query = query
-      .eq("scope_code", "global")
-      .is("owner_user_id", null)
-      .is("owner_actor_id", null)
-      .eq("origin_type_code", "system_model")
-      .in("status", ["draft", "active"]);
-  }
-  const { data, error } = await query;
-  if (error) throw new Error(`CURATOR_OBJECT_PARENT_READ_FAILED:${input.scope}:${error.message}`);
+  if (error) throw new Error(`CURATOR_OBJECT_PARENT_READ_FAILED:system:${error.message}`);
   const parent = (data?.[0] as ParentRow | undefined) ?? null;
   if (!parent) return null;
   if (input.childRole === "leaf") {
     return parent.ontology_node_role_code === "intermediate" ? parent : null;
   }
   if (input.childRole === "intermediate") {
-    return parent.ontology_node_role_code === "root" || parent.ontology_node_role_code === "intermediate"
+    return parent.ontology_node_role_code === "root" ||
+      parent.ontology_node_role_code === "intermediate"
       ? parent
       : null;
   }
@@ -737,91 +690,6 @@ async function resolveSemanticShape(input: {
     : text(input.parent.root_value_object_id);
   if (!UUID_RE.test(rootValueObjectId)) throw new Error("CURATOR_OBJECT_PARENT_ROOT_POINTER_INVALID");
   return { facetCode, objectKindCode, rootValueObjectId };
-}
-
-async function createPrivateObject(input: {
-  signal: EligibleSignal;
-  actor: ResolvedActorContext;
-  role: NodeRoleCode;
-  parent: ParentRow | null;
-  requestedFacet: string;
-  title: string;
-  description: string;
-  hierarchyRelationCode: string;
-}) {
-  const semantic = await resolveSemanticShape({
-    role: input.role,
-    parent: input.parent,
-    requestedFacet: input.requestedFacet,
-  });
-  const payload: JsonRecord = {
-    title: input.title,
-    description: input.description || input.title,
-    facetCode: semantic.facetCode,
-    objectKindCode: semantic.objectKindCode,
-    nodeRoleCode: input.role,
-    visibilityCode: "private",
-    privacyClassCode: "standard",
-  };
-  if (input.role !== "root" && input.parent) {
-    payload.parentValueObjectId = input.parent.id;
-    payload.hierarchyRelationCode = input.hierarchyRelationCode;
-  }
-  const hash = requestHash(payload);
-  const idempotencyKey = `curator-private-v13:${input.signal.id}:${hash.slice(0, 32).toLowerCase()}`;
-  const { data, error } = await supabase.rpc("create_value_object_ontology_v1", {
-    p_owner_user_id: input.actor.appUserId,
-    p_owner_actor_id: input.actor.actorId,
-    p_created_by_actor_id: input.actor.actorId,
-    p_payload: payload,
-    p_idempotency_key: idempotencyKey,
-    p_request_hash: hash,
-  });
-  if (error) throw new Error(`CURATOR_PRIVATE_CREATE_FAILED:${error.code ?? "DB"}:${error.message}`);
-  const card = asRecord(data);
-  const node = asRecord(card.valueObject);
-  const valueObjectId = text(node.id);
-  if (!UUID_RE.test(valueObjectId)) throw new Error("CURATOR_PRIVATE_CREATE_INVALID_CARD");
-
-  const { data: rows, error: stateError } = await supabase
-    .from("value_objects")
-    .select("id,status")
-    .eq("id", valueObjectId)
-    .limit(1);
-  if (stateError) throw new Error(`CURATOR_PRIVATE_POSTCREATE_READ_FAILED:${stateError.message}`);
-  if (rows?.[0]?.status === "draft") {
-    const { error: activationError } = await supabase.rpc("set_value_object_ontology_lifecycle_v1", {
-      p_owner_user_id: input.actor.appUserId,
-      p_owner_actor_id: input.actor.actorId,
-      p_value_object_id: valueObjectId,
-      p_new_status: "active",
-    });
-    if (activationError) throw new Error(`CURATOR_PRIVATE_ACTIVATION_FAILED:${activationError.code ?? "DB"}:${activationError.message}`);
-  }
-
-  const { data: postRows, error: postError } = await supabase
-    .from("value_objects")
-    .select("id,status,scope_code,owner_user_id,owner_actor_id,parent_value_object_id,root_value_object_id,ontology_node_role_code,facet_code,canonical_key")
-    .eq("id", valueObjectId)
-    .limit(1);
-  if (postError) throw new Error(`CURATOR_PRIVATE_POSTCHECK_FAILED:${postError.message}`);
-  const post = postRows?.[0];
-  const parentId = input.role === "root" ? null : input.parent?.id ?? null;
-  if (
-    !post ||
-    post.status !== "active" ||
-    post.scope_code !== "actor" ||
-    post.owner_user_id !== input.actor.appUserId ||
-    post.owner_actor_id !== input.actor.actorId ||
-    post.parent_value_object_id !== parentId ||
-    post.ontology_node_role_code !== input.role ||
-    post.facet_code !== semantic.facetCode ||
-    (input.role === "root" && post.root_value_object_id !== valueObjectId) ||
-    (input.role !== "root" && post.root_value_object_id !== semantic.rootValueObjectId)
-  ) {
-    throw new Error("CURATOR_PRIVATE_POSTCHECK_STATE_INVALID");
-  }
-  return { valueObjectId, canonicalKey: text(post.canonical_key) || null, title: input.title };
 }
 
 async function createSystemObject(input: {
@@ -1077,8 +945,8 @@ export async function POST(request: Request) {
       if (result === "existing_leaf_found") {
         selectedValueObjectId = text(body.selectedValueObjectId);
         if (!UUID_RE.test(selectedValueObjectId)) return errorResponse("CURATOR_OBJECT_EXISTING_LEAF_REQUIRED", "selectedValueObjectId is required", 400);
-        const existing = await readAllowedExistingLeaf(selectedValueObjectId, actor);
-        if (!existing) return errorResponse("CURATOR_OBJECT_EXISTING_LEAF_NOT_AVAILABLE", "Selected leaf is not available in System or the curator's current private profile", 409);
+        const existing = await readAllowedExistingLeaf(selectedValueObjectId);
+        if (!existing) return errorResponse("CURATOR_OBJECT_EXISTING_LEAF_NOT_AVAILABLE", "Selected leaf is not an active System observation-object leaf", 409);
         selectedTitle = text(existing.title) || null;
       }
       const summary = decisionSummary(result, selectedTitle);
@@ -1124,8 +992,12 @@ export async function POST(request: Request) {
       }
 
       const scope = text(body.scope);
-      if (scope !== "private" && scope !== "system") {
-        return errorResponse("CURATOR_OBJECT_SCOPE_REQUIRED", "scope must be explicitly private or system", 400);
+      if (scope !== "system") {
+        return errorResponse(
+          "CURATOR_OBJECT_SYSTEM_SCOPE_REQUIRED",
+          "This curator workflow creates only System observation objects",
+          400,
+        );
       }
       const nodeRole = text(body.nodeRole);
       if (!NODE_ROLES.has(nodeRole)) {
@@ -1143,11 +1015,11 @@ export async function POST(request: Request) {
         if (parentId) return errorResponse("CURATOR_ROOT_PARENT_FORBIDDEN", "Root observation objects cannot have a parent", 400);
       } else {
         if (!UUID_RE.test(parentId)) return errorResponse("CURATOR_OBJECT_PARENT_REQUIRED", "A valid parentValueObjectId is required", 400);
-        parent = await readParent({ parentId, scope: scope as ScopeCode, actor, childRole: role });
+        parent = await readParent({ parentId, childRole: role });
         if (!parent) {
           const message = role === "leaf"
-            ? "A leaf can be created only under an intermediate object in the same Private/System scope"
-            : "An intermediate can be created only under a root or intermediate object in the same Private/System scope";
+            ? "A System leaf can be created only under a System intermediate object"
+            : "A System intermediate can be created only under a System root or System intermediate object";
           return errorResponse("CURATOR_OBJECT_PARENT_NOT_AVAILABLE", message, 409);
         }
         if (text(parent.ontology_node_role_code) === "root" && !FACET_ORDER.includes(requestedFacet as (typeof FACET_ORDER)[number])) {
@@ -1158,52 +1030,29 @@ export async function POST(request: Request) {
         }
       }
 
-      let created: { valueObjectId: string; canonicalKey: string | null; title: string };
-      let resultSummaryRu: string;
-      let resultSummaryEn: string;
-
-      if (scope === "private") {
-        const title = text(body.title);
-        const description = text(body.description);
-        if (!title || title.length > 180) return errorResponse("CURATOR_PRIVATE_TITLE_INVALID", "title is required and must be 180 characters or fewer", 400);
-        if (description.length > 4000) return errorResponse("CURATOR_PRIVATE_DESCRIPTION_INVALID", "description must be 4000 characters or fewer", 400);
-        created = await createPrivateObject({
-          signal,
-          actor,
-          role,
-          parent,
-          requestedFacet,
-          title,
-          description,
-          hierarchyRelationCode,
-        });
-        resultSummaryRu = `Создан приватный ${roleNameRu(role)} ОН «${title}» только для текущего профиля «${actor.profile.displayName}».`;
-        resultSummaryEn = `Private ${roleNameEn(role)} observation object “${title}” was created only for the current profile “${actor.profile.displayName}”.`;
-      } else {
-        const canonicalKey = text(body.canonicalKey).toLowerCase();
-        const titleRu = text(body.titleRu);
-        const descriptionRu = text(body.descriptionRu);
-        const titleEn = text(body.titleEn);
-        const descriptionEn = text(body.descriptionEn);
-        if (!canonicalKey || canonicalKey.length > 160 || !CANONICAL_KEY_RE.test(canonicalKey)) return errorResponse("CURATOR_SYSTEM_CANONICAL_KEY_INVALID", "canonicalKey must be lowercase ASCII segments separated by dot, underscore or hyphen", 400);
-        if (!titleRu || !titleEn || titleRu.length > 180 || titleEn.length > 180) return errorResponse("CURATOR_SYSTEM_TITLE_INVALID", "RU and EN titles are required and must be 180 characters or fewer", 400);
-        if (!descriptionRu || !descriptionEn || descriptionRu.length > 4000 || descriptionEn.length > 4000) return errorResponse("CURATOR_SYSTEM_DESCRIPTION_INVALID", "RU and EN definitions are required and must be 4000 characters or fewer", 400);
-        created = await createSystemObject({
-          signal,
-          guard,
-          role,
-          parent,
-          requestedFacet,
-          canonicalKey,
-          titleRu,
-          descriptionRu,
-          titleEn,
-          descriptionEn,
-          hierarchyRelationCode,
-        });
-        resultSummaryRu = `Создан системный ${roleNameRu(role)} ОН-черновик «${titleRu}» (${canonicalKey}). Он ownerless, скрыт из обычного каталога и не опубликован автоматически.`;
-        resultSummaryEn = `Ownerless System ${roleNameEn(role)} draft “${titleEn}” (${canonicalKey}) was created. It is hidden from the ordinary catalog and was not published automatically.`;
-      }
+      const canonicalKey = text(body.canonicalKey).toLowerCase();
+      const titleRu = text(body.titleRu);
+      const descriptionRu = text(body.descriptionRu);
+      const titleEn = text(body.titleEn);
+      const descriptionEn = text(body.descriptionEn);
+      if (!canonicalKey || canonicalKey.length > 160 || !CANONICAL_KEY_RE.test(canonicalKey)) return errorResponse("CURATOR_SYSTEM_CANONICAL_KEY_INVALID", "canonicalKey must be lowercase ASCII segments separated by dot, underscore or hyphen", 400);
+      if (!titleRu || !titleEn || titleRu.length > 180 || titleEn.length > 180) return errorResponse("CURATOR_SYSTEM_TITLE_INVALID", "RU and EN titles are required and must be 180 characters or fewer", 400);
+      if (!descriptionRu || !descriptionEn || descriptionRu.length > 4000 || descriptionEn.length > 4000) return errorResponse("CURATOR_SYSTEM_DESCRIPTION_INVALID", "RU and EN definitions are required and must be 4000 characters or fewer", 400);
+      const created = await createSystemObject({
+        signal,
+        guard,
+        role,
+        parent,
+        requestedFacet,
+        canonicalKey,
+        titleRu,
+        descriptionRu,
+        titleEn,
+        descriptionEn,
+        hierarchyRelationCode,
+      });
+      const resultSummaryRu = `Создан системный ${roleNameRu(role)} ОН-черновик «${titleRu}» (${canonicalKey}). Он ownerless, скрыт из обычного каталога и не опубликован автоматически.`;
+      const resultSummaryEn = `Ownerless System ${roleNameEn(role)} draft “${titleEn}” (${canonicalKey}) was created. It is hidden from the ordinary catalog and was not published automatically.`;
 
       const completedTargetLeaf = role === "leaf";
       await appendLog({
@@ -1217,8 +1066,8 @@ export async function POST(request: Request) {
         eventCode: CREATED_EVENT_CODE,
         checklistStepCode: completedTargetLeaf ? "400.3" : "400.2",
         checklistStepNameSnapshotRu: completedTargetLeaf
-          ? "Создать целевой листовой объект наблюдения в явно выбранной области Private/System."
-          : "Создать недостающий структурный участок пути root → intermediate → … → leaf в явно выбранной области Private/System.",
+          ? "Создать целевой системный листовой объект наблюдения."
+          : "Создать недостающий системный структурный участок пути root → intermediate → … → leaf.",
         labelRu: completedTargetLeaf ? "Создан целевой листовой объект наблюдения" : "Создан структурный объект наблюдения",
         labelEn: completedTargetLeaf ? "Target leaf observation object created" : "Structural observation object created",
         resultSummaryRu,
@@ -1234,9 +1083,9 @@ export async function POST(request: Request) {
           facetCode: role === "root" ? "DOMAIN" : text(parent?.ontology_node_role_code) === "root" ? requestedFacet : text(parent?.facet_code),
           hierarchyRelationCode: role === "root" ? null : hierarchyRelationCode,
           completedTargetLeaf,
-          privateOwnerAppUserId: scope === "private" ? actor.appUserId : null,
-          privateOwnerActorId: scope === "private" ? actor.actorId : null,
-          systemOwnerless: scope === "system",
+          privateOwnerAppUserId: null,
+          privateOwnerActorId: null,
+          systemOwnerless: true,
           systemPublished: false,
           parameterDefinitionId: parameter.id,
           parameterCode: parameter.parameterCode,
