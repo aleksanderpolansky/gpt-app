@@ -822,3 +822,20 @@ Dashboard SSR использует минимальный уже существ�
 6. Private manual ontology objects не имеют полезной стадии черновика в текущем UX. Новый authoring сразу вызывает существующий lifecycle transition `draft -> active`; commercial draft-first остаётся отдельным защищённым контуром.
 7. Leaf creation under root запрещено в новом flow: пользователь сначала создаёт intermediate semantic branch, затем leaf внутри неё.
 8. Manual normalization старых private drafts должна быть узкой, обратимой и маркированной в metadata; GLOBAL/System, organizations, product/service/offer/certificate не затрагиваются.
+
+## DECISION_CURATOR_FACET_CODE_DEPRECATED_20260905
+
+Дата: 2026-09-05
+Code commit: `34d08384f5183a2aac28bca1537e75489dc6c5d4`
+
+Решение: `facet_code` не является частью актуального семантического контракта ARCTor и не должен запрашиваться у Куратора или показываться как смысловая характеристика ОН. Нового обязательного enum взамен не вводится.
+
+Причина: три дерева модели уже задают базовую плоскость реальности, а конкретный смысл ОН определяется карточкой, структурным положением и типизированными связями. Универсальный `ENTITY/PROCESS/STATE/...` создавал вторую онтологию поверх основной.
+
+Техническое ограничение текущего этапа: P1C DB guard пока требует legacy `facet_code/object_kind_code`. Поэтому значения временно остаются server-side compatibility metadata/storage fields и не являются источником истины. Физическое удаление из schema отложено до отдельного dependency audit/migration.
+
+### Ошибки release-runner, зафиксированные до успешного релиза
+
+- 18:46 V1: false FAIL на нормальном Git STDERR во время `fetch`; source/DB mutations отсутствовали.
+- 18:50 V1.0.1: allowlist остановил commit из-за загрязнения `git diff --name-only` предупреждением LF/CRLF; один residue-файл остался в worktree.
+- V1.0.2: native streams разделены; allowlist переведён на porcelain status; rollback усилен byte snapshot; auto-recovery разрешён только для точного известного residue path+hash.

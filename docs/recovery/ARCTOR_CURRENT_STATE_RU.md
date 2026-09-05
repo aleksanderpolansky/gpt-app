@@ -936,3 +936,14 @@ Recovery checkpoint: `docs/recovery/ARCTOR_TABLE_VIEWS_T2_3_1_COPY_HOTFIX_V1_1_R
 - Следующая точка: production postcheck новой вкладки, Ctrl+C -> Notepad/Excel/Google Sheets, затем T2_4 (создание ОН из таблицы) после закрытия clipboard/runtime.
 
 - 2026-08-29: два последовательных pre-mutation release FAIL не затронули `main`: сначала defect runtime fixture, затем LF/CRLF-sensitive anchor `workspace-labels`. V1_2 усиливает patcher LF/CRLF matching, self-test и добавляет replay на реальных worktree bytes до scratch/mutation.
+
+## 2026-09-05 — авторитетное обновление: facet удалён из curator semantic contract
+
+Релиз: `ARCTOR_CURATOR_FACETLESS_SYSTEM_OBJECT_AUTHORING_V1_0_2`.
+Code commit: `34d08384f5183a2aac28bca1537e75489dc6c5d4`.
+
+Новейшее решение: `facet_code` больше не является пользовательским/кураторским семантическим полем ARCTor. UI создания системного ОН, полная карточка и видимые технические обозначения больше не показывают Semantic facet. Новое обязательное поле вместо него не вводится.
+
+Текущая БД всё ещё содержит legacy `facet_code/object_kind_code` и P1C guards, поэтому create endpoint временно заполняет compatibility values серверно и только для storage-инвариантов. Для трёх root «Systems and Structures / States and Needs / Actions and Processes» direct-child compatibility соответствует `ENTITY / STATE / PROCESS`; куратор этих значений не выбирает. Неизвестный direct-root fail-closed.
+
+SQL/DB schema не менялись. Live acceptance production после push обязателен. Следующая предметная точка — вернуться к `подтянулся 10 раз`, построить leaf и связать `count`, затем проверить `duration`.
