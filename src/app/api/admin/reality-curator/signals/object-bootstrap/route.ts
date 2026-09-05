@@ -19,7 +19,7 @@ import { isConfirmedMissingTypicalActivityAnalysis } from "@/lib/activity/basic-
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const ROUTE_MARKER = "reality-curator-object-bootstrap-v1-7-locale-aware-fields" as const;
+const ROUTE_MARKER = "reality-curator-object-bootstrap-v1-8-facetless-curator-ui" as const;
 const PROCESSOR_NAME = "reality_curator_journey" as const;
 const PROCESSOR_VERSION = "1" as const;
 const PARAMETER_EVENT_CODE = "related_parameter_catalog_checked" as const;
@@ -28,7 +28,7 @@ const PARAMETER_SET_EVENT_CODE = "typical_activity_parameter_set_confirmed" as c
 const DECISION_EVENT_CODE = "measurable_object_decision_recorded" as const;
 const CREATED_EVENT_CODE = "observation_object_created" as const;
 const DECISION_CONTRACT = "ARCTOR_REALITY_CURATOR_MEASURABLE_OBJECT_V1" as const;
-const CREATION_CONTRACT = "ARCTOR_REALITY_MODEL_CURATOR_ACTIVITY_TEMPLATE_BUILDER_V1_6_LOCALE_AWARE" as const;
+const CREATION_CONTRACT = "ARCTOR_REALITY_MODEL_CURATOR_ACTIVITY_TEMPLATE_BUILDER_V1_7_FACETLESS_UI" as const;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CANONICAL_KEY_RE = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
@@ -52,16 +52,6 @@ const GENERIC_KIND_BY_FACET: Readonly<Record<string, string>> = {
   CONTEXT: "generic_context",
 };
 
-const FACET_ORDER = [
-  "ENTITY",
-  "PROCESS",
-  "STATE",
-  "RELATIONSHIP",
-  "ROLE",
-  "KNOWLEDGE",
-  "BEHAVIOR",
-  "CONTEXT",
-] as const;
 
 type JsonRecord = Record<string, unknown>;
 type ScopeCode = "private" | "system";
@@ -111,7 +101,6 @@ type WorkBody = {
   scope?: unknown;
   nodeRole?: unknown;
   parentValueObjectId?: unknown;
-  facetCode?: unknown;
   title?: unknown;
   description?: unknown;
   canonicalKey?: unknown;
@@ -157,6 +146,29 @@ function normalizeLocale(value: unknown): CuratorLocale {
   return CURATOR_LOCALES.includes(locale as CuratorLocale)
     ? (locale as CuratorLocale)
     : "en";
+}
+
+/**
+ * Legacy storage compatibility only. The current P1C database trigger still
+ * requires facet_code + object_kind_code for ontology rows. Curators do not
+ * choose these values and ARCTor does not treat them as semantic truth.
+ */
+function legacyCompatibilityFacetForRoot(parent: ParentRow): string {
+  const title = text(parent.title).toLowerCase();
+  const key = text(parent.canonical_key).toLowerCase();
+  const signature = `${title} ${key}`;
+
+  if (title === "systems and structures" || (signature.includes("system") && signature.includes("structur"))) {
+    return "ENTITY";
+  }
+  if (title === "states and needs" || (signature.includes("state") && signature.includes("need"))) {
+    return "STATE";
+  }
+  if (title === "actions and processes" || (signature.includes("action") && signature.includes("process"))) {
+    return "PROCESS";
+  }
+
+  throw new Error(`CURATOR_OBJECT_LEGACY_STORAGE_FACET_UNRESOLVED:${text(parent.canonical_key) || text(parent.title) || parent.id}`);
 }
 
 function stableUuid(seed: string): string {
@@ -482,28 +494,16 @@ function toOption(row: LeafOptionRow | ParentRow, locale: string) {
     id: row.id,
     title: text(localized.title) || row.id,
     canonicalKey: text(row.canonical_key) || null,
-    facetCode: text(row.facet_code) || null,
     nodeRole: role === "root" || role === "intermediate" || role === "leaf" ? role : null,
     scopeCode: row.scope_code === "global" ? ("global" as const) : ("actor" as const),
     status,
   };
 }
 
-async function readFacetOptions() {
-  const { data, error } = await supabase
-    .from("value_object_facet_registry")
-    .select("facet_code,status")
-    .eq("status", "active")
-    .in("facet_code", [...FACET_ORDER]);
-  if (error) throw new Error(`CURATOR_OBJECT_FACET_OPTIONS_READ_FAILED:${error.message}`);
-  const active = new Set((data ?? []).map((row) => text(row.facet_code)));
-  return FACET_ORDER.filter((facet) => active.has(facet));
-}
-
 async function readOptions(locale: string) {
   const parentSelect = "id,title,description,canonical_key,facet_code,branch_type_code,root_value_object_id,ontology_node_role_code,scope_code,owner_user_id,owner_actor_id,origin_type_code,status";
   const leafSelect = "id,title,description,canonical_key,facet_code,scope_code";
-  const [systemParentsResult, systemLeavesResult, facets] = await Promise.all([
+  const [systemParentsResult, systemLeavesResult] = await Promise.all([
     supabase
       .from("value_objects")
       .select(parentSelect)
@@ -526,7 +526,6 @@ async function readOptions(locale: string) {
       .eq("ontology_node_role_code", "leaf")
       .order("title", { ascending: true })
       .limit(2000),
-    readFacetOptions(),
   ]);
   for (const [name, result] of [
     ["systemParents", systemParentsResult],
@@ -541,7 +540,6 @@ async function readOptions(locale: string) {
   return {
     systemParents: systemParents.map((row) => toOption(row, locale)),
     existingLeaves: systemLeaves.map((row) => toOption(row, locale)),
-    facetOptions: facets,
   };
 }
 
@@ -665,7 +663,6 @@ async function chooseGenericKind(facetCode: string, role: "intermediate" | "leaf
 async function resolveSemanticShape(input: {
   role: NodeRoleCode;
   parent: ParentRow | null;
-  requestedFacet: string;
 }) {
   if (input.role === "root") {
     return {
@@ -677,14 +674,11 @@ async function resolveSemanticShape(input: {
   if (!input.parent) throw new Error("CURATOR_OBJECT_PARENT_REQUIRED");
   const parentRole = text(input.parent.ontology_node_role_code);
   const parentFacet = text(input.parent.facet_code);
-  let facetCode: string;
-  if (parentRole === "root") {
-    facetCode = text(input.requestedFacet).toUpperCase();
-    if (!FACET_ORDER.includes(facetCode as (typeof FACET_ORDER)[number])) {
-      throw new Error("CURATOR_OBJECT_DIRECT_CHILD_FACET_REQUIRED");
-    }
-  } else {
-    facetCode = parentFacet;
+  const facetCode = parentRole === "root"
+    ? legacyCompatibilityFacetForRoot(input.parent)
+    : parentFacet;
+  if (!facetCode || !GENERIC_KIND_BY_FACET[facetCode]) {
+    throw new Error(`CURATOR_OBJECT_LEGACY_STORAGE_FACET_UNAVAILABLE:${facetCode || "EMPTY"}`);
   }
   const objectKindCode = await chooseGenericKind(facetCode, input.role);
   const rootValueObjectId = parentRole === "root"
@@ -699,7 +693,6 @@ async function createSystemObject(input: {
   guard: RequirePlatformAdminSuccess;
   role: NodeRoleCode;
   parent: ParentRow | null;
-  requestedFacet: string;
   canonicalKey: string;
   locale: CuratorLocale;
   localizedTitle: string;
@@ -711,7 +704,6 @@ async function createSystemObject(input: {
   const semantic = await resolveSemanticShape({
     role: input.role,
     parent: input.parent,
-    requestedFacet: input.requestedFacet,
   });
   const payload: JsonRecord = {
     role: input.role,
@@ -1014,7 +1006,6 @@ export async function POST(request: Request) {
       }
       const role = nodeRole as NodeRoleCode;
       const parentId = text(body.parentValueObjectId);
-      const requestedFacet = text(body.facetCode).toUpperCase();
       const hierarchyRelationCode = text(body.hierarchyRelationCode);
       const comment = text(body.comment);
       if (!comment || comment.length > 1500) return errorResponse("CURATOR_OBJECT_CREATE_COMMENT_REQUIRED", "comment is required and must be 1500 characters or fewer", 400);
@@ -1030,9 +1021,6 @@ export async function POST(request: Request) {
             ? "A System leaf can be created only under a System intermediate object"
             : "A System intermediate can be created only under a System root or System intermediate object";
           return errorResponse("CURATOR_OBJECT_PARENT_NOT_AVAILABLE", message, 409);
-        }
-        if (text(parent.ontology_node_role_code) === "root" && !FACET_ORDER.includes(requestedFacet as (typeof FACET_ORDER)[number])) {
-          return errorResponse("CURATOR_OBJECT_DIRECT_CHILD_FACET_REQUIRED", "A non-DOMAIN facet is required for a direct child of a root", 400);
         }
         if (!RELATIONS.has(hierarchyRelationCode)) {
           return errorResponse("CURATOR_OBJECT_RELATION_INVALID", "hierarchyRelationCode is invalid", 400);
@@ -1054,7 +1042,6 @@ export async function POST(request: Request) {
         guard,
         role,
         parent,
-        requestedFacet,
         canonicalKey,
         locale,
         localizedTitle,
@@ -1098,7 +1085,8 @@ export async function POST(request: Request) {
           createdEnglishTitle: titleEn,
           createdEnglishDescription: descriptionEn,
           parentValueObjectId: parent?.id ?? null,
-          facetCode: role === "root" ? "DOMAIN" : text(parent?.ontology_node_role_code) === "root" ? requestedFacet : text(parent?.facet_code),
+          legacyStorageOnly: true,
+          legacyStorageFacetCode: role === "root" ? "DOMAIN" : text(parent?.ontology_node_role_code) === "root" && parent ? legacyCompatibilityFacetForRoot(parent) : text(parent?.facet_code),
           hierarchyRelationCode: role === "root" ? null : hierarchyRelationCode,
           completedTargetLeaf,
           privateOwnerAppUserId: null,
@@ -1124,7 +1112,9 @@ export async function POST(request: Request) {
       message.includes("NOT_AVAILABLE") ||
       message.includes("DECISION_REQUIRED") ||
       message.includes("GATE_REQUIRED") ||
-      message.includes("ROLE_UNAVAILABLE");
+      message.includes("ROLE_UNAVAILABLE") ||
+      message.includes("LEGACY_STORAGE_FACET_UNRESOLVED") ||
+      message.includes("LEGACY_STORAGE_FACET_UNAVAILABLE");
     const notFound = message.endsWith("NOT_FOUND");
     return errorResponse("CURATOR_OBJECT_BOOTSTRAP_POST_FAILED", message, notFound ? 404 : conflict ? 409 : 500);
   }

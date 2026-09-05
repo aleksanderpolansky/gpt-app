@@ -1743,7 +1743,7 @@ export default async function ValueObjectDetailPage({
           objectKindLabel={
             isGlobalSystemObject || isProductOrService
               ? `${
-                  valueObject.facet_code || valueObject.object_kind || "—"
+                  valueObject.object_kind_code || valueObject.object_kind || "—"
                 } · ${
                   valueObject.ontology_node_role_code ||
                   valueObject.node_role_code ||

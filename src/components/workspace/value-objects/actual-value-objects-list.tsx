@@ -524,15 +524,6 @@ function getContextLabel(
   return copy.personal;
 }
 
-function getFacetLabel(valueObject: ActualValueObjectPayload) {
-  return (
-    valueObject.facet_code?.trim() ||
-    valueObject.object_kind_code?.trim() ||
-    valueObject.object_kind?.trim() ||
-    "—"
-  );
-}
-
 function getKindLabel(valueObject: ActualValueObjectPayload) {
   return (
     valueObject.object_kind_code?.trim() ||
@@ -1122,8 +1113,6 @@ export function ActualValueObjectsList({
                       {showTechnicalCodes ? (
                         <>
                           <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#7c8099]">
-                            <span>{getFacetLabel(valueObject)}</span>
-                            <span aria-hidden="true">·</span>
                             <span>{getKindLabel(valueObject)}</span>
                           </div>
 

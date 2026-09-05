@@ -75,7 +75,6 @@ type Copy = {
   loading: string;
   readFailed: string;
   canonicalKey: string;
-  facet: string;
   kind: string;
   nodeRole: string;
   hierarchy: string;
@@ -149,7 +148,6 @@ const COPY: Record<LocaleCode, Copy> = {
     loading: "Loading the full object card…",
     readFailed: "Part of the full card could not be loaded.",
     canonicalKey: "Canonical key",
-    facet: "Semantic facet",
     kind: "Object kind",
     nodeRole: "Node role",
     hierarchy: "Relation to parent",
@@ -220,7 +218,6 @@ const COPY: Record<LocaleCode, Copy> = {
     loading: "Ładowanie pełnej karty obiektu…",
     readFailed: "Nie udało się wczytać części pełnej karty.",
     canonicalKey: "Klucz kanoniczny",
-    facet: "Płaszczyzna semantyczna",
     kind: "Rodzaj obiektu",
     nodeRole: "Rola węzła",
     hierarchy: "Relacja do rodzica",
@@ -292,7 +289,6 @@ const COPY: Record<LocaleCode, Copy> = {
     loading: "Загружаю полную карточку объекта…",
     readFailed: "Часть полной карточки не удалось загрузить.",
     canonicalKey: "Канонический ключ",
-    facet: "Смысловая плоскость",
     kind: "Вид объекта",
     nodeRole: "Роль узла",
     hierarchy: "Связь с родителем",
@@ -363,7 +359,6 @@ const COPY: Record<LocaleCode, Copy> = {
     loading: "Завантаження повної картки об’єкта…",
     readFailed: "Частину повної картки не вдалося завантажити.",
     canonicalKey: "Канонічний ключ",
-    facet: "Смислова площина",
     kind: "Вид об’єкта",
     nodeRole: "Роль вузла",
     hierarchy: "Зв’язок із батьком",
@@ -434,7 +429,6 @@ const COPY: Record<LocaleCode, Copy> = {
     loading: "Vollständige Objektkarte wird geladen…",
     readFailed: "Ein Teil der vollständigen Karte konnte nicht geladen werden.",
     canonicalKey: "Kanonischer Schlüssel",
-    facet: "Semantische Ebene",
     kind: "Objektart",
     nodeRole: "Knotenrolle",
     hierarchy: "Beziehung zum Elternobjekt",
@@ -505,7 +499,6 @@ const COPY: Record<LocaleCode, Copy> = {
     loading: "Cargando la tarjeta completa…",
     readFailed: "No se pudo cargar una parte de la tarjeta completa.",
     canonicalKey: "Clave canónica",
-    facet: "Plano semántico",
     kind: "Tipo de objeto",
     nodeRole: "Rol del nodo",
     hierarchy: "Relación con el padre",
@@ -576,7 +569,6 @@ const COPY: Record<LocaleCode, Copy> = {
     loading: "Načítání úplné karty objektu…",
     readFailed: "Část úplné karty se nepodařilo načíst.",
     canonicalKey: "Kanonický klíč",
-    facet: "Sémantická rovina",
     kind: "Druh objektu",
     nodeRole: "Role uzlu",
     hierarchy: "Vztah k rodiči",
@@ -1047,7 +1039,6 @@ export function ValueObjectFullCardPanel({
         ) : node ? (
           <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <Field label={copy.canonicalKey} value={node.canonicalKey} mono />
-            <Field label={copy.facet} value={node.facetCode} />
             <Field label={copy.kind} value={humanize(node.objectKindCode)} />
             <Field label={copy.nodeRole} value={humanize(node.nodeRoleCode)} />
             <Field label={copy.hierarchy} value={humanize(node.hierarchyRelationCode)} />
@@ -1355,7 +1346,6 @@ export function ValueObjectFullCardPanel({
               <pre className="mt-3 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-[#111827] p-4 text-[11px] leading-5 text-[#e5e7eb]">
                 {JSON.stringify(
                   {
-                    facetRegistry: ontology.facet,
                     kindPolicy: ontology.kind,
                     allowedLifecycleActions: ontology.allowedLifecycleActions,
                   },
