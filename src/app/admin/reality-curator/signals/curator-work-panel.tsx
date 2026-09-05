@@ -269,7 +269,7 @@ const PARAMETER_COPY: Record<LocaleCode, ParameterCopy> = {
     notNeeded: "No parameter is needed",
     clarify: "Clarification required",
     loading: "Loading the next-step state…",
-    completed: "Parameter and measurement check completed",
+    completed: "System parameter catalog check completed",
     loadError: "Could not load the parameter-check state.",
   },
   pl: {
@@ -282,7 +282,7 @@ const PARAMETER_COPY: Record<LocaleCode, ParameterCopy> = {
     notNeeded: "Parametr nie jest potrzebny",
     clarify: "Wymaga doprecyzowania",
     loading: "Wczytywanie stanu kolejnego kroku…",
-    completed: "Sprawdzenie parametrów i pomiarów zakończone",
+    completed: "Sprawdzanie systemowego katalogu parametrów zakończone",
     loadError: "Nie udało się wczytać stanu kontroli parametrów.",
   },
   uk: {
@@ -295,7 +295,7 @@ const PARAMETER_COPY: Record<LocaleCode, ParameterCopy> = {
     notNeeded: "Параметр не потрібен",
     clarify: "Потрібне уточнення",
     loading: "Завантажуємо стан наступного кроку…",
-    completed: "Перевірку параметрів і вимірювань завершено",
+    completed: "Перевірку системного каталогу параметрів завершено",
     loadError: "Не вдалося завантажити стан перевірки параметрів.",
   },
   de: {
@@ -308,7 +308,7 @@ const PARAMETER_COPY: Record<LocaleCode, ParameterCopy> = {
     notNeeded: "Kein Parameter erforderlich",
     clarify: "Klärung erforderlich",
     loading: "Status des nächsten Schritts wird geladen…",
-    completed: "Prüfung von Parametern und Messungen abgeschlossen",
+    completed: "Prüfung des Systemparameterkatalogs abgeschlossen",
     loadError: "Der Status der Parameterprüfung konnte nicht geladen werden.",
   },
   es: {
@@ -321,7 +321,7 @@ const PARAMETER_COPY: Record<LocaleCode, ParameterCopy> = {
     notNeeded: "No se necesita parámetro",
     clarify: "Se requiere aclaración",
     loading: "Cargando el estado del siguiente paso…",
-    completed: "Comprobación de parámetros y mediciones completada",
+    completed: "Comprobación del catálogo de parámetros del sistema completada",
     loadError: "No se pudo cargar el estado de la comprobación de parámetros.",
   },
   cs: {
@@ -334,7 +334,7 @@ const PARAMETER_COPY: Record<LocaleCode, ParameterCopy> = {
     notNeeded: "Parametr není potřeba",
     clarify: "Je třeba upřesnění",
     loading: "Načítání stavu dalšího kroku…",
-    completed: "Kontrola parametrů a měření dokončena",
+    completed: "Kontrola systémového katalogu parametrů dokončena",
     loadError: "Stav kontroly parametrů se nepodařilo načíst.",
   },
 };
@@ -467,12 +467,6 @@ export function CuratorWorkPanel({ signalId, journey, locale, onChanged }: Props
   let content: ReactNode;
 
   if (checkCompleted) {
-    const parameterSummary = parameterCheck
-      ? (locale === "ru"
-          ? parameterCheck.resultSummaryRu || parameterCheck.resultSummaryEn
-          : parameterCheck.resultSummaryEn || parameterCheck.resultSummaryRu)
-      : null;
-
     if (parameterStateLoading) {
       content = (
         <div className="rounded-2xl border border-[#dce3f5] bg-[#f8faff] p-4 text-sm text-[#727991]">
@@ -490,9 +484,6 @@ export function CuratorWorkPanel({ signalId, journey, locale, onChanged }: Props
         <div className="space-y-3">
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
             <div className="text-sm font-extrabold text-emerald-900">{parameterCopy.completed}</div>
-            {parameterSummary ? (
-              <div className="mt-1 text-sm leading-5 text-emerald-800">{parameterSummary}</div>
-            ) : null}
           </div>
           <CuratorTemplateParameters
             signalId={signalId}

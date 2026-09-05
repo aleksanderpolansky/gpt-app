@@ -97,99 +97,28 @@ type Copy = {
   createAndAdd: string;
 };
 
-const EN: Copy = {
-  title: "Typical activity parameters",
-  hint: "Build the required parameter set for the new system typical activity. Add an existing system parameter or create a missing one. After every addition, the selected set remains visible and you can add another parameter.",
-  rule: "A typical activity cannot be completed without at least one parameter. Parameters are the measurable facts by which execution of the activity is recorded.",
-  selectedTitle: "Selected parameters",
-  noneSelected: "No parameters have been selected yet.",
-  addAdditional: "+ Add another parameter",
-  chooseExisting: "Choose existing",
-  createNew: "Create new",
-  searchPlaceholder: "Search by name, code or dimension…",
-  noAvailable: "No matching active system parameters.",
-  addParameter: "Add parameter",
-  selectedBadge: "Selected",
-  mappingReady: "Measurable object determined",
-  mappingPending: "Measurable object is not determined yet",
-  confirmTitle: "Finish the parameter set",
-  confirmHint: "When the set is complete, confirm it. After confirmation, parameters are handled one by one and each is linked to its measurable leaf observation object.",
-  confirmComment: "Decision comment",
-  confirmCommentHint: "Briefly explain why this parameter set is sufficient for the typical activity.",
-  confirmButton: "Confirm parameter set and continue",
-  confirmed: "Typical activity parameter set confirmed",
-  confirmedHint: "The parameter set is locked for this review step. Now determine the measurable leaf observation object for every selected parameter.",
-  currentParameter: "Parameter being configured",
-  allMapped: "Measurable objects determined for all parameters",
-  allMappedHint: "This constructor section is complete. The next step can continue building the system typical activity.",
-  openCatalog: "Open parameter catalog",
-  loading: "Loading parameter constructor…",
-  saving: "Saving…",
-  loadError: "Could not load or save the parameter constructor.",
-  newTitle: "Name",
-  newDescription: "Description",
-  technicalCode: "Technical code",
-  dimension: "Dimension",
-  valueType: "Value type",
-  unit: "Canonical unit",
-  aggregation: "Aggregation",
-  window: "Default window",
-  allowNegative: "Allow negative values",
-  choose: "Choose…",
-  createAndAdd: "Create system parameter and add it",
-};
+const EN: Copy = {"title":"Typical activity parameters","hint":"Build the required parameter set for the new system typical activity. Add an existing system parameter or create a missing one. After every addition, the selected set remains visible and you can add another parameter.","rule":"A system typical activity must define at least one measurable parameter. A parameter specifies which value can be recorded for a particular execution of the activity; a fact exists after a value is recorded.","selectedTitle":"Selected parameters","noneSelected":"No parameters have been selected yet.","addAdditional":"+ Add another parameter","chooseExisting":"Choose existing","createNew":"Create new","searchPlaceholder":"Search by name, code or dimension…","noAvailable":"No matching active system parameters.","addParameter":"Add parameter","selectedBadge":"Selected","mappingReady":"Observation object for the measurement has been determined","mappingPending":"Observation object for the measurement has not been determined yet","confirmTitle":"Finish the parameter set","confirmHint":"When the set is complete, confirm it. Then process parameters one by one and determine the leaf observation object whose value each parameter measures.","confirmComment":"Decision comment","confirmCommentHint":"Briefly explain why this parameter set is sufficient for the typical activity.","confirmButton":"Confirm parameter set and continue","confirmed":"Typical activity parameter set confirmed","confirmedHint":"The set is fixed for this review step. Now determine, for every selected parameter, the leaf observation object whose value it measures.","currentParameter":"Parameter being configured","allMapped":"Observation objects for measurement determined for all parameters","allMappedHint":"This constructor section is complete. Continue to the next stage of building the system typical activity.","openCatalog":"Open parameter catalog","loading":"Loading parameter constructor…","saving":"Saving…","loadError":"Could not load or save the parameter constructor.","newTitle":"Name","newDescription":"Description","technicalCode":"Technical code","dimension":"Dimension","valueType":"Value type","unit":"Canonical unit","aggregation":"Aggregation","window":"Default window","allowNegative":"Allow negative values","choose":"Choose…","createAndAdd":"Create system parameter and add it"};
 
-const RU: Copy = {
-  ...EN,
-  title: "Параметры типовой активности",
-  hint: "Сформируйте обязательный набор параметров новой системной типовой активности. Можно выбрать существующий системный параметр или создать недостающий. После каждого добавления выбранный набор остаётся видимым, и можно добавить следующий параметр.",
-  rule: "Типовая активность не может быть завершена без хотя бы одного параметра. Именно параметры образуют измеримые факты, которыми фиксируется выполнение активности.",
-  selectedTitle: "Выбранные параметры",
-  noneSelected: "Пока не выбран ни один параметр.",
-  addAdditional: "+ Добавить дополнительный параметр",
-  chooseExisting: "Выбрать существующий",
-  createNew: "Создать новый",
-  searchPlaceholder: "Поиск по названию, коду или измерению…",
-  noAvailable: "Подходящих активных системных параметров не найдено.",
-  addParameter: "Добавить параметр",
-  selectedBadge: "Выбран",
-  mappingReady: "Измеримый объект определён",
-  mappingPending: "Измеримый объект ещё не определён",
-  confirmTitle: "Завершить набор параметров",
-  confirmHint: "Когда набор сформирован, подтвердите его. После подтверждения параметры будут последовательно обработаны: для каждого нужно определить измеримый листовой ОН.",
-  confirmComment: "Комментарий к решению",
-  confirmCommentHint: "Кратко зафиксируйте, почему этого набора параметров достаточно для типовой активности.",
-  confirmButton: "Подтвердить набор параметров и продолжить",
-  confirmed: "Набор параметров типовой активности сформирован",
-  confirmedHint: "Набор зафиксирован для этого шага проверки. Теперь для каждого выбранного параметра определите измеримый листовой объект наблюдения.",
-  currentParameter: "Настраиваем параметр",
-  allMapped: "Измеримые объекты определены для всех параметров",
-  allMappedHint: "Этот участок конструктора завершён. Следующий этап может продолжить построение системной типовой активности.",
-  openCatalog: "Открыть каталог параметров",
-  loading: "Загружаем конструктор параметров…",
-  saving: "Сохраняем…",
-  loadError: "Не удалось загрузить или сохранить конструктор параметров.",
-  newTitle: "Название",
-  newDescription: "Описание",
-  technicalCode: "Технический код",
-  dimension: "Измерение",
-  valueType: "Тип значения",
-  unit: "Каноническая единица",
-  aggregation: "Агрегация",
-  window: "Окно по умолчанию",
-  allowNegative: "Разрешить отрицательные значения",
-  choose: "Выберите…",
-  createAndAdd: "Создать системный параметр и добавить",
-};
+const RU: Copy = {"title":"Параметры типовой активности","hint":"Сформируйте необходимый набор параметров новой системной типовой активности. Добавьте существующий системный параметр или создайте недостающий. После каждого добавления выбранный набор остаётся видимым.","rule":"Для системной типовой активности должен быть определён хотя бы один измеримый параметр. Параметр задаёт, какое значение может быть зафиксировано при конкретном выполнении активности; факт возникает после записи значения.","selectedTitle":"Выбранные параметры","noneSelected":"Параметры ещё не выбраны.","addAdditional":"+ Добавить ещё один параметр","chooseExisting":"Выбрать существующий","createNew":"Создать новый","searchPlaceholder":"Поиск по названию, коду или измерению…","noAvailable":"Подходящих активных системных параметров не найдено.","addParameter":"Добавить параметр","selectedBadge":"Выбран","mappingReady":"Объект наблюдения для измерения определён","mappingPending":"Объект наблюдения для измерения ещё не определён","confirmTitle":"Завершить набор параметров","confirmHint":"Когда набор сформирован, подтвердите его. Затем обработайте параметры по одному и для каждого определите листовой объект наблюдения, значение которого он измеряет.","confirmComment":"Комментарий к решению","confirmCommentHint":"Кратко объясните, почему этого набора параметров достаточно для типовой активности.","confirmButton":"Подтвердить набор параметров и продолжить","confirmed":"Набор параметров типовой активности подтверждён","confirmedHint":"Набор зафиксирован для этого шага проверки. Теперь для каждого параметра определите листовой объект наблюдения, значение которого он измеряет.","currentParameter":"Настраиваемый параметр","allMapped":"Объекты наблюдения для измерения определены для всех параметров","allMappedHint":"Этот участок конструктора завершён. Можно переходить к следующему этапу построения системной типовой активности.","openCatalog":"Открыть каталог параметров","loading":"Загружаем конструктор параметров…","saving":"Сохраняем…","loadError":"Не удалось загрузить или сохранить конструктор параметров.","newTitle":"Название","newDescription":"Описание","technicalCode":"Технический код","dimension":"Измерение","valueType":"Тип значения","unit":"Каноническая единица","aggregation":"Агрегация","window":"Окно по умолчанию","allowNegative":"Разрешить отрицательные значения","choose":"Выберите…","createAndAdd":"Создать системный параметр и добавить"};
+
+const PL: Copy = {"title":"Parametry aktywności typowej","hint":"Zbuduj wymagany zestaw parametrów nowej systemowej aktywności typowej. Dodaj istniejący parametr systemowy albo utwórz brakujący. Po każdym dodaniu wybrany zestaw pozostaje widoczny.","rule":"Dla systemowej aktywności typowej trzeba określić co najmniej jeden mierzalny parametr. Parametr określa, jaka wartość może zostać zapisana dla konkretnego wykonania aktywności; fakt powstaje po zapisaniu wartości.","selectedTitle":"Wybrane parametry","noneSelected":"Nie wybrano jeszcze parametrów.","addAdditional":"+ Dodaj kolejny parametr","chooseExisting":"Wybierz istniejący","createNew":"Utwórz nowy","searchPlaceholder":"Szukaj po nazwie, kodzie lub wymiarze…","noAvailable":"Nie znaleziono pasujących aktywnych parametrów systemowych.","addParameter":"Dodaj parametr","selectedBadge":"Wybrano","mappingReady":"Określono obiekt obserwacji dla pomiaru","mappingPending":"Nie określono jeszcze obiektu obserwacji dla pomiaru","confirmTitle":"Zakończ zestaw parametrów","confirmHint":"Gdy zestaw jest gotowy, potwierdź go. Następnie obsłuż parametry po kolei i dla każdego określ liściowy obiekt obserwacji, którego wartość mierzy.","confirmComment":"Komentarz do decyzji","confirmCommentHint":"Krótko wyjaśnij, dlaczego ten zestaw parametrów jest wystarczający.","confirmButton":"Potwierdź zestaw i kontynuuj","confirmed":"Zestaw parametrów aktywności typowej potwierdzony","confirmedHint":"Zestaw został ustalony dla tego kroku. Teraz dla każdego parametru określ liściowy obiekt obserwacji, którego wartość mierzy.","currentParameter":"Konfigurowany parametr","allMapped":"Określono obiekty obserwacji dla wszystkich pomiarów","allMappedHint":"Ta część konstruktora jest zakończona. Można przejść do kolejnego etapu.","openCatalog":"Otwórz katalog parametrów","loading":"Wczytywanie konstruktora parametrów…","saving":"Zapisywanie…","loadError":"Nie udało się wczytać lub zapisać konstruktora parametrów.","newTitle":"Nazwa","newDescription":"Opis","technicalCode":"Kod techniczny","dimension":"Wymiar","valueType":"Typ wartości","unit":"Jednostka kanoniczna","aggregation":"Agregacja","window":"Domyślne okno","allowNegative":"Dopuść wartości ujemne","choose":"Wybierz…","createAndAdd":"Utwórz parametr systemowy i dodaj"};
+
+const UK: Copy = {"title":"Параметри типової активності","hint":"Сформуйте необхідний набір параметрів нової системної типової активності. Додайте наявний системний параметр або створіть відсутній. Після кожного додавання вибраний набір залишається видимим.","rule":"Для системної типової активності має бути визначено щонайменше один вимірюваний параметр. Параметр визначає, яке значення можна зафіксувати під час конкретного виконання активності; факт виникає після запису значення.","selectedTitle":"Вибрані параметри","noneSelected":"Параметри ще не вибрано.","addAdditional":"+ Додати ще один параметр","chooseExisting":"Вибрати наявний","createNew":"Створити новий","searchPlaceholder":"Пошук за назвою, кодом або виміром…","noAvailable":"Відповідних активних системних параметрів не знайдено.","addParameter":"Додати параметр","selectedBadge":"Вибрано","mappingReady":"Об’єкт спостереження для вимірювання визначено","mappingPending":"Об’єкт спостереження для вимірювання ще не визначено","confirmTitle":"Завершити набір параметрів","confirmHint":"Коли набір сформовано, підтвердьте його. Потім опрацьовуйте параметри по одному й для кожного визначте листовий об’єкт спостереження, значення якого він вимірює.","confirmComment":"Коментар до рішення","confirmCommentHint":"Коротко поясніть, чому цього набору параметрів достатньо для типової активності.","confirmButton":"Підтвердити набір параметрів і продовжити","confirmed":"Набір параметрів типової активності підтверджено","confirmedHint":"Набір зафіксовано для цього етапу перевірки. Тепер для кожного параметра визначте листовий об’єкт спостереження, значення якого він вимірює.","currentParameter":"Параметр, що налаштовується","allMapped":"Об’єкти спостереження для вимірювання визначено для всіх параметрів","allMappedHint":"Цю частину конструктора завершено. Можна переходити до наступного етапу створення системної типової активності.","openCatalog":"Відкрити каталог параметрів","loading":"Завантажуємо конструктор параметрів…","saving":"Зберігаємо…","loadError":"Не вдалося завантажити або зберегти конструктор параметрів.","newTitle":"Назва","newDescription":"Опис","technicalCode":"Технічний код","dimension":"Вимір","valueType":"Тип значення","unit":"Канонічна одиниця","aggregation":"Агрегація","window":"Вікно за замовчуванням","allowNegative":"Дозволити від’ємні значення","choose":"Виберіть…","createAndAdd":"Створити системний параметр і додати"};
+
+const DE: Copy = {"title":"Parameter der typischen Aktivität","hint":"Stellen Sie den erforderlichen Parametersatz für die neue systemweite typische Aktivität zusammen. Fügen Sie einen vorhandenen Systemparameter hinzu oder erstellen Sie einen fehlenden. Der gewählte Satz bleibt sichtbar.","rule":"Für eine systemweite typische Aktivität muss mindestens ein messbarer Parameter festgelegt sein. Ein Parameter bestimmt, welcher Wert bei einer konkreten Ausführung erfasst werden kann; ein Fakt entsteht nach dem Speichern eines Werts.","selectedTitle":"Ausgewählte Parameter","noneSelected":"Noch keine Parameter ausgewählt.","addAdditional":"+ Weiteren Parameter hinzufügen","chooseExisting":"Vorhandenen auswählen","createNew":"Neu erstellen","searchPlaceholder":"Nach Name, Code oder Dimension suchen…","noAvailable":"Keine passenden aktiven Systemparameter gefunden.","addParameter":"Parameter hinzufügen","selectedBadge":"Ausgewählt","mappingReady":"Beobachtungsobjekt für die Messung bestimmt","mappingPending":"Beobachtungsobjekt für die Messung noch nicht bestimmt","confirmTitle":"Parametersatz abschließen","confirmHint":"Bestätigen Sie den vollständigen Satz. Bearbeiten Sie danach die Parameter einzeln und bestimmen Sie jeweils das Blatt-Beobachtungsobjekt, dessen Wert gemessen wird.","confirmComment":"Entscheidungskommentar","confirmCommentHint":"Begründen Sie kurz, warum dieser Parametersatz ausreicht.","confirmButton":"Parametersatz bestätigen und fortfahren","confirmed":"Parametersatz der typischen Aktivität bestätigt","confirmedHint":"Der Satz ist für diesen Prüfschritt festgelegt. Bestimmen Sie nun für jeden Parameter das Blatt-Beobachtungsobjekt, dessen Wert er misst.","currentParameter":"Konfigurierter Parameter","allMapped":"Beobachtungsobjekte für alle Messungen bestimmt","allMappedHint":"Dieser Abschnitt ist abgeschlossen. Sie können mit der nächsten Phase fortfahren.","openCatalog":"Parameterkatalog öffnen","loading":"Parameterkonstruktor wird geladen…","saving":"Speichern…","loadError":"Parameterkonstruktor konnte nicht geladen oder gespeichert werden.","newTitle":"Name","newDescription":"Beschreibung","technicalCode":"Technischer Code","dimension":"Dimension","valueType":"Werttyp","unit":"Kanonische Einheit","aggregation":"Aggregation","window":"Standardfenster","allowNegative":"Negative Werte erlauben","choose":"Auswählen…","createAndAdd":"Systemparameter erstellen und hinzufügen"};
+
+const ES: Copy = {"title":"Parámetros de la actividad típica","hint":"Defina el conjunto de parámetros necesario para la nueva actividad típica del sistema. Añada un parámetro existente o cree uno que falte. El conjunto seleccionado permanece visible.","rule":"Una actividad típica del sistema debe tener al menos un parámetro medible definido. El parámetro determina qué valor puede registrarse para una ejecución concreta; el hecho existe después de registrar un valor.","selectedTitle":"Parámetros seleccionados","noneSelected":"Todavía no se ha seleccionado ningún parámetro.","addAdditional":"+ Añadir otro parámetro","chooseExisting":"Elegir existente","createNew":"Crear nuevo","searchPlaceholder":"Buscar por nombre, código o dimensión…","noAvailable":"No se encontraron parámetros activos que coincidan.","addParameter":"Añadir parámetro","selectedBadge":"Seleccionado","mappingReady":"Objeto de observación para la medición determinado","mappingPending":"El objeto de observación para la medición aún no está determinado","confirmTitle":"Finalizar el conjunto de parámetros","confirmHint":"Confirme el conjunto cuando esté completo. Después procese los parámetros uno a uno y determine para cada uno el objeto de observación hoja cuyo valor mide.","confirmComment":"Comentario de la decisión","confirmCommentHint":"Explique brevemente por qué este conjunto es suficiente.","confirmButton":"Confirmar el conjunto y continuar","confirmed":"Conjunto de parámetros confirmado","confirmedHint":"El conjunto queda fijado para este paso. Ahora determine para cada parámetro el objeto de observación hoja cuyo valor mide.","currentParameter":"Parámetro en configuración","allMapped":"Objetos de observación determinados para todas las mediciones","allMappedHint":"Esta parte del constructor está completa. Puede continuar con la siguiente etapa.","openCatalog":"Abrir catálogo de parámetros","loading":"Cargando constructor de parámetros…","saving":"Guardando…","loadError":"No se pudo cargar o guardar el constructor de parámetros.","newTitle":"Nombre","newDescription":"Descripción","technicalCode":"Código técnico","dimension":"Dimensión","valueType":"Tipo de valor","unit":"Unidad canónica","aggregation":"Agregación","window":"Ventana predeterminada","allowNegative":"Permitir valores negativos","choose":"Elegir…","createAndAdd":"Crear parámetro del sistema y añadirlo"};
+
+const CS: Copy = {"title":"Parametry typické aktivity","hint":"Sestavte požadovanou sadu parametrů pro novou systémovou typickou aktivitu. Přidejte existující systémový parametr nebo vytvořte chybějící. Vybraná sada zůstává viditelná.","rule":"Pro systémovou typickou aktivitu musí být určen alespoň jeden měřitelný parametr. Parametr určuje, jakou hodnotu lze zaznamenat pro konkrétní provedení; fakt vzniká po uložení hodnoty.","selectedTitle":"Vybrané parametry","noneSelected":"Zatím nebyl vybrán žádný parametr.","addAdditional":"+ Přidat další parametr","chooseExisting":"Vybrat existující","createNew":"Vytvořit nový","searchPlaceholder":"Hledat podle názvu, kódu nebo rozměru…","noAvailable":"Nebyly nalezeny odpovídající aktivní systémové parametry.","addParameter":"Přidat parametr","selectedBadge":"Vybráno","mappingReady":"Objekt pozorování pro měření byl určen","mappingPending":"Objekt pozorování pro měření zatím nebyl určen","confirmTitle":"Dokončit sadu parametrů","confirmHint":"Jakmile je sada kompletní, potvrďte ji. Poté zpracujte parametry postupně a pro každý určete listový objekt pozorování, jehož hodnotu měří.","confirmComment":"Komentář k rozhodnutí","confirmCommentHint":"Stručně vysvětlete, proč je tato sada dostačující.","confirmButton":"Potvrdit sadu a pokračovat","confirmed":"Sada parametrů typické aktivity potvrzena","confirmedHint":"Sada je pro tento krok pevně nastavena. Nyní pro každý parametr určete listový objekt pozorování, jehož hodnotu měří.","currentParameter":"Nastavovaný parametr","allMapped":"Objekty pozorování určeny pro všechna měření","allMappedHint":"Tato část konstruktoru je dokončena. Můžete pokračovat další fází.","openCatalog":"Otevřít katalog parametrů","loading":"Načítání konstruktoru parametrů…","saving":"Ukládání…","loadError":"Konstruktor parametrů se nepodařilo načíst nebo uložit.","newTitle":"Název","newDescription":"Popis","technicalCode":"Technický kód","dimension":"Rozměr","valueType":"Typ hodnoty","unit":"Kanonická jednotka","aggregation":"Agregace","window":"Výchozí okno","allowNegative":"Povolit záporné hodnoty","choose":"Vyberte…","createAndAdd":"Vytvořit systémový parametr a přidat"};
 
 const COPY: Record<LocaleCode, Copy> = {
   en: EN,
   ru: RU,
-  pl: EN,
-  uk: EN,
-  de: EN,
-  es: EN,
-  cs: EN,
+  pl: PL,
+  uk: UK,
+  de: DE,
+  es: ES,
+  cs: CS,
 };
 
 const DIMENSIONS = [
@@ -496,11 +425,6 @@ export function CuratorTemplateParameters({ signalId, locale, onChanged }: Props
 
         {nextParameter ? (
           <>
-            <div className="rounded-xl border border-[#cfd8ef] bg-white px-3 py-2 text-xs text-[#5f6679]">
-              <span className="font-extrabold text-[#34405a]">{copy.currentParameter}: </span>
-              <span className="font-bold text-[#263044]">{nextParameter.title}</span>
-              <span className="ml-1 font-mono text-[#65708d]">· {nextParameter.parameterCode}</span>
-            </div>
             <CuratorObjectBootstrap
               signalId={signalId}
               locale={locale}
