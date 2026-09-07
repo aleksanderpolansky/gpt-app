@@ -997,3 +997,14 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - V1.0.3 остановлен собственным self-test до mutation: intentional exit 7 был ошибочно прочитан PowerShell wrapper как 0.
 - V1.0.4 переносит native-process orchestration в Node и оставляет PowerShell только безопасным bootstrap с Process.ExitCode.
 - Code commit V1.0.4: `4be956bb4eeb0f47e9506c275a82c80ce018c763`.
+
+
+## 2026-09-07 — ARCTOR_CURATOR_SEARCHABLE_ON_SELECTOR_PUBLICATION_COPY_V1
+
+- Удалена устаревшая UI-семантика отдельной публикации системного ОН: подтверждение куратором уже означает немедленную общую публикацию.
+- Выбор родительского и существующего листового ОН переведен на поисковый combobox.
+- Поиск использует локализованные name/description, канонические English name/description и canonical key; структурные ограничения сохраняются до поиска.
+- DB/SQL/RLS не меняются.
+- Code commit: `1f5f469196dc9b905abcbb6b45971e858f45e0f9`.
+- Recovery checkpoint: `docs/recovery/ARCTOR_CURATOR_SEARCHABLE_ON_SELECTOR_PUBLICATION_COPY_V1_RU_20260907.md`.
+- Next: production live acceptance в кураторе, затем продолжение построения пути ОН.
