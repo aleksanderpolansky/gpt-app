@@ -9,6 +9,11 @@ import {
 } from "@/lib/admin/require-platform-admin";
 import { localizeGlobalSystemValueObject } from "@/lib/reality-core/global-system-value-object-localization";
 import {
+  backfillCuratorSystemValueObjectLocalizationsV1,
+  buildCanonicalSystemValueObjectLocalizationV1,
+  hasCompleteCanonicalSystemValueObjectLocalizationV1,
+} from "@/lib/reality-core/global-system-value-object-localization.server";
+import {
   ActorContextError,
   resolveActiveActorContext,
   type ResolvedActorContext,
@@ -19,7 +24,7 @@ import { isConfirmedMissingTypicalActivityAnalysis } from "@/lib/activity/basic-
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const ROUTE_MARKER = "reality-curator-object-bootstrap-v1-9-auto-canonical-key" as const;
+const ROUTE_MARKER = "reality-curator-object-bootstrap-v2-canonical-english-localization" as const;
 const PROCESSOR_NAME = "reality_curator_journey" as const;
 const PROCESSOR_VERSION = "1" as const;
 const PARAMETER_EVENT_CODE = "related_parameter_catalog_checked" as const;
@@ -28,7 +33,7 @@ const PARAMETER_SET_EVENT_CODE = "typical_activity_parameter_set_confirmed" as c
 const DECISION_EVENT_CODE = "measurable_object_decision_recorded" as const;
 const CREATED_EVENT_CODE = "observation_object_created" as const;
 const DECISION_CONTRACT = "ARCTOR_REALITY_CURATOR_MEASURABLE_OBJECT_V1" as const;
-const CREATION_CONTRACT = "ARCTOR_REALITY_MODEL_CURATOR_ACTIVITY_TEMPLATE_BUILDER_V1_8_AUTO_CANONICAL_KEY" as const;
+const CREATION_CONTRACT = "ARCTOR_REALITY_MODEL_CURATOR_ACTIVITY_TEMPLATE_BUILDER_V2_CANONICAL_ENGLISH_LOCALIZATION" as const;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const RELATIONS = new Set(["part_of", "is_a", "aspect_of", "subprocess_of"]);
@@ -725,6 +730,7 @@ async function resolveSemanticShape(input: {
 async function createSystemObject(input: {
   signal: EligibleSignal;
   guard: RequirePlatformAdminSuccess;
+  actor: ResolvedActorContext;
   role: NodeRoleCode;
   parent: ParentRow | null;
   canonicalKey: string;
@@ -785,6 +791,18 @@ async function createSystemObject(input: {
     return { valueObjectId, canonicalKey: input.canonicalKey, title: input.localizedTitle, replay: true };
   }
 
+  const localizationEnvelope = await buildCanonicalSystemValueObjectLocalizationV1({
+    userId: input.guard.appUser.id,
+    actorId: input.actor.actorId,
+    entityKey: valueObjectId,
+    operationId: stableUuid(`ARCTOR_CURATOR_SYSTEM_LOCALIZATION_V1|${valueObjectId}|${hash}`),
+    curatorLocale: input.locale,
+    localizedTitle: input.localizedTitle,
+    localizedDescription: input.localizedDescription,
+    titleEn: input.titleEn,
+    descriptionEn: input.descriptionEn,
+  });
+
   const draftLocalizations: Record<string, { title: string; description: string }> = {
     en: { title: input.titleEn, description: input.descriptionEn },
   };
@@ -794,6 +812,10 @@ async function createSystemObject(input: {
   };
 
   const metadataJson = {
+    localizedContent: localizationEnvelope,
+    contentLocalizationRuntime: "ARCTOR_CONTENT_LOCALIZATION_V1",
+    systemValueObjectLocalizationRuntime:
+      "ARCTOR_SYSTEM_VALUE_OBJECT_CANONICAL_ENGLISH_LOCALIZATION_V1",
     curator_system_draft_v1: {
       contract: CREATION_CONTRACT,
       requestHash: hash,
@@ -805,6 +827,10 @@ async function createSystemObject(input: {
       publicationState: "published_by_curator_confirmation",
       publishedAt: new Date().toISOString(),
       canonicalKeyMode: "server_generated_v1",
+      canonicalLocale: "en",
+      localizationState: "complete",
+      localizationLocales: [...CURATOR_LOCALES],
+      localizationCompletedAt: new Date().toISOString(),
       nodeRole: input.role,
       localizations: draftLocalizations,
     },
@@ -894,6 +920,11 @@ async function createSystemObject(input: {
     post.facet_code !== semantic.facetCode ||
     post.origin_type_code !== "system_model" ||
     postMetadata.system_hidden_from_observation_ui === true ||
+    !hasCompleteCanonicalSystemValueObjectLocalizationV1({
+      metadata: postMetadata,
+      titleEn: input.titleEn,
+      descriptionEn: input.descriptionEn,
+    }) ||
     !version ||
     version.scope_code !== "global" ||
     version.owner_actor_id !== null ||
@@ -930,9 +961,19 @@ export async function GET(request: Request) {
     const signal = await readEligibleSignal(signalId);
     await assertParameterCheckCompleted(signal);
     await assertParameterSetReady(signal, parameterDefinitionId);
-    return NextResponse.json(
-      await buildState(signal, actor, locale, parameterDefinitionId),
+    const systemLocalizationRepair =
+      await backfillCuratorSystemValueObjectLocalizationsV1({
+        userId: guard.appUser.id,
+        actorId: actor.actorId,
+        limit: 5,
+      });
+    const state = await buildState(
+      signal,
+      actor,
+      locale,
+      parameterDefinitionId,
     );
+    return NextResponse.json({ ...state, systemLocalizationRepair });
   } catch (error) {
     if (error instanceof ActorContextError) return errorResponse(error.code, error.message, error.status);
     const message = error instanceof Error ? error.message : String(error);
@@ -1080,6 +1121,7 @@ export async function POST(request: Request) {
       const created = await createSystemObject({
         signal,
         guard,
+        actor,
         role,
         parent,
         canonicalKey,
@@ -1133,7 +1175,7 @@ export async function POST(request: Request) {
           privateOwnerAppUserId: null,
           privateOwnerActorId: null,
           systemOwnerless: true,
-          systemPublished: false,
+          systemPublished: true,
           parameterDefinitionId: parameter.id,
           parameterCode: parameter.parameterCode,
           parameterTitle: parameter.title,

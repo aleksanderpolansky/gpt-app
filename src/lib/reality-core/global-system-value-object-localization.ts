@@ -1,4 +1,5 @@
 import localizationCatalog from "@/data/reality-core/global-system-reality-localizations-v2.json";
+import { resolveLocalizedContentFieldsStrict } from "@/lib/localization/contentLocalization";
 
 export const GLOBAL_SYSTEM_VALUE_OBJECT_LOCALES = [
   "en",
@@ -87,28 +88,37 @@ export function localizeGlobalSystemValueObject<T extends LocalizableValueObject
   valueObject: T,
   localeValue: unknown,
 ): T {
-  const canonicalKey = cleanText(valueObject.canonical_key);
-  if (!canonicalKey) {
-    return valueObject;
-  }
-
-  const staticEntry = (
-    localizationCatalog.objects as Record<string, CatalogEntry | undefined>
-  )[canonicalKey];
-  const entry = staticEntry ?? runtimeDraftEntry(valueObject);
-  if (!entry) {
-    return valueObject;
-  }
-
   const locale = normalizeGlobalSystemValueObjectLocale(localeValue);
+  const localizedContent = resolveLocalizedContentFieldsStrict({
+    metadata: valueObject.metadata_json,
+    locale,
+    fieldCodes: ["title", "description"],
+  });
+  const localizedContentTitle = cleanText(localizedContent.title);
+  const localizedContentDescription = cleanText(localizedContent.description);
+
+  const canonicalKey = cleanText(valueObject.canonical_key);
+  const staticEntry = canonicalKey
+    ? (
+        localizationCatalog.objects as Record<string, CatalogEntry | undefined>
+      )[canonicalKey]
+    : undefined;
+  const legacyEntry = staticEntry ?? runtimeDraftEntry(valueObject);
+
   const title =
-    cleanText(entry.title?.[locale]) ??
-    cleanText(entry.title?.en) ??
+    localizedContentTitle ??
+    cleanText(legacyEntry?.title?.[locale]) ??
+    cleanText(legacyEntry?.title?.en) ??
     cleanText(valueObject.title);
   const description =
-    cleanText(entry.description?.[locale]) ??
-    cleanText(entry.description?.en) ??
+    localizedContentDescription ??
+    cleanText(legacyEntry?.description?.[locale]) ??
+    cleanText(legacyEntry?.description?.en) ??
     cleanText(valueObject.description);
+
+  if (!title && !description) {
+    return valueObject;
+  }
 
   return {
     ...valueObject,
