@@ -76,6 +76,25 @@ export const ACTIVITY_FACT_STATUSES = [
 
 export type ActivityFactStatus = (typeof ACTIVITY_FACT_STATUSES)[number];
 
+export const ACTIVITY_FACT_ROLE_CODES = [
+  "source",
+  "result",
+  "snapshot",
+] as const;
+
+export type ActivityFactRoleCode = (typeof ACTIVITY_FACT_ROLE_CODES)[number];
+
+export const ACTIVITY_FACT_SNAPSHOT_WINDOW_CODES = [
+  "point_in_time",
+  "daily",
+  "weekly",
+  "event_driven",
+  "custom",
+] as const;
+
+export type ActivityFactSnapshotWindowCode =
+  (typeof ACTIVITY_FACT_SNAPSHOT_WINDOW_CODES)[number];
+
 export const ACTIVITY_FACT_REVIEW_DECISIONS = [
   "pending",
   "accepted",

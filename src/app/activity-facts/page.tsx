@@ -28,6 +28,19 @@ type ActivityFact = {
   metricValueSource: string | null;
   unit: string | null;
   factStatus: string | null;
+  factRoleCode: string | null;
+  effectiveAt: string | null;
+  validFrom: string | null;
+  validTo: string | null;
+  snapshotWindowCode: string | null;
+  calculationRuleCode: string | null;
+  calculationRuleVersion: string | null;
+  previousSnapshotFactId: string | null;
+  derivationInputs?: Array<{
+    inputFactId: string;
+    inputRoleCode: string;
+    inputOrdinal: number | null;
+  }>;
   sourceType: string | null;
   confidence: number | null;
   performedByActorId: string | null;
@@ -53,6 +66,7 @@ type FactTableRow = {
   activity: string;
   valueObject: string;
   type: string;
+  role: string;
   value: string;
   unit: string;
   status: string;
@@ -538,6 +552,50 @@ const COPY: Record<Locale, ActivityFactsCopy> = {
   },
 };
 
+type FactCardLabels = {
+  role: string;
+  effectiveAt: string;
+  validity: string;
+  snapshotWindow: string;
+  calculationRule: string;
+  previousSnapshot: string;
+  calculationInputs: string;
+  notApplicable: string;
+  roleLabels: Record<string, string>;
+  snapshotLabels: Record<string, string>;
+};
+
+const FACT_CARD_LABELS: Record<Locale, FactCardLabels> = {
+  en: { role: "Fact role", effectiveAt: "Effective at", validity: "Valid period", snapshotWindow: "Snapshot", calculationRule: "Calculation rule", previousSnapshot: "Previous snapshot", calculationInputs: "Input facts", notApplicable: "Not applicable", roleLabels: { source: "Source fact", result: "Resulting fact", snapshot: "State snapshot" }, snapshotLabels: { point_in_time: "Point in time", daily: "Daily", weekly: "Weekly", event_driven: "Event-driven", custom: "Custom" } },
+  pl: { role: "Rola faktu", effectiveAt: "Stan na moment", validity: "Okres ważności", snapshotWindow: "Przekrój stanu", calculationRule: "Reguła obliczenia", previousSnapshot: "Poprzedni przekrój", calculationInputs: "Fakty wejściowe", notApplicable: "Nie dotyczy", roleLabels: { source: "Fakt źródłowy", result: "Fakt wynikowy", snapshot: "Przekrój stanu" }, snapshotLabels: { point_in_time: "Punktowy", daily: "Dzienny", weekly: "Tygodniowy", event_driven: "Po zdarzeniu", custom: "Własny" } },
+  ru: { role: "Роль факта", effectiveAt: "Состояние на момент", validity: "Период действия", snapshotWindow: "Срез состояния", calculationRule: "Правило расчёта", previousSnapshot: "Предыдущий срез", calculationInputs: "Входные факты", notApplicable: "Не применяется", roleLabels: { source: "Исходный факт", result: "Результирующий факт", snapshot: "Факт-срез состояния" }, snapshotLabels: { point_in_time: "На момент", daily: "Дневной", weekly: "Недельный", event_driven: "По событию", custom: "Произвольный" } },
+  uk: { role: "Роль факту", effectiveAt: "Стан на момент", validity: "Період дії", snapshotWindow: "Зріз стану", calculationRule: "Правило розрахунку", previousSnapshot: "Попередній зріз", calculationInputs: "Вхідні факти", notApplicable: "Не застосовується", roleLabels: { source: "Вихідний факт", result: "Результуючий факт", snapshot: "Факт-зріз стану" }, snapshotLabels: { point_in_time: "На момент", daily: "Денний", weekly: "Тижневий", event_driven: "За подією", custom: "Довільний" } },
+  de: { role: "Faktrolle", effectiveAt: "Gültiger Zeitpunkt", validity: "Gültigkeitszeitraum", snapshotWindow: "Zustandsschnitt", calculationRule: "Berechnungsregel", previousSnapshot: "Vorheriger Schnitt", calculationInputs: "Eingangsfakten", notApplicable: "Nicht anwendbar", roleLabels: { source: "Quellfakt", result: "Ergebnisfakt", snapshot: "Zustandsschnitt" }, snapshotLabels: { point_in_time: "Zeitpunkt", daily: "Täglich", weekly: "Wöchentlich", event_driven: "Ereignisbasiert", custom: "Benutzerdefiniert" } },
+  es: { role: "Rol del hecho", effectiveAt: "Estado en el momento", validity: "Periodo de validez", snapshotWindow: "Corte de estado", calculationRule: "Regla de cálculo", previousSnapshot: "Corte anterior", calculationInputs: "Hechos de entrada", notApplicable: "No aplica", roleLabels: { source: "Hecho fuente", result: "Hecho resultante", snapshot: "Corte de estado" }, snapshotLabels: { point_in_time: "Puntual", daily: "Diario", weekly: "Semanal", event_driven: "Por evento", custom: "Personalizado" } },
+  cs: { role: "Role faktu", effectiveAt: "Stav k okamžiku", validity: "Doba platnosti", snapshotWindow: "Snímek stavu", calculationRule: "Pravidlo výpočtu", previousSnapshot: "Předchozí snímek", calculationInputs: "Vstupní fakta", notApplicable: "Nepoužije se", roleLabels: { source: "Zdrojový fakt", result: "Výsledný fakt", snapshot: "Snímek stavu" }, snapshotLabels: { point_in_time: "K okamžiku", daily: "Denní", weekly: "Týdenní", event_driven: "Podle události", custom: "Vlastní" } },
+};
+
+function getFactRoleLabel(locale: Locale, role: string | null) {
+  const normalized = role ?? "source";
+  return FACT_CARD_LABELS[locale].roleLabels[normalized] ?? normalized;
+}
+
+function getSnapshotLabel(locale: Locale, value: string | null) {
+  if (!value) return "—";
+  return FACT_CARD_LABELS[locale].snapshotLabels[value] ?? value;
+}
+
+function formatValidity(
+  locale: Locale,
+  validFrom: string | null,
+  validTo: string | null,
+) {
+  if (!validFrom && !validTo) return "—";
+  return `${validFrom ? formatDate(validFrom, locale) : "…"} → ${
+    validTo ? formatDate(validTo, locale) : "…"
+  }`;
+}
+
 type FactDisplayCodeCopy = {
   measureTypes: Record<string, string>;
   units: Record<string, string>;
@@ -548,37 +606,37 @@ const FACT_DISPLAY_CODES: Record<Locale, FactDisplayCodeCopy> = {
   en: {
     measureTypes: { duration: "Duration", count: "Count", context_tag: "Context" },
     units: { minute: "min", minutes: "min", hour: "h", hours: "h", second: "s", seconds: "s", count: "count", tag: "tag", percent: "%", meter: "m", kilometer: "km" },
-    sources: { user_edit: "User edit", ai_extraction: "AI extraction", manual_form: "Manual", system_event: "System", activity_capture: "Activity capture" },
+    sources: { user_edit: "User edit", ai_extraction: "AI extraction", manual_form: "Manual", system_event: "System", activity_capture: "Activity capture", derived_calculation: "Calculated" },
   },
   pl: {
     measureTypes: { duration: "Czas trwania", count: "Liczba", context_tag: "Kontekst" },
     units: { minute: "min", minutes: "min", hour: "h", hours: "h", second: "s", seconds: "s", count: "liczba", tag: "tag", percent: "%", meter: "m", kilometer: "km" },
-    sources: { user_edit: "Edycja użytkownika", ai_extraction: "Ekstrakcja AI", manual_form: "Ręcznie", system_event: "System", activity_capture: "Rejestr aktywności" },
+    sources: { user_edit: "Edycja użytkownika", ai_extraction: "Ekstrakcja AI", manual_form: "Ręcznie", system_event: "System", activity_capture: "Rejestr aktywności", derived_calculation: "Obliczenie" },
   },
   ru: {
     measureTypes: { duration: "Длительность", count: "Количество", context_tag: "Контекст" },
     units: { minute: "мин", minutes: "мин", hour: "ч", hours: "ч", second: "с", seconds: "с", count: "кол-во", tag: "метка", percent: "%", meter: "м", kilometer: "км" },
-    sources: { user_edit: "Изменено пользователем", ai_extraction: "Извлечено AI", manual_form: "Вручную", system_event: "Система", activity_capture: "Фиксация активности" },
+    sources: { user_edit: "Изменено пользователем", ai_extraction: "Извлечено AI", manual_form: "Вручную", system_event: "Система", activity_capture: "Фиксация активности", derived_calculation: "Расчёт" },
   },
   uk: {
     measureTypes: { duration: "Тривалість", count: "Кількість", context_tag: "Контекст" },
     units: { minute: "хв", minutes: "хв", hour: "год", hours: "год", second: "с", seconds: "с", count: "кільк.", tag: "мітка", percent: "%", meter: "м", kilometer: "км" },
-    sources: { user_edit: "Змінено користувачем", ai_extraction: "Видобуто AI", manual_form: "Вручну", system_event: "Система", activity_capture: "Фіксація активності" },
+    sources: { user_edit: "Змінено користувачем", ai_extraction: "Видобуто AI", manual_form: "Вручну", system_event: "Система", activity_capture: "Фіксація активності", derived_calculation: "Розрахунок" },
   },
   de: {
     measureTypes: { duration: "Dauer", count: "Anzahl", context_tag: "Kontext" },
     units: { minute: "min", minutes: "min", hour: "h", hours: "h", second: "s", seconds: "s", count: "Anz.", tag: "Tag", percent: "%", meter: "m", kilometer: "km" },
-    sources: { user_edit: "Benutzeränderung", ai_extraction: "AI-Extraktion", manual_form: "Manuell", system_event: "System", activity_capture: "Aktivitätserfassung" },
+    sources: { user_edit: "Benutzeränderung", ai_extraction: "AI-Extraktion", manual_form: "Manuell", system_event: "System", activity_capture: "Aktivitätserfassung", derived_calculation: "Berechnet" },
   },
   es: {
     measureTypes: { duration: "Duración", count: "Cantidad", context_tag: "Contexto" },
     units: { minute: "min", minutes: "min", hour: "h", hours: "h", second: "s", seconds: "s", count: "cant.", tag: "etiqueta", percent: "%", meter: "m", kilometer: "km" },
-    sources: { user_edit: "Edición del usuario", ai_extraction: "Extracción AI", manual_form: "Manual", system_event: "Sistema", activity_capture: "Registro de actividad" },
+    sources: { user_edit: "Edición del usuario", ai_extraction: "Extracción AI", manual_form: "Manual", system_event: "Sistema", activity_capture: "Registro de actividad", derived_calculation: "Calculado" },
   },
   cs: {
     measureTypes: { duration: "Doba trvání", count: "Počet", context_tag: "Kontext" },
     units: { minute: "min", minutes: "min", hour: "h", hours: "h", second: "s", seconds: "s", count: "počet", tag: "štítek", percent: "%", meter: "m", kilometer: "km" },
-    sources: { user_edit: "Úprava uživatelem", ai_extraction: "Extrakce AI", manual_form: "Ručně", system_event: "Systém", activity_capture: "Záznam aktivity" },
+    sources: { user_edit: "Úprava uživatelem", ai_extraction: "Extrakce AI", manual_form: "Ručně", system_event: "Systém", activity_capture: "Záznam aktivity", derived_calculation: "Výpočet" },
   },
 };
 
@@ -866,7 +924,10 @@ function FactRow({
         >
           {getStatusLabel(fact.factStatus, copy)}
         </span>
-        <div className="mt-2 text-xs font-semibold text-slate-500">{fact.sourceType ?? "—"}</div>
+        <div className="mt-2 text-xs font-black text-indigo-700">
+          {getFactRoleLabel(locale, fact.factRoleCode)}
+        </div>
+        <div className="mt-1 text-xs font-semibold text-slate-500">{fact.sourceType ?? "—"}</div>
       </div>
 
       <div className="flex items-center sm:justify-end">
@@ -989,6 +1050,7 @@ function ActivityFactsPageContent() {
             : "—"),
         valueObject: formatFactValueObjectLabel(fact, copy),
         type: localizeFactCode(locale, "measureTypes", fact.measureType),
+        role: getFactRoleLabel(locale, fact.factRoleCode),
         value: formatMetricValue(fact.metricValue),
         unit: localizeFactCode(locale, "units", fact.unit),
         status: getStatusLabel(fact.factStatus, copy),
@@ -1044,6 +1106,15 @@ function ActivityFactsPageContent() {
         tooltip: true,
       },
       {
+        title: FACT_CARD_LABELS[locale].role,
+        field: "role",
+        minWidth: 132,
+        widthGrow: 1,
+        widthShrink: 2,
+        responsive: 4,
+        tooltip: true,
+      },
+      {
         title: copy.value,
         field: "value",
         width: 86,
@@ -1090,7 +1161,7 @@ function ActivityFactsPageContent() {
         cssClass: "arctor-table-number",
       },
     ],
-    [copy],
+    [copy, locale],
   );
 
   const loadFacts = useCallback(async () => {
@@ -1412,6 +1483,15 @@ function ActivityFactsPageContent() {
 
           {selectedFact ? (
             <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-[22px] border border-indigo-200 bg-indigo-50/50 p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                  {FACT_CARD_LABELS[locale].role}
+                </div>
+                <strong className="mt-2 block text-indigo-800">
+                  {getFactRoleLabel(locale, selectedFact.factRoleCode)}
+                </strong>
+              </div>
+
               <div className="rounded-[22px] border border-slate-200 p-4">
                 <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
                   {copy.type}
@@ -1512,6 +1592,78 @@ function ActivityFactsPageContent() {
                     <span className="font-mono">A: —</span>
                   )}
                 </div>
+              </div>
+
+              <div className="rounded-[22px] border border-slate-200 p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                  {FACT_CARD_LABELS[locale].effectiveAt}
+                </div>
+                <strong className="mt-2 block">
+                  {formatDate(selectedFact.effectiveAt ?? selectedFact.createdAt, locale)}
+                </strong>
+              </div>
+
+              <div className="rounded-[22px] border border-slate-200 p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                  {FACT_CARD_LABELS[locale].validity}
+                </div>
+                <strong className="mt-2 block">
+                  {formatValidity(locale, selectedFact.validFrom, selectedFact.validTo)}
+                </strong>
+              </div>
+
+              <div className="rounded-[22px] border border-slate-200 p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                  {FACT_CARD_LABELS[locale].snapshotWindow}
+                </div>
+                <strong className="mt-2 block">
+                  {selectedFact.factRoleCode === "snapshot"
+                    ? getSnapshotLabel(locale, selectedFact.snapshotWindowCode)
+                    : FACT_CARD_LABELS[locale].notApplicable}
+                </strong>
+              </div>
+
+              <div className="rounded-[22px] border border-slate-200 p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                  {FACT_CARD_LABELS[locale].previousSnapshot}
+                </div>
+                <strong className="mt-2 block font-mono">
+                  {selectedFact.previousSnapshotFactId
+                    ? `F: ${truncateMiddle(selectedFact.previousSnapshotFactId, 10, 8)}`
+                    : "—"}
+                </strong>
+              </div>
+
+              <div className="rounded-[22px] border border-slate-200 p-4 md:col-span-2">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                  {FACT_CARD_LABELS[locale].calculationRule}
+                </div>
+                <strong className="mt-2 block break-words font-mono">
+                  {selectedFact.calculationRuleCode
+                    ? `${selectedFact.calculationRuleCode} · ${selectedFact.calculationRuleVersion ?? "—"}`
+                    : "—"}
+                </strong>
+              </div>
+
+              <div className="rounded-[22px] border border-slate-200 p-4 md:col-span-2">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                  {FACT_CARD_LABELS[locale].calculationInputs}
+                </div>
+                {(selectedFact.derivationInputs ?? []).length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {(selectedFact.derivationInputs ?? []).map((input) => (
+                      <span
+                        key={`${input.inputFactId}-${input.inputRoleCode}`}
+                        className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-xs font-bold text-slate-700"
+                        title={input.inputFactId}
+                      >
+                        {input.inputRoleCode}: F:{truncateMiddle(input.inputFactId, 7, 6)}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <strong className="mt-2 block">—</strong>
+                )}
               </div>
 
               <ActivityFactTaggingPanel

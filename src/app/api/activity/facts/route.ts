@@ -130,6 +130,14 @@ function normalizeFactRow(row: Row) {
     metricValueSource: normalizeMetricValueSource(row),
     unit: asString(row.unit),
     factStatus: asString(row.fact_status),
+    factRoleCode: asString(row.fact_role_code) ?? "source",
+    effectiveAt: asString(row.effective_at),
+    validFrom: asString(row.valid_from),
+    validTo: asString(row.valid_to),
+    snapshotWindowCode: asString(row.snapshot_window_code),
+    calculationRuleCode: asString(row.calculation_rule_code),
+    calculationRuleVersion: asString(row.calculation_rule_version),
+    previousSnapshotFactId: asString(row.previous_snapshot_fact_id),
     isUserConfirmed: asBoolean(row.is_user_confirmed),
     sourceType: asString(row.source_type),
     confidence: asNumber(row.confidence),
@@ -222,6 +230,20 @@ export async function GET(request: Request) {
     "activityEventId",
   );
   const factStatus = parseOptionalFilter(url.searchParams, "factStatus");
+  const factRoleCode = parseOptionalFilter(url.searchParams, "factRoleCode");
+
+  if (factRoleCode && !["source", "result", "snapshot"].includes(factRoleCode)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        endpoint: ENDPOINT,
+        readStatus: "blocked",
+        errorCode: "ACTIVITY_FACTS_INVALID_FACT_ROLE",
+        errorMessage: "factRoleCode must be source, result, or snapshot.",
+      },
+      { status: 400 },
+    );
+  }
 
   let matchedFactIds: string[] | null = null;
 
@@ -266,6 +288,7 @@ export async function GET(request: Request) {
           valueObjectId,
           activityEventId,
           factStatus,
+          factRoleCode,
         },
         ownership: {
           appUserId: context.appUserId,
@@ -304,6 +327,14 @@ export async function GET(request: Request) {
         "value_boolean",
         "unit",
         "fact_status",
+        "fact_role_code",
+        "effective_at",
+        "valid_from",
+        "valid_to",
+        "snapshot_window_code",
+        "calculation_rule_code",
+        "calculation_rule_version",
+        "previous_snapshot_fact_id",
         "is_user_confirmed",
         "source_type",
         "confidence",
@@ -335,6 +366,10 @@ export async function GET(request: Request) {
     query = query.eq("fact_status", factStatus);
   }
 
+  if (factRoleCode) {
+    query = query.eq("fact_role_code", factRoleCode);
+  }
+
   const { data, error } = await query;
 
   if (error) {
@@ -351,6 +386,7 @@ export async function GET(request: Request) {
           valueObjectId,
           activityEventId,
           factStatus,
+          factRoleCode,
         },
         sideEffects: {
           dbWritesExecuted: false,
@@ -393,6 +429,14 @@ export async function GET(request: Request) {
           "value_boolean",
           "unit",
           "fact_status",
+          "fact_role_code",
+          "effective_at",
+          "valid_from",
+          "valid_to",
+          "snapshot_window_code",
+          "calculation_rule_code",
+          "calculation_rule_version",
+          "previous_snapshot_fact_id",
           "is_user_confirmed",
           "source_type",
           "confidence",
@@ -495,6 +539,54 @@ export async function GET(request: Request) {
       isMaterialized: asBoolean(row.is_materialized),
     });
     effectiveLinksByFactId.set(factId, current);
+  }
+
+  const derivationInputsByResultFactId = new Map<
+    string,
+    Array<{
+      inputFactId: string;
+      inputRoleCode: string;
+      inputOrdinal: number | null;
+    }>
+  >();
+
+  if (allFactIds.length > 0) {
+    for (let index = 0; index < allFactIds.length; index += 200) {
+      const ids = allFactIds.slice(index, index + 200);
+      const { data: derivationData, error: derivationError } = await supabase
+        .from("activity_fact_derivation_inputs_v1")
+        .select("result_fact_id,input_fact_id,input_role_code,input_ordinal")
+        .in("result_fact_id", ids)
+        .order("input_ordinal", { ascending: true });
+
+      if (derivationError) {
+        return NextResponse.json(
+          {
+            ok: false,
+            endpoint: ENDPOINT,
+            readStatus: "error",
+            errorCode: "ACTIVITY_FACTS_DERIVATION_INPUT_READ_FAILED",
+            errorMessage: derivationError.message,
+          },
+          { status: 500 },
+        );
+      }
+
+      for (const row of derivationData ?? []) {
+        const record = asRecord(row);
+        const resultFactId = asString(record.result_fact_id);
+        const inputFactId = asString(record.input_fact_id);
+        if (!resultFactId || !inputFactId) continue;
+
+        const current = derivationInputsByResultFactId.get(resultFactId) ?? [];
+        current.push({
+          inputFactId,
+          inputRoleCode: asString(record.input_role_code) ?? "input",
+          inputOrdinal: asNumber(record.input_ordinal),
+        });
+        derivationInputsByResultFactId.set(resultFactId, current);
+      }
+    }
   }
 
   const activityIds = Array.from(
@@ -603,11 +695,7 @@ export async function GET(request: Request) {
       .map((fact) => [fact.factId as string, fact] as const),
   );
 
-  const facts = grouped.map((group) => {
-    const base =
-      rowsByFactId.get(group.projectionFactIds[0]) ??
-      projectionRowsForGrouping[0];
-
+  function buildFactLinks(factIds: string[]) {
     const finalLinks = new Map<
       string,
       {
@@ -619,7 +707,7 @@ export async function GET(request: Request) {
       }
     >();
 
-    for (const factId of group.projectionFactIds) {
+    for (const factId of factIds) {
       for (const link of effectiveLinksByFactId.get(factId) ?? []) {
         if (!finalLinks.has(link.valueObjectId)) {
           finalLinks.set(link.valueObjectId, link);
@@ -633,9 +721,21 @@ export async function GET(request: Request) {
       return valueObject ? [valueObject] : [];
     });
 
+    return { finalLinkList, groupValueObjects };
+  }
+
+  const activityFacts = grouped.map((group) => {
+    const base =
+      rowsByFactId.get(group.projectionFactIds[0]) ??
+      projectionRowsForGrouping[0];
+    const { finalLinkList, groupValueObjects } = buildFactLinks(
+      group.projectionFactIds,
+    );
+    const factId = group.projectionFactIds[0] ?? null;
+
     return {
       ...base,
-      factId: group.projectionFactIds[0] ?? null,
+      factId,
       projectionFactIds: group.projectionFactIds,
       projectionCount: group.projectionFactIds.length,
       measureId: group.measureId,
@@ -651,8 +751,36 @@ export async function GET(request: Request) {
       valueObjectId: finalLinkList[0]?.valueObjectId ?? null,
       valueObjects: groupValueObjects,
       finalValueObjectLinks: finalLinkList,
+      derivationInputs: factId
+        ? derivationInputsByResultFactId.get(factId) ?? []
+        : [],
     };
   });
+
+  const standaloneFacts = projectionRowsForGrouping
+    .filter((fact) => fact.factId && !fact.activityEventId)
+    .map((fact) => {
+      const factId = fact.factId as string;
+      const { finalLinkList, groupValueObjects } = buildFactLinks([factId]);
+      return {
+        ...fact,
+        projectionFactIds: [factId],
+        projectionCount: 1,
+        activityTitle: null,
+        valueObjectId: finalLinkList[0]?.valueObjectId ?? fact.valueObjectId,
+        valueObjects: groupValueObjects,
+        finalValueObjectLinks: finalLinkList,
+        derivationInputs: derivationInputsByResultFactId.get(factId) ?? [],
+      };
+    });
+
+  const facts = [...activityFacts, ...standaloneFacts]
+    .sort((left, right) =>
+      String(right.effectiveAt ?? right.createdAt ?? "").localeCompare(
+        String(left.effectiveAt ?? left.createdAt ?? ""),
+      ),
+    )
+    .slice(0, limit);
 
   return NextResponse.json(
     {
@@ -667,6 +795,7 @@ export async function GET(request: Request) {
         valueObjectId,
         activityEventId,
         factStatus,
+        factRoleCode,
       },
       ownership: {
         appUserId: context.appUserId,
@@ -678,7 +807,7 @@ export async function GET(request: Request) {
         source:
           "activity_object_facts + activity_fact_value_object_links_effective_v1",
         strategy:
-          "measure-centric grouping with final effective fact tags; no virtual template expansion",
+          "measure-centric grouping for activity facts plus standalone result/snapshot facts; final effective fact tags; derivation lineage exposed from activity_fact_derivation_inputs_v1",
         metricValueRule:
           "Legacy page metric values remain compatibility reads from activity_object_facts; dashboard analytics uses activity_fact_analytics_inputs_v1 canonical measure values.",
       },
