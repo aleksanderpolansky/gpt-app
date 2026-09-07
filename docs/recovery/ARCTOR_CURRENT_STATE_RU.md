@@ -989,3 +989,11 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - Code commit: `0621af92cd5a2a238869df1c1f56324181c8720f`.
 - Recovery checkpoint: `docs/recovery/ARCTOR_CURATOR_SYSTEM_OBJECTS_GLOBAL_VISIBILITY_V1_RU_20260907.md`.
 - Следующий шаг: live-проверка `/value-objects` под обычным аккаунтом, затем продолжение построения системных ОН.
+
+
+## 2026-09-07 — Канонический английский и локализация системных ОН
+
+Для новых системных объектов наблюдения английский язык является каноническим независимо от языка интерфейса куратора. До публикации формируются `en/pl/ru/uk/de/es/cs`; читатель видит вариант своего переключателя языка. Новые системные ОН используют `localizedContent`, а прежние кураторские ОН без полного набора переводов восстанавливаются пакетно при входе куратора. Подробности: `ARCTOR_SYSTEM_ON_CANONICAL_ENGLISH_LOCALIZATION_V1_RU_20260907.md`.
+- V1.0.3 остановлен собственным self-test до mutation: intentional exit 7 был ошибочно прочитан PowerShell wrapper как 0.
+- V1.0.4 переносит native-process orchestration в Node и оставляет PowerShell только безопасным bootstrap с Process.ExitCode.
+- Code commit V1.0.4: `4be956bb4eeb0f47e9506c275a82c80ce018c763`.
