@@ -1008,3 +1008,13 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - Code commit: `1f5f469196dc9b905abcbb6b45971e858f45e0f9`.
 - Recovery checkpoint: `docs/recovery/ARCTOR_CURATOR_SEARCHABLE_ON_SELECTOR_PUBLICATION_COPY_V1_RU_20260907.md`.
 - Next: production live acceptance в кураторе, затем продолжение построения пути ОН.
+
+
+## 2026-09-07 — ARCTOR_VALUE_OBJECT_SCOPE_SWITCHER_V1
+
+- В `/value-objects` добавлен единый переключатель области каталога: мои / системные / все ОН.
+- Визуальный шаблон соответствует переключателю сертификатов.
+- Фильтрация выполняется поверх уже полученного объединённого read-model без SQL/API/RLS изменений.
+- Счётчики, поиск, дерево, карточки, карта, таблица и нижний итог используют одну и ту же выбранную область.
+- Code commit: `c25c891c667f5b562482fc6b61b6489281d8ae33`.
+- Следующая точка: production live acceptance трёх `scope`-режимов.
