@@ -24,7 +24,7 @@ import { isConfirmedMissingTypicalActivityAnalysis } from "@/lib/activity/basic-
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const ROUTE_MARKER = "reality-curator-object-bootstrap-v2-canonical-english-localization" as const;
+const ROUTE_MARKER = "reality-curator-object-bootstrap-v3-searchable-observation-object-options" as const;
 const PROCESSOR_NAME = "reality_curator_journey" as const;
 const PROCESSOR_VERSION = "1" as const;
 const PARAMETER_EVENT_CODE = "related_parameter_catalog_checked" as const;
@@ -532,6 +532,9 @@ function toOption(row: LeafOptionRow | ParentRow, locale: string) {
   return {
     id: row.id,
     title: text(localized.title) || row.id,
+    description: text(localized.description) || null,
+    titleEn: text(row.title) || null,
+    descriptionEn: text(row.description) || null,
     canonicalKey: text(row.canonical_key) || null,
     nodeRole: role === "root" || role === "intermediate" || role === "leaf" ? role : null,
     scopeCode: row.scope_code === "global" ? ("global" as const) : ("actor" as const),
