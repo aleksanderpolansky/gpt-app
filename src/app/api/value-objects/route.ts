@@ -465,6 +465,7 @@ export async function GET(request: Request) {
       .from("value_objects")
       .select(globalSelectShape)
       .eq("scope_code", "global")
+      .eq("status", "active")
       .order("created_at", { ascending: false }),
   ]);
 

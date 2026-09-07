@@ -545,7 +545,7 @@ async function readOptions(locale: string) {
       .is("owner_user_id", null)
       .is("owner_actor_id", null)
       .eq("origin_type_code", "system_model")
-      .in("status", ["draft", "active"])
+      .eq("status", "active")
       .in("ontology_node_role_code", ["root", "intermediate"])
       .order("title", { ascending: true })
       .limit(2000),
@@ -659,7 +659,7 @@ async function readParent(input: {
     .is("owner_user_id", null)
     .is("owner_actor_id", null)
     .eq("origin_type_code", "system_model")
-    .in("status", ["draft", "active"])
+    .eq("status", "active")
     .limit(1);
   if (error) throw new Error(`CURATOR_OBJECT_PARENT_READ_FAILED:system:${error.message}`);
   const parent = (data?.[0] as ParentRow | undefined) ?? null;
@@ -778,7 +778,9 @@ async function createSystemObject(input: {
       existing.root_value_object_id === expectedRootId &&
       existing.ontology_node_role_code === input.role &&
       existing.facet_code === semantic.facetCode &&
-      existing.origin_type_code === "system_model";
+      existing.origin_type_code === "system_model" &&
+      existing.status === "active" &&
+      metadata.system_hidden_from_observation_ui !== true;
     if (!replay) throw new Error("CURATOR_SYSTEM_CANONICAL_KEY_ALREADY_EXISTS");
     return { valueObjectId, canonicalKey: input.canonicalKey, title: input.localizedTitle, replay: true };
   }
@@ -792,7 +794,6 @@ async function createSystemObject(input: {
   };
 
   const metadataJson = {
-    system_hidden_from_observation_ui: true,
     curator_system_draft_v1: {
       contract: CREATION_CONTRACT,
       requestHash: hash,
@@ -801,7 +802,8 @@ async function createSystemObject(input: {
       curatorAdminId: input.guard.platformAdmin.id,
       curatorRole: input.guard.platformAdmin.role,
       createdAt: new Date().toISOString(),
-      publicationState: "draft_not_published",
+      publicationState: "published_by_curator_confirmation",
+      publishedAt: new Date().toISOString(),
       canonicalKeyMode: "server_generated_v1",
       nodeRole: input.role,
       localizations: draftLocalizations,
@@ -831,7 +833,7 @@ async function createSystemObject(input: {
     instance_of_value_object_id: null,
     privacy_level: "public",
     sensitivity_level: "standard",
-    status: "draft",
+    status: "active",
     canonical_key: input.canonicalKey,
     facet_code: semantic.facetCode,
     object_kind_code: semantic.objectKindCode,
@@ -881,7 +883,7 @@ async function createSystemObject(input: {
   const postMetadata = asRecord(post?.metadata_json);
   if (
     !post ||
-    post.status !== "draft" ||
+    post.status !== "active" ||
     post.scope_code !== "global" ||
     post.owner_user_id !== null ||
     post.owner_actor_id !== null ||
@@ -891,7 +893,7 @@ async function createSystemObject(input: {
     post.ontology_node_role_code !== input.role ||
     post.facet_code !== semantic.facetCode ||
     post.origin_type_code !== "system_model" ||
-    postMetadata.system_hidden_from_observation_ui !== true ||
+    postMetadata.system_hidden_from_observation_ui === true ||
     !version ||
     version.scope_code !== "global" ||
     version.owner_actor_id !== null ||
@@ -1089,8 +1091,8 @@ export async function POST(request: Request) {
         hierarchyRelationCode,
       });
       const titleForRussianLog = locale === "ru" ? localizedTitle : titleEn;
-      const resultSummaryRu = `Создан системный ${roleNameRu(role)} ОН-черновик «${titleForRussianLog}» (${canonicalKey}). Он ownerless, скрыт из обычного каталога и не опубликован автоматически.`;
-      const resultSummaryEn = `Ownerless System ${roleNameEn(role)} draft “${titleEn}” (${canonicalKey}) was created. It is hidden from the ordinary catalog and was not published automatically.`;
+      const resultSummaryRu = `Создан системный ${roleNameRu(role)} объект наблюдения «${titleForRussianLog}» (${canonicalKey}). Он не имеет личного владельца, активен и сразу доступен всем пользователям для просмотра и использования.`;
+      const resultSummaryEn = `Ownerless System ${roleNameEn(role)} observation object “${titleEn}” (${canonicalKey}) was created. It is active and immediately available to all users for viewing and use.`;
 
       const completedTargetLeaf = role === "leaf";
       await appendLog({
