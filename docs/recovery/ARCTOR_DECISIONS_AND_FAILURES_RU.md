@@ -869,3 +869,13 @@ Code commit: `9d24805ddf7457620c9c4c8424a6d4ab24b13a08`
 - Lesson: release runners must keep executable PowerShell source ASCII-only when localized text contains smart quotation marks. Localized UTF-8 payloads must be constructed at runtime (Base64/Unicode code points) or stored outside PowerShell syntax.
 - Impact: no source/DB/commit/push changes occurred because parsing failed before execution.
 - Fix: V1.0.1 uses Base64-decoded UTF-8 localization strings and records this failure in recovery.
+
+## 2026-09-07 — публикация системных ОН подтверждением куратора
+
+Решение: отдельный второй этап ручной публикации системного ОН отменен. Подтверждение создания системного ОН авторизованным куратором является моментом публикации общей модели.
+
+Системный ОН создается ownerless, `scope_code=global`, `origin_type_code=system_model`, `status=active` и доступен всем пользователям. Личные ОН остаются закрытыми для других пользователей.
+
+Причина: прежняя схема `draft + system_hidden_from_observation_ui=true` делала уже подтвержденные куратором системные ОН невидимыми обычным пользователям и разрывала единый системный каталог.
+
+Маркер ошибки runner: `GLOBAL_VISIBILITY_V1_RUNNER_TRAILING_WHITESPACE_FAILURE`. Первый запуск прошел все проверки кода и создал code commit `0621af92cd5a2a238869df1c1f56324181c8720f`, но остановился до recovery commit/push из-за пробелов в конце строк автоматически созданного recovery-файла. После rollback три tracked-файла остались помечены измененными только из-за окончаний строк. V1.0.1 разрешает автоматическую очистку лишь этого точно известного остатка после проверки отсутствия смысловых различий и нормализует recovery-файл до staging.

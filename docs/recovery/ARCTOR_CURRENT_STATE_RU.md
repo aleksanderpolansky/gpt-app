@@ -980,3 +980,12 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - Code commit: `88f881d2a38990df02ab3381b1a77efb9ebfc718`.
 - Recovery checkpoint: `docs/recovery/ARCTOR_FACT_CARD_UK_OBSERVATION_OBJECT_TERMINOLOGY_HOTFIX_V1_0_1_RU_20260907.md`.
 - Next: live acceptance, then continue result/snapshot fact calculation contract.
+
+## 2026-09-07 — ARCTOR_CURATOR_SYSTEM_OBJECTS_GLOBAL_VISIBILITY_V1
+
+- Подтвержденный куратором системный ОН теперь считается общей опубликованной частью модели: ownerless, global, system_model, active и доступный всем пользователям.
+- Обычный каталог должен объединять активные системные ОН и личные ОН текущего пользователя; личные ОН других пользователей остаются закрытыми.
+- SQL postcheck после ручного применения миграции: 2 системных ОН, 2 active, 0 hidden, all_pass=true.
+- Code commit: `0621af92cd5a2a238869df1c1f56324181c8720f`.
+- Recovery checkpoint: `docs/recovery/ARCTOR_CURATOR_SYSTEM_OBJECTS_GLOBAL_VISIBILITY_V1_RU_20260907.md`.
+- Следующий шаг: live-проверка `/value-objects` под обычным аккаунтом, затем продолжение построения системных ОН.
