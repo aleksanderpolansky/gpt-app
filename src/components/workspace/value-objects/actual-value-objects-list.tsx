@@ -70,6 +70,7 @@ type ActualListStatus =
 type RoleFilter = "all" | "root" | "intermediate" | "leaf" | "draft";
 type SortMode = "newest" | "title" | "structure";
 type SemanticRole = "root" | "intermediate" | "leaf";
+type CatalogScope = "mine" | "system" | "all";
 
 type LocalCopy = {
   eyebrow: string;
@@ -343,6 +344,46 @@ const COPY: Record<LocaleCode, LocalCopy> = {
   },
 };
 
+const CATALOG_SCOPE_COPY: Record<LocaleCode, Record<CatalogScope, string>> = {
+  en: { mine: "My observation objects", system: "System observation objects", all: "All observation objects" },
+  pl: { mine: "Moje obiekty obserwacji", system: "Systemowe obiekty obserwacji", all: "Wszystkie obiekty obserwacji" },
+  ru: { mine: "Мои объекты наблюдения", system: "Системные объекты наблюдения", all: "Все объекты наблюдения" },
+  uk: { mine: "Мої об’єкти спостереження", system: "Системні об’єкти спостереження", all: "Усі об’єкти спостереження" },
+  de: { mine: "Meine Beobachtungsobjekte", system: "System-Beobachtungsobjekte", all: "Alle Beobachtungsobjekte" },
+  es: { mine: "Mis objetos de observación", system: "Objetos de observación del sistema", all: "Todos los objetos de observación" },
+  cs: { mine: "Moje objekty pozorování", system: "Systémové objekty pozorování", all: "Všechny objekty pozorování" },
+};
+
+const CATALOG_SCOPE_DESCRIPTION: Record<LocaleCode, string> = {
+  en: "Choose your objects, system objects, or the combined catalog. Search and structural filters apply to the selected scope.",
+  pl: "Wybierz własne obiekty, obiekty systemowe albo wspólny katalog. Wyszukiwanie i filtry strukturalne działają w wybranym zakresie.",
+  ru: "Выберите свои, системные или все объекты наблюдения. Поиск и структурные фильтры работают в выбранной области.",
+  uk: "Виберіть свої, системні або всі об’єкти спостереження. Пошук і структурні фільтри працюють у вибраній області.",
+  de: "Wählen Sie eigene Objekte, Systemobjekte oder den gemeinsamen Katalog. Suche und Strukturfilter gelten für den gewählten Bereich.",
+  es: "Elija sus objetos, los objetos del sistema o el catálogo combinado. La búsqueda y los filtros estructurales se aplican al ámbito seleccionado.",
+  cs: "Vyberte vlastní objekty, systémové objekty nebo společný katalog. Vyhledávání a strukturální filtry platí pro zvolený rozsah.",
+};
+
+function normalizeCatalogScope(value: string | null | undefined): CatalogScope {
+  if (value === "mine" || value === "system") return value;
+  return "all";
+}
+
+function buildCatalogScopeHref(scope: CatalogScope, locale: LocaleCode) {
+  const searchParams = new URLSearchParams();
+  searchParams.set("scope", scope);
+  if (locale !== "en") searchParams.set("locale", locale);
+  return `/value-objects?${searchParams.toString()}`;
+}
+
+function isSystemValueObject(valueObject: ActualValueObjectPayload) {
+  return (
+    valueObject.scope_code === "global" ||
+    valueObject.origin_type_code === "system_model" ||
+    valueObject.origin_type_code === "system"
+  );
+}
+
 function useInterfaceLocale(): LocaleCode {
   const [locale, setLocale] = useState<LocaleCode>("en");
 
@@ -565,6 +606,23 @@ export function ActualValueObjectsList({
   const [sortMode, setSortMode] = useState<SortMode>("newest");
   const [query, setQuery] = useState("");
   const [hierarchyPathIds, setHierarchyPathIds] = useState<string[]>([]);
+  const [catalogScope, setCatalogScope] = useState<CatalogScope>("all");
+
+  useEffect(() => {
+    if (tableWorkspaceOnly || typeof window === "undefined") return;
+
+    function readScopeFromUrl() {
+      const nextScope = normalizeCatalogScope(
+        new URLSearchParams(window.location.search).get("scope"),
+      );
+      setCatalogScope(nextScope);
+      setHierarchyPathIds([]);
+    }
+
+    readScopeFromUrl();
+    window.addEventListener("popstate", readScopeFromUrl);
+    return () => window.removeEventListener("popstate", readScopeFromUrl);
+  }, [tableWorkspaceOnly]);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -620,22 +678,35 @@ export function ActualValueObjectsList({
     };
   }, [locale]);
 
+  const scopedValueObjects = useMemo(() => {
+    if (catalogScope === "all") return valueObjects;
+    const includeSystem = catalogScope === "system";
+    return valueObjects.filter(
+      (valueObject) => isSystemValueObject(valueObject) === includeSystem,
+    );
+  }, [catalogScope, valueObjects]);
+
+  const scopeLabels = CATALOG_SCOPE_COPY[locale] ?? CATALOG_SCOPE_COPY.en;
+  const scopeDescription =
+    CATALOG_SCOPE_DESCRIPTION[locale] ?? CATALOG_SCOPE_DESCRIPTION.en;
+  const currentCatalogTitle = scopeLabels[catalogScope];
+
   const objectsById = useMemo(() => {
     const map = new Map<string, ActualValueObjectPayload>();
 
-    for (const valueObject of valueObjects) {
+    for (const valueObject of scopedValueObjects) {
       if (valueObject.id) {
         map.set(valueObject.id, valueObject);
       }
     }
 
     return map;
-  }, [valueObjects]);
+  }, [scopedValueObjects]);
 
   const childrenByParent = useMemo(() => {
     const map = new Map<string, ActualValueObjectPayload[]>();
 
-    for (const valueObject of valueObjects) {
+    for (const valueObject of scopedValueObjects) {
       const parentId = valueObject.parent_value_object_id;
       if (!parentId) {
         continue;
@@ -647,7 +718,7 @@ export function ActualValueObjectsList({
     }
 
     return map;
-  }, [valueObjects]);
+  }, [scopedValueObjects]);
 
   const hierarchyVisibleIds = useMemo(() => {
     const selectedId =
@@ -683,7 +754,7 @@ export function ActualValueObjectsList({
   const pathById = useMemo(() => {
     const map = new Map<string, string>();
 
-    for (const valueObject of valueObjects) {
+    for (const valueObject of scopedValueObjects) {
       if (!valueObject.id) {
         continue;
       }
@@ -708,7 +779,7 @@ export function ActualValueObjectsList({
     }
 
     return map;
-  }, [objectsById, valueObjects]);
+  }, [objectsById, scopedValueObjects]);
 
   const descendantLeafCountById = useMemo(() => {
     const cache = new Map<string, number>();
@@ -744,21 +815,21 @@ export function ActualValueObjectsList({
       return total;
     }
 
-    for (const valueObject of valueObjects) {
+    for (const valueObject of scopedValueObjects) {
       if (valueObject.id) {
         count(valueObject.id);
       }
     }
 
     return cache;
-  }, [childrenByParent, valueObjects]);
+  }, [childrenByParent, scopedValueObjects]);
 
   const counts = useMemo(() => {
     let roots = 0;
     let intermediate = 0;
     let leaves = 0;
 
-    for (const valueObject of valueObjects) {
+    for (const valueObject of scopedValueObjects) {
       const role = getSemanticRole(valueObject);
 
       if (role === "root") {
@@ -771,17 +842,17 @@ export function ActualValueObjectsList({
     }
 
     return {
-      total: valueObjects.length,
+      total: scopedValueObjects.length,
       roots,
       intermediate,
       leaves,
     };
-  }, [valueObjects]);
+  }, [scopedValueObjects]);
 
   const filteredObjects = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase(locale);
 
-    const filtered = valueObjects.filter((valueObject) => {
+    const filtered = scopedValueObjects.filter((valueObject) => {
       const role = getSemanticRole(valueObject);
 
       if (roleFilter === "root" && role !== "root") {
@@ -850,7 +921,7 @@ export function ActualValueObjectsList({
     query,
     roleFilter,
     sortMode,
-    valueObjects,
+    scopedValueObjects,
   ]);
 
   const filters: Array<{
@@ -867,17 +938,47 @@ export function ActualValueObjectsList({
   return (
     <section
       className={tableWorkspaceOnly ? "grid gap-2" : "grid gap-4"}
-      aria-label={copy.title}
+      aria-label={currentCatalogTitle}
     >
+      <div
+        className={
+          tableWorkspaceOnly
+            ? "hidden"
+            : "inline-flex w-fit max-w-full flex-wrap rounded-xl border border-[#dfe3f1] bg-white p-1 shadow-sm"
+        }
+      >
+        {(["mine", "system", "all"] as const).map((scope) => {
+          const selected = catalogScope === scope;
+          return (
+            <Link
+              key={scope}
+              prefetch={false}
+              href={buildCatalogScopeHref(scope, locale)}
+              onClick={() => {
+                setCatalogScope(scope);
+                setHierarchyPathIds([]);
+              }}
+              className={`rounded-lg px-4 py-2 text-[13px] font-semibold transition-all ${
+                selected
+                  ? "bg-[#3b6ef8] text-white shadow-sm"
+                  : "text-[#5a5f7a] hover:bg-[#f5f6fb]"
+              }`}
+            >
+              {scopeLabels[scope]}
+            </Link>
+          );
+        })}
+      </div>
+
       <header className={tableWorkspaceOnly ? "hidden" : undefined}>
         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
           {copy.eyebrow}
         </div>
         <h1 className="mt-1 text-[22px] font-bold leading-tight text-[#111827]">
-          {copy.title}
+          {currentCatalogTitle}
         </h1>
         <p className="mt-1 max-w-[880px] text-[13px] leading-5 text-[#7c8099]">
-          {copy.description}
+          {scopeDescription}
         </p>
       </header>
 
@@ -969,16 +1070,16 @@ export function ActualValueObjectsList({
         </div>
       ) : null}
 
-      {status === "success" && valueObjects.length === 0 ? (
+      {status === "success" && scopedValueObjects.length === 0 ? (
         <div className="rounded-[20px] border border-dashed border-[#c9d5ff] bg-[#f7f9ff] p-5 text-[13px] leading-5 text-[#4a4f6a]">
           {t("valueObjects.actual.empty")}
         </div>
       ) : null}
 
-      {status === "success" && valueObjects.length > 0 ? (
+      {status === "success" && scopedValueObjects.length > 0 ? (
         <>
           <ValueObjectCatalogViews
-            valueObjects={valueObjects}
+            valueObjects={scopedValueObjects}
             locale={locale}
             query={query}
             roleFilter={roleFilter}
@@ -1165,7 +1266,7 @@ export function ActualValueObjectsList({
           </ValueObjectCatalogViews>
 
           <div className="rounded-[18px] border border-black/[0.07] bg-white px-4 py-3 text-[12px] text-[#7c8099] shadow-sm">
-            {copy.shown} {filteredObjects.length} {copy.of} {valueObjects.length}
+            {copy.shown} {filteredObjects.length} {copy.of} {scopedValueObjects.length}
           </div>
         </>
       ) : null}
