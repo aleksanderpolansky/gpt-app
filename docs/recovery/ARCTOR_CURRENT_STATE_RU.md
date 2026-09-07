@@ -959,3 +959,15 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - SQL/schema/существующие canonical keys не менялись.
 - Live acceptance: создать `Діяльність людини / Human activity` без поля canonical key; затем продолжить путь к `Pull-up` и назначить `count`, после чего проверить `duration`.
 - Подробный checkpoint: `docs/recovery/ARCTOR_CURATOR_AUTO_CANONICAL_KEY_V1_RU_20260905.md`.
+
+## 2026-09-07 — ARCTOR_FACT_CARD_V1_READ_MODEL_UI
+
+- DB foundation карточки факта применён вручную и подтверждён: 26/26 существующих строк = `source`; derivation table существует; postcheck `16/16 all_pass=true`.
+- Числа живут только в фактах; ОН остаётся смысловой меткой/адресом.
+- Fact roles: `source | result | snapshot`; `source_type` остаётся независимым происхождением значения.
+- `result/snapshot` могут существовать без activity_event/measure; lineage расчёта хранится в `activity_fact_derivation_inputs_v1`.
+- `/api/activity/facts` и `/activity-facts` теперь читают/показывают роль, effective time, validity, snapshot window, rule/version, previous snapshot и input facts; standalone result/snapshot больше не теряются из read model.
+- Git migration фиксирует уже применённый production DB contract.
+- Code commit: `9d24805ddf7457620c9c4c8424a6d4ab24b13a08`.
+- Следующая точка: live acceptance существующего source-факта, затем write contract для результирующих фактов/срезов и реестр формул.
+- Checkpoint: `docs/recovery/ARCTOR_FACT_CARD_V1_READ_MODEL_UI_RU_20260907.md`.
