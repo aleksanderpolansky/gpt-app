@@ -971,3 +971,12 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - Code commit: `9d24805ddf7457620c9c4c8424a6d4ab24b13a08`.
 - Следующая точка: live acceptance существующего source-факта, затем write contract для результирующих фактов/срезов и реестр формул.
 - Checkpoint: `docs/recovery/ARCTOR_FACT_CARD_V1_READ_MODEL_UI_RU_20260907.md`.
+
+## 2026-09-07 - ARCTOR_FACT_CARD_UK_OBSERVATION_OBJECT_TERMINOLOGY_HOTFIX_V1_0_1
+
+- Ukrainian fact-card observation-object terminology hotfix released.
+- Source UI now uses Ukrainian observation-object terms for linked objects, ID and singular object label.
+- DB/API/SQL unchanged.
+- Code commit: `88f881d2a38990df02ab3381b1a77efb9ebfc718`.
+- Recovery checkpoint: `docs/recovery/ARCTOR_FACT_CARD_UK_OBSERVATION_OBJECT_TERMINOLOGY_HOTFIX_V1_0_1_RU_20260907.md`.
+- Next: live acceptance, then continue result/snapshot fact calculation contract.

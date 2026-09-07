@@ -861,3 +861,11 @@ Code commit: `9d24805ddf7457620c9c4c8424a6d4ab24b13a08`
 Роль факта (`source/result/snapshot`) отделена от происхождения значения (`source_type`). Результирующий факт хранит значение + идентификатор/версию зарегистрированного правила и ссылки на конкретные входные факты. Срез хранится такой же строкой факта, но фиксирует status quo на момент/границу периода и может ссылаться на предыдущий срез.
 
 Формула не должна дублироваться текстом в каждой строке факта: строка хранит `calculation_rule_code + calculation_rule_version`, а сама формула должна жить в отдельном версионируемом реестре следующего этапа.
+
+## 2026-09-07 - PowerShell parser failure in Ukrainian terminology hotfix V1
+
+- Symptom: the runner failed before execution with ParserError around the Ukrainian U+2019 apostrophe.
+- Cause: Windows PowerShell 5.1 recognizes smart quotation marks as quotation delimiters; U+2019 was embedded inside single-quoted PowerShell literals.
+- Lesson: release runners must keep executable PowerShell source ASCII-only when localized text contains smart quotation marks. Localized UTF-8 payloads must be constructed at runtime (Base64/Unicode code points) or stored outside PowerShell syntax.
+- Impact: no source/DB/commit/push changes occurred because parsing failed before execution.
+- Fix: V1.0.1 uses Base64-decoded UTF-8 localization strings and records this failure in recovery.
