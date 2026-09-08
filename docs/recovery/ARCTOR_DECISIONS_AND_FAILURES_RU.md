@@ -939,3 +939,18 @@ V1.0.3 добавил обязательный self-test ненулевого к
 Решение: принадлежность ОН и структурная роль являются независимыми измерениями фильтрации. Верхний переключатель выбирает область данных (`mine/system/all`), а существующие фильтры ниже выбирают роль (`all/root/intermediate/leaf/draft`). Нельзя реализовывать область только визуальным скрытием карточек: сначала формируется scoped read-model, и уже он передаётся во все представления каталога и счётчики.
 
 Визуально новый переключатель не создаёт новый паттерн: повторно используется стиль уже действующего переключателя сертификатов.
+
+
+## 2026-09-08 — единый визуальный стандарт dashboard/catalog, runner V1.0.3
+
+Решение: High-Fidelity Dashboard Design и его theme tokens считаются рабочей визуальной основой ARCTor. Повторяющиеся controls должны выноситься в shared components, а не копироваться локально.
+
+Сбой runner V1: CRLF/LF exact-match mismatch на dry-run; rollback clean. Исправление: EOL normalization before patch/hash.
+
+Сбой runner V1.0.1: source allowlist использовал только git diff --name-only и не видел намеренно создаваемые untracked paths. Исправление V1.0.2: tracked diff + git ls-files --others --exclude-standard.
+
+Сбой runner V1.0.2: после успешного post-TypeScript touched ESLint дал 2 errors / 3 warnings. Эти нарушения уже присутствуют в exact baseline certificates-dashboard.tsx: 2 x react-hooks/set-state-in-effect и 3 x @next/next/no-img-element. Ошибка release-runner состояла в предположении, что каждый существующий touched-файл обязан иметь 0/0, без измерения его собственного baseline.
+
+Исправление V1.0.3: baseline ESLint вычисляется из содержимого exact baseline Git commit через ESLint --stdin --stdin-filename для каждого существующего touched-файла. После patch counts и rule histogram обязаны остаться без изменений, а каждый новый linted-файл обязан иметь 0/0. Full-project ESLint также не может увеличить baseline 244 errors / 107 warnings.
+
+Это изменение не ослабляет gate: существующий lint debt не разрешается расти или менять правило, а новый код обязан быть чистым.

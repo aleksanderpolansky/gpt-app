@@ -1018,3 +1018,16 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - Счётчики, поиск, дерево, карточки, карта, таблица и нижний итог используют одну и ту же выбранную область.
 - Code commit: `c25c891c667f5b562482fc6b61b6489281d8ae33`.
 - Следующая точка: production live acceptance трёх `scope`-режимов.
+
+
+## 2026-09-08 — UI design standard normalization V1.0.3
+
+- Runner V1: dry-run остановлен до mutation из-за CRLF/LF exact-match mismatch; rollback clean.
+- Runner V1.0.1: EOL-safe dry-run реального baseline, TYPECHECK_PRE и baseline ESLint прошли; затем allowlist ошибочно использовал только git diff --name-only и не увидел два новых untracked source/doc paths. Rollback clean; commits/push отсутствовали.
+- Runner V1.0.2: allowlist исправлен; TYPECHECK_POST прошёл; абсолютный touched ESLint 0/0 gate получил 2 errors / 3 warnings из существующего certificates-dashboard lint debt и корректно остановил release. Rollback clean; commits/push отсутствовали.
+- V1.0.3: lint gate вычисляет exact per-file baseline напрямую из baseline Git commit для существующих touched-файлов и требует отсутствие регрессии; новый shared component обязан быть 0/0.
+- Зафиксирован ARCTor UI Design Standard V1 на основе High-Fidelity Dashboard theme tokens.
+- Общий segmented switch используется каталогом ОН и сертификатами.
+- Каталог ОН нормализован по workspace/card/filter/action геометрии dashboard.
+- Code commit: 8d3e5f178afcecd76f951219d115a6af2758ae53.
+- Следующая точка: production live acceptance двух страниц на одинаковом viewport.
