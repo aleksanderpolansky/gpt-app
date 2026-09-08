@@ -1041,3 +1041,13 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - /certificates: «Добавить суперпредложение» перенесена в верхнюю строку действий справа от scope switch.
 - UI design standard дополнен правилом размещения и семантического соответствия contextual create action.
 - DB/API/RLS/SQL/OpenAI runtime не изменялись.
+
+
+## 2026-09-08 — create action grid hotfix V1
+
+- Baseline: `a6c028ca87ba017f95f9873a52749df517805062`.
+- Code commit: `fdbbc969358c17bbe876b13baef85b9e45d46f9c`.
+- /value-objects: одна зелёная CTA «Добавить ОН» → /value-objects/new/root; универсальный selector /value-objects/new исключён из этого входа.
+- /certificates: contextual create action вынесена в отдельную верхнюю строку справа, scope switch расположен отдельной следующей строкой слева.
+- UI design standard дополнен правилом action-row → scope-row.
+- DB/API/RLS/SQL/OpenAI runtime не изменялись.

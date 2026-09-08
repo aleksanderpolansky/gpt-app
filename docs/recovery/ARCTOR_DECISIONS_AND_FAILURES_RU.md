@@ -959,3 +959,8 @@ V1.0.3 добавил обязательный self-test ненулевого к
 ## 2026-09-08 — правило contextual create action
 
 Решение: зелёная contextual create action должна создавать сущность текущего раздела, а не переносить пользователя в несвязанный домен. На desktop такая кнопка размещается в верхней action-row справа. Для каталога ОН это «Добавить ОН» → /value-objects/new; для сертификатов «Добавить суперпредложение» → /offers/new. Вторичные специализированные действия могут находиться рядом в белом secondary style.
+
+
+## 2026-09-08 — правило create action row / scope row
+
+Решение: на desktop contextual create action занимает собственную верхнюю строку справа. Scope/navigation switch располагается отдельной следующей строкой слева. Каталог ОН не ведёт через универсальный commercial selector: contextual create action направляется непосредственно в ordinary observation-object creation flow /value-objects/new/root.
