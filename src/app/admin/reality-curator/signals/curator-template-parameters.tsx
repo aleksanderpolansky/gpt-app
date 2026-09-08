@@ -28,6 +28,15 @@ type SelectedParameterItem = ParameterItem & {
   mappingResult: string | null;
   mappingSummaryRu: string | null;
   mappingSummaryEn: string | null;
+  mappingCount: number;
+  mappingIteration: number;
+  mappings: Array<{
+    valueObjectId: string;
+    title: string | null;
+    summaryRu: string | null;
+    summaryEn: string | null;
+    source: "existing" | "created";
+  }>;
 };
 
 type ParameterState = {
@@ -121,6 +130,59 @@ const COPY: Record<LocaleCode, Copy> = {
   cs: CS,
 };
 
+const MULTI_MAPPING_COPY: Record<
+  LocaleCode,
+  {
+    mappedCount: string;
+    addMore: string;
+    confirmSet: string;
+    setConfirmed: string;
+  }
+> = {
+  en: {
+    mappedCount: "Mapped leaf observation objects",
+    addMore: "+ Add another observation object",
+    confirmSet: "All observation objects for this parameter are assigned",
+    setConfirmed: "Observation-object set confirmed",
+  },
+  ru: {
+    mappedCount: "Назначено листовых объектов наблюдения",
+    addMore: "+ Добавить ещё ОН",
+    confirmSet: "Все ОН этого параметра назначены",
+    setConfirmed: "Набор объектов наблюдения подтверждён",
+  },
+  pl: {
+    mappedCount: "Przypisane liściowe obiekty obserwacji",
+    addMore: "+ Dodaj kolejny obiekt obserwacji",
+    confirmSet: "Wszystkie obiekty obserwacji tego parametru są przypisane",
+    setConfirmed: "Zestaw obiektów obserwacji potwierdzony",
+  },
+  uk: {
+    mappedCount: "Призначено листових об’єктів спостереження",
+    addMore: "+ Додати ще один ОН",
+    confirmSet: "Усі ОН цього параметра призначено",
+    setConfirmed: "Набір об’єктів спостереження підтверджено",
+  },
+  de: {
+    mappedCount: "Zugeordnete Blatt-Beobachtungsobjekte",
+    addMore: "+ Weiteres Beobachtungsobjekt hinzufügen",
+    confirmSet: "Alle Beobachtungsobjekte dieses Parameters sind zugeordnet",
+    setConfirmed: "Beobachtungsobjekt-Satz bestätigt",
+  },
+  es: {
+    mappedCount: "Objetos de observación hoja asignados",
+    addMore: "+ Añadir otro objeto de observación",
+    confirmSet: "Todos los objetos de observación de este parámetro están asignados",
+    setConfirmed: "Conjunto de objetos de observación confirmado",
+  },
+  cs: {
+    mappedCount: "Přiřazené listové objekty pozorování",
+    addMore: "+ Přidat další objekt pozorování",
+    confirmSet: "Všechny objekty pozorování tohoto parametru jsou přiřazeny",
+    setConfirmed: "Sada objektů pozorování potvrzena",
+  },
+};
+
 const DIMENSIONS = [
   "time",
   "distance",
@@ -184,6 +246,7 @@ function parameterMeta(item: ParameterItem) {
 
 export function CuratorTemplateParameters({ signalId, locale, onChanged }: Props) {
   const copy = COPY[locale] ?? COPY.en;
+  const multiCopy = MULTI_MAPPING_COPY[locale] ?? MULTI_MAPPING_COPY.en;
   const [state, setState] = useState<ParameterState | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -413,9 +476,19 @@ export function CuratorTemplateParameters({ signalId, locale, onChanged }: Props
                     {item.mappingCompleted ? copy.mappingReady : copy.mappingPending}
                   </span>
                 </div>
-                {item.mappingCompleted ? (
-                  <div className="mt-2 text-xs leading-5 text-[#65708d]">
-                    {localized(item.mappingSummaryRu, item.mappingSummaryEn, locale)}
+                {item.mappingCount > 0 ? (
+                  <div className="mt-2 space-y-1 text-xs leading-5 text-[#65708d]">
+                    <div className="font-bold">
+                      {multiCopy.mappedCount}: {item.mappingCount}
+                    </div>
+                    {item.mappings.map((mapping) => (
+                      <div key={mapping.valueObjectId}>
+                        • {mapping.title || localized(mapping.summaryRu, mapping.summaryEn, locale) || mapping.valueObjectId}
+                      </div>
+                    ))}
+                    {item.mappingCompleted ? (
+                      <div className="font-bold text-emerald-700">{multiCopy.setConfirmed}</div>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
@@ -426,6 +499,7 @@ export function CuratorTemplateParameters({ signalId, locale, onChanged }: Props
         {nextParameter ? (
           <>
             <CuratorObjectBootstrap
+              key={`${nextParameter.id}:${nextParameter.mappingIteration}`}
               signalId={signalId}
               locale={locale}
               parameterDefinitionId={nextParameter.id}
@@ -438,6 +512,41 @@ export function CuratorTemplateParameters({ signalId, locale, onChanged }: Props
                 onChanged();
               }}
             />
+            {nextParameter.mappingCount > 0 ? (
+              <div className="rounded-2xl border border-[#dce3f5] bg-white p-4">
+                <div className="text-xs font-bold text-[#65708d]">
+                  {multiCopy.mappedCount}: {nextParameter.mappingCount}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() =>
+                      void post({
+                        action: "continue_measurable_object_mapping",
+                        parameterDefinitionId: nextParameter.id,
+                      })
+                    }
+                    className="inline-flex min-h-10 items-center rounded-xl border border-[#cfd8ef] bg-white px-3 py-2 text-sm font-bold text-[#34405a] disabled:opacity-40"
+                  >
+                    {busy ? copy.saving : multiCopy.addMore}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() =>
+                      void post({
+                        action: "confirm_measurable_object_mapping_set",
+                        parameterDefinitionId: nextParameter.id,
+                      })
+                    }
+                    className="inline-flex min-h-10 items-center rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-40"
+                  >
+                    {busy ? copy.saving : multiCopy.confirmSet}
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </>
         ) : (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">

@@ -26,6 +26,8 @@ const PARAMETER_SELECTED_EVENT_CODE = "typical_activity_parameter_selected" as c
 const PARAMETER_SET_EVENT_CODE = "typical_activity_parameter_set_confirmed" as const;
 const OBJECT_DECISION_EVENT_CODE = "measurable_object_decision_recorded" as const;
 const OBJECT_CREATED_EVENT_CODE = "observation_object_created" as const;
+const MAPPING_CONTINUED_EVENT_CODE = "measurable_object_mapping_continued" as const;
+const MAPPING_SET_CONFIRMED_EVENT_CODE = "measurable_object_mapping_set_confirmed" as const;
 const CONTRACT = "ARCTOR_REALITY_CURATOR_ACTIVITY_TEMPLATE_PARAMETER_SET_V1" as const;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -113,6 +115,22 @@ function selectionLogId(signalId: string, parameterDefinitionId: string) {
 
 function setConfirmedLogId(signalId: string) {
   return stableUuid(`${CONTRACT}|${signalId}|${PARAMETER_SET_EVENT_CODE}`);
+}
+
+function mappingContinuedLogId(
+  signalId: string,
+  parameterDefinitionId: string,
+  mappingIteration: number,
+) {
+  return stableUuid(
+    `${CONTRACT}|${signalId}|${parameterDefinitionId}|${MAPPING_CONTINUED_EVENT_CODE}|${mappingIteration}`,
+  );
+}
+
+function mappingSetConfirmedLogId(signalId: string, parameterDefinitionId: string) {
+  return stableUuid(
+    `${CONTRACT}|${signalId}|${parameterDefinitionId}|${MAPPING_SET_CONFIRMED_EVENT_CODE}`,
+  );
 }
 
 function adminMetadata(guard: RequirePlatformAdminSuccess) {
@@ -288,45 +306,115 @@ async function readMappingState(signalId: string, parameterDefinitionId: string)
     .eq("processor_name", PROCESSOR_NAME)
     .eq("processor_version", PROCESSOR_VERSION)
     .contains("metadata_json", { parameterDefinitionId })
-    .order("started_at", { ascending: false })
-    .limit(200);
+    .order("started_at", { ascending: true })
+    .limit(400);
   if (error) {
     throw new Error(
       `CURATOR_TEMPLATE_PARAMETERS_MAPPING_READ_FAILED:${error.message}`,
     );
   }
 
-  let decision: JsonRecord | null = null;
-  let targetLeaf: JsonRecord | null = null;
+  const mappings = new Map<
+    string,
+    {
+      valueObjectId: string;
+      title: string | null;
+      summaryRu: string | null;
+      summaryEn: string | null;
+      source: "existing" | "created";
+    }
+  >();
+  let latestResult: string | null = null;
+  let latestSummaryRu: string | null = null;
+  let latestSummaryEn: string | null = null;
+  let mappingIteration = 0;
+  let setConfirmed = false;
+  let currentIterationDecisionResult: string | null = null;
+  let currentIterationLeafMapped = false;
+
   for (const row of data ?? []) {
     const metadata = asRecord(row.metadata_json);
     const eventCode = text(metadata.eventCode);
-    if (!decision && eventCode === OBJECT_DECISION_EVENT_CODE) {
-      decision = metadata;
+
+    if (eventCode === MAPPING_CONTINUED_EVENT_CODE) {
+      const rawIteration = Number(metadata.mappingIteration);
+      if (Number.isInteger(rawIteration) && rawIteration > mappingIteration) {
+        mappingIteration = rawIteration;
+      } else {
+        mappingIteration += 1;
+      }
+      continue;
     }
+
+    if (eventCode === MAPPING_SET_CONFIRMED_EVENT_CODE) {
+      setConfirmed = true;
+      latestSummaryRu = text(metadata.resultSummaryRu) || latestSummaryRu;
+      latestSummaryEn = text(metadata.resultSummaryEn) || latestSummaryEn;
+      continue;
+    }
+
+    if (eventCode === OBJECT_DECISION_EVENT_CODE) {
+      const result = text(metadata.objectDecisionResult);
+      const rawIteration = Number(metadata.mappingIteration);
+      const eventIteration =
+        Number.isInteger(rawIteration) && rawIteration >= 0 ? rawIteration : 0;
+      if (eventIteration === mappingIteration) {
+        currentIterationDecisionResult = result || null;
+      }
+      latestResult = result || latestResult;
+      latestSummaryRu = text(metadata.resultSummaryRu) || latestSummaryRu;
+      latestSummaryEn = text(metadata.resultSummaryEn) || latestSummaryEn;
+
+      if (result === "existing_leaf_found") {
+        const valueObjectId = text(metadata.selectedValueObjectId);
+        if (UUID_RE.test(valueObjectId)) {
+          mappings.set(valueObjectId, {
+            valueObjectId,
+            title: text(metadata.selectedValueObjectTitle) || null,
+            summaryRu: text(metadata.resultSummaryRu) || null,
+            summaryEn: text(metadata.resultSummaryEn) || null,
+            source: "existing",
+          });
+        }
+      }
+      continue;
+    }
+
     if (
-      !targetLeaf &&
       eventCode === OBJECT_CREATED_EVENT_CODE &&
       metadata.completedTargetLeaf === true
     ) {
-      targetLeaf = metadata;
+      const rawIteration = Number(metadata.mappingIteration);
+      const eventIteration =
+        Number.isInteger(rawIteration) && rawIteration >= 0 ? rawIteration : 0;
+      if (eventIteration === mappingIteration) {
+        currentIterationLeafMapped = true;
+      }
+      const valueObjectId = text(metadata.createdValueObjectId);
+      if (UUID_RE.test(valueObjectId)) {
+        mappings.set(valueObjectId, {
+          valueObjectId,
+          title: text(metadata.createdTitle) || null,
+          summaryRu: text(metadata.resultSummaryRu) || null,
+          summaryEn: text(metadata.resultSummaryEn) || null,
+          source: "created",
+        });
+      }
+      latestSummaryRu = text(metadata.resultSummaryRu) || latestSummaryRu;
+      latestSummaryEn = text(metadata.resultSummaryEn) || latestSummaryEn;
     }
   }
 
-  const result = text(decision?.objectDecisionResult);
-  const completed =
-    decision !== null &&
-    (result !== "new_leaf_required" || targetLeaf !== null);
-  const summaryRu =
-    text(targetLeaf?.resultSummaryRu) || text(decision?.resultSummaryRu) || null;
-  const summaryEn =
-    text(targetLeaf?.resultSummaryEn) || text(decision?.resultSummaryEn) || null;
-
   return {
-    completed,
-    result: result || null,
-    summaryRu,
-    summaryEn,
+    completed: setConfirmed,
+    result: latestResult,
+    summaryRu: latestSummaryRu,
+    summaryEn: latestSummaryEn,
+    mappings: [...mappings.values()],
+    mappingCount: mappings.size,
+    mappingIteration,
+    currentIterationDecisionResult,
+    currentIterationLeafMapped,
   };
 }
 
@@ -374,6 +462,9 @@ async function buildState(signalId: string, locale: ActivityParameterLocale) {
       mappingResult: mapping.result,
       mappingSummaryRu: mapping.summaryRu,
       mappingSummaryEn: mapping.summaryEn,
+      mappings: mapping.mappings,
+      mappingCount: mapping.mappingCount,
+      mappingIteration: mapping.mappingIteration,
     });
   }
 
@@ -587,6 +678,144 @@ export async function POST(request: Request) {
           parameterCode: parameter.parameter_code,
           parameterTitleSnapshot: presentation.title,
           selectionSource,
+        },
+      });
+
+      return NextResponse.json({
+        ...(await buildState(signal.id, locale)),
+        action,
+        duplicate: result.duplicate,
+      });
+    }
+
+    if (action === "continue_measurable_object_mapping") {
+      if (!confirmed) {
+        return errorResponse(
+          "CURATOR_TEMPLATE_PARAMETER_SET_NOT_CONFIRMED",
+          "The typical-activity parameter set must be confirmed first.",
+          409,
+        );
+      }
+
+      const parameterDefinitionId = text(body.parameterDefinitionId);
+      if (!UUID_RE.test(parameterDefinitionId)) {
+        return errorResponse(
+          "CURATOR_TEMPLATE_PARAMETER_ID_INVALID",
+          "parameterDefinitionId is invalid",
+          400,
+        );
+      }
+
+      const mapping = await readMappingState(signal.id, parameterDefinitionId);
+      if (mapping.completed) {
+        return errorResponse(
+          "CURATOR_TEMPLATE_PARAMETER_MAPPING_ALREADY_CONFIRMED",
+          "The observation-object set for this parameter is already confirmed.",
+          409,
+        );
+      }
+      if (mapping.mappingCount < 1) {
+        return errorResponse(
+          "CURATOR_TEMPLATE_PARAMETER_MAPPING_REQUIRED",
+          "At least one leaf observation object must be mapped before another one can be added.",
+          409,
+        );
+      }
+
+      const nextIteration = mapping.mappingIteration + 1;
+      const resultSummaryRu =
+        `Для параметра продолжено назначение объектов наблюдения. Уже назначено листовых ОН: ${mapping.mappingCount}.`;
+      const resultSummaryEn =
+        `Observation-object mapping continued for the parameter. Leaf observation objects already mapped: ${mapping.mappingCount}.`;
+
+      const result = await appendLog({
+        id: mappingContinuedLogId(signal.id, parameterDefinitionId, nextIteration),
+        signal,
+        guard,
+        eventCode: MAPPING_CONTINUED_EVENT_CODE,
+        labelRu: "Продолжено назначение объектов наблюдения параметру",
+        labelEn: "Observation-object mapping continued for parameter",
+        resultSummaryRu,
+        resultSummaryEn,
+        comment: text(body.comment) || null,
+        extraMetadata: {
+          parameterDefinitionId,
+          mappingIteration: nextIteration,
+          mappedLeafCountBeforeContinue: mapping.mappingCount,
+        },
+      });
+
+      return NextResponse.json({
+        ...(await buildState(signal.id, locale)),
+        action,
+        duplicate: result.duplicate,
+      });
+    }
+
+    if (action === "confirm_measurable_object_mapping_set") {
+      if (!confirmed) {
+        return errorResponse(
+          "CURATOR_TEMPLATE_PARAMETER_SET_NOT_CONFIRMED",
+          "The typical-activity parameter set must be confirmed first.",
+          409,
+        );
+      }
+
+      const parameterDefinitionId = text(body.parameterDefinitionId);
+      if (!UUID_RE.test(parameterDefinitionId)) {
+        return errorResponse(
+          "CURATOR_TEMPLATE_PARAMETER_ID_INVALID",
+          "parameterDefinitionId is invalid",
+          400,
+        );
+      }
+
+      const mapping = await readMappingState(signal.id, parameterDefinitionId);
+      if (mapping.completed) {
+        return NextResponse.json({
+          ...(await buildState(signal.id, locale)),
+          action,
+          duplicate: true,
+        });
+      }
+      if (mapping.mappingCount < 1) {
+        return errorResponse(
+          "CURATOR_TEMPLATE_PARAMETER_MAPPING_REQUIRED",
+          "At least one leaf observation object must be mapped before the set can be confirmed.",
+          409,
+        );
+      }
+      if (
+        mapping.currentIterationDecisionResult === "new_leaf_required" &&
+        !mapping.currentIterationLeafMapped
+      ) {
+        return errorResponse(
+          "CURATOR_TEMPLATE_PARAMETER_MAPPING_ITERATION_INCOMPLETE",
+          "The current new-leaf mapping must be completed before the observation-object set can be confirmed.",
+          409,
+        );
+      }
+
+      const resultSummaryRu =
+        `Для параметра подтверждён полный набор связанных листовых объектов наблюдения: ${mapping.mappingCount}.`;
+      const resultSummaryEn =
+        `The complete set of related leaf observation objects was confirmed for the parameter: ${mapping.mappingCount}.`;
+
+      const result = await appendLog({
+        id: mappingSetConfirmedLogId(signal.id, parameterDefinitionId),
+        signal,
+        guard,
+        eventCode: MAPPING_SET_CONFIRMED_EVENT_CODE,
+        labelRu: "Набор объектов наблюдения параметра подтверждён",
+        labelEn: "Parameter observation-object set confirmed",
+        resultSummaryRu,
+        resultSummaryEn,
+        comment: text(body.comment) || null,
+        extraMetadata: {
+          parameterDefinitionId,
+          mappingIteration: mapping.mappingIteration,
+          mappedLeafCount: mapping.mappingCount,
+          mappedLeafValueObjectIds: mapping.mappings.map((item) => item.valueObjectId),
         },
       });
 

@@ -162,7 +162,9 @@ function blockCode(eventCode: string): CuratorProcessingLogBlock["code"] {
   }
   if (
     eventCode === "measurable_object_decision_recorded" ||
-    eventCode === "observation_object_created"
+    eventCode === "observation_object_created" ||
+    eventCode === "measurable_object_mapping_continued" ||
+    eventCode === "measurable_object_mapping_set_confirmed"
   ) {
     return "object_definition";
   }
@@ -348,13 +350,19 @@ function summarizeBlock(input: {
   }
 
   if (input.code === "object_definition") {
+    const setConfirmed = input.events.find(
+      (item) => item.eventCode === "measurable_object_mapping_set_confirmed",
+    );
+    const continued = input.events.find(
+      (item) => item.eventCode === "measurable_object_mapping_continued",
+    );
     const created = input.events.find(
       (item) => item.eventCode === "observation_object_created",
     );
     const decision = input.events.find(
       (item) => item.eventCode === "measurable_object_decision_recorded",
     );
-    const event = created || decision || input.events[0];
+    const event = setConfirmed || continued || created || decision || input.events[0];
     return {
       ru: event?.resultSummaryRu || "Решение по измеримому объекту зафиксировано.",
       en: event?.resultSummaryEn || "The measurable-object decision was recorded.",
@@ -531,12 +539,18 @@ export async function readCuratorProcessingLogs(
     const objectCreatedEvent = events.find(
       (event) => event.eventCode === "observation_object_created",
     );
-    const currentStageRu = objectCreatedEvent
-      ? "Построение измеримого объекта"
-      : objectDecisionEvent
-        ? "Определение измеримого объекта завершено"
+    const objectMappingContinuedEvent = events.find(
+      (event) => event.eventCode === "measurable_object_mapping_continued",
+    );
+    const objectMappingSetConfirmedEvent = events.find(
+      (event) => event.eventCode === "measurable_object_mapping_set_confirmed",
+    );
+    const currentStageRu = objectMappingSetConfirmedEvent
+      ? "Набор измеримых объектов параметра подтверждён"
+      : objectMappingContinuedEvent || objectCreatedEvent || objectDecisionEvent
+        ? "Определение измеримых объектов параметра"
         : parameterSetEvent
-          ? "Определение измеримого объекта"
+          ? "Определение измеримых объектов параметра"
           : parameterSelectedEvent || parameterEvent
             ? "Формирование параметров типовой активности"
             : typicalEvent
@@ -544,12 +558,12 @@ export async function readCuratorProcessingLogs(
               : workEvent
                 ? "Определение типовой активности"
                 : "Ожидает принятия в работу";
-    const currentStageEn = objectCreatedEvent
-      ? "Measurable object path construction"
-      : objectDecisionEvent
-        ? "Measurable object determination completed"
+    const currentStageEn = objectMappingSetConfirmedEvent
+      ? "Parameter measurable-object set confirmed"
+      : objectMappingContinuedEvent || objectCreatedEvent || objectDecisionEvent
+        ? "Parameter measurable-object determination"
         : parameterSetEvent
-          ? "Measurable object determination"
+          ? "Parameter measurable-object determination"
           : parameterSelectedEvent || parameterEvent
             ? "Typical activity parameter formation"
             : typicalEvent

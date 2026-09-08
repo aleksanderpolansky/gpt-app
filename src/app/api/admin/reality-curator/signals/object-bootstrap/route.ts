@@ -32,6 +32,7 @@ const PARAMETER_SELECTED_EVENT_CODE = "typical_activity_parameter_selected" as c
 const PARAMETER_SET_EVENT_CODE = "typical_activity_parameter_set_confirmed" as const;
 const DECISION_EVENT_CODE = "measurable_object_decision_recorded" as const;
 const CREATED_EVENT_CODE = "observation_object_created" as const;
+const MAPPING_CONTINUED_EVENT_CODE = "measurable_object_mapping_continued" as const;
 const DECISION_CONTRACT = "ARCTOR_REALITY_CURATOR_MEASURABLE_OBJECT_V1" as const;
 const CREATION_CONTRACT = "ARCTOR_REALITY_MODEL_CURATOR_ACTIVITY_TEMPLATE_BUILDER_V2_CANONICAL_ENGLISH_LOCALIZATION" as const;
 
@@ -132,6 +133,7 @@ type CreationState = {
   resultSummaryRu: string | null;
   resultSummaryEn: string | null;
   completedTargetLeaf: boolean;
+  mappingIteration: number;
 };
 
 function asRecord(value: unknown): JsonRecord {
@@ -232,9 +234,18 @@ function parameterCheckLogId(signalId: string) {
   return stableUuid(`ARCTOR_REALITY_CURATOR_PARAMETER_CHECK_V1|${signalId}|${PARAMETER_EVENT_CODE}`);
 }
 
-function decisionLogId(signalId: string, parameterDefinitionId: string) {
+function decisionLogId(
+  signalId: string,
+  parameterDefinitionId: string,
+  mappingIteration: number,
+) {
+  if (mappingIteration === 0) {
+    return stableUuid(
+      `${DECISION_CONTRACT}|${signalId}|${parameterDefinitionId}|${DECISION_EVENT_CODE}`,
+    );
+  }
   return stableUuid(
-    `${DECISION_CONTRACT}|${signalId}|${parameterDefinitionId}|${DECISION_EVENT_CODE}`,
+    `${DECISION_CONTRACT}|${signalId}|${parameterDefinitionId}|${DECISION_EVENT_CODE}|iteration:${mappingIteration}`,
   );
 }
 
@@ -242,9 +253,12 @@ function creationLogId(
   signalId: string,
   parameterDefinitionId: string,
   valueObjectId: string,
+  mappingIteration: number,
 ) {
+  const suffix =
+    mappingIteration === 0 ? valueObjectId : `${valueObjectId}|iteration:${mappingIteration}`;
   return stableUuid(
-    `${CREATION_CONTRACT}|${signalId}|${parameterDefinitionId}|${CREATED_EVENT_CODE}|${valueObjectId}`,
+    `${CREATION_CONTRACT}|${signalId}|${parameterDefinitionId}|${CREATED_EVENT_CODE}|${suffix}`,
   );
 }
 
@@ -401,14 +415,48 @@ async function assertParameterSetReady(
   };
 }
 
+async function readMappingIteration(
+  signalId: string,
+  parameterDefinitionId: string,
+): Promise<number> {
+  const { data, error } = await supabase
+    .from("activity_processing_logs")
+    .select("metadata_json,started_at,created_at")
+    .eq("raw_signal_id", signalId)
+    .eq("processor_name", PROCESSOR_NAME)
+    .eq("processor_version", PROCESSOR_VERSION)
+    .contains("metadata_json", {
+      eventCode: MAPPING_CONTINUED_EVENT_CODE,
+      parameterDefinitionId,
+    })
+    .order("started_at", { ascending: true })
+    .limit(200);
+  if (error) {
+    throw new Error(`CURATOR_OBJECT_MAPPING_ITERATION_READ_FAILED:${error.message}`);
+  }
+
+  let iteration = 0;
+  for (const row of data ?? []) {
+    const metadata = asRecord(row.metadata_json);
+    const rawIteration = Number(metadata.mappingIteration);
+    if (Number.isInteger(rawIteration) && rawIteration > iteration) {
+      iteration = rawIteration;
+    } else {
+      iteration += 1;
+    }
+  }
+  return iteration;
+}
+
 async function readDecisionState(
   signalId: string,
   parameterDefinitionId: string,
+  mappingIteration: number,
 ): Promise<DecisionState> {
   const { data, error } = await supabase
     .from("activity_processing_logs")
     .select("id,metadata_json")
-    .eq("id", decisionLogId(signalId, parameterDefinitionId))
+    .eq("id", decisionLogId(signalId, parameterDefinitionId, mappingIteration))
     .eq("raw_signal_id", signalId)
     .eq("processor_name", PROCESSOR_NAME)
     .eq("processor_version", PROCESSOR_VERSION)
@@ -465,6 +513,10 @@ async function readCreationStates(
       resultSummaryRu: text(metadata.resultSummaryRu) || null,
       resultSummaryEn: text(metadata.resultSummaryEn) || null,
       completedTargetLeaf: metadata.completedTargetLeaf === true,
+      mappingIteration:
+        Number.isInteger(Number(metadata.mappingIteration)) && Number(metadata.mappingIteration) >= 0
+          ? Number(metadata.mappingIteration)
+          : 0,
     };
   });
 }
@@ -591,12 +643,23 @@ async function buildState(
   locale: string,
   parameterDefinitionId: string,
 ) {
+  const mappingIteration = await readMappingIteration(
+    signal.id,
+    parameterDefinitionId,
+  );
   const [decision, creations, options] = await Promise.all([
-    readDecisionState(signal.id, parameterDefinitionId),
+    readDecisionState(signal.id, parameterDefinitionId, mappingIteration),
     readCreationStates(signal.id, parameterDefinitionId),
     readOptions(locale),
   ]);
-  const targetLeaf = [...creations].reverse().find((item) => item.completedTargetLeaf) ?? null;
+  const targetLeaf =
+    [...creations]
+      .reverse()
+      .find(
+        (item) =>
+          item.completedTargetLeaf &&
+          item.mappingIteration === mappingIteration,
+      ) ?? null;
   return {
     ok: true,
     routeMarker: ROUTE_MARKER,
@@ -604,6 +667,7 @@ async function buildState(
       actorId: actor.actorId,
       displayName: actor.profile.displayName,
     },
+    mappingIteration,
     decision,
     creation: {
       completed: Boolean(targetLeaf),
@@ -1011,7 +1075,15 @@ export async function POST(request: Request) {
     const action = text(body.action);
 
     if (action === "record_object_decision") {
-      const previous = await readDecisionState(signal.id, parameterDefinitionId);
+      const mappingIteration = await readMappingIteration(
+        signal.id,
+        parameterDefinitionId,
+      );
+      const previous = await readDecisionState(
+        signal.id,
+        parameterDefinitionId,
+        mappingIteration,
+      );
       if (previous.completed) {
         return NextResponse.json(
           await buildState(signal, actor, locale, parameterDefinitionId),
@@ -1033,7 +1105,7 @@ export async function POST(request: Request) {
       }
       const summary = decisionSummary(result, selectedTitle);
       await appendLog({
-        id: decisionLogId(signal.id, parameterDefinitionId),
+        id: decisionLogId(signal.id, parameterDefinitionId, mappingIteration),
         signal,
         guard,
         eventCode: DECISION_EVENT_CODE,
@@ -1049,6 +1121,7 @@ export async function POST(request: Request) {
           selectedValueObjectId,
           selectedValueObjectTitle: selectedTitle,
           parameterDefinitionId: parameter.id,
+          mappingIteration,
           parameterCode: parameter.parameterCode,
           parameterTitle: parameter.title,
         },
@@ -1059,7 +1132,15 @@ export async function POST(request: Request) {
     }
 
     if (action === "create_observation_object") {
-      const decision = await readDecisionState(signal.id, parameterDefinitionId);
+      const mappingIteration = await readMappingIteration(
+        signal.id,
+        parameterDefinitionId,
+      );
+      const decision = await readDecisionState(
+        signal.id,
+        parameterDefinitionId,
+        mappingIteration,
+      );
       if (!decision.completed || decision.result !== "new_leaf_required") {
         return errorResponse("CURATOR_OBJECT_NEW_LEAF_DECISION_REQUIRED", "The curator must first record that a new leaf is required", 409);
       }
@@ -1067,7 +1148,13 @@ export async function POST(request: Request) {
         signal.id,
         parameterDefinitionId,
       );
-      if (existingCreations.some((item) => item.completedTargetLeaf)) {
+      if (
+        existingCreations.some(
+          (item) =>
+            item.completedTargetLeaf &&
+            item.mappingIteration === mappingIteration,
+        )
+      ) {
         return NextResponse.json(
           await buildState(signal, actor, locale, parameterDefinitionId),
         );
@@ -1145,6 +1232,7 @@ export async function POST(request: Request) {
           signal.id,
           parameterDefinitionId,
           created.valueObjectId,
+          mappingIteration,
         ),
         signal,
         guard,
@@ -1180,6 +1268,7 @@ export async function POST(request: Request) {
           systemOwnerless: true,
           systemPublished: true,
           parameterDefinitionId: parameter.id,
+          mappingIteration,
           parameterCode: parameter.parameterCode,
           parameterTitle: parameter.title,
         },
