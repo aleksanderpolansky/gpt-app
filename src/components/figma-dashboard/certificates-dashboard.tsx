@@ -1574,23 +1574,32 @@ export function CertificatesDashboardContent({
 
   return (
     <div className="p-5">
-      <ArctorSegmentedSwitch
-        value={isAllScope ? "all" : "mine"}
-        ariaLabel={labels.titles[mode]}
-        className="mb-4"
-        items={[
-          {
-            value: "mine",
-            label: scopeCopy.mine,
-            href: appendLocale("/certificates?scope=mine", locale),
-          },
-          {
-            value: "all",
-            label: scopeCopy.all,
-            href: appendLocale("/certificates?scope=all", locale),
-          },
-        ]}
-      />
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
+        <ArctorSegmentedSwitch
+          value={isAllScope ? "all" : "mine"}
+          ariaLabel={labels.titles[mode]}
+          items={[
+            {
+              value: "mine",
+              label: scopeCopy.mine,
+              href: appendLocale("/certificates?scope=mine", locale),
+            },
+            {
+              value: "all",
+              label: scopeCopy.all,
+              href: appendLocale("/certificates?scope=all", locale),
+            },
+          ]}
+        />
+
+        <Link
+          href={action.href}
+          className="flex w-fit items-center gap-1.5 rounded-xl border border-[#22c55e]/35 bg-[#ecfdf3] px-4 py-2 text-[13px] font-semibold text-[#16a34a] shadow-sm transition-all hover:bg-[#dcfce7]"
+        >
+          <Plus size={14} />
+          {action.label}
+        </Link>
+      </div>
 
       {!isAllScope ? (
         <div className="mb-4 flex flex-wrap gap-2">
@@ -1629,13 +1638,7 @@ export function CertificatesDashboardContent({
         <p className="mt-0.5 text-[13px] text-[#7c8099]">
           {labels.subtitles[mode]}
         </p>
-        <Link
-          href={action.href}
-          className="mt-3 flex w-fit items-center gap-1.5 rounded-xl border border-[#22c55e]/35 bg-[#ecfdf3] px-4 py-2 text-[13px] font-semibold text-[#16a34a] shadow-sm transition-all hover:bg-[#dcfce7]"
-        >
-          <Plus size={14} />
-          {action.label}
-        </Link>
+
       </div>
 
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">

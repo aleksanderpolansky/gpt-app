@@ -45,14 +45,14 @@ const CREATE_ROOT_LABELS: Record<string, string> = {
   cs: "Vytvořit kořenový objekt pozorování",
 };
 
-const CREATE_SUPER_OFFER_LABELS: Record<string, string> = {
-  en: "Add super offer",
-  pl: "Dodaj superofertę",
-  ru: "Добавить суперпредложение",
-  uk: "Додати суперпропозицію",
-  de: "Superangebot hinzufügen",
-  es: "Añadir superoferta",
-  cs: "Přidat supernabídku",
+const CREATE_VALUE_OBJECT_LABELS: Record<string, string> = {
+  en: "Add observation object",
+  pl: "Dodaj obiekt obserwacji",
+  ru: "Добавить ОН",
+  uk: "Додати об’єкт спостереження",
+  de: "Beobachtungsobjekt hinzufügen",
+  es: "Añadir objeto de observación",
+  cs: "Přidat objekt pozorování",
 };
 
 export default async function ValueObjectsPage({
@@ -67,7 +67,7 @@ export default async function ValueObjectsPage({
     "/value-objects/new/root",
     locale,
   );
-  const superOfferHref = buildLocaleAwareHref("/offers/new", locale);
+  const createValueObjectHref = buildLocaleAwareHref("/value-objects/new", locale);
   return (
     <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#f0f2f7] p-5 text-[#1a1d2e]">
       <div className="grid min-w-0 w-full gap-5">
@@ -79,12 +79,12 @@ export default async function ValueObjectsPage({
             {CREATE_ROOT_LABELS[locale] ?? CREATE_ROOT_LABELS.en}
           </Link>
           <Link
-            href={superOfferHref}
+            href={createValueObjectHref}
             className="flex items-center gap-1.5 rounded-xl border border-[#22c55e]/35 bg-[#ecfdf3] px-4 py-2 text-[13px] font-semibold text-[#16a34a] shadow-sm transition-all hover:bg-[#dcfce7]"
           >
             <Plus size={14} />
-            {CREATE_SUPER_OFFER_LABELS[locale] ??
-              CREATE_SUPER_OFFER_LABELS.en}
+            {CREATE_VALUE_OBJECT_LABELS[locale] ??
+              CREATE_VALUE_OBJECT_LABELS.en}
           </Link>
         </div>
 
