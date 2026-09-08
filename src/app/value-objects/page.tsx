@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Plus } from "lucide-react";
 
 import { ActualValueObjectsList } from "@/components/workspace/value-objects/actual-value-objects-list";
 import { getLocaleSearchParam } from "@/i18n";
@@ -68,19 +69,20 @@ export default async function ValueObjectsPage({
   );
   const superOfferHref = buildLocaleAwareHref("/offers/new", locale);
   return (
-    <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#f5f6fb] px-3 py-5 text-[#1a1d2e] sm:px-5">
-      <div className="mx-auto grid min-w-0 w-full max-w-[1440px] gap-5">
+    <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#f0f2f7] p-5 text-[#1a1d2e]">
+      <div className="grid min-w-0 w-full gap-5">
         <div className="flex flex-wrap justify-end gap-2">
           <Link
             href={createRootHref}
-            className="rounded-full border border-[#dfe3f1] bg-white px-4 py-2 text-[12px] font-semibold text-[#4a4f6a] shadow-sm transition hover:bg-gray-50"
+            className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-2 text-[13px] font-semibold text-[#4a4f6a] shadow-sm transition-all hover:bg-[#f5f6fb]"
           >
             {CREATE_ROOT_LABELS[locale] ?? CREATE_ROOT_LABELS.en}
           </Link>
           <Link
             href={superOfferHref}
-            className="rounded-full bg-[#3b6ef8] px-5 py-2 text-[12px] font-bold text-white shadow-[0_8px_20px_rgba(59,110,248,0.22)] transition hover:bg-[#315fdc]"
+            className="flex items-center gap-1.5 rounded-xl border border-[#22c55e]/35 bg-[#ecfdf3] px-4 py-2 text-[13px] font-semibold text-[#16a34a] shadow-sm transition-all hover:bg-[#dcfce7]"
           >
+            <Plus size={14} />
             {CREATE_SUPER_OFFER_LABELS[locale] ??
               CREATE_SUPER_OFFER_LABELS.en}
           </Link>

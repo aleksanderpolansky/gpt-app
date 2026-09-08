@@ -16,6 +16,7 @@ import {
   type ValueObjectsMessageKey,
 } from "@/i18n";
 
+import { ArctorSegmentedSwitch } from "@/components/ui/arctor-segmented-switch";
 import { ValueObjectCatalogViews } from "@/components/workspace/value-objects/value-object-catalog-views";
 
 type OrganizationPayload = {
@@ -940,41 +941,27 @@ export function ActualValueObjectsList({
       className={tableWorkspaceOnly ? "grid gap-2" : "grid gap-4"}
       aria-label={currentCatalogTitle}
     >
-      <div
-        className={
-          tableWorkspaceOnly
-            ? "hidden"
-            : "inline-flex w-fit max-w-full flex-wrap rounded-xl border border-[#dfe3f1] bg-white p-1 shadow-sm"
-        }
-      >
-        {(["mine", "system", "all"] as const).map((scope) => {
-          const selected = catalogScope === scope;
-          return (
-            <Link
-              key={scope}
-              prefetch={false}
-              href={buildCatalogScopeHref(scope, locale)}
-              onClick={() => {
-                setCatalogScope(scope);
-                setHierarchyPathIds([]);
-              }}
-              className={`rounded-lg px-4 py-2 text-[13px] font-semibold transition-all ${
-                selected
-                  ? "bg-[#3b6ef8] text-white shadow-sm"
-                  : "text-[#5a5f7a] hover:bg-[#f5f6fb]"
-              }`}
-            >
-              {scopeLabels[scope]}
-            </Link>
-          );
-        })}
-      </div>
+      <ArctorSegmentedSwitch
+        value={catalogScope}
+        ariaLabel={copy.eyebrow}
+        className={tableWorkspaceOnly ? "hidden" : undefined}
+        onValueChange={(scope) => {
+          setCatalogScope(scope as CatalogScope);
+          setHierarchyPathIds([]);
+        }}
+        items={(["mine", "system", "all"] as const).map((scope) => ({
+          value: scope,
+          label: scopeLabels[scope],
+          href: buildCatalogScopeHref(scope, locale),
+          prefetch: false,
+        }))}
+      />
 
       <header className={tableWorkspaceOnly ? "hidden" : undefined}>
         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8099]">
           {copy.eyebrow}
         </div>
-        <h1 className="mt-1 text-[22px] font-bold leading-tight text-[#111827]">
+        <h1 className="mt-1 text-[22px] font-bold leading-tight text-[#1a1d2e]">
           {currentCatalogTitle}
         </h1>
         <p className="mt-1 max-w-[880px] text-[13px] leading-5 text-[#7c8099]">
@@ -997,12 +984,12 @@ export function ActualValueObjectsList({
         ].map(([label, value]) => (
           <div
             key={String(label)}
-            className="rounded-[20px] border border-black/[0.07] bg-white p-5 shadow-sm"
+            className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm"
           >
             <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#7c8099]">
               {label}
             </div>
-            <div className="mt-3 text-[26px] font-bold text-[#111827]">
+            <div className="mt-3 text-[26px] font-bold text-[#1a1d2e]">
               {value}
             </div>
           </div>
@@ -1023,10 +1010,10 @@ export function ActualValueObjectsList({
               type="button"
               onClick={() => setRoleFilter(filter.value)}
               className={[
-                "rounded-xl border px-4 py-2 text-[12px] font-semibold shadow-sm transition",
+                "rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all",
                 selected
-                  ? "border-[#3b6ef8] bg-[#3b6ef8] text-white"
-                  : "border-[#dfe3f1] bg-white text-[#4a4f6a] hover:bg-gray-50",
+                  ? "bg-[#3b6ef8] text-white shadow-sm"
+                  : "border border-[rgba(0,0,0,0.07)] bg-white text-[#5a5f7a] hover:bg-[#f5f6fb]",
               ].join(" ")}
             >
               {filter.label}
@@ -1039,16 +1026,16 @@ export function ActualValueObjectsList({
         className={
           tableWorkspaceOnly
             ? "hidden"
-            : "grid gap-3 rounded-[20px] border border-black/[0.07] bg-white p-4 shadow-sm md:grid-cols-[1fr_auto]"
+            : "grid gap-3 rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm md:grid-cols-[1fr_auto]"
         }
       >
-        <label className="flex min-h-11 items-center gap-2 rounded-xl border border-[#dfe3f1] bg-[#f8fafc] px-3">
+        <label className="flex min-h-11 items-center gap-2 rounded-xl border border-[#dfe3f1] bg-[#f5f6fb] px-3">
           <Search size={16} className="shrink-0 text-[#7c8099]" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={copy.searchPlaceholder}
-            className="w-full bg-transparent text-[13px] text-[#111827] outline-none placeholder:text-[#9ca3b8]"
+            className="w-full bg-transparent text-[13px] text-[#1a1d2e] outline-none placeholder:text-[#9ca3b8]"
           />
         </label>
 
@@ -1064,14 +1051,14 @@ export function ActualValueObjectsList({
       </div>
 
       {status !== "success" ? (
-        <div className="rounded-[18px] border border-[#fed7aa] bg-[#fff7ed] p-4 text-[13px] font-semibold text-[#9a3412]">
+        <div className="rounded-xl border border-[#fed7aa] bg-[#fff7ed] p-4 text-[13px] font-semibold text-[#9a3412]">
           {getStatusText(status, t)}
           {errorMessage ? ` ${errorMessage}` : ""}
         </div>
       ) : null}
 
       {status === "success" && scopedValueObjects.length === 0 ? (
-        <div className="rounded-[20px] border border-dashed border-[#c9d5ff] bg-[#f7f9ff] p-5 text-[13px] leading-5 text-[#4a4f6a]">
+        <div className="rounded-xl border border-dashed border-[#c9d5ff] bg-[#f7f9ff] p-5 text-[13px] leading-5 text-[#4a4f6a]">
           {t("valueObjects.actual.empty")}
         </div>
       ) : null}
@@ -1154,7 +1141,7 @@ export function ActualValueObjectsList({
               return (
                 <article
                   key={valueObject.id ?? title}
-                  className="min-w-0 w-full max-w-full overflow-hidden rounded-[20px] border border-[#dfe3f1] bg-white p-3 shadow-sm transition hover:border-[#c9d5ff] hover:shadow-md sm:p-4"
+                  className="min-w-0 w-full max-w-full overflow-hidden rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-3 shadow-sm transition hover:border-[#c9d5ff] hover:shadow-md sm:p-4"
                 >
                   <div className="flex min-w-0 gap-3 sm:gap-4">
                     <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#dfe4ff] bg-[#eef2ff] text-[#3b6ef8] sm:h-24 sm:w-24">
@@ -1207,7 +1194,7 @@ export function ActualValueObjectsList({
                         </Link>
                       </div>
 
-                      <h2 className="mt-2 break-words text-[16px] font-bold text-[#111827] sm:truncate">
+                      <h2 className="mt-2 break-words text-[16px] font-bold text-[#1a1d2e] sm:truncate">
                         {title}
                       </h2>
 
@@ -1253,7 +1240,7 @@ export function ActualValueObjectsList({
                         <div className="break-words text-[9px] font-semibold uppercase tracking-[0.06em] text-[#7c8099] sm:text-[10px] sm:tracking-[0.1em]">
                           {label}
                         </div>
-                        <div className="mt-1 text-[14px] font-bold text-[#111827]">
+                        <div className="mt-1 text-[14px] font-bold text-[#1a1d2e]">
                           {value}
                         </div>
                       </div>
@@ -1265,7 +1252,7 @@ export function ActualValueObjectsList({
             </div>
           </ValueObjectCatalogViews>
 
-          <div className="rounded-[18px] border border-black/[0.07] bg-white px-4 py-3 text-[12px] text-[#7c8099] shadow-sm">
+          <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white px-4 py-3 text-[12px] text-[#7c8099] shadow-sm">
             {copy.shown} {filteredObjects.length} {copy.of} {scopedValueObjects.length}
           </div>
         </>

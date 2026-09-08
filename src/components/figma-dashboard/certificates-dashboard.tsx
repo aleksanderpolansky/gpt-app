@@ -23,6 +23,8 @@ import {
 
 import { type LocaleCode } from "@/i18n";
 
+import { ArctorSegmentedSwitch } from "@/components/ui/arctor-segmented-switch";
+
 import { CertificateCommercialPrice } from "./certificate-commercial-price";
 import { CertificateShareButton } from "./certificate-share-button";
 
@@ -1572,28 +1574,23 @@ export function CertificatesDashboardContent({
 
   return (
     <div className="p-5">
-      <div className="mb-4 inline-flex rounded-xl border border-[#dfe3f1] bg-white p-1 shadow-sm">
-        <Link
-          href={appendLocale("/certificates?scope=mine", locale)}
-          className={`rounded-lg px-4 py-2 text-[13px] font-semibold transition-all ${
-            !isAllScope
-              ? "bg-[#3b6ef8] text-white shadow-sm"
-              : "text-[#5a5f7a] hover:bg-[#f5f6fb]"
-          }`}
-        >
-          {scopeCopy.mine}
-        </Link>
-        <Link
-          href={appendLocale("/certificates?scope=all", locale)}
-          className={`rounded-lg px-4 py-2 text-[13px] font-semibold transition-all ${
-            isAllScope
-              ? "bg-[#3b6ef8] text-white shadow-sm"
-              : "text-[#5a5f7a] hover:bg-[#f5f6fb]"
-          }`}
-        >
-          {scopeCopy.all}
-        </Link>
-      </div>
+      <ArctorSegmentedSwitch
+        value={isAllScope ? "all" : "mine"}
+        ariaLabel={labels.titles[mode]}
+        className="mb-4"
+        items={[
+          {
+            value: "mine",
+            label: scopeCopy.mine,
+            href: appendLocale("/certificates?scope=mine", locale),
+          },
+          {
+            value: "all",
+            label: scopeCopy.all,
+            href: appendLocale("/certificates?scope=all", locale),
+          },
+        ]}
+      />
 
       {!isAllScope ? (
         <div className="mb-4 flex flex-wrap gap-2">
