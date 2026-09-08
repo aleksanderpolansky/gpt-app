@@ -35,16 +35,6 @@ function buildLocaleAwareHref(pathname: string, locale: string) {
   return `${pathname}?locale=${encodeURIComponent(locale)}`;
 }
 
-const CREATE_ROOT_LABELS: Record<string, string> = {
-  en: "Create root observation object",
-  pl: "Utwórz korzeniowy obiekt obserwacji",
-  ru: "Создать корневой объект наблюдения",
-  uk: "Створити кореневий об’єкт спостереження",
-  de: "Wurzel-Beobachtungsobjekt erstellen",
-  es: "Crear objeto raíz de observación",
-  cs: "Vytvořit kořenový objekt pozorování",
-};
-
 const CREATE_VALUE_OBJECT_LABELS: Record<string, string> = {
   en: "Add observation object",
   pl: "Dodaj obiekt obserwacji",
@@ -63,21 +53,14 @@ export default async function ValueObjectsPage({
     getPageLocaleSearchParams(resolvedSearchParams?.locale),
   );
 
-  const createRootHref = buildLocaleAwareHref(
+  const createValueObjectHref = buildLocaleAwareHref(
     "/value-objects/new/root",
     locale,
   );
-  const createValueObjectHref = buildLocaleAwareHref("/value-objects/new", locale);
   return (
     <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#f0f2f7] p-5 text-[#1a1d2e]">
       <div className="grid min-w-0 w-full gap-5">
         <div className="flex flex-wrap justify-end gap-2">
-          <Link
-            href={createRootHref}
-            className="rounded-xl border border-[#dfe3f1] bg-white px-4 py-2 text-[13px] font-semibold text-[#4a4f6a] shadow-sm transition-all hover:bg-[#f5f6fb]"
-          >
-            {CREATE_ROOT_LABELS[locale] ?? CREATE_ROOT_LABELS.en}
-          </Link>
           <Link
             href={createValueObjectHref}
             className="flex items-center gap-1.5 rounded-xl border border-[#22c55e]/35 bg-[#ecfdf3] px-4 py-2 text-[13px] font-semibold text-[#16a34a] shadow-sm transition-all hover:bg-[#dcfce7]"

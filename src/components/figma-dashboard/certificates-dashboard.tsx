@@ -1574,24 +1574,7 @@ export function CertificatesDashboardContent({
 
   return (
     <div className="p-5">
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
-        <ArctorSegmentedSwitch
-          value={isAllScope ? "all" : "mine"}
-          ariaLabel={labels.titles[mode]}
-          items={[
-            {
-              value: "mine",
-              label: scopeCopy.mine,
-              href: appendLocale("/certificates?scope=mine", locale),
-            },
-            {
-              value: "all",
-              label: scopeCopy.all,
-              href: appendLocale("/certificates?scope=all", locale),
-            },
-          ]}
-        />
-
+      <div className="mb-5 flex flex-wrap justify-end gap-2">
         <Link
           href={action.href}
           className="flex w-fit items-center gap-1.5 rounded-xl border border-[#22c55e]/35 bg-[#ecfdf3] px-4 py-2 text-[13px] font-semibold text-[#16a34a] shadow-sm transition-all hover:bg-[#dcfce7]"
@@ -1600,6 +1583,24 @@ export function CertificatesDashboardContent({
           {action.label}
         </Link>
       </div>
+
+      <ArctorSegmentedSwitch
+        value={isAllScope ? "all" : "mine"}
+        ariaLabel={labels.titles[mode]}
+        className="mb-4"
+        items={[
+          {
+            value: "mine",
+            label: scopeCopy.mine,
+            href: appendLocale("/certificates?scope=mine", locale),
+          },
+          {
+            value: "all",
+            label: scopeCopy.all,
+            href: appendLocale("/certificates?scope=all", locale),
+          },
+        ]}
+      />
 
       {!isAllScope ? (
         <div className="mb-4 flex flex-wrap gap-2">
