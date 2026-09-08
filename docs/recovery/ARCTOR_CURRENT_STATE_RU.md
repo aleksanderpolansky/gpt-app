@@ -1031,3 +1031,13 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - Каталог ОН нормализован по workspace/card/filter/action геометрии dashboard.
 - Code commit: 8d3e5f178afcecd76f951219d115a6af2758ae53.
 - Следующая точка: production live acceptance двух страниц на одинаковом viewport.
+
+
+## 2026-09-08 — contextual create actions alignment V1
+
+- Baseline: `909844ece17c96057ffd20dd2486bacd380fad94`.
+- Code commit: `97aaed4273c842adf85d124cb486a7d016187812`.
+- /value-objects: ошибочная CTA «Добавить суперпредложение» заменена на «Добавить ОН» и направлена на /value-objects/new.
+- /certificates: «Добавить суперпредложение» перенесена в верхнюю строку действий справа от scope switch.
+- UI design standard дополнен правилом размещения и семантического соответствия contextual create action.
+- DB/API/RLS/SQL/OpenAI runtime не изменялись.
