@@ -270,18 +270,58 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   if (globalSystemValueObject) {
+    const [relationTypesResult, candidatesResult] = await Promise.all([
+      supabase
+        .from("value_object_relation_types")
+        .select(
+          "relation_type_code, directionality_code, from_scope_code, to_scope_code, title_key, description_key, reverse_title_key, reverse_description_key, allow_self_link, contract_version, display_order, status",
+        )
+        .eq("status", "active")
+        .order("display_order", { ascending: true })
+        .order("relation_type_code", { ascending: true }),
+      supabase
+        .from("value_objects")
+        .select("id, title, branch_type_code, object_kind, node_role_code, status")
+        .eq("scope_code", "global")
+        .eq("origin_type_code", "system_model")
+        .eq("status", "active")
+        .neq("id", valueObjectId)
+        .not("node_role_code", "is", null)
+        .order("title", { ascending: true }),
+    ]);
+
+    if (relationTypesResult.error) {
+      return NextResponse.json(
+        { ok: false, error: relationTypesResult.error.message },
+        { status: 500 },
+      );
+    }
+
+    if (candidatesResult.error) {
+      return NextResponse.json(
+        { ok: false, error: candidatesResult.error.message },
+        { status: 500 },
+      );
+    }
+
+    const relationTypes = ((relationTypesResult.data ?? []) as RelationTypeRow[])
+      .map(toRelationTypeDto)
+      .filter((relationType) => relationType.status === "active");
+
+    const candidates = ((candidatesResult.data ?? []) as ValueObjectRow[]).map(toCandidateDto);
+
     const response: ValueObjectSemanticRelationListResponse = {
       ok: true,
       valueObjectId,
-      relationTypes: [],
-      candidates: [],
+      relationTypes,
+      candidates,
       relations: [],
     };
 
     return NextResponse.json(response, {
       headers: {
         "Cache-Control": "no-store",
-        "X-ARCTor-Read-Scope": "global-system-read-only",
+        "X-ARCTor-Read-Scope": "global-system-canonical-relation-types",
       },
     });
   }

@@ -36,6 +36,7 @@ import type {
   ValueObjectSemanticRelationLocale,
 } from "@/types/value-object-semantic-relation";
 import { ValueObjectSemanticRelationsManager } from "./value-object-semantic-relations-manager";
+import { ValueObjectRelationshipCoverageReview } from "./value-object-relationship-coverage-review";
 
 type LocaleCode = ValueObjectSemanticRelationLocale;
 
@@ -614,6 +615,26 @@ function RelationshipMapInner({
     );
     const grouped = new Map<string, { title: string; description: string; order: number; cards: RelationCard[] }>();
 
+    // Keep every allowed semantic relation visible even when it has zero links.
+    // This turns absence into an explicit curator work item instead of hiding it.
+    for (const relationType of relationData?.relationTypes ?? []) {
+      if (relationType.status !== "active") continue;
+      const perspectives =
+        relationType.directionalityCode === "symmetric"
+          ? (["symmetric"] as const)
+          : (["outgoing", "incoming"] as const);
+
+      for (const perspective of perspectives) {
+        const key = `semantic:${relationType.relationTypeCode}:${perspective}`;
+        grouped.set(key, {
+          title: resolveSemanticRelationTitle(relationType, locale, perspective),
+          description: resolveSemanticRelationDescription(relationType, locale, perspective),
+          order: relationType.displayOrder,
+          cards: [],
+        });
+      }
+    }
+
     for (const relation of relationData?.relations ?? []) {
       if (relation.status !== "active") continue;
       const relationType = relationTypesByCode.get(relation.relationTypeCode) ?? relationTypeFallback(relation);
@@ -870,9 +891,17 @@ function RelationshipMapInner({
 
 export function ValueObjectRelationshipMap(props: Props) {
   return (
-    <ReactFlowProvider>
-      <RelationshipMapInner {...props} />
-    </ReactFlowProvider>
+    <>
+      <ReactFlowProvider>
+        <RelationshipMapInner {...props} />
+      </ReactFlowProvider>
+      {props.canManageRelations ? (
+        <ValueObjectRelationshipCoverageReview
+          valueObjectId={props.valueObjectId}
+          locale={props.locale}
+        />
+      ) : null}
+    </>
   );
 }
 
