@@ -18,7 +18,7 @@ import {
   type ValueObjectPublicLocation,
   type ValueObjectSummaryItem,
 } from "@/components/workspace/value-objects/value-object-profile-top-grid";
-import { ValueObjectSemanticRelationsManager } from "@/components/workspace/value-objects/value-object-semantic-relations-manager";
+import { ValueObjectRelationshipMap } from "@/components/workspace/value-objects/value-object-relationship-map";
 import { ValueObjectFullCardPanel } from "@/components/workspace/value-objects/value-object-full-card-panel";
 import { ValueObjectDeleteAction } from "@/components/workspace/value-objects/value-object-delete-action";
 import { ValueObjectAnalyticsProfileManager } from "@/components/workspace/value-objects/value-object-analytics-profile-manager";
@@ -1329,6 +1329,14 @@ export default async function ValueObjectDetailPage({
   }
 
   const directChildren = childrenByParent.get(valueObject.id) ?? [];
+  const parentNode = valueObject.parent_value_object_id
+    ? nodesById.get(valueObject.parent_value_object_id) ?? null
+    : null;
+  const siblingNodes = parentNode
+    ? (childrenByParent.get(parentNode.id) ?? []).filter(
+        (node) => node.id !== valueObject.id,
+      )
+    : [];
   const criteria = (criteriaData ?? []) as CriterionRow[];
   const ontologyNodeRole = valueObject.ontology_node_role_code;
   const isRoot =
@@ -1796,6 +1804,35 @@ export default async function ValueObjectDetailPage({
           viewHref={viewHref}
         />
 
+        <ValueObjectRelationshipMap
+          valueObjectId={valueObject.id}
+          title={valueObject.title}
+          locale={locale}
+          parentObject={
+            parentNode
+              ? {
+                  id: parentNode.id,
+                  title: parentNode.title,
+                  nodeRoleCode:
+                    parentNode.ontology_node_role_code ?? parentNode.node_role_code,
+                }
+              : null
+          }
+          siblingObjects={siblingNodes.map((node) => ({
+            id: node.id,
+            title: node.title,
+            nodeRoleCode: node.ontology_node_role_code ?? node.node_role_code,
+          }))}
+          childObjects={directChildren.map((node) => ({
+            id: node.id,
+            title: node.title,
+            nodeRoleCode: node.ontology_node_role_code ?? node.node_role_code,
+          }))}
+          canCreateChildren={isStructural}
+          canCreateLeaf={isIntermediate}
+          canManageRelations={!isGlobalSystemObject}
+        />
+
         {isLeaf && !isProductOrService ? (
           <ValueObjectAnalyticsProfileManager
             valueObjectId={valueObject.id}
@@ -1981,15 +2018,6 @@ export default async function ValueObjectDetailPage({
               )}
             </section>
 
-            <section className="hidden">
-              <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#7c8099]">
-                {copy.relations}
-              </div>
-              <ValueObjectSemanticRelationsManager
-                valueObjectId={valueObject.id}
-                locale={locale}
-              />
-            </section>
           </div>
         </section>
 
