@@ -64,6 +64,32 @@ type Props = {
 type Density = "normal" | "compact" | "dense" | "fixed";
 type ZoneKind = "structural" | "semantic" | "cross_plane";
 type ReviewCode = "reviewed" | "unreviewed" | "stale" | "not_applicable" | "model_gap";
+type DetailLevel = "overview" | "work" | "detailed";
+type SemanticBlockKey =
+  | "structure"
+  | "correspondence"
+  | "dependency_support"
+  | "influence_conflict"
+  | "cross_plane"
+  | "other";
+
+type ReviewSummary = {
+  reviewed: number;
+  unreviewed: number;
+  stale: number;
+  not_applicable: number;
+  model_gap: number;
+};
+
+type SemanticBlock = {
+  key: SemanticBlockKey;
+  title: string;
+  description: string;
+  zones: RelationshipZone[];
+  summary: ReviewSummary;
+  dominantReviewCode: ReviewCode | null;
+  paletteIndex: number;
+};
 
 type RelationCard = {
   id: string;
@@ -363,6 +389,360 @@ const REVIEW_LABELS: Record<LocaleCode, Record<ReviewCode, string>> = {
   cs: { reviewed: "Zkontrolováno", unreviewed: "Nezkontrolováno", stale: "Zkontrolovat znovu", not_applicable: "Nepoužije se", model_gap: "Mezera modelu" },
 };
 
+type BlockCopy = {
+  levels: Record<DetailLevel, string>;
+  fullMap: string;
+  openBlock: string;
+  attention: string;
+  overdue: string;
+  reviewed: string;
+  notApplicable: string;
+  modelGap: string;
+  groups: Record<
+    SemanticBlockKey,
+    {
+      title: string;
+      description: string;
+    }
+  >;
+};
+
+const BLOCK_COPY: Record<LocaleCode, BlockCopy> = {
+  en: {
+    levels: { overview: "Overview", work: "Work", detailed: "Detailed" },
+    fullMap: "Full map",
+    openBlock: "Open block",
+    attention: "Needs attention",
+    overdue: "Review again",
+    reviewed: "Reviewed",
+    notApplicable: "Not applicable",
+    modelGap: "Model gap",
+    groups: {
+      structure: {
+        title: "Structure",
+        description: "Parent, children and structural neighbours.",
+      },
+      correspondence: {
+        title: "Correspondence and subject",
+        description: "Related objects and objects describing the same subject.",
+      },
+      dependency_support: {
+        title: "Dependency and support",
+        description: "Dependencies, prerequisites and support in both directions.",
+      },
+      influence_conflict: {
+        title: "Influence and conflict",
+        description: "Influence, experienced influence and conflicts.",
+      },
+      cross_plane: {
+        title: "Other primary branches",
+        description: "Coverage of the two parallel primary branches of the model.",
+      },
+      other: {
+        title: "Other semantic links",
+        description: "Other active semantic relation types.",
+      },
+    },
+  },
+  pl: {
+    levels: { overview: "Przegląd", work: "Roboczy", detailed: "Szczegółowy" },
+    fullMap: "Pełna mapa",
+    openBlock: "Otwórz blok",
+    attention: "Wymaga uwagi",
+    overdue: "Sprawdź ponownie",
+    reviewed: "Sprawdzono",
+    notApplicable: "Nie dotyczy",
+    modelGap: "Luka modelu",
+    groups: {
+      structure: {
+        title: "Struktura",
+        description: "Rodzic, dzieci i sąsiedzi strukturalni.",
+      },
+      correspondence: {
+        title: "Powiązanie i ten sam przedmiot",
+        description: "Obiekty powiązane i opisujące ten sam przedmiot obserwacji.",
+      },
+      dependency_support: {
+        title: "Zależność i wsparcie",
+        description: "Zależności, warunki konieczne i wsparcie w obu kierunkach.",
+      },
+      influence_conflict: {
+        title: "Wpływ i konflikt",
+        description: "Wpływ, doświadczany wpływ i konflikty.",
+      },
+      cross_plane: {
+        title: "Inne główne gałęzie",
+        description: "Pokrycie dwóch równoległych głównych gałęzi modelu.",
+      },
+      other: {
+        title: "Inne relacje semantyczne",
+        description: "Pozostałe aktywne typy relacji semantycznych.",
+      },
+    },
+  },
+  ru: {
+    levels: { overview: "Обзор", work: "Рабочий", detailed: "Подробный" },
+    fullMap: "Полная карта",
+    openBlock: "Открыть блок",
+    attention: "Требуют внимания",
+    overdue: "Перепроверить",
+    reviewed: "Проверено",
+    notApplicable: "Не применяется",
+    modelGap: "Пробел модели",
+    groups: {
+      structure: {
+        title: "Структура",
+        description: "Родитель, дети и структурные соседи.",
+      },
+      correspondence: {
+        title: "Соответствие и общий предмет",
+        description: "Связанные ОН и объекты, описывающие тот же предмет наблюдения.",
+      },
+      dependency_support: {
+        title: "Зависимость и поддержка",
+        description: "Зависимости, необходимые условия и поддержка в обоих направлениях.",
+      },
+      influence_conflict: {
+        title: "Влияние и конфликт",
+        description: "Влияние, испытываемое влияние и конфликты.",
+      },
+      cross_plane: {
+        title: "Другие основные ветви",
+        description: "Покрытие двух параллельных основных ветвей модели.",
+      },
+      other: {
+        title: "Другие смысловые связи",
+        description: "Остальные действующие виды смысловых связей.",
+      },
+    },
+  },
+  uk: {
+    levels: { overview: "Огляд", work: "Робочий", detailed: "Докладний" },
+    fullMap: "Повна карта",
+    openBlock: "Відкрити блок",
+    attention: "Потребують уваги",
+    overdue: "Перевірити знову",
+    reviewed: "Перевірено",
+    notApplicable: "Не застосовується",
+    modelGap: "Прогалина моделі",
+    groups: {
+      structure: {
+        title: "Структура",
+        description: "Батьківський об’єкт, дочірні об’єкти та структурні сусіди.",
+      },
+      correspondence: {
+        title: "Відповідність і спільний предмет",
+        description: "Пов’язані об’єкти та об’єкти, що описують той самий предмет спостереження.",
+      },
+      dependency_support: {
+        title: "Залежність і підтримка",
+        description: "Залежності, необхідні умови та підтримка в обох напрямках.",
+      },
+      influence_conflict: {
+        title: "Вплив і конфлікт",
+        description: "Вплив, отримуваний вплив і конфлікти.",
+      },
+      cross_plane: {
+        title: "Інші основні гілки",
+        description: "Покриття двох паралельних основних гілок моделі.",
+      },
+      other: {
+        title: "Інші смислові зв’язки",
+        description: "Інші активні типи смислових зв’язків.",
+      },
+    },
+  },
+  de: {
+    levels: { overview: "Übersicht", work: "Arbeitsansicht", detailed: "Detailliert" },
+    fullMap: "Gesamtkarte",
+    openBlock: "Block öffnen",
+    attention: "Aufmerksamkeit nötig",
+    overdue: "Erneut prüfen",
+    reviewed: "Geprüft",
+    notApplicable: "Nicht anwendbar",
+    modelGap: "Modelllücke",
+    groups: {
+      structure: {
+        title: "Struktur",
+        description: "Elternobjekt, Kinder und strukturelle Nachbarn.",
+      },
+      correspondence: {
+        title: "Zuordnung und gleicher Gegenstand",
+        description: "Verknüpfte Objekte und Objekte mit demselben Beobachtungsgegenstand.",
+      },
+      dependency_support: {
+        title: "Abhängigkeit und Unterstützung",
+        description: "Abhängigkeiten, Voraussetzungen und Unterstützung in beide Richtungen.",
+      },
+      influence_conflict: {
+        title: "Einfluss und Konflikt",
+        description: "Einfluss, empfangener Einfluss und Konflikte.",
+      },
+      cross_plane: {
+        title: "Andere Hauptzweige",
+        description: "Abdeckung der beiden parallelen Hauptzweige des Modells.",
+      },
+      other: {
+        title: "Andere semantische Beziehungen",
+        description: "Weitere aktive semantische Beziehungstypen.",
+      },
+    },
+  },
+  es: {
+    levels: { overview: "Resumen", work: "Trabajo", detailed: "Detallado" },
+    fullMap: "Mapa completo",
+    openBlock: "Abrir bloque",
+    attention: "Requiere atención",
+    overdue: "Revisar de nuevo",
+    reviewed: "Revisado",
+    notApplicable: "No aplica",
+    modelGap: "Vacío del modelo",
+    groups: {
+      structure: {
+        title: "Estructura",
+        description: "Padre, hijos y vecinos estructurales.",
+      },
+      correspondence: {
+        title: "Correspondencia y mismo sujeto",
+        description: "Objetos relacionados y objetos que describen el mismo sujeto.",
+      },
+      dependency_support: {
+        title: "Dependencia y apoyo",
+        description: "Dependencias, requisitos y apoyo en ambas direcciones.",
+      },
+      influence_conflict: {
+        title: "Influencia y conflicto",
+        description: "Influencia, influencia recibida y conflictos.",
+      },
+      cross_plane: {
+        title: "Otras ramas principales",
+        description: "Cobertura de las dos ramas principales paralelas del modelo.",
+      },
+      other: {
+        title: "Otras relaciones semánticas",
+        description: "Otros tipos activos de relaciones semánticas.",
+      },
+    },
+  },
+  cs: {
+    levels: { overview: "Přehled", work: "Pracovní", detailed: "Podrobný" },
+    fullMap: "Úplná mapa",
+    openBlock: "Otevřít blok",
+    attention: "Vyžaduje pozornost",
+    overdue: "Zkontrolovat znovu",
+    reviewed: "Zkontrolováno",
+    notApplicable: "Nepoužije se",
+    modelGap: "Mezera modelu",
+    groups: {
+      structure: {
+        title: "Struktura",
+        description: "Rodič, děti a strukturální sousedé.",
+      },
+      correspondence: {
+        title: "Souvislost a stejný předmět",
+        description: "Související objekty a objekty popisující stejný předmět pozorování.",
+      },
+      dependency_support: {
+        title: "Závislost a podpora",
+        description: "Závislosti, předpoklady a podpora v obou směrech.",
+      },
+      influence_conflict: {
+        title: "Vliv a konflikt",
+        description: "Vliv, přijímaný vliv a konflikty.",
+      },
+      cross_plane: {
+        title: "Jiné hlavní větve",
+        description: "Pokrytí dvou paralelních hlavních větví modelu.",
+      },
+      other: {
+        title: "Další sémantické vztahy",
+        description: "Ostatní aktivní typy sémantických vztahů.",
+      },
+    },
+  },
+};
+
+const BLOCK_ORDER: readonly SemanticBlockKey[] = [
+  "structure",
+  "correspondence",
+  "dependency_support",
+  "influence_conflict",
+  "cross_plane",
+  "other",
+];
+
+const BLOCK_PALETTE_INDEX: Record<SemanticBlockKey, number> = {
+  structure: 0,
+  correspondence: 4,
+  dependency_support: 5,
+  influence_conflict: 7,
+  cross_plane: 2,
+  other: 6,
+};
+
+const BLOCK_POSITIONS: Record<SemanticBlockKey, { x: number; y: number }> = {
+  structure: { x: 520, y: 20 },
+  correspondence: { x: 60, y: 210 },
+  dependency_support: { x: 60, y: 520 },
+  influence_conflict: { x: 1010, y: 520 },
+  cross_plane: { x: 1010, y: 210 },
+  other: { x: 520, y: 760 },
+};
+
+function summarizeReview(zones: RelationshipZone[]): ReviewSummary {
+  const summary: ReviewSummary = {
+    reviewed: 0,
+    unreviewed: 0,
+    stale: 0,
+    not_applicable: 0,
+    model_gap: 0,
+  };
+
+  for (const zone of zones) {
+    if (zone.reviewCode) {
+      summary[zone.reviewCode] += 1;
+    }
+  }
+
+  return summary;
+}
+
+function dominantReviewCode(summary: ReviewSummary): ReviewCode | null {
+  if (summary.model_gap > 0) return "model_gap";
+  if (summary.unreviewed > 0) return "unreviewed";
+  if (summary.stale > 0) return "stale";
+  if (summary.reviewed > 0) return "reviewed";
+  if (summary.not_applicable > 0) return "not_applicable";
+  return null;
+}
+
+function relationCodeFromZone(zone: RelationshipZone) {
+  const zoneKey = zone.coverageZoneKey ?? "";
+  if (!zoneKey.startsWith("relation:")) return null;
+  return zoneKey.split(":")[1] ?? null;
+}
+
+function blockKeyForZone(zone: RelationshipZone): SemanticBlockKey {
+  if (zone.kind === "structural") return "structure";
+  if (zone.kind === "cross_plane") return "cross_plane";
+
+  const relationCode = relationCodeFromZone(zone);
+
+  if (relationCode === "related_to" || relationCode === "same_subject_as") {
+    return "correspondence";
+  }
+
+  if (relationCode === "supports" || relationCode === "depends_on") {
+    return "dependency_support";
+  }
+
+  if (relationCode === "influences" || relationCode === "conflicts_with") {
+    return "influence_conflict";
+  }
+
+  return "other";
+}
+
 function reviewVisual(code: ReviewCode) {
   if (code === "reviewed") return { strip: "bg-emerald-400", dot: "bg-emerald-500", badge: "border-emerald-200 bg-emerald-50 text-emerald-700", ring: "ring-1 ring-emerald-300/60" };
   if (code === "stale") return { strip: "bg-amber-400", dot: "bg-amber-400", badge: "border-amber-200 bg-amber-50 text-amber-800", ring: "ring-1 ring-amber-300/60" };
@@ -527,9 +907,132 @@ function ZoneNode({ data }: NodeProps<ZoneFlowNode>) {
   );
 }
 
+type BlockData = Record<string, unknown> & {
+  block: SemanticBlock;
+  locale: LocaleCode;
+  detailLevel: "overview" | "work";
+  onOpenBlock: (blockKey: SemanticBlockKey) => void;
+  onOpenZone: (zoneKey: string) => void;
+};
+type BlockFlowNode = Node<BlockData, "block">;
+
+function BlockNode({ data }: NodeProps<BlockFlowNode>) {
+  const { block, locale, detailLevel, onOpenBlock, onOpenZone } = data;
+  const palette = PALETTES[block.paletteIndex % PALETTES.length];
+  const dominant = block.dominantReviewCode
+    ? reviewVisual(block.dominantReviewCode)
+    : null;
+  const counters: Array<{ code: ReviewCode; count: number }> = [
+    { code: "model_gap", count: block.summary.model_gap },
+    { code: "unreviewed", count: block.summary.unreviewed },
+    { code: "stale", count: block.summary.stale },
+    { code: "reviewed", count: block.summary.reviewed },
+    { code: "not_applicable", count: block.summary.not_applicable },
+  ];
+
+  return (
+    <div
+      className={`relative w-[340px] overflow-hidden rounded-[24px] border ${palette.border} ${palette.background} p-4 shadow-md ${dominant?.ring ?? ""}`}
+    >
+      {dominant ? (
+        <div
+          className={`pointer-events-none absolute inset-x-0 top-0 h-[4px] ${dominant.strip}`}
+          aria-hidden="true"
+        />
+      ) : null}
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!h-2 !w-2 !border-0 !bg-slate-400"
+      />
+
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className={`text-[13px] font-bold uppercase tracking-[0.08em] ${palette.accent}`}>
+            {block.title}
+          </div>
+          <div
+            className={`mt-1 text-[10px] leading-4 text-slate-500 ${
+              detailLevel === "overview" ? "line-clamp-1" : "line-clamp-2"
+            }`}
+          >
+            {block.description}
+          </div>
+        </div>
+        <button
+          type="button"
+          className="nodrag nopan shrink-0 rounded-lg border border-black/10 bg-white p-1.5 text-slate-600 shadow-sm hover:bg-slate-50"
+          onClick={() => onOpenBlock(block.key)}
+          title={BLOCK_COPY[locale].openBlock}
+          aria-label={BLOCK_COPY[locale].openBlock}
+        >
+          <Maximize2 size={14} />
+        </button>
+      </div>
+
+      {counters.some((item) => item.count > 0) ? (
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          {counters
+            .filter((item) => item.count > 0)
+            .map((item) => {
+              const visual = reviewVisual(item.code);
+              return (
+                <span
+                  key={item.code}
+                  className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-bold ${visual.badge}`}
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${visual.dot}`} />
+                  {item.count}
+                </span>
+              );
+            })}
+        </div>
+      ) : null}
+
+      <div className="mt-3 grid gap-1.5">
+        {block.zones.map((zone) => {
+          const status = zone.reviewCode ? reviewVisual(zone.reviewCode) : null;
+          return (
+            <button
+              key={zone.key}
+              type="button"
+              className="nodrag nopan flex w-full items-center gap-2 rounded-xl border border-black/[0.07] bg-white/90 px-2.5 py-2 text-left shadow-sm transition hover:-translate-y-px hover:shadow"
+              onClick={() => onOpenZone(zone.key)}
+            >
+              {status ? (
+                <span className={`h-2 w-2 shrink-0 rounded-full ${status.dot}`} />
+              ) : (
+                <span className="h-2 w-2 shrink-0 rounded-full bg-slate-300" />
+              )}
+              <span className="min-w-0 flex-1 truncate text-[10px] font-bold text-slate-700">
+                {zone.title}
+              </span>
+              <span className="shrink-0 text-[10px] font-bold text-slate-500">
+                {zone.cards.length}
+              </span>
+              {detailLevel === "work" && zone.reviewCode ? (
+                <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[8px] font-bold uppercase ${status?.badge ?? ""}`}>
+                  {REVIEW_LABELS[locale][zone.reviewCode]}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!h-2 !w-2 !border-0 !bg-slate-400"
+      />
+    </div>
+  );
+}
+
 const NODE_TYPES = {
   center: CenterNode,
   zone: ZoneNode,
+  block: BlockNode,
 };
 
 function zonePosition(index: number, total: number) {
@@ -585,11 +1088,19 @@ function RelationshipMapInner({
   const [coverageAvailable, setCoverageAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-  const [autoDensity, setAutoDensity] = useState(true);
+const [autoDensity, setAutoDensity] = useState(true);
+  const [detailLevel, setDetailLevel] = useState<DetailLevel>("overview");
   const [expandedZoneOverride, setExpandedZoneOverride] = useState<string | null | undefined>(undefined);
+  const [expandedBlockOverride, setExpandedBlockOverride] = useState<string | null | undefined>(undefined);
   const [search, setSearch] = useState("");
   const requestedZoneKey = searchParams.get("relationsZone");
+  const requestedBlockKey = searchParams.get("relationsBlock");
   const expandedZoneKey = expandedZoneOverride === undefined ? requestedZoneKey : expandedZoneOverride;
+  const expandedBlockKey = expandedZoneKey
+    ? null
+    : expandedBlockOverride === undefined
+      ? requestedBlockKey
+      : expandedBlockOverride;
 
   const fetchRelations = useCallback(async () => {
     const response = await fetch(`/api/value-objects/${encodeURIComponent(valueObjectId)}/relations`, {
@@ -678,9 +1189,16 @@ function RelationshipMapInner({
     }
   }, [copy.error, fetchRelations]);
 
-  const expandZone = useCallback((zoneKey: string) => {
+const expandZone = useCallback((zoneKey: string) => {
     setSearch("");
+    setExpandedBlockOverride(null);
     setExpandedZoneOverride(zoneKey);
+  }, []);
+
+  const openBlock = useCallback((blockKey: SemanticBlockKey) => {
+    setSearch("");
+    setExpandedZoneOverride(null);
+    setExpandedBlockOverride(blockKey);
   }, []);
 
   const zones = useMemo<RelationshipZone[]>(() => {
@@ -827,7 +1345,48 @@ function RelationshipMapInner({
     siblingObjects,
   ]);
 
+const blockCopy = BLOCK_COPY[locale];
+
+  const semanticBlocks = useMemo<SemanticBlock[]>(() => {
+    const grouped = new Map<SemanticBlockKey, RelationshipZone[]>();
+
+    for (const key of BLOCK_ORDER) {
+      grouped.set(key, []);
+    }
+
+    for (const zone of zones) {
+      grouped.get(blockKeyForZone(zone))?.push(zone);
+    }
+
+    return BLOCK_ORDER.flatMap((key) => {
+      const blockZones = grouped.get(key) ?? [];
+      if (blockZones.length === 0) return [];
+
+      const summary = summarizeReview(blockZones);
+      const groupCopy = blockCopy.groups[key];
+
+      return [
+        {
+          key,
+          title: groupCopy.title,
+          description: groupCopy.description,
+          zones: blockZones,
+          summary,
+          dominantReviewCode: dominantReviewCode(summary),
+          paletteIndex: BLOCK_PALETTE_INDEX[key],
+        },
+      ];
+    });
+  }, [blockCopy, zones]);
+
+  const reviewSummary = useMemo(
+    () => summarizeReview(zones.filter((zone) => Boolean(zone.reviewCode))),
+    [zones],
+  );
+
   const expandedZone = zones.find((zone) => zone.key === expandedZoneKey) ?? null;
+  const expandedBlock =
+    semanticBlocks.find((block) => block.key === expandedBlockKey) ?? null;
 
   const handleCoverageChange = useCallback((snapshot: CoverageSnapshot) => {
     setCoverageData(snapshot);
@@ -838,38 +1397,87 @@ function RelationshipMapInner({
     const center: CenterFlowNode = {
       id: "__center__",
       type: "center",
-      position: { x: 530, y: 410 },
+      position: { x: 585, y: 420 },
       draggable: false,
       selectable: false,
       data: { title },
     };
-    const zoneNodes: ZoneFlowNode[] = zones.map((zone, index) => ({
-      id: `zone:${zone.key}`,
-      type: "zone",
-      position: zonePosition(index, zones.length),
-      draggable: true,
+
+    if (detailLevel === "detailed") {
+      const zoneNodes: ZoneFlowNode[] = zones.map((zone, index) => ({
+        id: `zone:${zone.key}`,
+        type: "zone",
+        position: zonePosition(index, zones.length),
+        draggable: true,
+        selectable: false,
+        data: {
+          zone,
+          locale,
+          copy,
+          autoDensity,
+          onExpand: expandZone,
+        },
+      }));
+
+      return [center, ...zoneNodes];
+    }
+
+    const blockNodes: BlockFlowNode[] = semanticBlocks.map((block) => ({
+      id: `block:${block.key}`,
+      type: "block",
+      position: BLOCK_POSITIONS[block.key],
+      draggable: false,
       selectable: false,
       data: {
-        zone,
+        block,
         locale,
-        copy,
-        autoDensity,
-        onExpand: expandZone,
+        detailLevel,
+        onOpenBlock: openBlock,
+        onOpenZone: expandZone,
       },
     }));
-    return [center, ...zoneNodes];
-  }, [autoDensity, copy, expandZone, locale, title, zones]);
 
-  const edges = useMemo<Edge[]>(
-    () => zones.map((zone) => ({
-      id: `edge:${zone.key}`,
+    return [center, ...blockNodes];
+  }, [
+    autoDensity,
+    copy,
+    detailLevel,
+    expandZone,
+    locale,
+    openBlock,
+    semanticBlocks,
+    title,
+    zones,
+  ]);
+
+  const edges = useMemo<Edge[]>(() => {
+    if (detailLevel === "detailed") {
+      return zones.map((zone) => ({
+        id: `edge:${zone.key}`,
+        source: "__center__",
+        target: `zone:${zone.key}`,
+        type: "smoothstep",
+        style: { stroke: "#cbd5e1", strokeWidth: 1.1 },
+      }));
+    }
+
+    return semanticBlocks.map((block) => ({
+      id: `edge:block:${block.key}`,
       source: "__center__",
-      target: `zone:${zone.key}`,
+      target: `block:${block.key}`,
       type: "smoothstep",
-      style: { stroke: "#94a3b8", strokeWidth: 1.4 },
-    })),
-    [zones],
-  );
+      style: { stroke: "#cbd5e1", strokeWidth: 1.2 },
+    }));
+  }, [detailLevel, semanticBlocks, zones]);
+
+  const separateBlockHref = expandedBlock
+    ? (() => {
+        const query = new URLSearchParams();
+        if (locale !== "en") query.set("locale", locale);
+        query.set("relationsBlock", expandedBlock.key);
+        return `/value-objects/${encodeURIComponent(valueObjectId)}?${query.toString()}`;
+      })()
+    : "#";
 
   const separateHref = expandedZone
     ? (() => {
@@ -894,17 +1502,68 @@ function RelationshipMapInner({
           </div>
           <p className="mt-2 text-[12px] leading-5 text-[#6b7280]">{copy.description}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setAutoDensity((current) => !current)}
-            className={`rounded-xl border px-3 py-2 text-[11px] font-bold transition ${autoDensity ? "border-[#cbd7ff] bg-[#eef2ff] text-[#3b6ef8]" : "border-[#dfe3ea] bg-white text-[#4b5563]"}`}
-            title={copy.densityHint}
-          >
-            {autoDensity ? copy.autoScale : copy.fixedSize}
-          </button>
+<div className="flex flex-wrap items-center gap-2">
+          {(["overview", "work", "detailed"] as const).map((level) => (
+            <button
+              key={level}
+              type="button"
+              onClick={() => {
+                setDetailLevel(level);
+                if (level === "detailed") {
+                  setExpandedBlockOverride(null);
+                }
+              }}
+              className={`rounded-xl border px-3 py-2 text-[11px] font-bold transition ${
+                detailLevel === level
+                  ? "border-[#cbd7ff] bg-[#eef2ff] text-[#3b6ef8]"
+                  : "border-[#dfe3ea] bg-white text-[#4b5563] hover:bg-slate-50"
+              }`}
+            >
+              {blockCopy.levels[level]}
+            </button>
+          ))}
+          {detailLevel === "detailed" ? (
+            <button
+              type="button"
+              onClick={() => setAutoDensity((current) => !current)}
+              className={`rounded-xl border px-3 py-2 text-[11px] font-bold transition ${autoDensity ? "border-[#cbd7ff] bg-[#eef2ff] text-[#3b6ef8]" : "border-[#dfe3ea] bg-white text-[#4b5563]"}`}
+              title={copy.densityHint}
+            >
+              {autoDensity ? copy.autoScale : copy.fixedSize}
+            </button>
+          ) : null}
         </div>
       </div>
+
+{coverageAvailable ? (
+        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl border border-[#e5e7eb] bg-[#f8fafc] px-3 py-2.5">
+          <span className="mr-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+            {blockCopy.fullMap}
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+            {blockCopy.attention}: {reviewSummary.unreviewed + reviewSummary.model_gap}
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+            {blockCopy.overdue}: {reviewSummary.stale}
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            {blockCopy.reviewed}: {reviewSummary.reviewed}
+          </span>
+          {reviewSummary.model_gap > 0 ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-300 bg-rose-100 px-2 py-1 text-[10px] font-bold text-rose-900">
+              <span className="h-1.5 w-1.5 rounded-full bg-rose-700" />
+              {blockCopy.modelGap}: {reviewSummary.model_gap}
+            </span>
+          ) : null}
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold text-slate-600">
+            <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+            {blockCopy.notApplicable}: {reviewSummary.not_applicable}
+          </span>
+        </div>
+      ) : null}
 
       {loading ? (
         <div className="mt-4 rounded-2xl border border-dashed border-[#dfe3ea] bg-[#f8fafc] px-4 py-5 text-[12px] font-medium text-slate-500">{copy.loading}</div>
@@ -914,7 +1573,7 @@ function RelationshipMapInner({
           <button type="button" onClick={() => void retryRelations()} className="rounded-lg border border-rose-200 bg-white px-3 py-1.5 font-bold">{copy.retry}</button>
         </div>
       ) : (
-        <div className="mt-4 h-[680px] min-h-[520px] overflow-hidden rounded-[22px] border border-[#e5e7eb] bg-[#f8fafc]">
+        <div className="mt-4 h-[760px] min-h-[560px] overflow-hidden rounded-[22px] border border-[#e5e7eb] bg-[#f8fafc]">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -932,6 +1591,112 @@ function RelationshipMapInner({
           </ReactFlow>
         </div>
       )}
+
+{expandedBlock ? (
+        <div
+          className="fixed inset-0 z-[88] flex items-stretch justify-center bg-black/45 p-3 sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-label={expandedBlock.title}
+        >
+          <div className="flex w-full max-w-5xl flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#e5e7eb] px-5 py-4 sm:px-6">
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#3b6ef8]">
+                  {blockCopy.fullMap} → {expandedBlock.title}
+                </div>
+                <h3 className="mt-1 text-[22px] font-bold text-[#111827]">
+                  {expandedBlock.title}
+                </h3>
+                <p className="mt-1 max-w-3xl text-[12px] leading-5 text-[#6b7280]">
+                  {expandedBlock.description}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={separateBlockHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-[#dfe3ea] bg-white px-3 py-2 text-[12px] font-bold text-[#4b5563] hover:bg-slate-50"
+                >
+                  <ExternalLink size={14} /> {copy.openSeparate}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setExpandedBlockOverride(null)}
+                  className="rounded-xl border border-[#dfe3ea] bg-white p-2 text-[#4b5563] hover:bg-slate-50"
+                  title={copy.close}
+                  aria-label={copy.close}
+                >
+                  <X size={17} />
+                </button>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
+              {expandedBlock.dominantReviewCode ? (
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {([
+                    ["model_gap", expandedBlock.summary.model_gap],
+                    ["unreviewed", expandedBlock.summary.unreviewed],
+                    ["stale", expandedBlock.summary.stale],
+                    ["reviewed", expandedBlock.summary.reviewed],
+                    ["not_applicable", expandedBlock.summary.not_applicable],
+                  ] as Array<[ReviewCode, number]>)
+                    .filter(([, count]) => count > 0)
+                    .map(([code, count]) => {
+                      const visual = reviewVisual(code);
+                      return (
+                        <span
+                          key={code}
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-bold ${visual.badge}`}
+                        >
+                          <span className={`h-1.5 w-1.5 rounded-full ${visual.dot}`} />
+                          {REVIEW_LABELS[locale][code]} · {count}
+                        </span>
+                      );
+                    })}
+                </div>
+              ) : null}
+
+              <div className="grid gap-3 md:grid-cols-2">
+                {expandedBlock.zones.map((zone) => {
+                  const status = zone.reviewCode ? reviewVisual(zone.reviewCode) : null;
+                  return (
+                    <button
+                      key={zone.key}
+                      type="button"
+                      onClick={() => expandZone(zone.key)}
+                      className={`relative overflow-hidden rounded-[20px] border border-[#e5e7eb] bg-white p-4 text-left shadow-sm transition hover:-translate-y-px hover:border-[#bdcaff] hover:shadow ${status?.ring ?? ""}`}
+                    >
+                      {status ? (
+                        <span className={`absolute inset-x-0 top-0 h-[3px] ${status.strip}`} />
+                      ) : null}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-[13px] font-bold text-[#111827]">
+                            {zone.title} · {zone.cards.length}
+                          </div>
+                          <div className="mt-1 text-[11px] leading-4 text-[#6b7280]">
+                            {zone.description}
+                          </div>
+                        </div>
+                        <Maximize2 size={15} className="shrink-0 text-[#3b6ef8]" />
+                      </div>
+                      {zone.reviewCode && status ? (
+                        <div className={`mt-3 inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[9px] font-bold uppercase ${status.badge}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
+                          {REVIEW_LABELS[locale][zone.reviewCode]}
+                        </div>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {expandedZone ? (
         <div className="fixed inset-0 z-[90] flex items-stretch justify-center bg-black/45 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={expandedZone.title}>
