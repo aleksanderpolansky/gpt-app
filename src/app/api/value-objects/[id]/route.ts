@@ -6,8 +6,8 @@ import {
 import { auth0 } from "../../../../../lib/auth0";
 import { persistMediaImageValue } from "../../../../../lib/media-storage";
 import { supabase } from "../../../../../lib/supabase";
-import { resolveLocalizedContentFields } from "@/lib/localization/contentLocalization";
-import { localizeEntityContent } from "@/lib/localization/contentLocalization.server";
+import { resolveActorValueObjectReadLocalizationsV1 } from "@/lib/localization/valueObjectReadLocalization.server";
+import { materializeActorValueObjectAllLocalizationsV1 } from "@/lib/localization/valueObjectLocalizationMaterialization.server";
 
 export const dynamic = "force-dynamic";
 
@@ -949,23 +949,21 @@ export async function GET(request: Request, context: ValueObjectRouteContext) {
   }
 
   const locale = new URL(request.url).searchParams.get("locale");
-  const localizedFields = resolveLocalizedContentFields({
-    metadata: valueObject.metadata_json,
-    locale,
-    fallback: {
-      title: valueObject.title ?? null,
-      description: valueObject.description ?? null,
-    },
+  const localized = await resolveActorValueObjectReadLocalizationsV1({
+    entities: [valueObject],
+    targetLocale: locale,
+    fieldCodes: ["title", "description"],
   });
+  const localizedFields = localized.fieldsById.get(valueObject.id);
 
   return NextResponse.json({
     ok: true,
     mode: "draft_read",
     valueObject: {
       ...valueObject,
-      title: localizedFields.title ?? valueObject.title ?? null,
+      title: localizedFields?.title ?? valueObject.title ?? null,
       description:
-        localizedFields.description ?? valueObject.description ?? null,
+        localizedFields?.description ?? valueObject.description ?? null,
     },
     editContract: buildEditContract(),
   });
@@ -1071,23 +1069,44 @@ export async function PATCH(request: Request, context: ValueObjectRouteContext) 
 
   let contentLocalization = null;
   if (isRecord(body)) {
-    const localizedFields: Record<string, string | null> = {};
+    const sourceFields: {
+      title?: string | null;
+      description?: string | null;
+    } = {};
+    const fieldCodes: Array<"title" | "description"> = [];
+
     if (Object.prototype.hasOwnProperty.call(body, "title")) {
-      localizedFields.title = updatedValueObject.title ?? null;
-    }
-    if (Object.prototype.hasOwnProperty.call(body, "description")) {
-      localizedFields.description = updatedValueObject.description ?? null;
+      sourceFields.title = updatedValueObject.title ?? null;
+      fieldCodes.push("title");
     }
 
-    if (Object.keys(localizedFields).length > 0) {
-      contentLocalization = await localizeEntityContent({
-        userId: appUser.id,
-        actorId: personActor.id,
-        table: "value_objects",
-        entityId: updatedValueObject.id,
-        sourceLocaleHint: body.locale,
-        fields: localizedFields,
-      });
+    if (Object.prototype.hasOwnProperty.call(body, "description")) {
+      sourceFields.description = updatedValueObject.description ?? null;
+      fieldCodes.push("description");
+    }
+
+    if (fieldCodes.length > 0) {
+      try {
+        contentLocalization =
+          await materializeActorValueObjectAllLocalizationsV1({
+            appUserId: appUser.id,
+            actorId: personActor.id,
+            entityId: updatedValueObject.id,
+            sourceLocaleHint: new URL(request.url).searchParams.get("locale"),
+            fieldCodes,
+            sourceFields,
+          });
+      } catch (error) {
+        contentLocalization = {
+          ok: true as const,
+          entityId: updatedValueObject.id,
+          complete: false as const,
+          warning:
+            error instanceof Error
+              ? error.message
+              : "VALUE_OBJECT_ALL_LOCALE_MATERIALIZATION_FAILED",
+        };
+      }
     }
   }
 

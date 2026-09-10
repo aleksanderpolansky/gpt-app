@@ -7,6 +7,7 @@ import {
 } from "../../../../../../lib/actor-context";
 import { auth0 } from "../../../../../../lib/auth0";
 import { supabase } from "../../../../../../lib/supabase";
+import { materializeActorValueObjectAllLocalizationsV1 } from "@/lib/localization/valueObjectLocalizationMaterialization.server";
 
 export const dynamic = "force-dynamic";
 
@@ -491,7 +492,65 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
-  return NextResponse.json(data, {
+  let contentLocalization: unknown = null;
+
+  const sourceFields: {
+    title?: string | null;
+    description?: string | null;
+  } = {};
+  const fieldCodes: Array<"title" | "description"> = [];
+
+  if (
+    normalized.editKind === "rename" &&
+    typeof normalized.patch.title === "string"
+  ) {
+    sourceFields.title = normalized.patch.title;
+    fieldCodes.push("title");
+  }
+
+  if (
+    normalized.editKind === "semantic_definition" &&
+    Object.prototype.hasOwnProperty.call(
+      normalized.patch,
+      "description",
+    )
+  ) {
+    sourceFields.description =
+      typeof normalized.patch.description === "string"
+        ? normalized.patch.description
+        : null;
+    fieldCodes.push("description");
+  }
+
+  if (fieldCodes.length > 0) {
+    try {
+      contentLocalization =
+        await materializeActorValueObjectAllLocalizationsV1({
+          appUserId: actorContext.appUserId,
+          actorId: actorContext.actorId,
+          entityId: valueObjectId,
+          sourceLocaleHint: locale,
+          fieldCodes,
+          sourceFields,
+        });
+    } catch (localizationError) {
+      contentLocalization = {
+        ok: true,
+        entityId: valueObjectId,
+        complete: false,
+        warning:
+          localizationError instanceof Error
+            ? localizationError.message
+            : "VALUE_OBJECT_ALL_LOCALE_MATERIALIZATION_FAILED",
+      };
+    }
+  }
+
+  const responseBody = isRecord(data)
+    ? { ...data, contentLocalization }
+    : { data, contentLocalization };
+
+  return NextResponse.json(responseBody, {
     headers: {
       "Cache-Control": "no-store",
     },

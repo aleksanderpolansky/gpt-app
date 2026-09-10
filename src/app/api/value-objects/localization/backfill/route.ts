@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import {
@@ -7,191 +6,148 @@ import {
 } from "../../../../../../lib/actor-context";
 import { auth0 } from "../../../../../../lib/auth0";
 import { supabase } from "../../../../../../lib/supabase";
-import {
-  normalizeContentLocale,
-  readLocalizedContentEnvelope,
-  type ArctorContentLocale,
-} from "@/lib/localization/contentLocalization";
-import {
-  ARCTOR_CONTENT_LOCALIZATION_RUNTIME,
-  generateLocalizedContentBatch,
-} from "@/lib/localization/contentLocalization.server";
+import { materializeActorValueObjectAllLocalizationsV1 } from "@/lib/localization/valueObjectLocalizationMaterialization.server";
 
 export const dynamic = "force-dynamic";
 
-const BATCH_SIZE = 5;
-
 type JsonRecord = Record<string, unknown>;
 
-type BackfillRow = {
-  id: string;
-  title?: string | null;
-  description?: string | null;
-  metadata_json?: JsonRecord | null;
-  scope_code?: string | null;
-  usage_scope?: string | null;
-};
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function isVisibleObservationObject(row: BackfillRow) {
-  const metadata = isRecord(row.metadata_json) ? row.metadata_json : {};
-  return (
-    row.scope_code !== "global" &&
-    row.usage_scope !== "commercial" &&
-    metadata.system_hidden_from_observation_ui !== true &&
-    metadata.system_root_code !== "products_services"
-  );
-}
-
-function fieldsFor(row: BackfillRow) {
-  const title = typeof row.title === "string" && row.title.trim() ? row.title.trim() : null;
-  const description =
-    typeof row.description === "string" && row.description.trim()
-      ? row.description.trim()
-      : null;
-
-  return {
-    title,
-    ...(description ? { description } : {}),
-  };
-}
-
-function chunks<T>(items: T[], size: number) {
-  const result: T[][] = [];
-  for (let index = 0; index < items.length; index += size) {
-    result.push(items.slice(index, index + size));
+function normalizeCursor(value: unknown): string | null {
+  if (value === null || value === undefined || value === "") {
+    return null;
   }
-  return result;
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  return normalized && normalized.length <= 200 ? normalized : null;
 }
 
 export async function POST(request: Request) {
   const session = await auth0.getSession();
 
   if (!session?.user?.sub) {
-    return NextResponse.json({ ok: false, error: "Not authenticated" }, { status: 401 });
+    return NextResponse.json(
+      { ok: false, error: "Not authenticated" },
+      { status: 401 },
+    );
   }
 
   let actorContext;
+
   try {
     actorContext = await resolveActiveActorContext(session.user.sub);
   } catch (error) {
     if (error instanceof ActorContextError) {
       return NextResponse.json(
-        { ok: false, error: error.message, errorCode: error.code },
+        {
+          ok: false,
+          error: error.message,
+          errorCode: error.code,
+        },
         { status: error.status },
       );
     }
 
     return NextResponse.json(
-      { ok: false, error: "Could not resolve active actor context" },
+      {
+        ok: false,
+        error: "Could not resolve active actor context",
+      },
       { status: 500 },
     );
   }
 
   const body = (await request.json().catch(() => ({}))) as JsonRecord;
-  const locale = normalizeContentLocale(body.locale);
+  const cursor = normalizeCursor(body.cursor);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("value_objects")
-    .select("id,title,description,metadata_json,scope_code,usage_scope")
+    .select("id,title,description")
     .eq("owner_user_id", actorContext.appUserId)
     .eq("owner_actor_id", actorContext.actorId)
-    .order("created_at", { ascending: true });
+    .order("id", { ascending: true })
+    .limit(2);
 
-  if (error) {
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  if (cursor) {
+    query = query.gt("id", cursor);
   }
 
-  const pending = ((data ?? []) as BackfillRow[]).filter((row) => {
-    if (!isVisibleObservationObject(row)) return false;
-    if (readLocalizedContentEnvelope(row.metadata_json)) return false;
-    return Boolean(fieldsFor(row).title);
-  });
+  const { data, error } = await query;
 
-  if (pending.length === 0) {
+  if (error) {
+    return NextResponse.json(
+      { ok: false, error: error.message },
+      { status: 500 },
+    );
+  }
+
+  const rows = (data ?? []) as Array<{
+    id: string;
+    title: string | null;
+    description: string | null;
+  }>;
+
+  if (rows.length === 0) {
     return NextResponse.json({
       ok: true,
-      localized: 0,
-      pending: 0,
-      locale,
-      warnings: [],
+      done: true,
+      processed: 0,
+      cursor,
+      nextCursor: cursor,
+      item: null,
     });
   }
 
-  let localized = 0;
-  const warnings: string[] = [];
+  const row = rows[0];
 
-  for (const batch of chunks(pending, BATCH_SIZE)) {
-    try {
-      const generated = await generateLocalizedContentBatch({
-        userId: actorContext.appUserId,
+  try {
+    const item =
+      await materializeActorValueObjectAllLocalizationsV1({
+        appUserId: actorContext.appUserId,
         actorId: actorContext.actorId,
-        operationId: randomUUID(),
-        sourceLocaleHint: locale,
-        items: batch.map((row) => ({
-          key: row.id,
-          fields: fieldsFor(row),
-        })),
+        entityId: row.id,
+        fieldCodes: ["title", "description"],
       });
 
-      await Promise.all(
-        batch.map(async (row) => {
-          const envelope = generated.envelopes.get(row.id);
-          if (!envelope) {
-            warnings.push(`MISSING_LOCALIZATION_RESULT:${row.id}`);
-            return;
-          }
-
-          const detectedSourceLocale = envelope.detectedSourceLocale as ArctorContentLocale;
-          const protectedSourceEnvelope = {
-            ...envelope,
-            humanLocales: Array.from(
-              new Set<ArctorContentLocale>([
-                ...envelope.humanLocales,
-                detectedSourceLocale,
-              ]),
-            ),
-            lastEditedLocale: detectedSourceLocale,
-          };
-          const metadata = isRecord(row.metadata_json) ? row.metadata_json : {};
-          const { error: updateError } = await supabase
-            .from("value_objects")
-            .update({
-              metadata_json: {
-                ...metadata,
-                localizedContent: protectedSourceEnvelope,
-                contentLocalizationRuntime: ARCTOR_CONTENT_LOCALIZATION_RUNTIME,
-              },
-            })
-            .eq("id", row.id)
-            .eq("owner_user_id", actorContext.appUserId)
-            .eq("owner_actor_id", actorContext.actorId);
-
-          if (updateError) {
-            warnings.push(`LOCALIZATION_WRITE_FAILED:${row.id}:${updateError.message}`);
-            return;
-          }
-
-          localized += 1;
-        }),
-      );
-    } catch (batchError) {
-      warnings.push(
-        batchError instanceof Error
-          ? batchError.message
-          : "CONTENT_LOCALIZATION_BACKFILL_FAILED",
+    if (!item.complete) {
+      return NextResponse.json(
+        {
+          ok: false,
+          done: false,
+          processed: 0,
+          retryCursor: cursor,
+          failedEntityId: row.id,
+          item,
+        },
+        { status: 503 },
       );
     }
-  }
 
-  return NextResponse.json({
-    ok: true,
-    localized,
-    pending: pending.length,
-    locale,
-    warnings,
-  });
+    return NextResponse.json({
+      ok: true,
+      done: rows.length === 1,
+      processed: 1,
+      cursor,
+      nextCursor: row.id,
+      item,
+    });
+  } catch (materializationError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        done: false,
+        processed: 0,
+        retryCursor: cursor,
+        failedEntityId: row.id,
+        error:
+          materializationError instanceof Error
+            ? materializationError.message
+            : "VALUE_OBJECT_ALL_LOCALE_BACKFILL_FAILED",
+      },
+      { status: 503 },
+    );
+  }
 }

@@ -6,7 +6,7 @@ import {
 } from "../../../../lib/actor-context";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
-import { persistHumanLocalizedEntityContent } from "@/lib/localization/contentLocalization.server";
+import { materializeActorValueObjectAllLocalizationsV1 } from "@/lib/localization/valueObjectLocalizationMaterialization.server";
 import { resolveActorValueObjectReadLocalizationsV1 } from "@/lib/localization/valueObjectReadLocalization.server";
 import { localizeGlobalSystemValueObject } from "@/lib/reality-core/global-system-value-object-localization";
 import {
@@ -288,14 +288,16 @@ async function localizeCreatedObservationObject(input: {
   valueObjectId: string;
   locale: string | null;
   title: string;
-  description: string;
+  description: string | null;
 }) {
   try {
-    return await persistHumanLocalizedEntityContent({
-      table: "value_objects",
+    return await materializeActorValueObjectAllLocalizationsV1({
+      appUserId: input.appUser.id,
+      actorId: input.personActor.id,
       entityId: input.valueObjectId,
-      sourceLocaleHint: input.locale ?? "en",
-      fields: {
+      sourceLocaleHint: input.locale,
+      fieldCodes: ["title", "description"],
+      sourceFields: {
         title: input.title,
         description: input.description,
       },
@@ -303,13 +305,12 @@ async function localizeCreatedObservationObject(input: {
   } catch (error) {
     return {
       ok: true as const,
-      manualPersisted: false as const,
-      aiLocalized: false as const,
-      locale: input.locale ?? "en",
+      entityId: input.valueObjectId,
+      complete: false as const,
       warning:
         error instanceof Error
           ? error.message
-          : "VALUE_OBJECT_CONTENT_LOCALIZATION_FAILED",
+          : "VALUE_OBJECT_ALL_LOCALE_MATERIALIZATION_FAILED",
     };
   }
 }
@@ -1326,6 +1327,7 @@ async function createDraftValueObject(
   const valueType = normalizeOptionalString(body.valueType) ?? defaults.valueType;
   const title = normalizeOptionalString(body.title) ?? defaults.title;
   const description = normalizeOptionalString(body.description);
+  const locale = normalizeLocale(body.locale);
   const unitType = normalizeOptionalString(body.unitType);
   const defaultPrice = normalizeOptionalNumber(body.defaultPrice);
   const defaultCurrency = normalizeOptionalString(body.defaultCurrency);
@@ -1404,10 +1406,20 @@ async function createDraftValueObject(
     );
   }
 
+  const contentLocalization = await localizeCreatedObservationObject({
+    appUser,
+    personActor,
+    valueObjectId: valueObject.id,
+    locale,
+    title,
+    description,
+  });
+
   return NextResponse.json({
     ok: true,
     mode: "draft_first",
     valueObject,
+    contentLocalization,
     redirectUrl: buildValueObjectEditUrl(valueObject.id),
   });
 }
@@ -1421,6 +1433,7 @@ async function createLegacyCommercialValueObject(
   const valueType = normalizeRequiredString(body.valueType);
   const title = normalizeRequiredString(body.title);
   const description = normalizeOptionalString(body.description);
+  const locale = normalizeLocale(body.locale);
   const unitType = normalizeOptionalString(body.unitType);
   const defaultPrice = normalizeOptionalNumber(body.defaultPrice);
   const defaultCurrency = normalizeOptionalString(body.defaultCurrency);
@@ -1488,10 +1501,20 @@ async function createLegacyCommercialValueObject(
     );
   }
 
+  const contentLocalization = await localizeCreatedObservationObject({
+    appUser,
+    personActor,
+    valueObjectId: valueObject.id,
+    locale,
+    title,
+    description,
+  });
+
   return NextResponse.json({
     ok: true,
     mode: "legacy_commercial_active",
     valueObject,
+    contentLocalization,
   });
 }
 
