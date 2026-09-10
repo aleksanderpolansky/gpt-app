@@ -1639,6 +1639,7 @@ function RelationshipMapInner({
             maxZoom={2}
             nodesConnectable={false}
             nodesDraggable={showDetailedMap}
+            onNodeClick={() => undefined}
             elementsSelectable={false}
             proOptions={{ hideAttribution: true }}
           >
