@@ -967,6 +967,77 @@ const VIEW_MODE_LABELS: Record<LocaleCode, string> = {
   cs: "Režim zobrazení",
 };
 
+
+const NODE_ROLE_LABELS: Record<LocaleCode, Record<string, string>> = {
+  en: {
+    root: "Root",
+    intermediate: "Intermediate",
+    leaf: "Leaf",
+    structural: "Structural",
+    activity_leaf: "Activity leaf",
+  },
+  pl: {
+    root: "Korzeń",
+    intermediate: "Pośredni",
+    leaf: "Liść",
+    structural: "Strukturalny",
+    activity_leaf: "Liść aktywności",
+  },
+  ru: {
+    root: "Корневой",
+    intermediate: "Промежуточный",
+    leaf: "Листовой",
+    structural: "Структурный",
+    activity_leaf: "Лист активности",
+  },
+  uk: {
+    root: "Кореневий",
+    intermediate: "Проміжний",
+    leaf: "Листовий",
+    structural: "Структурний",
+    activity_leaf: "Лист активності",
+  },
+  de: {
+    root: "Wurzel",
+    intermediate: "Zwischenknoten",
+    leaf: "Blatt",
+    structural: "Strukturell",
+    activity_leaf: "Aktivitätsblatt",
+  },
+  es: {
+    root: "Raíz",
+    intermediate: "Intermedio",
+    leaf: "Hoja",
+    structural: "Estructural",
+    activity_leaf: "Hoja de actividad",
+  },
+  cs: {
+    root: "Kořen",
+    intermediate: "Mezilehlý",
+    leaf: "List",
+    structural: "Strukturální",
+    activity_leaf: "List aktivity",
+  },
+};
+
+const GLOBAL_SYSTEM_OWNER_KIND_LABELS: Record<LocaleCode, string> = {
+  en: "System",
+  pl: "System",
+  ru: "Система",
+  uk: "Система",
+  de: "System",
+  es: "Sistema",
+  cs: "Systém",
+};
+
+function localizeNodeRoleCode(
+  value: string | null | undefined,
+  locale: LocaleCode,
+): string {
+  if (!value) return "—";
+  return NODE_ROLE_LABELS[locale]?.[value] ?? value;
+}
+
 function buildValueObjectModeHref(
   valueObjectId: string,
   locale: LocaleCode,
@@ -1216,6 +1287,7 @@ export default async function ValueObjectDetailPage({
           root_value_object_id,
           parent_value_object_id,
           status,
+          metadata_json,
           created_at
         `,
         )
@@ -1288,7 +1360,7 @@ export default async function ValueObjectDetailPage({
       isGlobalSystemObject
         ? Promise.resolve<ValueObjectOwnerPresentation>({
             displayName: "ARCTor Global System",
-            kindLabel: "System",
+            kindLabel: GLOBAL_SYSTEM_OWNER_KIND_LABELS[locale],
             imageUrl: null,
             href: null,
           })
@@ -1558,10 +1630,12 @@ export default async function ValueObjectDetailPage({
           { label: copy.status, value: STATUS_LABELS[locale][valueObject.status] || valueObject.status || "—" },
           {
             label: copy.role,
-            value:
-              (isSemanticOntologyObject
+            value: localizeNodeRoleCode(
+              isSemanticOntologyObject
                 ? valueObject.ontology_node_role_code
-                : valueObject.node_role_code) || "—",
+                : valueObject.node_role_code,
+              locale,
+            ),
           },
           {
             label: summaryLabels.linkedActivities,
@@ -1573,10 +1647,12 @@ export default async function ValueObjectDetailPage({
           { label: copy.status, value: STATUS_LABELS[locale][valueObject.status] || valueObject.status || "—" },
           {
             label: copy.role,
-            value:
-              (isSemanticOntologyObject
+            value: localizeNodeRoleCode(
+              isSemanticOntologyObject
                 ? valueObject.ontology_node_role_code
-                : valueObject.node_role_code) || "—",
+                : valueObject.node_role_code,
+              locale,
+            ),
           },
           { label: copy.directChildren, value: String(directChildren.length) },
           { label: copy.descendantLeaves, value: String(descendantLeafCount) },
@@ -1820,20 +1896,28 @@ export default async function ValueObjectDetailPage({
               ? {
                   id: parentNode.id,
                   title: parentNode.title,
-                  nodeRoleCode:
+                  nodeRoleCode: localizeNodeRoleCode(
                     parentNode.ontology_node_role_code ?? parentNode.node_role_code,
+                    locale,
+                  ),
                 }
               : null
           }
           siblingObjects={siblingNodes.map((node) => ({
             id: node.id,
             title: node.title,
-            nodeRoleCode: node.ontology_node_role_code ?? node.node_role_code,
+            nodeRoleCode: localizeNodeRoleCode(
+              node.ontology_node_role_code ?? node.node_role_code,
+              locale,
+            ),
           }))}
           childObjects={directChildren.map((node) => ({
             id: node.id,
             title: node.title,
-            nodeRoleCode: node.ontology_node_role_code ?? node.node_role_code,
+            nodeRoleCode: localizeNodeRoleCode(
+              node.ontology_node_role_code ?? node.node_role_code,
+              locale,
+            ),
           }))}
           canCreateChildren={isStructural}
           canCreateLeaf={isIntermediate}
