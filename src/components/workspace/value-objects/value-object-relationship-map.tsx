@@ -36,7 +36,10 @@ import type {
   ValueObjectSemanticRelationLocale,
 } from "@/types/value-object-semantic-relation";
 import { ValueObjectSemanticRelationsManager } from "./value-object-semantic-relations-manager";
-import { ValueObjectRelationshipCoverageReview } from "./value-object-relationship-coverage-review";
+import {
+  ValueObjectRelationshipCoverageReview,
+  type CoverageSnapshot,
+} from "./value-object-relationship-coverage-review";
 
 type LocaleCode = ValueObjectSemanticRelationLocale;
 
@@ -59,7 +62,8 @@ type Props = {
 };
 
 type Density = "normal" | "compact" | "dense" | "fixed";
-type ZoneKind = "structural" | "semantic";
+type ZoneKind = "structural" | "semantic" | "cross_plane";
+type ReviewCode = "reviewed" | "unreviewed" | "stale" | "not_applicable" | "model_gap";
 
 type RelationCard = {
   id: string;
@@ -75,6 +79,9 @@ type RelationshipZone = {
   kind: ZoneKind;
   cards: RelationCard[];
   paletteIndex: number;
+  coverageZoneKey?: string;
+  reviewCode?: ReviewCode;
+  reviewedAt?: string | null;
 };
 
 type Copy = {
@@ -321,6 +328,49 @@ const COPY: Record<LocaleCode, Copy> = {
   },
 };
 
+const PRIMARY_PLANE_LABELS: Record<string, Record<LocaleCode, string>> = {
+  systems_structures: {
+    ru: "Системы и структуры", en: "Systems and Structures", pl: "Systemy i struktury",
+    uk: "Системи та структури", de: "Systeme und Strukturen", es: "Sistemas y estructuras", cs: "Systémy a struktury",
+  },
+  states_needs: {
+    ru: "Состояния и потребности", en: "States and Needs", pl: "Stany i potrzeby",
+    uk: "Стани та потреби", de: "Zustände und Bedürfnisse", es: "Estados y necesidades", cs: "Stavy a potřeby",
+  },
+  actions_processes: {
+    ru: "Действия и процессы", en: "Actions and Processes", pl: "Działania i procesy",
+    uk: "Дії та процеси", de: "Handlungen und Prozesse", es: "Acciones y procesos", cs: "Akce a procesy",
+  },
+};
+
+const PRIMARY_PLANE_DESCRIPTION: Record<LocaleCode, string> = {
+  ru: "Связи текущего ОН с параллельной основной веткой модели.",
+  en: "Links between the current observation object and the parallel primary model branch.",
+  pl: "Relacje bieżącego obiektu obserwacji z równoległą główną gałęzią modelu.",
+  uk: "Зв’язки поточного об’єкта спостереження з паралельною основною гілкою моделі.",
+  de: "Beziehungen des aktuellen Beobachtungsobjekts zum parallelen Hauptzweig des Modells.",
+  es: "Relaciones del objeto de observación actual con la rama principal paralela del modelo.",
+  cs: "Vztahy aktuálního objektu pozorování s paralelní hlavní větví modelu.",
+};
+
+const REVIEW_LABELS: Record<LocaleCode, Record<ReviewCode, string>> = {
+  ru: { reviewed: "Проверено", unreviewed: "Не проверено", stale: "Нужно перепроверить", not_applicable: "Не применяется", model_gap: "Пробел модели" },
+  en: { reviewed: "Reviewed", unreviewed: "Not reviewed", stale: "Review again", not_applicable: "Not applicable", model_gap: "Model gap" },
+  pl: { reviewed: "Sprawdzono", unreviewed: "Nie sprawdzono", stale: "Sprawdź ponownie", not_applicable: "Nie dotyczy", model_gap: "Luka modelu" },
+  uk: { reviewed: "Перевірено", unreviewed: "Не перевірено", stale: "Потрібно перевірити знову", not_applicable: "Не застосовується", model_gap: "Прогалина моделі" },
+  de: { reviewed: "Geprüft", unreviewed: "Nicht geprüft", stale: "Erneut prüfen", not_applicable: "Nicht anwendbar", model_gap: "Modelllücke" },
+  es: { reviewed: "Revisado", unreviewed: "No revisado", stale: "Revisar de nuevo", not_applicable: "No aplica", model_gap: "Vacío del modelo" },
+  cs: { reviewed: "Zkontrolováno", unreviewed: "Nezkontrolováno", stale: "Zkontrolovat znovu", not_applicable: "Nepoužije se", model_gap: "Mezera modelu" },
+};
+
+function reviewVisual(code: ReviewCode) {
+  if (code === "reviewed") return { strip: "bg-emerald-400", dot: "bg-emerald-500", badge: "border-emerald-200 bg-emerald-50 text-emerald-700", ring: "ring-1 ring-emerald-300/60" };
+  if (code === "stale") return { strip: "bg-amber-400", dot: "bg-amber-400", badge: "border-amber-200 bg-amber-50 text-amber-800", ring: "ring-1 ring-amber-300/60" };
+  if (code === "not_applicable") return { strip: "bg-slate-400", dot: "bg-slate-400", badge: "border-slate-200 bg-slate-50 text-slate-600", ring: "ring-1 ring-slate-300/50" };
+  if (code === "model_gap") return { strip: "bg-rose-600", dot: "bg-rose-600", badge: "border-rose-300 bg-rose-50 text-rose-800", ring: "ring-2 ring-rose-400/70" };
+  return { strip: "bg-rose-400", dot: "bg-rose-500", badge: "border-rose-200 bg-rose-50 text-rose-700", ring: "ring-1 ring-rose-300/60" };
+}
+
 const PALETTES = [
   { border: "border-amber-200", background: "bg-amber-50/95", accent: "text-amber-800", card: "border-amber-100 bg-white" },
   { border: "border-emerald-200", background: "bg-emerald-50/95", accent: "text-emerald-800", card: "border-emerald-100 bg-white" },
@@ -393,8 +443,9 @@ type ZoneData = Record<string, unknown> & {
 type ZoneFlowNode = Node<ZoneData, "zone">;
 
 function ZoneNode({ data }: NodeProps<ZoneFlowNode>) {
-  const { zone, copy, autoDensity, onExpand } = data;
+  const { zone, locale, copy, autoDensity, onExpand } = data;
   const palette = PALETTES[zone.paletteIndex % PALETTES.length];
+  const status = zone.reviewCode ? reviewVisual(zone.reviewCode) : null;
   const density = resolveDensity(zone.cards.length, autoDensity);
   const limit = visibleLimit(density);
   const shown = density === "fixed" ? zone.cards : zone.cards.slice(0, limit);
@@ -411,7 +462,8 @@ function ZoneNode({ data }: NodeProps<ZoneFlowNode>) {
       : "px-2 py-1.5";
 
   return (
-    <div className={`w-[300px] rounded-[22px] border ${palette.border} ${palette.background} p-3.5 shadow-md`}>
+    <div className={`relative w-[300px] overflow-hidden rounded-[22px] border ${palette.border} ${palette.background} p-3.5 shadow-md ${status?.ring ?? ""}`}>
+      {status ? <div className={`pointer-events-none absolute inset-x-0 top-0 h-[3px] ${status.strip}`} aria-hidden="true" /> : null}
       <Handle type="target" position={Position.Top} className="!h-2 !w-2 !border-0 !bg-slate-400" />
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
@@ -464,6 +516,12 @@ function ZoneNode({ data }: NodeProps<ZoneFlowNode>) {
           </button>
         ) : null}
       </div>
+      {status && zone.reviewCode ? (
+        <div className={`mt-2.5 inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.06em] ${status.badge}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} aria-hidden="true" />
+          {REVIEW_LABELS[locale][zone.reviewCode]}
+        </div>
+      ) : null}
       <Handle type="source" position={Position.Bottom} className="!h-2 !w-2 !border-0 !bg-slate-400" />
     </div>
   );
@@ -523,6 +581,8 @@ function RelationshipMapInner({
   const copy = COPY[locale];
   const searchParams = useSearchParams();
   const [relationData, setRelationData] = useState<ValueObjectSemanticRelationListResponse>();
+  const [coverageData, setCoverageData] = useState<CoverageSnapshot | null>(null);
+  const [coverageAvailable, setCoverageAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [autoDensity, setAutoDensity] = useState(true);
@@ -563,6 +623,47 @@ function RelationshipMapInner({
       cancelled = true;
     };
   }, [copy.error, fetchRelations]);
+
+  const fetchCoverage = useCallback(async () => {
+    if (!canManageRelations) {
+      setCoverageData(null);
+      setCoverageAvailable(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/value-objects/${encodeURIComponent(valueObjectId)}/relationship-coverage`,
+        { cache: "no-store", headers: { Accept: "application/json" } },
+      );
+
+      if (response.status === 401 || response.status === 403 || response.status === 409) {
+        setCoverageData(null);
+        setCoverageAvailable(false);
+        return;
+      }
+
+      const payload = (await response.json()) as CoverageSnapshot & { error?: string };
+      if (!response.ok || !payload.ok) {
+        setCoverageData(null);
+        setCoverageAvailable(false);
+        return;
+      }
+
+      setCoverageData(payload);
+      setCoverageAvailable(true);
+    } catch {
+      setCoverageData(null);
+      setCoverageAvailable(false);
+    }
+  }, [canManageRelations, valueObjectId]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void fetchCoverage();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [fetchCoverage]);
 
   const retryRelations = useCallback(async () => {
     setLoading(true);
@@ -613,10 +714,11 @@ function RelationshipMapInner({
     const relationTypesByCode = new Map(
       (relationData?.relationTypes ?? []).map((item) => [item.relationTypeCode, item] as const),
     );
-    const grouped = new Map<string, { title: string; description: string; order: number; cards: RelationCard[] }>();
+    const grouped = new Map<
+      string,
+      { title: string; description: string; order: number; cards: RelationCard[] }
+    >();
 
-    // Keep every allowed semantic relation visible even when it has zero links.
-    // This turns absence into an explicit curator work item instead of hiding it.
     for (const relationType of relationData?.relationTypes ?? []) {
       if (relationType.status !== "active") continue;
       const perspectives =
@@ -637,7 +739,8 @@ function RelationshipMapInner({
 
     for (const relation of relationData?.relations ?? []) {
       if (relation.status !== "active") continue;
-      const relationType = relationTypesByCode.get(relation.relationTypeCode) ?? relationTypeFallback(relation);
+      const relationType =
+        relationTypesByCode.get(relation.relationTypeCode) ?? relationTypeFallback(relation);
       const key = `semantic:${relation.relationTypeCode}:${relation.perspective}`;
       const current = grouped.get(key) ?? {
         title: resolveSemanticRelationTitle(relationType, locale, relation.perspective),
@@ -651,16 +754,36 @@ function RelationshipMapInner({
       grouped.set(key, current);
     }
 
-    const semantic = [...grouped.entries()]
+    const coverageRelationMap = new Map(
+      (coverageData?.relationZones ?? []).map((zone) => [zone.zoneKey, zone] as const),
+    );
+
+    const semantic: RelationshipZone[] = [...grouped.entries()]
       .sort((a, b) => a[1].order - b[1].order || a[1].title.localeCompare(b[1].title))
-      .map(([key, group], index) => ({
-        key,
-        title: group.title,
-        description: group.description,
-        kind: "semantic" as const,
-        cards: group.cards,
-        paletteIndex: 3 + index,
-      }));
+      .map(([key, group], index) => {
+        const coverageZoneKey = key.replace(/^semantic:/, "relation:");
+        const coverageZone = coverageRelationMap.get(coverageZoneKey);
+        const cards = coverageZone
+          ? coverageZone.links.map((link) => ({
+              id: link.id,
+              title: link.title,
+              href: buildLocaleHref(`/value-objects/${link.id}`, locale),
+              detail: link.nodeRoleCode ?? undefined,
+            }))
+          : group.cards;
+
+        return {
+          key,
+          title: group.title,
+          description: group.description,
+          kind: "semantic" as const,
+          cards,
+          paletteIndex: 3 + index,
+          coverageZoneKey,
+          reviewCode: coverageAvailable ? coverageZone?.review.code ?? "unreviewed" : undefined,
+          reviewedAt: coverageZone?.review.reviewedAt ?? null,
+        };
+      });
 
     if (semantic.length === 0) {
       semantic.push({
@@ -673,10 +796,43 @@ function RelationshipMapInner({
       });
     }
 
-    return [...structural, ...semantic];
-  }, [childObjects, copy, locale, parentObject, relationData, siblingObjects]);
+    const crossPlane: RelationshipZone[] = coverageAvailable
+      ? (coverageData?.crossPlaneZones ?? []).map((zone, index) => ({
+          key: `cross-plane:${zone.plane}`,
+          title: PRIMARY_PLANE_LABELS[zone.plane]?.[locale] ?? zone.plane,
+          description: PRIMARY_PLANE_DESCRIPTION[locale],
+          kind: "cross_plane",
+          cards: zone.links.map((link) => ({
+            id: link.id,
+            title: link.title,
+            href: buildLocaleHref(`/value-objects/${link.id}`, locale),
+            detail: link.relationTypeCode ?? link.nodeRoleCode ?? undefined,
+          })),
+          paletteIndex: 3 + semantic.length + index,
+          coverageZoneKey: zone.zoneKey,
+          reviewCode: zone.review.code,
+          reviewedAt: zone.review.reviewedAt,
+        }))
+      : [];
+
+    return [...structural, ...crossPlane, ...semantic];
+  }, [
+    childObjects,
+    copy,
+    coverageAvailable,
+    coverageData,
+    locale,
+    parentObject,
+    relationData,
+    siblingObjects,
+  ]);
 
   const expandedZone = zones.find((zone) => zone.key === expandedZoneKey) ?? null;
+
+  const handleCoverageChange = useCallback((snapshot: CoverageSnapshot) => {
+    setCoverageData(snapshot);
+    setCoverageAvailable(true);
+  }, []);
 
   const nodes = useMemo<Node[]>(() => {
     const center: CenterFlowNode = {
@@ -801,6 +957,7 @@ function RelationshipMapInner({
                     setSearch("");
                     setExpandedZoneOverride(null);
                     void retryRelations();
+                    void fetchCoverage();
                   }}
                   className="rounded-xl border border-[#dfe3ea] bg-white p-2 text-[#4b5563] hover:bg-slate-50"
                   title={copy.close}
@@ -865,7 +1022,18 @@ function RelationshipMapInner({
               </div>
 
               <aside className="min-w-0 rounded-[22px] border border-[#e5e7eb] bg-[#f8fafc] p-4">
-                {expandedZone.kind === "semantic" && canManageRelations ? (
+                {expandedZone.coverageZoneKey && canManageRelations && coverageAvailable ? (
+                  <>
+                    <div className="mb-3 text-[12px] font-bold text-[#111827]">{copy.relationManagement}</div>
+                    <ValueObjectRelationshipCoverageReview
+                      valueObjectId={valueObjectId}
+                      locale={locale}
+                      focusZoneKey={expandedZone.coverageZoneKey}
+                      embedded
+                      onCoverageChange={handleCoverageChange}
+                    />
+                  </>
+                ) : expandedZone.kind === "semantic" && canManageRelations ? (
                   <>
                     <div className="mb-3 text-[12px] font-bold text-[#111827]">{copy.relationManagement}</div>
                     <ValueObjectSemanticRelationsManager valueObjectId={valueObjectId} locale={locale} />
@@ -891,17 +1059,9 @@ function RelationshipMapInner({
 
 export function ValueObjectRelationshipMap(props: Props) {
   return (
-    <>
-      <ReactFlowProvider>
-        <RelationshipMapInner {...props} />
-      </ReactFlowProvider>
-      {props.canManageRelations ? (
-        <ValueObjectRelationshipCoverageReview
-          valueObjectId={props.valueObjectId}
-          locale={props.locale}
-        />
-      ) : null}
-    </>
+    <ReactFlowProvider>
+      <RelationshipMapInner {...props} />
+    </ReactFlowProvider>
   );
 }
 

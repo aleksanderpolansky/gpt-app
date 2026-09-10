@@ -59,7 +59,12 @@ type CoverageResponse = {
 type Props = {
   valueObjectId: string;
   locale: LocaleCode;
+  focusZoneKey?: string | null;
+  embedded?: boolean;
+  onCoverageChange?: (snapshot: CoverageSnapshot) => void;
 };
+
+export type CoverageSnapshot = CoverageResponse;
 
 const RU_RELATIONS: Record<string, string> = {
   related_to: "Связан с",
@@ -93,6 +98,7 @@ const COPY: Record<LocaleCode, {
   stale: string; notApplicable: string; modelGap: string; empty: string; markReviewed: string;
   markEmptyReviewed: string; markNotApplicable: string; markGap: string; lastReview: string; coverage: string;
   relationTypes: string; crossPlanes: string; noAccess: string; add: string; remove: string; chooseObject: string; chooseRelation: string;
+  markUnreviewed: string;
 }> = {
   ru: {
     title: "Проверка полноты связей",
@@ -101,14 +107,14 @@ const COPY: Record<LocaleCode, {
     stale: "Нужно перепроверить", notApplicable: "Не применяется", modelGap: "Пробел модели", empty: "Связей нет",
     markReviewed: "Завершить проверку", markEmptyReviewed: "Проверено — связи не нужны", markNotApplicable: "Не применяется",
     markGap: "Отметить пробел модели", lastReview: "Последняя проверка", coverage: "Полнота проверки", relationTypes: "Виды смысловых связей",
-    crossPlanes: "Связи между тремя ветками", noAccess: "Блок доступен куратору модели.", add: "Добавить", remove: "Убрать", chooseObject: "Выберите ОН", chooseRelation: "Вид связи",
+    crossPlanes: "Связи между тремя ветками", noAccess: "Блок доступен куратору модели.", add: "Добавить", remove: "Убрать", chooseObject: "Выберите ОН", chooseRelation: "Вид связи", markUnreviewed: "Оставить на проверке",
   },
-  en: { title:"Relationship coverage review", description:"Each permitted relation and the two other primary branches are shown separately. Empty does not mean wrong: unreviewed must be different from reviewed with no links required.", loading:"Loading review state…", retry:"Retry", reviewed:"Reviewed", unreviewed:"Not reviewed", stale:"Review again", notApplicable:"Not applicable", modelGap:"Model gap", empty:"No links", markReviewed:"Finish review", markEmptyReviewed:"Reviewed — no links required", markNotApplicable:"Not applicable", markGap:"Mark model gap", lastReview:"Last review", coverage:"Review coverage", relationTypes:"Semantic relation types", crossPlanes:"Links across the three branches", noAccess:"This block is available to the model curator.", add:"Add", remove:"Remove", chooseObject:"Choose object", chooseRelation:"Relation type" },
-  pl: { title:"Kontrola kompletności relacji", description:"Każdy dozwolony typ relacji i dwie pozostałe główne gałęzie są pokazane osobno.", loading:"Ładowanie stanu kontroli…", retry:"Ponów", reviewed:"Sprawdzono", unreviewed:"Nie sprawdzono", stale:"Sprawdź ponownie", notApplicable:"Nie dotyczy", modelGap:"Luka modelu", empty:"Brak relacji", markReviewed:"Zakończ kontrolę", markEmptyReviewed:"Sprawdzono — relacje nie są potrzebne", markNotApplicable:"Nie dotyczy", markGap:"Oznacz lukę modelu", lastReview:"Ostatnia kontrola", coverage:"Kompletność kontroli", relationTypes:"Typy relacji semantycznych", crossPlanes:"Relacje między trzema gałęziami", noAccess:"Blok jest dostępny dla kuratora modelu.", add:"Dodaj", remove:"Usuń", chooseObject:"Wybierz obiekt", chooseRelation:"Typ relacji" },
-  uk: { title:"Перевірка повноти зв’язків", description:"Кожен дозволений тип зв’язку та дві інші головні гілки показані окремо.", loading:"Завантаження стану перевірки…", retry:"Повторити", reviewed:"Перевірено", unreviewed:"Не перевірено", stale:"Потрібно перевірити знову", notApplicable:"Не застосовується", modelGap:"Прогалина моделі", empty:"Зв’язків немає", markReviewed:"Завершити перевірку", markEmptyReviewed:"Перевірено — зв’язки не потрібні", markNotApplicable:"Не застосовується", markGap:"Позначити прогалину моделі", lastReview:"Остання перевірка", coverage:"Повнота перевірки", relationTypes:"Типи смислових зв’язків", crossPlanes:"Зв’язки між трьома гілками", noAccess:"Блок доступний куратору моделі.", add:"Додати", remove:"Прибрати", chooseObject:"Оберіть об’єкт", chooseRelation:"Тип зв’язку" },
-  de: { title:"Prüfung der Beziehungsabdeckung", description:"Jeder zulässige Beziehungstyp und die zwei anderen Hauptzweige werden getrennt angezeigt.", loading:"Prüfstatus wird geladen…", retry:"Erneut", reviewed:"Geprüft", unreviewed:"Nicht geprüft", stale:"Erneut prüfen", notApplicable:"Nicht anwendbar", modelGap:"Modelllücke", empty:"Keine Beziehungen", markReviewed:"Prüfung abschließen", markEmptyReviewed:"Geprüft — keine Beziehungen nötig", markNotApplicable:"Nicht anwendbar", markGap:"Modelllücke markieren", lastReview:"Letzte Prüfung", coverage:"Prüfabdeckung", relationTypes:"Semantische Beziehungstypen", crossPlanes:"Beziehungen zwischen den drei Zweigen", noAccess:"Dieser Bereich ist für den Modellkurator verfügbar.", add:"Hinzufügen", remove:"Entfernen", chooseObject:"Objekt wählen", chooseRelation:"Beziehungstyp" },
-  es: { title:"Revisión de cobertura de relaciones", description:"Cada tipo de relación permitido y las otras dos ramas principales se muestran por separado.", loading:"Cargando estado de revisión…", retry:"Reintentar", reviewed:"Revisado", unreviewed:"No revisado", stale:"Revisar de nuevo", notApplicable:"No aplica", modelGap:"Vacío del modelo", empty:"Sin relaciones", markReviewed:"Finalizar revisión", markEmptyReviewed:"Revisado — no se requieren relaciones", markNotApplicable:"No aplica", markGap:"Marcar vacío del modelo", lastReview:"Última revisión", coverage:"Cobertura de revisión", relationTypes:"Tipos de relaciones semánticas", crossPlanes:"Relaciones entre las tres ramas", noAccess:"Este bloque está disponible para el curador del modelo.", add:"Añadir", remove:"Quitar", chooseObject:"Elegir objeto", chooseRelation:"Tipo de relación" },
-  cs: { title:"Kontrola úplnosti vztahů", description:"Každý povolený typ vztahu a dvě další hlavní větve jsou zobrazeny odděleně.", loading:"Načítám stav kontroly…", retry:"Opakovat", reviewed:"Zkontrolováno", unreviewed:"Nezkontrolováno", stale:"Zkontrolovat znovu", notApplicable:"Nepoužije se", modelGap:"Mezera modelu", empty:"Žádné vztahy", markReviewed:"Dokončit kontrolu", markEmptyReviewed:"Zkontrolováno — vztahy nejsou potřeba", markNotApplicable:"Nepoužije se", markGap:"Označit mezeru modelu", lastReview:"Poslední kontrola", coverage:"Pokrytí kontroly", relationTypes:"Typy sémantických vztahů", crossPlanes:"Vztahy mezi třemi větvemi", noAccess:"Tento blok je dostupný kurátorovi modelu.", add:"Přidat", remove:"Odebrat", chooseObject:"Vyberte objekt", chooseRelation:"Typ vztahu" },
+  en: { title:"Relationship coverage review", description:"Each permitted relation and the two other primary branches are shown separately. Empty does not mean wrong: unreviewed must be different from reviewed with no links required.", loading:"Loading review state…", retry:"Retry", reviewed:"Reviewed", unreviewed:"Not reviewed", stale:"Review again", notApplicable:"Not applicable", modelGap:"Model gap", empty:"No links", markReviewed:"Finish review", markEmptyReviewed:"Reviewed — no links required", markNotApplicable:"Not applicable", markGap:"Mark model gap", lastReview:"Last review", coverage:"Review coverage", relationTypes:"Semantic relation types", crossPlanes:"Links across the three branches", noAccess:"This block is available to the model curator.", add:"Add", remove:"Remove", chooseObject:"Choose object", chooseRelation:"Relation type", markUnreviewed:"Leave for review" },
+  pl: { title:"Kontrola kompletności relacji", description:"Każdy dozwolony typ relacji i dwie pozostałe główne gałęzie są pokazane osobno.", loading:"Ładowanie stanu kontroli…", retry:"Ponów", reviewed:"Sprawdzono", unreviewed:"Nie sprawdzono", stale:"Sprawdź ponownie", notApplicable:"Nie dotyczy", modelGap:"Luka modelu", empty:"Brak relacji", markReviewed:"Zakończ kontrolę", markEmptyReviewed:"Sprawdzono — relacje nie są potrzebne", markNotApplicable:"Nie dotyczy", markGap:"Oznacz lukę modelu", lastReview:"Ostatnia kontrola", coverage:"Kompletność kontroli", relationTypes:"Typy relacji semantycznych", crossPlanes:"Relacje między trzema gałęziami", noAccess:"Blok jest dostępny dla kuratora modelu.", add:"Dodaj", remove:"Usuń", chooseObject:"Wybierz obiekt", chooseRelation:"Typ relacji", markUnreviewed:"Pozostaw do sprawdzenia" },
+  uk: { title:"Перевірка повноти зв’язків", description:"Кожен дозволений тип зв’язку та дві інші головні гілки показані окремо.", loading:"Завантаження стану перевірки…", retry:"Повторити", reviewed:"Перевірено", unreviewed:"Не перевірено", stale:"Потрібно перевірити знову", notApplicable:"Не застосовується", modelGap:"Прогалина моделі", empty:"Зв’язків немає", markReviewed:"Завершити перевірку", markEmptyReviewed:"Перевірено — зв’язки не потрібні", markNotApplicable:"Не застосовується", markGap:"Позначити прогалину моделі", lastReview:"Остання перевірка", coverage:"Повнота перевірки", relationTypes:"Типи смислових зв’язків", crossPlanes:"Зв’язки між трьома гілками", noAccess:"Блок доступний куратору моделі.", add:"Додати", remove:"Прибрати", chooseObject:"Оберіть об’єкт", chooseRelation:"Тип зв’язку", markUnreviewed:"Залишити на перевірці" },
+  de: { title:"Prüfung der Beziehungsabdeckung", description:"Jeder zulässige Beziehungstyp und die zwei anderen Hauptzweige werden getrennt angezeigt.", loading:"Prüfstatus wird geladen…", retry:"Erneut", reviewed:"Geprüft", unreviewed:"Nicht geprüft", stale:"Erneut prüfen", notApplicable:"Nicht anwendbar", modelGap:"Modelllücke", empty:"Keine Beziehungen", markReviewed:"Prüfung abschließen", markEmptyReviewed:"Geprüft — keine Beziehungen nötig", markNotApplicable:"Nicht anwendbar", markGap:"Modelllücke markieren", lastReview:"Letzte Prüfung", coverage:"Prüfabdeckung", relationTypes:"Semantische Beziehungstypen", crossPlanes:"Beziehungen zwischen den drei Zweigen", noAccess:"Dieser Bereich ist für den Modellkurator verfügbar.", add:"Hinzufügen", remove:"Entfernen", chooseObject:"Objekt wählen", chooseRelation:"Beziehungstyp", markUnreviewed:"Zur Prüfung offen lassen" },
+  es: { title:"Revisión de cobertura de relaciones", description:"Cada tipo de relación permitido y las otras dos ramas principales se muestran por separado.", loading:"Cargando estado de revisión…", retry:"Reintentar", reviewed:"Revisado", unreviewed:"No revisado", stale:"Revisar de nuevo", notApplicable:"No aplica", modelGap:"Vacío del modelo", empty:"Sin relaciones", markReviewed:"Finalizar revisión", markEmptyReviewed:"Revisado — no se requieren relaciones", markNotApplicable:"No aplica", markGap:"Marcar vacío del modelo", lastReview:"Última revisión", coverage:"Cobertura de revisión", relationTypes:"Tipos de relaciones semánticas", crossPlanes:"Relaciones entre las tres ramas", noAccess:"Este bloque está disponible para el curador del modelo.", add:"Añadir", remove:"Quitar", chooseObject:"Elegir objeto", chooseRelation:"Tipo de relación", markUnreviewed:"Dejar para revisión" },
+  cs: { title:"Kontrola úplnosti vztahů", description:"Každý povolený typ vztahu a dvě další hlavní větve jsou zobrazeny odděleně.", loading:"Načítám stav kontroly…", retry:"Opakovat", reviewed:"Zkontrolováno", unreviewed:"Nezkontrolováno", stale:"Zkontrolovat znovu", notApplicable:"Nepoužije se", modelGap:"Mezera modelu", empty:"Žádné vztahy", markReviewed:"Dokončit kontrolu", markEmptyReviewed:"Zkontrolováno — vztahy nejsou potřeba", markNotApplicable:"Nepoužije se", markGap:"Označit mezeru modelu", lastReview:"Poslední kontrola", coverage:"Pokrytí kontroly", relationTypes:"Typy sémantických vztahů", crossPlanes:"Vztahy mezi třemi větvemi", noAccess:"Tento blok je dostupný kurátorovi modelu.", add:"Přidat", remove:"Odebrat", chooseObject:"Vyberte objekt", chooseRelation:"Typ vztahu", markUnreviewed:"Ponechat ke kontrole" },
 };
 
 function relationLabel(zone: RelationZone, locale: LocaleCode) {
@@ -128,7 +134,13 @@ function statusLabel(code: ReviewCode, copy: (typeof COPY)[LocaleCode]) {
   return code === "reviewed" ? copy.reviewed : code === "stale" ? copy.stale : code === "not_applicable" ? copy.notApplicable : code === "model_gap" ? copy.modelGap : copy.unreviewed;
 }
 
-export function ValueObjectRelationshipCoverageReview({ valueObjectId, locale }: Props) {
+export function ValueObjectRelationshipCoverageReview({
+  valueObjectId,
+  locale,
+  focusZoneKey = null,
+  embedded = false,
+  onCoverageChange,
+}: Props) {
   const copy = COPY[locale] ?? COPY.en;
   const [data, setData] = useState<CoverageResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -156,6 +168,10 @@ export function ValueObjectRelationshipCoverageReview({ valueObjectId, locale }:
 
     return () => window.clearTimeout(timer);
   }, [load]);
+
+  useEffect(() => {
+    if (data) onCoverageChange?.(data);
+  }, [data, onCoverageChange]);
 
   const submitReview = useCallback(async (zoneKey: string, outcomeCode: string) => {
     setBusyZone(zoneKey);
@@ -193,25 +209,56 @@ export function ValueObjectRelationshipCoverageReview({ valueObjectId, locale }:
 
   if (hidden) return null;
 
-  return (
-    <section className="mt-4 rounded-[26px] border border-black/[0.07] bg-white p-5 shadow-sm">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="max-w-3xl">
-          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#3b6ef8]">{copy.title}</div>
-          <p className="mt-2 text-sm leading-6 text-slate-600">{copy.description}</p>
+  const focusedZone = data && focusZoneKey
+    ? [...data.crossPlaneZones, ...data.relationZones].find((zone) => zone.zoneKey === focusZoneKey) ?? null
+    : null;
+
+  const content = (
+    <>
+      {!embedded ? (
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-3xl">
+            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#3b6ef8]">{copy.title}</div>
+            <p className="mt-2 text-sm leading-6 text-slate-600">{copy.description}</p>
+          </div>
+          {data ? <div className="rounded-2xl border border-slate-200 px-4 py-3 text-right"><div className="text-xs text-slate-500">{copy.coverage}</div><div className="text-2xl font-bold text-slate-900">{percent}%</div><div className="text-xs text-slate-500">{data.counters.reviewed} / {data.counters.total}</div></div> : null}
         </div>
-        {data ? <div className="rounded-2xl border border-slate-200 px-4 py-3 text-right"><div className="text-xs text-slate-500">{copy.coverage}</div><div className="text-2xl font-bold text-slate-900">{percent}%</div><div className="text-xs text-slate-500">{data.counters.reviewed} / {data.counters.total}</div></div> : null}
-      </div>
+      ) : null}
 
-      {loading ? <div className="mt-5 text-sm text-slate-500">{copy.loading}</div> : null}
-      {error ? <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"><span>{error}</span><button type="button" onClick={() => void load()} className="inline-flex items-center gap-1 rounded-xl border border-rose-300 bg-white px-3 py-1.5 font-medium"><RefreshCw size={14}/>{copy.retry}</button></div> : null}
+      {loading ? <div className={embedded ? "text-sm text-slate-500" : "mt-5 text-sm text-slate-500"}>{copy.loading}</div> : null}
+      {error ? <div className={`${embedded ? "" : "mt-5 "}flex items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800`}><span>{error}</span><button type="button" onClick={() => void load()} className="inline-flex items-center gap-1 rounded-xl border border-rose-300 bg-white px-3 py-1.5 font-medium"><RefreshCw size={14}/>{copy.retry}</button></div> : null}
 
-      {data ? (
-        <div className="mt-5 space-y-6">
+      {data && focusZoneKey ? (
+        focusedZone ? (
+          <CoverageZoneCard
+            zone={focusedZone}
+            locale={locale}
+            copy={copy}
+            busy={busyZone === focusedZone.zoneKey}
+            onReview={submitReview}
+            onMutate={mutateRelation}
+            candidates={data.candidates}
+            relationZones={data.relationZones}
+          />
+        ) : (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+            {copy.empty}
+          </div>
+        )
+      ) : data ? (
+        <div className={embedded ? "space-y-6" : "mt-5 space-y-6"}>
           <ZoneGroup title={copy.crossPlanes} zones={data.crossPlaneZones} locale={locale} copy={copy} busyZone={busyZone} onReview={submitReview} onMutate={mutateRelation} candidates={data.candidates} relationZones={data.relationZones} />
           <ZoneGroup title={copy.relationTypes} zones={data.relationZones} locale={locale} copy={copy} busyZone={busyZone} onReview={submitReview} onMutate={mutateRelation} candidates={data.candidates} relationZones={data.relationZones} />
         </div>
       ) : null}
+    </>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <section className="mt-4 rounded-[26px] border border-black/[0.07] bg-white p-5 shadow-sm">
+      {content}
     </section>
   );
 }
@@ -248,6 +295,6 @@ function CoverageZoneCard({ zone, locale, copy, busy, onReview, onMutate, candid
       {zone.kind === "cross_plane" ? <select value={selectedRelationType} onChange={(e) => setSelectedRelationType(e.target.value)} className="mb-1.5 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs"><option value="">{copy.chooseRelation}</option>{availableRelationTypes.map((item) => <option key={item.relationTypeCode} value={item.relationTypeCode}>{relationLabel(item, locale)}</option>)}</select> : null}
       <div className="flex gap-1.5"><select value={selectedObjectId} onChange={(e) => setSelectedObjectId(e.target.value)} className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs"><option value="">{copy.chooseObject}</option>{availableCandidates.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.title}</option>)}</select><button type="button" disabled={busy || !selectedObjectId || !selectedRelationType} onClick={() => void onMutate({ action:"add_relation", relationTypeCode:selectedRelationType, targetValueObjectId:selectedObjectId, direction:addDirection, zoneKey:zone.zoneKey })} className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-[11px] font-semibold text-blue-700 disabled:opacity-40">{copy.add}</button></div>
     </div>
-    <div className="mt-3 flex flex-wrap gap-1.5"><button disabled={busy} type="button" onClick={() => void onReview(zone.zoneKey, zone.links.length ? "links_confirmed" : "no_links_required")} className="rounded-lg border border-emerald-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-emerald-700 disabled:opacity-50">{zone.links.length ? copy.markReviewed : copy.markEmptyReviewed}</button><button disabled={busy} type="button" onClick={() => void onReview(zone.zoneKey, "not_applicable")} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-slate-600 disabled:opacity-50">{copy.markNotApplicable}</button>{zone.kind === "cross_plane" && zone.links.length === 0 ? <button disabled={busy} type="button" onClick={() => void onReview(zone.zoneKey, "expected_missing")} className="rounded-lg border border-rose-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-rose-700 disabled:opacity-50">{copy.markGap}</button> : null}</div>
+    <div className="mt-3 flex flex-wrap gap-1.5"><button disabled={busy} type="button" onClick={() => void onReview(zone.zoneKey, zone.links.length ? "links_confirmed" : "no_links_required")} className="rounded-lg border border-emerald-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-emerald-700 disabled:opacity-50">{zone.links.length ? copy.markReviewed : copy.markEmptyReviewed}</button><button disabled={busy} type="button" onClick={() => void onReview(zone.zoneKey, "not_applicable")} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-slate-600 disabled:opacity-50">{copy.markNotApplicable}</button>{zone.kind === "cross_plane" && zone.links.length === 0 ? <button disabled={busy} type="button" onClick={() => void onReview(zone.zoneKey, "expected_missing")} className="rounded-lg border border-rose-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-rose-700 disabled:opacity-50">{copy.markGap}</button> : null}<button disabled={busy} type="button" onClick={() => void onMutate({ action:"reset_review", zoneKey:zone.zoneKey })} className="rounded-lg border border-amber-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-amber-700 disabled:opacity-50">{copy.markUnreviewed}</button></div>
   </article>;
 }

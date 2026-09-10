@@ -84,6 +84,18 @@ function reviewState(review: ReviewRow | undefined, hasLinks: boolean) {
     };
   }
 
+  // A relation-set mutation can invalidate any previous decision, including
+  // "not applicable" and "expected missing". In that case stale wins.
+  if (review.next_review_at && new Date(review.next_review_at).getTime() <= Date.now()) {
+    return {
+      code: "stale" as const,
+      label: "review_stale",
+      reviewedAt: review.reviewed_at,
+      nextReviewAt: review.next_review_at,
+      outcome: review.outcome_code,
+    };
+  }
+
   if (review.outcome_code === "not_applicable") {
     return {
       code: "not_applicable" as const,
@@ -104,16 +116,6 @@ function reviewState(review: ReviewRow | undefined, hasLinks: boolean) {
     };
   }
 
-  if (review.next_review_at && new Date(review.next_review_at).getTime() <= Date.now()) {
-    return {
-      code: "stale" as const,
-      label: "review_stale",
-      reviewedAt: review.reviewed_at,
-      nextReviewAt: review.next_review_at,
-      outcome: review.outcome_code,
-    };
-  }
-
   return {
     code: "reviewed" as const,
     label: "reviewed",
@@ -122,7 +124,6 @@ function reviewState(review: ReviewRow | undefined, hasLinks: boolean) {
     outcome: review.outcome_code,
   };
 }
-
 
 
 function isCoverageSchemaPending(error: unknown) {
@@ -163,6 +164,42 @@ async function loadRelationsForObject(id: string) {
 
   if (error) throw error;
   return (data ?? []) as SystemRelationRow[];
+}
+
+async function markReviewZonesStale(valueObjectId: string, zoneKeys: string[]) {
+  const unique = Array.from(new Set(zoneKeys.map((key) => key.trim()).filter(Boolean)));
+  if (unique.length === 0) return;
+
+  const { error } = await supabase
+    .from("value_object_relation_zone_reviews")
+    .update({
+      next_review_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("value_object_id", valueObjectId)
+    .in("zone_key", unique);
+
+  if (error) throw error;
+}
+
+function semanticZoneKey(
+  relationTypeCode: string,
+  directionalityCode: "directed" | "symmetric",
+  direction: RelationDirection,
+) {
+  const normalizedDirection =
+    directionalityCode === "symmetric" ? "symmetric" : direction;
+  return `relation:${relationTypeCode}:${normalizedDirection}`;
+}
+
+function crossPlaneZoneKey(
+  current: Pick<ValueObjectRow, "id" | "root_value_object_id">,
+  other: Pick<ValueObjectRow, "id" | "root_value_object_id">,
+) {
+  const currentPlane = planeOf(current);
+  const otherPlane = planeOf(other);
+  if (otherPlane === "other" || otherPlane === currentPlane) return null;
+  return `plane:${otherPlane}`;
 }
 
 async function responseForObject(id: string) {
@@ -430,6 +467,22 @@ export async function POST(
       return await responseForObject(id);
     }
 
+    if (action === "reset_review") {
+      const zoneKey = typeof body.zoneKey === "string" ? body.zoneKey.trim() : "";
+      if (!zoneKey) {
+        return NextResponse.json({ ok: false, error: "ZONE_KEY_REQUIRED" }, { status: 400 });
+      }
+
+      const { error } = await supabase
+        .from("value_object_relation_zone_reviews")
+        .delete()
+        .eq("value_object_id", id)
+        .eq("zone_key", zoneKey);
+      if (error) throw error;
+
+      return await responseForObject(id);
+    }
+
     if (action === "add_relation") {
       const relationTypeCode =
         typeof body.relationTypeCode === "string" ? body.relationTypeCode.trim() : "";
@@ -439,6 +492,8 @@ export async function POST(
         body.direction === "incoming" || body.direction === "outgoing" || body.direction === "symmetric"
           ? body.direction
           : "outgoing";
+      const requestedZoneKey =
+        typeof body.zoneKey === "string" ? body.zoneKey.trim() : "";
       if (!relationTypeCode || !targetValueObjectId || targetValueObjectId === id) {
         return NextResponse.json({ ok: false, error: "INVALID_RELATION_PAYLOAD" }, { status: 400 });
       }
@@ -497,22 +552,91 @@ export async function POST(
         { onConflict: "relation_type_code,source_value_object_id,target_value_object_id" },
       );
       if (error) throw error;
+
+      const changedSemanticZone = semanticZoneKey(
+        relationTypeCode,
+        relationType.directionality_code,
+        relationType.directionality_code === "symmetric" ? "symmetric" : direction,
+      );
+      const changedPlaneZone = crossPlaneZoneKey(target, other);
+      await markReviewZonesStale(
+        id,
+        [requestedZoneKey, changedSemanticZone, changedPlaneZone ?? ""],
+      );
+
       return await responseForObject(id);
     }
 
     if (action === "remove_relation") {
       const relationId = typeof body.relationId === "string" ? body.relationId.trim() : "";
+      const requestedZoneKey =
+        typeof body.zoneKey === "string" ? body.zoneKey.trim() : "";
       if (!relationId) {
         return NextResponse.json({ ok: false, error: "RELATION_ID_REQUIRED" }, { status: 400 });
       }
+
+      const { data: relationData, error: relationReadError } = await supabase
+        .from("system_value_object_relations")
+        .select("id,relation_type_code,source_value_object_id,target_value_object_id,status")
+        .eq("id", relationId)
+        .or(`source_value_object_id.eq.${id},target_value_object_id.eq.${id}`)
+        .maybeSingle();
+      if (relationReadError) throw relationReadError;
+      if (!relationData) {
+        return NextResponse.json({ ok: false, error: "RELATION_NOT_FOUND" }, { status: 404 });
+      }
+
+      const relation = relationData as Pick<
+        SystemRelationRow,
+        "id" | "relation_type_code" | "source_value_object_id" | "target_value_object_id" | "status"
+      >;
+      const relatedId =
+        relation.source_value_object_id === id
+          ? relation.target_value_object_id
+          : relation.source_value_object_id;
+
+      const [other, relationTypeResult] = await Promise.all([
+        loadObject(relatedId),
+        supabase
+          .from("value_object_relation_types")
+          .select("relation_type_code,directionality_code")
+          .eq("relation_type_code", relation.relation_type_code)
+          .maybeSingle(),
+      ]);
+      if (relationTypeResult.error) throw relationTypeResult.error;
+
       const { error } = await supabase
         .from("system_value_object_relations")
         .update({ status: "inactive", updated_at: new Date().toISOString() })
         .eq("id", relationId)
         .or(`source_value_object_id.eq.${id},target_value_object_id.eq.${id}`);
       if (error) throw error;
+
+      const directionality =
+        relationTypeResult.data?.directionality_code === "symmetric"
+          ? "symmetric"
+          : "directed";
+      const direction: RelationDirection =
+        directionality === "symmetric"
+          ? "symmetric"
+          : relation.source_value_object_id === id
+            ? "outgoing"
+            : "incoming";
+      const changedSemanticZone = semanticZoneKey(
+        relation.relation_type_code,
+        directionality,
+        direction,
+      );
+      const changedPlaneZone = other ? crossPlaneZoneKey(target, other) : null;
+
+      await markReviewZonesStale(
+        id,
+        [requestedZoneKey, changedSemanticZone, changedPlaneZone ?? ""],
+      );
+
       return await responseForObject(id);
     }
+
 
     return NextResponse.json({ ok: false, error: "UNKNOWN_ACTION" }, { status: 400 });
   } catch (error) {
