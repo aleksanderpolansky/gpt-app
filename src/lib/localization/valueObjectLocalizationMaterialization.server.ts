@@ -455,13 +455,18 @@ async function synchronizeEnvelopeToPlatform(input: {
     }
 
     for (const locale of ARCTOR_CONTENT_LOCALES) {
+      // The canonical source locale is represented by
+      // platform_localization_sources_v1 and the planner's use_canonical_source
+      // branch. It must never be duplicated into localized variants.
+      if (locale === input.sourceLocale) {
+        continue;
+      }
+
       const plan = planner.byKey.get(plannerKey(fieldCode, locale));
       const legacyHuman =
         input.envelope.humanLocales.includes(locale);
-      const isSourceLocale = locale === input.sourceLocale;
 
       if (
-        !isSourceLocale &&
         plan?.human_locked === true &&
         asText(plan.localized_text)
       ) {
@@ -470,7 +475,6 @@ async function synchronizeEnvelopeToPlatform(input: {
       }
 
       if (
-        !isSourceLocale &&
         !legacyHuman &&
         plan &&
         plan.needs_generation === false &&
@@ -481,9 +485,8 @@ async function synchronizeEnvelopeToPlatform(input: {
         continue;
       }
 
-      const localizedValue = isSourceLocale
-        ? sourceValue
-        : asText(input.envelope.variants[locale]?.[fieldCode]);
+      const localizedValue =
+        asText(input.envelope.variants[locale]?.[fieldCode]);
 
       if (!localizedValue) {
         warnings.push(
@@ -492,12 +495,12 @@ async function synchronizeEnvelopeToPlatform(input: {
         continue;
       }
 
-      const humanLocked = isSourceLocale || legacyHuman;
+      const humanLocked = legacyHuman;
       const providerCode: "openai" | "human" = humanLocked
         ? "human"
         : "openai";
       const statusCode: "current" | "needs_review" =
-        humanLocked && !isSourceLocale ? "needs_review" : "current";
+        humanLocked ? "needs_review" : "current";
 
       try {
         await upsertVariant({
