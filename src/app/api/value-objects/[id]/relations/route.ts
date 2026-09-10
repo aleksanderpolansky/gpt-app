@@ -7,6 +7,10 @@ import {
 } from "../../../../../../lib/actor-context";
 import { auth0 } from "../../../../../../lib/auth0";
 import { supabase } from "../../../../../../lib/supabase";
+import {
+  localizeGlobalSystemValueObject,
+  normalizeGlobalSystemValueObjectLocale,
+} from "@/lib/reality-core/global-system-value-object-localization";
 import type {
   ValueObjectRelationCandidateDto,
   ValueObjectRelationDirectionality,
@@ -32,6 +36,8 @@ type ValueObjectRow = {
   status: string;
   scope_code?: string | null;
   origin_type_code?: string | null;
+  canonical_key?: string | null;
+  metadata_json?: unknown;
 };
 
 type RelationTypeRow = {
@@ -236,7 +242,7 @@ function mapRpcErrorStatus(message: string) {
   return 500;
 }
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const { id: rawId } = await context.params;
   const valueObjectId = normalizeUuid(rawId);
 
@@ -246,6 +252,10 @@ export async function GET(_request: Request, context: RouteContext) {
       { status: 400 },
     );
   }
+
+  const locale = normalizeGlobalSystemValueObjectLocale(
+    new URL(request.url).searchParams.get("locale"),
+  );
 
   const { actorContext, errorResponse } = await resolveRouteActorContext();
 
@@ -281,7 +291,9 @@ export async function GET(_request: Request, context: RouteContext) {
         .order("relation_type_code", { ascending: true }),
       supabase
         .from("value_objects")
-        .select("id, title, branch_type_code, object_kind, node_role_code, status")
+        .select(
+          "id, title, branch_type_code, object_kind, node_role_code, status, canonical_key, metadata_json",
+        )
         .eq("scope_code", "global")
         .eq("origin_type_code", "system_model")
         .eq("status", "active")
@@ -308,7 +320,11 @@ export async function GET(_request: Request, context: RouteContext) {
       .map(toRelationTypeDto)
       .filter((relationType) => relationType.status === "active");
 
-    const candidates = ((candidatesResult.data ?? []) as ValueObjectRow[]).map(toCandidateDto);
+    const candidates = ((candidatesResult.data ?? []) as ValueObjectRow[])
+      .map((row) =>
+        toCandidateDto(localizeGlobalSystemValueObject(row, locale)),
+      )
+      .sort((left, right) => left.title.localeCompare(right.title, locale));
 
     const response: ValueObjectSemanticRelationListResponse = {
       ok: true,

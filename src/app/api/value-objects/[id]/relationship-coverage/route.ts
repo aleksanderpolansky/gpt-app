@@ -5,6 +5,10 @@ import {
   platformAdminErrorResponse,
   requirePlatformAdmin,
 } from "@/lib/admin/require-platform-admin";
+import {
+  localizeGlobalSystemValueObject,
+  normalizeGlobalSystemValueObjectLocale,
+} from "@/lib/reality-core/global-system-value-object-localization";
 
 const PRIMARY_ROOTS = {
   systems_structures: "1f86ed22-e220-562a-b2a4-341abf5c5780",
@@ -41,6 +45,8 @@ type ValueObjectRow = {
   owner_user_id: string | null;
   owner_actor_id: string | null;
   status: string | null;
+  canonical_key?: string | null;
+  metadata_json?: unknown;
 };
 
 type SystemRelationRow = {
@@ -144,7 +150,7 @@ async function loadObject(id: string) {
   const { data, error } = await supabase
     .from("value_objects")
     .select(
-      "id,title,facet_code,node_role_code,root_value_object_id,owner_user_id,owner_actor_id,status",
+      "id,title,facet_code,node_role_code,root_value_object_id,owner_user_id,owner_actor_id,status,canonical_key,metadata_json",
     )
     .eq("id", id)
     .maybeSingle();
@@ -202,11 +208,14 @@ function crossPlaneZoneKey(
   return `plane:${otherPlane}`;
 }
 
-async function responseForObject(id: string) {
-  const target = await loadObject(id);
-  if (!target) {
+async function responseForObject(id: string, localeValue: unknown) {
+  const locale = normalizeGlobalSystemValueObjectLocale(localeValue);
+  const targetRaw = await loadObject(id);
+  if (!targetRaw) {
     return NextResponse.json({ ok: false, error: "VALUE_OBJECT_NOT_FOUND" }, { status: 404 });
   }
+  const target = localizeGlobalSystemValueObject(targetRaw, locale);
+
   if (!isGlobalSystemObject(target)) {
     return NextResponse.json(
       { ok: false, error: "COVERAGE_REVIEW_GLOBAL_SYSTEM_ONLY" },
@@ -249,29 +258,35 @@ async function responseForObject(id: string) {
     const { data, error } = await supabase
       .from("value_objects")
       .select(
-        "id,title,facet_code,node_role_code,root_value_object_id,owner_user_id,owner_actor_id,status",
+        "id,title,facet_code,node_role_code,root_value_object_id,owner_user_id,owner_actor_id,status,canonical_key,metadata_json",
       )
       .in("id", relatedIds);
     if (error) throw error;
-    for (const row of (data ?? []) as ValueObjectRow[]) relatedObjects.set(row.id, row);
+    for (const row of (data ?? []) as ValueObjectRow[]) {
+      const localized = localizeGlobalSystemValueObject(row, locale);
+      relatedObjects.set(localized.id, localized);
+    }
   }
 
   const { data: globalCandidatesData, error: globalCandidatesError } = await supabase
     .from("value_objects")
-    .select("id,title,facet_code,node_role_code,root_value_object_id,owner_user_id,owner_actor_id,status")
+    .select("id,title,facet_code,node_role_code,root_value_object_id,owner_user_id,owner_actor_id,status,canonical_key,metadata_json")
     .is("owner_user_id", null)
     .is("owner_actor_id", null)
     .eq("status", "active")
     .neq("id", id)
     .order("title", { ascending: true });
   if (globalCandidatesError) throw globalCandidatesError;
-  const globalCandidates = ((globalCandidatesData ?? []) as ValueObjectRow[]).map((object) => ({
-    id: object.id,
-    title: object.title,
-    facetCode: object.facet_code,
-    nodeRoleCode: object.node_role_code,
-    plane: planeOf(object),
-  }));
+  const globalCandidates = ((globalCandidatesData ?? []) as ValueObjectRow[])
+    .map((object) => localizeGlobalSystemValueObject(object, locale))
+    .map((object) => ({
+      id: object.id,
+      title: object.title,
+      facetCode: object.facet_code,
+      nodeRoleCode: object.node_role_code,
+      plane: planeOf(object),
+    }))
+    .sort((left, right) => left.title.localeCompare(right.title, locale));
 
   const relationZones = relationTypes.flatMap((relationType) => {
     const directions: RelationDirection[] =
@@ -392,7 +407,7 @@ async function responseForObject(id: string) {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   const admin = await requirePlatformAdmin();
@@ -400,7 +415,8 @@ export async function GET(
 
   try {
     const { id } = await context.params;
-    return await responseForObject(id);
+    const locale = new URL(request.url).searchParams.get("locale");
+    return await responseForObject(id, locale);
   } catch (error) {
     if (isCoverageSchemaPending(error)) {
       return NextResponse.json(
@@ -426,6 +442,7 @@ export async function POST(
 
   try {
     const { id } = await context.params;
+    const locale = new URL(request.url).searchParams.get("locale");
     const body = (await request.json()) as Record<string, unknown>;
     const action = typeof body.action === "string" ? body.action : "";
     const target = await loadObject(id);
@@ -464,7 +481,7 @@ export async function POST(
         { onConflict: "value_object_id,zone_key" },
       );
       if (error) throw error;
-      return await responseForObject(id);
+      return await responseForObject(id, locale);
     }
 
     if (action === "reset_review") {
@@ -480,7 +497,7 @@ export async function POST(
         .eq("zone_key", zoneKey);
       if (error) throw error;
 
-      return await responseForObject(id);
+      return await responseForObject(id, locale);
     }
 
     if (action === "add_relation") {
@@ -564,7 +581,7 @@ export async function POST(
         [requestedZoneKey, changedSemanticZone, changedPlaneZone ?? ""],
       );
 
-      return await responseForObject(id);
+      return await responseForObject(id, locale);
     }
 
     if (action === "remove_relation") {
@@ -634,7 +651,7 @@ export async function POST(
         [requestedZoneKey, changedSemanticZone, changedPlaneZone ?? ""],
       );
 
-      return await responseForObject(id);
+      return await responseForObject(id, locale);
     }
 
 

@@ -151,7 +151,7 @@ export function ValueObjectRelationshipCoverageReview({
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const response = await fetch(`/api/value-objects/${valueObjectId}/relationship-coverage`, { cache: "no-store" });
+      const response = await fetch(`/api/value-objects/${valueObjectId}/relationship-coverage?locale=${encodeURIComponent(locale)}`, { cache: "no-store" });
       if (response.status === 401 || response.status === 403 || response.status === 409) { setHidden(true); return; }
       const payload = (await response.json()) as CoverageResponse & { error?: string };
       if (!response.ok || !payload.ok) throw new Error(payload.error ?? "RELATIONSHIP_COVERAGE_READ_FAILED");
@@ -159,7 +159,7 @@ export function ValueObjectRelationshipCoverageReview({
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "RELATIONSHIP_COVERAGE_READ_FAILED");
     } finally { setLoading(false); }
-  }, [valueObjectId]);
+  }, [locale, valueObjectId]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -176,7 +176,7 @@ export function ValueObjectRelationshipCoverageReview({
   const submitReview = useCallback(async (zoneKey: string, outcomeCode: string) => {
     setBusyZone(zoneKey);
     try {
-      const response = await fetch(`/api/value-objects/${valueObjectId}/relationship-coverage`, {
+      const response = await fetch(`/api/value-objects/${valueObjectId}/relationship-coverage?locale=${encodeURIComponent(locale)}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "review", zoneKey, outcomeCode }),
       });
@@ -185,13 +185,13 @@ export function ValueObjectRelationshipCoverageReview({
       setData(payload);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "RELATIONSHIP_COVERAGE_WRITE_FAILED"); }
     finally { setBusyZone(null); }
-  }, [valueObjectId]);
+  }, [locale, valueObjectId]);
 
   const mutateRelation = useCallback(async (payload: Record<string, unknown>) => {
     const zoneKey = typeof payload.zoneKey === "string" ? payload.zoneKey : "relation-mutation";
     setBusyZone(zoneKey);
     try {
-      const response = await fetch(`/api/value-objects/${valueObjectId}/relationship-coverage`, {
+      const response = await fetch(`/api/value-objects/${valueObjectId}/relationship-coverage?locale=${encodeURIComponent(locale)}`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
       });
       const next = (await response.json()) as CoverageResponse & { error?: string };
@@ -199,7 +199,7 @@ export function ValueObjectRelationshipCoverageReview({
       setData(next);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "RELATIONSHIP_COVERAGE_WRITE_FAILED"); }
     finally { setBusyZone(null); }
-  }, [valueObjectId]);
+  }, [locale, valueObjectId]);
 
   const percent = useMemo(() => {
     if (!data || data.counters.total === 0) return 0;

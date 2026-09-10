@@ -1144,16 +1144,19 @@ function RelationshipMapInner({
       : expandedBlockOverride;
 
   const fetchRelations = useCallback(async () => {
-    const response = await fetch(`/api/value-objects/${encodeURIComponent(valueObjectId)}/relations`, {
-      cache: "no-store",
-      headers: { Accept: "application/json" },
-    });
+    const response = await fetch(
+      `/api/value-objects/${encodeURIComponent(valueObjectId)}/relations?locale=${encodeURIComponent(locale)}`,
+      {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      },
+    );
     const payload = (await response.json()) as ValueObjectSemanticRelationListResponse;
     if (!response.ok || !payload.ok) {
       throw new Error(payload.error || `HTTP ${response.status}`);
     }
     return payload;
-  }, [valueObjectId]);
+  }, [locale, valueObjectId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1185,7 +1188,7 @@ function RelationshipMapInner({
 
     try {
       const response = await fetch(
-        `/api/value-objects/${encodeURIComponent(valueObjectId)}/relationship-coverage`,
+        `/api/value-objects/${encodeURIComponent(valueObjectId)}/relationship-coverage?locale=${encodeURIComponent(locale)}`,
         { cache: "no-store", headers: { Accept: "application/json" } },
       );
 
@@ -1208,7 +1211,7 @@ function RelationshipMapInner({
       setCoverageData(null);
       setCoverageAvailable(false);
     }
-  }, [canManageRelations, valueObjectId]);
+  }, [canManageRelations, locale, valueObjectId]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
