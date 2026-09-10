@@ -9,8 +9,7 @@ import {
 import { auth0 } from "../../../../lib/auth0";
 import { toMediaDeliveryUrl } from "../../../../lib/media-egress";
 import { supabase } from "../../../../lib/supabase";
-import { resolveLocalizedContentFields } from "@/lib/localization/contentLocalization";
-import { ensureActorValueObjectLocalizationsV1 } from "@/lib/localization/valueObjectOnDemandLocalization.server";
+import { resolveActorValueObjectReadLocalizationsV1 } from "@/lib/localization/valueObjectReadLocalization.server";
 import { localizeGlobalSystemValueObject } from "@/lib/reality-core/global-system-value-object-localization";
 import { requirePlatformAdmin } from "@/lib/admin/require-platform-admin";
 import {
@@ -1030,6 +1029,16 @@ const GLOBAL_SYSTEM_OWNER_KIND_LABELS: Record<LocaleCode, string> = {
   cs: "Systém",
 };
 
+const PART_OF_LABELS: Record<LocaleCode, string> = {
+  en: "Part of",
+  pl: "Część / należy do",
+  ru: "Часть / входит в",
+  uk: "Частина / входить до",
+  de: "Teil von",
+  es: "Parte de",
+  cs: "Součást / patří do",
+};
+
 function localizeNodeRoleCode(
   value: string | null | undefined,
   locale: LocaleCode,
@@ -1227,12 +1236,10 @@ export default async function ValueObjectDetailPage({
   const canManageRelations =
     !isGlobalSystemObject || relationAdminGuard?.ok === true;
 
-  const onDemandLocalization = isGlobalSystemObject
+  const actorReadLocalization = isGlobalSystemObject
     ? null
-    : await ensureActorValueObjectLocalizationsV1({
-        appUserId: actorContext.appUserId,
-        actorId: actorContext.actorId,
-        entityKeys: [rawValueObject.id],
+    : await resolveActorValueObjectReadLocalizationsV1({
+        entities: [rawValueObject],
         targetLocale: locale,
         fieldCodes: ["title", "description"],
       });
@@ -1241,26 +1248,13 @@ export default async function ValueObjectDetailPage({
   if (isGlobalSystemObject) {
     valueObject = localizeGlobalSystemValueObject(valueObject, locale);
   } else {
-    const localizedFields = resolveLocalizedContentFields({
-      metadata: valueObject.metadata_json,
-      locale,
-      fallback: {
-        title: valueObject.title,
-        description: valueObject.description,
-      },
-    });
-    const onDemandFields =
-      onDemandLocalization?.fieldsById.get(rawValueObject.id);
+    const localizedFields =
+      actorReadLocalization?.fieldsById.get(rawValueObject.id);
     valueObject = {
       ...valueObject,
-      title:
-        onDemandFields?.title ??
-        localizedFields.title ??
-        valueObject.title,
+      title: localizedFields?.title ?? valueObject.title,
       description:
-        onDemandFields?.description ??
-        localizedFields.description ??
-        valueObject.description,
+        localizedFields?.description ?? valueObject.description,
     };
   }
 
@@ -1319,13 +1313,12 @@ export default async function ValueObjectDetailPage({
     }
 
     const treeNodes = (data ?? []) as TreeNodeRow[];
-    const treeLocalization = await ensureActorValueObjectLocalizationsV1({
-      appUserId: actorContext.appUserId,
-      actorId: actorContext.actorId,
-      entityKeys: treeNodes.map((node) => node.id),
-      targetLocale: locale,
-      fieldCodes: ["title"],
-    });
+    const treeLocalization =
+      await resolveActorValueObjectReadLocalizationsV1({
+        entities: treeNodes,
+        targetLocale: locale,
+        fieldCodes: ["title"],
+      });
 
     return treeNodes.map((node) => ({
       ...node,
@@ -2030,7 +2023,7 @@ export default async function ValueObjectDetailPage({
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#3b6ef8]">
-                      part_of
+                      {PART_OF_LABELS[locale]}
                     </div>
                     <h2 className="mt-2 text-[22px] font-bold text-[#111827]">
                       {copy.children}

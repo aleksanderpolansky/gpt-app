@@ -11,6 +11,7 @@ import {
   localizeGlobalSystemValueObject,
   normalizeGlobalSystemValueObjectLocale,
 } from "@/lib/reality-core/global-system-value-object-localization";
+import { resolveActorValueObjectReadLocalizationsV1 } from "@/lib/localization/valueObjectReadLocalization.server";
 import type {
   ValueObjectRelationCandidateDto,
   ValueObjectRelationDirectionality,
@@ -210,7 +211,7 @@ async function readOwnedValueObject(
   return supabase
     .from("value_objects")
     .select(
-      "id, title, branch_type_code, object_kind, node_role_code, status",
+      "id, title, branch_type_code, object_kind, node_role_code, status, metadata_json",
     )
     .eq("id", valueObjectId)
     .eq("owner_user_id", actorContext.appUserId)
@@ -371,7 +372,7 @@ export async function GET(request: Request, context: RouteContext) {
       supabase
         .from("value_objects")
         .select(
-          "id, title, branch_type_code, object_kind, node_role_code, status",
+          "id, title, branch_type_code, object_kind, node_role_code, status, metadata_json",
         )
         .eq("owner_user_id", actorContext.appUserId)
         .eq("owner_actor_id", actorContext.actorId)
@@ -433,7 +434,6 @@ export async function GET(request: Request, context: RouteContext) {
     ]),
   );
   const candidateRows = (candidatesResult.data ?? []) as ValueObjectRow[];
-  const candidates = candidateRows.map(toCandidateDto);
   const relationRows = (relationsResult.data ?? []) as RelationRow[];
   const relatedIds = [
     ...new Set(
@@ -451,7 +451,7 @@ export async function GET(request: Request, context: RouteContext) {
     const { data, error } = await supabase
       .from("value_objects")
       .select(
-        "id, title, branch_type_code, object_kind, node_role_code, status",
+        "id, title, branch_type_code, object_kind, node_role_code, status, metadata_json",
       )
       .eq("owner_user_id", actorContext.appUserId)
       .eq("owner_actor_id", actorContext.actorId)
@@ -467,8 +467,30 @@ export async function GET(request: Request, context: RouteContext) {
     relatedRows = (data ?? []) as ValueObjectRow[];
   }
 
+  const actorReadLocalization =
+    await resolveActorValueObjectReadLocalizationsV1({
+      entities: [...candidateRows, ...relatedRows],
+      targetLocale: locale,
+      fieldCodes: ["title"],
+    });
+
+  const localizeActorRow = (row: ValueObjectRow): ValueObjectRow => ({
+    ...row,
+    title:
+      actorReadLocalization.fieldsById.get(row.id)?.title ??
+      row.title,
+  });
+
+  const candidates = candidateRows
+    .map(localizeActorRow)
+    .map(toCandidateDto)
+    .sort((left, right) => left.title.localeCompare(right.title, locale));
+
   const relatedById = new Map(
-    relatedRows.map((row) => [row.id, toCandidateDto(row)] as const),
+    relatedRows.map((row) => {
+      const localized = localizeActorRow(row);
+      return [localized.id, toCandidateDto(localized)] as const;
+    }),
   );
   const relations: ValueObjectSemanticRelationDto[] = [];
 

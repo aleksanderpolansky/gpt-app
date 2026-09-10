@@ -7,7 +7,7 @@ import {
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
 import { persistHumanLocalizedEntityContent } from "@/lib/localization/contentLocalization.server";
-import { ensureActorValueObjectLocalizationsV1 } from "@/lib/localization/valueObjectOnDemandLocalization.server";
+import { resolveActorValueObjectReadLocalizationsV1 } from "@/lib/localization/valueObjectReadLocalization.server";
 import { localizeGlobalSystemValueObject } from "@/lib/reality-core/global-system-value-object-localization";
 import {
   isValueObjectLeafKindV2,
@@ -484,15 +484,22 @@ export async function GET(request: Request) {
   }
 
   const ownedRows = (ownedResult.data ?? []) as Array<Record<string, unknown>>;
-  const ownedLocalization = await ensureActorValueObjectLocalizationsV1({
-    appUserId: appUser.id,
-    actorId: personActor.id,
-    entityKeys: ownedRows
-      .map((row) => (typeof row.id === "string" ? row.id : ""))
-      .filter(Boolean),
-    targetLocale: locale,
-    fieldCodes: ["title", "description"],
-  });
+  const ownedLocalization =
+    await resolveActorValueObjectReadLocalizationsV1({
+      entities: ownedRows
+        .filter(
+          (row): row is Record<string, unknown> & { id: string } =>
+            typeof row.id === "string" && Boolean(row.id.trim()),
+        )
+        .map((row) => ({
+          id: row.id,
+          title: row.title,
+          description: row.description,
+          metadata_json: row.metadata_json,
+        })),
+      targetLocale: locale,
+      fieldCodes: ["title", "description"],
+    });
 
   const ownedValueObjects = ownedRows.map((row: Record<string, unknown>) => {
     const localizedFields =
