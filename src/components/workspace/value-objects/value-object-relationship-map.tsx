@@ -662,6 +662,36 @@ const BLOCK_COPY: Record<LocaleCode, BlockCopy> = {
   },
 };
 
+const DETAILED_MAP_LABELS: Record<LocaleCode, string> = {
+  ru: "Подробная карта связей",
+  en: "Detailed relationship map",
+  pl: "Szczegółowa mapa relacji",
+  uk: "Докладна карта зв’язків",
+  de: "Detaillierte Beziehungskarte",
+  es: "Mapa detallado de relaciones",
+  cs: "Podrobná mapa vztahů",
+};
+
+const BACK_TO_FULL_MAP_LABELS: Record<LocaleCode, string> = {
+  ru: "Вернуться к полной карте",
+  en: "Back to full map",
+  pl: "Wróć do pełnej mapy",
+  uk: "Повернутися до повної карти",
+  de: "Zurück zur Gesamtkarte",
+  es: "Volver al mapa completo",
+  cs: "Zpět na úplnou mapu",
+};
+
+const MORE_ACTIONS_LABELS: Record<LocaleCode, string> = {
+  ru: "Дополнительные действия",
+  en: "More actions",
+  pl: "Więcej działań",
+  uk: "Додаткові дії",
+  de: "Weitere Aktionen",
+  es: "Más acciones",
+  cs: "Další akce",
+};
+
 const BLOCK_ORDER: readonly SemanticBlockKey[] = [
   "structure",
   "correspondence",
@@ -932,7 +962,18 @@ function BlockNode({ data }: NodeProps<BlockFlowNode>) {
 
   return (
     <div
-      className={`relative w-[340px] overflow-hidden rounded-[24px] border ${palette.border} ${palette.background} p-4 shadow-md ${dominant?.ring ?? ""}`}
+      className={`nodrag nopan relative w-[340px] cursor-pointer overflow-hidden rounded-[24px] border ${palette.border} ${palette.background} p-4 shadow-md transition hover:-translate-y-px hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#9db3ff] ${dominant?.ring ?? ""}`}
+      role="button"
+      tabIndex={0}
+      aria-label={`${BLOCK_COPY[locale].openBlock}: ${block.title}`}
+      onClick={() => onOpenBlock(block.key)}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpenBlock(block.key);
+        }
+      }}
     >
       {dominant ? (
         <div
@@ -959,15 +1000,12 @@ function BlockNode({ data }: NodeProps<BlockFlowNode>) {
             {block.description}
           </div>
         </div>
-        <button
-          type="button"
-          className="nodrag nopan shrink-0 rounded-lg border border-black/10 bg-white p-1.5 text-slate-600 shadow-sm hover:bg-slate-50"
-          onClick={() => onOpenBlock(block.key)}
-          title={BLOCK_COPY[locale].openBlock}
-          aria-label={BLOCK_COPY[locale].openBlock}
+        <span
+          className="shrink-0 rounded-lg border border-black/10 bg-white p-1.5 text-slate-500 shadow-sm"
+          aria-hidden="true"
         >
           <Maximize2 size={14} />
-        </button>
+        </span>
       </div>
 
       {counters.some((item) => item.count > 0) ? (
@@ -997,7 +1035,10 @@ function BlockNode({ data }: NodeProps<BlockFlowNode>) {
               key={zone.key}
               type="button"
               className="nodrag nopan flex w-full items-center gap-2 rounded-xl border border-black/[0.07] bg-white/90 px-2.5 py-2 text-left shadow-sm transition hover:-translate-y-px hover:shadow"
-              onClick={() => onOpenZone(zone.key)}
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpenZone(zone.key);
+              }}
             >
               {status ? (
                 <span className={`h-2 w-2 shrink-0 rounded-full ${status.dot}`} />
@@ -1088,8 +1129,8 @@ function RelationshipMapInner({
   const [coverageAvailable, setCoverageAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-const [autoDensity, setAutoDensity] = useState(true);
-  const [detailLevel, setDetailLevel] = useState<DetailLevel>("overview");
+  const [autoDensity, setAutoDensity] = useState(true);
+  const [showDetailedMap, setShowDetailedMap] = useState(false);
   const [expandedZoneOverride, setExpandedZoneOverride] = useState<string | null | undefined>(undefined);
   const [expandedBlockOverride, setExpandedBlockOverride] = useState<string | null | undefined>(undefined);
   const [search, setSearch] = useState("");
@@ -1189,7 +1230,7 @@ const [autoDensity, setAutoDensity] = useState(true);
     }
   }, [copy.error, fetchRelations]);
 
-const expandZone = useCallback((zoneKey: string) => {
+  const expandZone = useCallback((zoneKey: string) => {
     setSearch("");
     setExpandedBlockOverride(null);
     setExpandedZoneOverride(zoneKey);
@@ -1345,7 +1386,7 @@ const expandZone = useCallback((zoneKey: string) => {
     siblingObjects,
   ]);
 
-const blockCopy = BLOCK_COPY[locale];
+  const blockCopy = BLOCK_COPY[locale];
 
   const semanticBlocks = useMemo<SemanticBlock[]>(() => {
     const grouped = new Map<SemanticBlockKey, RelationshipZone[]>();
@@ -1403,7 +1444,7 @@ const blockCopy = BLOCK_COPY[locale];
       data: { title },
     };
 
-    if (detailLevel === "detailed") {
+    if (showDetailedMap) {
       const zoneNodes: ZoneFlowNode[] = zones.map((zone, index) => ({
         id: `zone:${zone.key}`,
         type: "zone",
@@ -1431,7 +1472,7 @@ const blockCopy = BLOCK_COPY[locale];
       data: {
         block,
         locale,
-        detailLevel,
+        detailLevel: "work",
         onOpenBlock: openBlock,
         onOpenZone: expandZone,
       },
@@ -1441,17 +1482,17 @@ const blockCopy = BLOCK_COPY[locale];
   }, [
     autoDensity,
     copy,
-    detailLevel,
     expandZone,
     locale,
     openBlock,
     semanticBlocks,
+    showDetailedMap,
     title,
     zones,
   ]);
 
   const edges = useMemo<Edge[]>(() => {
-    if (detailLevel === "detailed") {
+    if (showDetailedMap) {
       return zones.map((zone) => ({
         id: `edge:${zone.key}`,
         source: "__center__",
@@ -1468,7 +1509,7 @@ const blockCopy = BLOCK_COPY[locale];
       type: "smoothstep",
       style: { stroke: "#cbd5e1", strokeWidth: 1.2 },
     }));
-  }, [detailLevel, semanticBlocks, zones]);
+  }, [semanticBlocks, showDetailedMap, zones]);
 
   const separateBlockHref = expandedBlock
     ? (() => {
@@ -1502,40 +1543,54 @@ const blockCopy = BLOCK_COPY[locale];
           </div>
           <p className="mt-2 text-[12px] leading-5 text-[#6b7280]">{copy.description}</p>
         </div>
-<div className="flex flex-wrap items-center gap-2">
-          {(["overview", "work", "detailed"] as const).map((level) => (
-            <button
-              key={level}
-              type="button"
-              onClick={() => {
-                setDetailLevel(level);
-                if (level === "detailed") {
-                  setExpandedBlockOverride(null);
-                }
-              }}
-              className={`rounded-xl border px-3 py-2 text-[11px] font-bold transition ${
-                detailLevel === level
-                  ? "border-[#cbd7ff] bg-[#eef2ff] text-[#3b6ef8]"
-                  : "border-[#dfe3ea] bg-white text-[#4b5563] hover:bg-slate-50"
-              }`}
-            >
-              {blockCopy.levels[level]}
-            </button>
-          ))}
-          {detailLevel === "detailed" ? (
-            <button
-              type="button"
-              onClick={() => setAutoDensity((current) => !current)}
-              className={`rounded-xl border px-3 py-2 text-[11px] font-bold transition ${autoDensity ? "border-[#cbd7ff] bg-[#eef2ff] text-[#3b6ef8]" : "border-[#dfe3ea] bg-white text-[#4b5563]"}`}
-              title={copy.densityHint}
-            >
-              {autoDensity ? copy.autoScale : copy.fixedSize}
-            </button>
-          ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {showDetailedMap ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setShowDetailedMap(false)}
+                className="rounded-xl border border-[#dfe3ea] bg-white px-3 py-2 text-[11px] font-bold text-[#4b5563] transition hover:bg-slate-50"
+              >
+                ← {BACK_TO_FULL_MAP_LABELS[locale]}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAutoDensity((current) => !current)}
+                className={`rounded-xl border px-3 py-2 text-[11px] font-bold transition ${autoDensity ? "border-[#cbd7ff] bg-[#eef2ff] text-[#3b6ef8]" : "border-[#dfe3ea] bg-white text-[#4b5563]"}`}
+                title={copy.densityHint}
+              >
+                {autoDensity ? copy.autoScale : copy.fixedSize}
+              </button>
+            </>
+          ) : (
+            <details className="relative">
+              <summary
+                className="cursor-pointer list-none rounded-xl border border-[#dfe3ea] bg-white px-3 py-2 text-[13px] font-bold leading-none text-[#4b5563] transition hover:bg-slate-50"
+                title={MORE_ACTIONS_LABELS[locale]}
+                aria-label={MORE_ACTIONS_LABELS[locale]}
+              >
+                ···
+              </summary>
+              <div className="absolute right-0 z-20 mt-2 w-[230px] rounded-xl border border-[#e5e7eb] bg-white p-1.5 shadow-xl">
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    const details = event.currentTarget.closest("details");
+                    if (details) details.open = false;
+                    setExpandedBlockOverride(null);
+                    setShowDetailedMap(true);
+                  }}
+                  className="w-full rounded-lg px-3 py-2 text-left text-[11px] font-bold text-[#4b5563] hover:bg-slate-50"
+                >
+                  {DETAILED_MAP_LABELS[locale]}
+                </button>
+              </div>
+            </details>
+          )}
         </div>
       </div>
 
-{coverageAvailable ? (
+      {coverageAvailable ? (
         <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl border border-[#e5e7eb] bg-[#f8fafc] px-3 py-2.5">
           <span className="mr-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
             {blockCopy.fullMap}
@@ -1583,6 +1638,7 @@ const blockCopy = BLOCK_COPY[locale];
             minZoom={0.15}
             maxZoom={2}
             nodesConnectable={false}
+            nodesDraggable={showDetailedMap}
             elementsSelectable={false}
             proOptions={{ hideAttribution: true }}
           >
@@ -1592,7 +1648,7 @@ const blockCopy = BLOCK_COPY[locale];
         </div>
       )}
 
-{expandedBlock ? (
+      {expandedBlock ? (
         <div
           className="fixed inset-0 z-[88] flex items-stretch justify-center bg-black/45 p-3 sm:p-6"
           role="dialog"
@@ -1834,4 +1890,5 @@ export const __relationshipMapTesting = {
   resolveDensity,
   visibleLimit,
   zonePosition,
+  unifiedInteractiveMap: true,
 };
