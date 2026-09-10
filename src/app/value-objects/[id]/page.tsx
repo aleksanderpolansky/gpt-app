@@ -12,6 +12,7 @@ import { supabase } from "../../../../lib/supabase";
 import { resolveLocalizedContentFields } from "@/lib/localization/contentLocalization";
 import { ensureActorValueObjectLocalizationsV1 } from "@/lib/localization/valueObjectOnDemandLocalization.server";
 import { localizeGlobalSystemValueObject } from "@/lib/reality-core/global-system-value-object-localization";
+import { requirePlatformAdmin } from "@/lib/admin/require-platform-admin";
 import {
   ValueObjectProfileTopGrid,
   type ValueObjectOwnerPresentation,
@@ -1149,6 +1150,12 @@ export default async function ValueObjectDetailPage({
     notFound();
   }
 
+  const relationAdminGuard = isGlobalSystemObject
+    ? await requirePlatformAdmin()
+    : null;
+  const canManageRelations =
+    !isGlobalSystemObject || relationAdminGuard?.ok === true;
+
   const onDemandLocalization = isGlobalSystemObject
     ? null
     : await ensureActorValueObjectLocalizationsV1({
@@ -1830,7 +1837,7 @@ export default async function ValueObjectDetailPage({
           }))}
           canCreateChildren={isStructural}
           canCreateLeaf={isIntermediate}
-          canManageRelations={!isGlobalSystemObject}
+          canManageRelations={canManageRelations}
         />
 
         {isLeaf && !isProductOrService ? (
