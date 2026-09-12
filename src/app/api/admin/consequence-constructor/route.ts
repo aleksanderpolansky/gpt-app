@@ -170,23 +170,23 @@ async function buildTargetCandidates(
   }
   const relations = [...relationById.values()];
 
-  const otherIds = [
+  const relatedObjectIds = [
     ...new Set(
       relations.flatMap((relation) => [
         relation.source_value_object_id,
         relation.target_value_object_id,
       ]),
     ),
-  ].filter((id) => !sourceIds.includes(id));
+  ];
 
-  if (otherIds.length === 0) return result;
+  if (relatedObjectIds.length === 0) return result;
 
   const { data: objectRows, error: objectError } = await supabase
     .from("value_objects")
     .select(
       "id,title,description,canonical_key,metadata_json,facet_code,node_role_code,ontology_node_role_code,scope_code,origin_type_code,owner_user_id,owner_actor_id,status",
     )
-    .in("id", otherIds)
+    .in("id", relatedObjectIds)
     .eq("scope_code", "global")
     .eq("origin_type_code", "system_model")
     .eq("status", "active")

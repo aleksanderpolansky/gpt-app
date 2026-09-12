@@ -1136,3 +1136,14 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - Добавлена migration, закрепляющая ручной production fix `guard_system_value_object_relation_v1()` на `ontology_node_role_code`.
 - Формулы пока не создаются.
 - Recovery detail: docs/recovery/ARCTOR_CONSEQUENCE_TARGET_UNLOCK_RELATION_EDIT_DELETE_V1_0_1_RU_20260912.md.
+
+## 2026-09-12 — Исправление fan-out кандидатов в Конструкторе последствий
+- Baseline: 1649b57f8859d48438fc6d3a4df471f7b1ae9776.
+- Runtime показал: активная leaf→leaf связь существует и видна в `/admin/relations`, но target не показывается в consequence target picker.
+- Причина: `buildTargetCandidates()` глобально исключал любой endpoint, который встречался в `sourceIds` хотя бы одного из 27 consequence tasks.
+- Исправление: карточки кандидатов загружаются для полного union endpoint ID; второй конец связи определяется отдельно относительно каждого конкретного source ОН.
+- Один ОН теперь может быть source в одном task и target в другом.
+- Active/global/system/ontology-leaf фильтры, target-before-template и formula-write=NO сохранены.
+- Первая попытка V1 остановилась на false-negative validator `PER_SOURCE_OUTGOING_TARGET_DISCOVERY_REMAINS`: validator ожидал буквальный `\\n`; rollback выполнен.
+- V1.0.1 использует whitespace-tolerant regex, функциональная логика hotfix не меняется.
+- Recovery detail: docs/recovery/ARCTOR_CONSEQUENCE_TARGET_CANDIDATE_FANOUT_HOTFIX_V1_0_1_RU_20260912.md.
