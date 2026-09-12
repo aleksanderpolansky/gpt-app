@@ -14,6 +14,9 @@ import {
   createPendingCanonicalSystemValueObjectLocalizationV1,
 } from "@/lib/reality-core/global-system-value-object-localization.server";
 import {
+  ensureConsequenceConstructorTaskV1,
+} from "@/lib/reality-curator/consequence-constructor.server";
+import {
   ActorContextError,
   resolveActiveActorContext,
   type ResolvedActorContext,
@@ -1154,6 +1157,26 @@ export async function POST(request: Request) {
           parameterTitle: parameter.title,
         },
       });
+      if (result === "existing_leaf_found" && selectedValueObjectId) {
+        try {
+          await ensureConsequenceConstructorTaskV1({
+            signalId: signal.id,
+            userId: signal.userId,
+            activityEventId: signal.activityEventId,
+            parameterDefinitionId: parameter.id,
+            parameterCode: parameter.parameterCode,
+            parameterTitle: parameter.title,
+            sourceValueObjectId: selectedValueObjectId,
+            sourceValueObjectTitle: selectedTitle,
+            curatorMetadata: adminMetadata(guard),
+          });
+        } catch (consequenceTaskError) {
+          console.error(
+            "CURATOR_CONSEQUENCE_TASK_IMMEDIATE_CREATE_FAILED",
+            consequenceTaskError,
+          );
+        }
+      }
       return NextResponse.json(
         await buildState(signal, actor, locale, parameterDefinitionId),
       );
@@ -1301,6 +1324,26 @@ export async function POST(request: Request) {
           parameterTitle: parameter.title,
         },
       });
+      if (completedTargetLeaf) {
+        try {
+          await ensureConsequenceConstructorTaskV1({
+            signalId: signal.id,
+            userId: signal.userId,
+            activityEventId: signal.activityEventId,
+            parameterDefinitionId: parameter.id,
+            parameterCode: parameter.parameterCode,
+            parameterTitle: parameter.title,
+            sourceValueObjectId: created.valueObjectId,
+            sourceValueObjectTitle: created.title,
+            curatorMetadata: adminMetadata(guard),
+          });
+        } catch (consequenceTaskError) {
+          console.error(
+            "CURATOR_CONSEQUENCE_TASK_IMMEDIATE_CREATE_FAILED",
+            consequenceTaskError,
+          );
+        }
+      }
       return NextResponse.json(
         await buildState(signal, actor, locale, parameterDefinitionId),
       );

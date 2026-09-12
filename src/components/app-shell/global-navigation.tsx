@@ -213,6 +213,24 @@ function getLocalizationQueueLabel(locale: string, count: number) {
   return label + " · " + count;
 }
 
+const CONSEQUENCE_CONSTRUCTOR_LABEL_BY_LOCALE: Record<string, string> = {
+  en: "Consequence constructor",
+  pl: "Konstruktor konsekwencji",
+  ru: "Конструктор последствий",
+  uk: "Конструктор наслідків",
+  de: "Folgen-Konstruktor",
+  es: "Constructor de consecuencias",
+  cs: "Konstruktor důsledků",
+};
+
+function getConsequenceConstructorLabel(locale: string, count: number) {
+  const label =
+    CONSEQUENCE_CONSTRUCTOR_LABEL_BY_LOCALE[locale] ??
+    CONSEQUENCE_CONSTRUCTOR_LABEL_BY_LOCALE.en;
+  return `${label} · ${count}`;
+}
+
+
 function getComingSoonLabel(label: string, comingSoon?: boolean, comingSoonSuffix = getComingSoonSuffix("en")) {
   return comingSoon ? `${label}${comingSoonSuffix}` : label;
 }
@@ -594,6 +612,7 @@ export function GlobalSidebar({
   const [showAdminNavigation, setShowAdminNavigation] = useState(false);
   const [adminCanEdit, setAdminCanEdit] = useState(false);
   const [pendingLocalizationCount, setPendingLocalizationCount] = useState(0);
+  const [pendingConsequenceCount, setPendingConsequenceCount] = useState(0);
 
   const t = useNavigationTranslator();
   const locale = useInterfaceLocale();
@@ -613,6 +632,21 @@ export function GlobalSidebar({
           | null;
         if (response.ok && payload?.ok === true) {
           setPendingLocalizationCount(
+            Number.isFinite(payload.pendingCount) ? Number(payload.pendingCount) : 0,
+          );
+        }
+      })
+      .catch(() => undefined);
+    void fetch("/api/admin/consequence-constructor?summary=1", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as
+          | { ok?: boolean; pendingCount?: number }
+          | null;
+        if (response.ok && payload?.ok === true) {
+          setPendingConsequenceCount(
             Number.isFinite(payload.pendingCount) ? Number(payload.pendingCount) : 0,
           );
         }
@@ -717,6 +751,9 @@ export function GlobalSidebar({
   const isUploadedFilesActive = currentPathname === "/uploaded-files";
   const isLocalEditorsActive = isLocalEditorPrivacyRoute(currentPathname);
   const isRealityCuratorActive = currentPathname.startsWith("/admin/reality-curator");
+  const isConsequenceConstructorActive = currentPathname.startsWith(
+    "/admin/consequence-constructor",
+  );
   const isLocalizationQueueActive = currentPathname.startsWith("/admin/localization-jobs");
   const isSystemAiInstructionsActive =
     currentPathname === "/admin/ai-instructions";
@@ -850,6 +887,12 @@ export function GlobalSidebar({
                     depth={1}
                     href={localeHref("/admin/reality-curator/signals")}
                     active={isRealityCuratorActive}
+                  />
+                  <TreeItem
+                    label={getConsequenceConstructorLabel(locale, pendingConsequenceCount)}
+                    depth={1}
+                    href={localeHref("/admin/consequence-constructor")}
+                    active={isConsequenceConstructorActive}
                   />
                   <TreeItem
                     label={getLocalizationQueueLabel(locale, pendingLocalizationCount)}

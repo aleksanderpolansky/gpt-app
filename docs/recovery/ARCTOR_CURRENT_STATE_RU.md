@@ -1059,3 +1059,13 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - Daily maintenance cron поддерживает свежесть price snapshots и повторяет очередь.
 - Runtime model identity перенесена в navigatorModelCatalog; legacy model/config env-переменные удалены из runtime.
 - Recovery detail: docs/recovery/ARCTOR_LOCALIZATION_QUEUE_PRICE_RUNTIME_HOTFIX_V1_0_6_RU_20260912.md.
+
+## 2026-09-12 — Конструктор последствий: очередь заданий V1
+- Baseline before release: ce9669a4e805009391ed17bd44e02aed786a90d9.
+- После назначения параметр → листовой ОН немедленно создаётся consequence-constructor task.
+- Контекст пары будущего последствия является activity-specific: общая связь ОН автоматически не создаётся.
+- До появления типовой активности хранится raw-activity provenance; после появления типовой активности контекст автоматически переопределяется, manual bind также доступен.
+- Целевой ОН в V1 заблокирован до конструктора связей ОН.
+- Admin UI: /admin/consequence-constructor; nav: «Конструктор последствий · N».
+- SQL schema change: none.
+- Recovery detail: docs/recovery/ARCTOR_CONSEQUENCE_CONSTRUCTOR_TASKS_V1_RU_20260912.md.
