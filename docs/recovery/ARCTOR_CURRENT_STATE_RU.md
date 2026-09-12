@@ -1051,3 +1051,11 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - /certificates: contextual create action вынесена в отдельную верхнюю строку справа, scope switch расположен отдельной следующей строкой слева.
 - UI design standard дополнен правилом action-row → scope-row.
 - DB/API/RLS/SQL/OpenAI runtime не изменялись.
+
+## 2026-09-12 — Localization Queue + Price Runtime Hotfix V1
+- Baseline: e4422808147b6f2b5b03f7413817d60431f22789.
+- System ОН теперь сохраняется до AI-localization; локализация не является write-gate.
+- Незавершённые переводы имеют persistent states pending/retrying/blocked/complete, retry metadata и admin UI /admin/localization-jobs.
+- Daily maintenance cron поддерживает свежесть price snapshots и повторяет очередь.
+- Runtime model identity перенесена в navigatorModelCatalog; legacy model/config env-переменные удалены из runtime.
+- Recovery detail: docs/recovery/ARCTOR_LOCALIZATION_QUEUE_PRICE_RUNTIME_HOTFIX_V1_0_6_RU_20260912.md.

@@ -198,6 +198,21 @@ function getComingSoonSuffix(locale: string) {
   return COMING_SOON_SUFFIX_BY_LOCALE[locale] ?? COMING_SOON_SUFFIX_BY_LOCALE.en;
 }
 
+const LOCALIZATION_QUEUE_LABEL_BY_LOCALE: Record<string, string> = {
+  en: "Translations",
+  pl: "Tłumaczenia",
+  ru: "Переводы",
+  uk: "Переклади",
+  de: "Übersetzungen",
+  es: "Traducciones",
+  cs: "Překlady",
+};
+
+function getLocalizationQueueLabel(locale: string, count: number) {
+  const label = LOCALIZATION_QUEUE_LABEL_BY_LOCALE[locale] ?? LOCALIZATION_QUEUE_LABEL_BY_LOCALE.en;
+  return label + " · " + count;
+}
+
 function getComingSoonLabel(label: string, comingSoon?: boolean, comingSoonSuffix = getComingSoonSuffix("en")) {
   return comingSoon ? `${label}${comingSoonSuffix}` : label;
 }
@@ -578,11 +593,33 @@ export function GlobalSidebar({
   const [currentSearch, setCurrentSearch] = useState("");
   const [showAdminNavigation, setShowAdminNavigation] = useState(false);
   const [adminCanEdit, setAdminCanEdit] = useState(false);
+  const [pendingLocalizationCount, setPendingLocalizationCount] = useState(0);
 
   const t = useNavigationTranslator();
   const locale = useInterfaceLocale();
   const certificateView = useUnifiedCertificateView();
   const localeHref = (pathname: string) => buildLocaleAwareHref(pathname, locale);
+
+  useEffect(() => {
+    if (!adminCanEdit) return;
+    const controller = new AbortController();
+    void fetch("/api/admin/localization-jobs?summary=1", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as
+          | { ok?: boolean; pendingCount?: number }
+          | null;
+        if (response.ok && payload?.ok === true) {
+          setPendingLocalizationCount(
+            Number.isFinite(payload.pendingCount) ? Number(payload.pendingCount) : 0,
+          );
+        }
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [adminCanEdit, currentPathname]);
   const suppressRemoteProfileImages =
     currentPathname === "" || isLocalEditorPrivacyRoute(currentPathname);
 
@@ -680,6 +717,7 @@ export function GlobalSidebar({
   const isUploadedFilesActive = currentPathname === "/uploaded-files";
   const isLocalEditorsActive = isLocalEditorPrivacyRoute(currentPathname);
   const isRealityCuratorActive = currentPathname.startsWith("/admin/reality-curator");
+  const isLocalizationQueueActive = currentPathname.startsWith("/admin/localization-jobs");
   const isSystemAiInstructionsActive =
     currentPathname === "/admin/ai-instructions";
   const isAdminUsersActive = currentPathname === "/admin/users";
@@ -806,12 +844,20 @@ export function GlobalSidebar({
           {showAdminNavigation ? (
             <>
               {adminCanEdit ? (
-                <TreeItem
-                  label={t("navigation.realityCurator")}
-                  depth={1}
-                  href={localeHref("/admin/reality-curator/signals")}
-                  active={isRealityCuratorActive}
-                />
+                <>
+                  <TreeItem
+                    label={t("navigation.realityCurator")}
+                    depth={1}
+                    href={localeHref("/admin/reality-curator/signals")}
+                    active={isRealityCuratorActive}
+                  />
+                  <TreeItem
+                    label={getLocalizationQueueLabel(locale, pendingLocalizationCount)}
+                    depth={1}
+                    href={localeHref("/admin/localization-jobs")}
+                    active={isLocalizationQueueActive}
+                  />
+                </>
               ) : null}
               <TreeItem
                 label={t("navigation.systemAiInstructions")}

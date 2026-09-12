@@ -964,3 +964,24 @@ V1.0.3 добавил обязательный self-test ненулевого к
 ## 2026-09-08 — правило create action row / scope row
 
 Решение: на desktop contextual create action занимает собственную верхнюю строку справа. Scope/navigation switch располагается отдельной следующей строкой слева. Каталог ОН не ведёт через универсальный commercial selector: contextual create action направляется непосредственно в ordinary observation-object creation flow /value-objects/new/root.
+
+## 2026-09-12 — PRICE_SNAPSHOT_STALE в curator localization
+Решение: не блокировать создание ОН локализацией. Persist-first + persistent retry queue. Model names больше не хранятся в .env.local; центральный источник — navigatorModelCatalog. Price snapshot автоматически освежается из versioned catalog при точном совпадении модели/цен; несовпадение — fail-closed.
+
+### Ошибка runner V1
+Первый запуск V1 дошёл до targeted ESLint и завершился exit=1 до build/commit/push. Первый REPORT не сохранял полный вывод ESLint.
+
+### Ошибка runner V1_0_1
+Второй запуск подтвердил validator 15/15, но targeted ESLint остановил релиз на react-hooks/set-state-in-effect. Исправлено разделением fetchQueue и UI state update.
+
+### Ошибка runner V1_0_2
+Третий запуск прошёл validator 15/15 и targeted ESLint, но Next production build остановился на strict TypeScript check. Исправлен тип emptyVariants и добавлен отдельный tsc --noEmit gate.
+
+### Ошибка runner V1_0_3
+Четвёртый запуск полностью прошёл validator, ESLint, TypeScript и production build. Harness ошибочно трактовал LF/CRLF warning из native STDERR как terminating error. Исправлено решением PASS/FAIL по native exit code.
+
+### Ошибка runner V1_0_4
+Пятый запуск полностью прошёл validator 15/15, targeted ESLint, TypeScript и production build. git diff --check затем корректно нашёл настоящую проблему recovery-записи: double-quoted PowerShell here-strings интерпретировали Markdown backticks как escape-последовательности, а Add-Content в Windows PowerShell 5.1 нарушал стабильность существующего UTF-8/CRLF файла. V1_0_5 использует single-quoted here-strings, .NET UTF8Encoding(false), byte-preserving append, CRLF normalization и byte-prefix integrity check. Commit/push V1_0_4 не выполнялись; failure path снова запустил rollback.
+
+### Ошибка runner V1_0_5
+Шестой запуск V1_0_5 прошёл recovery integrity, validator 15/15, targeted ESLint, `tsc --noEmit`, production build и `git diff --check`, но остановился на source allowlist до commit/push: `git status --porcelain=v1` вернул новый каталог `src/app/admin/localization-jobs/` как одну агрегированную untracked-запись. Это ложное срабатывание harness: разрешённый файл `src/app/admin/localization-jobs/page.tsx` находился внутри этого каталога. V1_0_6 использует `git status --porcelain=v1 --untracked-files=all` и тем самым сохраняет строгий file-level allowlist без разрешения произвольных директорий.

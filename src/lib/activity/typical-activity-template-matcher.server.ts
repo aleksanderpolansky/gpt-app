@@ -5,6 +5,8 @@ import {
   runAiJsonWithUsageMetadata,
   type RunAiJsonUsageMetadata,
 } from "../../../lib/ai/openaiClient";
+import { getNavigatorModelDefinition } from "../../../lib/ai/navigatorModelCatalog";
+import { ensureNavigatorPriceSnapshotV1 } from "../../../lib/ai/navigatorPriceSnapshot.server";
 import {
   completeAiAnalysisExecution,
   createAiAnalysisExecution,
@@ -19,7 +21,7 @@ import { supabase } from "../../../lib/supabase";
 export const ARCTOR_RUNTIME_TEMPLATE_MATCH_V2 =
   "ARCTOR_RUNTIME_TEMPLATE_MATCH_V2" as const;
 
-const MODEL_TIER = "nano";
+const MODEL_TIER = "nano" as const;
 const MAX_CANDIDATES = 24;
 const MAX_ACTIVE_PROFILES = 5000;
 const PROFILE_PAGE_SIZE = 500;
@@ -326,24 +328,12 @@ function estimateBudgetInputTokens(input: {
 }
 
 async function resolveNanoModel() {
-  const { data, error } = await supabase
-    .from("ai_model_tiers")
-    .select("tier_code,default_model_name,enabled")
-    .eq("tier_code", MODEL_TIER)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`TEMPLATE_MATCH_MODEL_READ_FAILED:${error.message}`);
-  }
-
-  if (!data || data.enabled !== true || !text(data.default_model_name)) {
+  const definition = getNavigatorModelDefinition(MODEL_TIER);
+  const modelName = text(definition?.modelName);
+  if (!definition || definition.tierCode !== MODEL_TIER || !modelName) {
     throw new Error("TEMPLATE_MATCH_NANO_MODEL_UNAVAILABLE");
   }
-
-  return {
-    tierCode: MODEL_TIER,
-    modelName: text(data.default_model_name),
-  };
+  return { tierCode: MODEL_TIER, modelName };
 }
 
 async function reserveBudget(input: {
@@ -353,6 +343,12 @@ async function reserveBudget(input: {
   modelName: string;
   estimatedInputTokens: number;
 }): Promise<BudgetReservation> {
+  await ensureNavigatorPriceSnapshotV1({
+    tierCode: input.tierCode,
+    modelName: input.modelName,
+    maxAgeHours: 72,
+  });
+
   const { data, error } = await supabase.rpc("preflight_ai_pilot_call_budget_v1", {
     p_app_user_id: input.userId,
     p_operation_id: input.operationId,

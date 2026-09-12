@@ -1,5 +1,6 @@
 ﻿import OpenAI from "openai";
 
+import { getNavigatorModelDefinition } from "../ai/navigatorModelCatalog";
 import { supabase } from "../supabase";
 
 const BUSINESS_DIRECTORY_CONTEXT_CODE = "business_directory";
@@ -7,7 +8,6 @@ const ORGANIZATION_OBJECT_TYPE_CODE = "organization";
 const CLASSIFY_ACTION_TYPE_CODE = "classify";
 const FALLBACK_CATEGORY_SLUG = "other";
 const FALLBACK_CATEGORY_LABEL = "Other";
-const DEFAULT_MODEL = "gpt-5.5";
 
 type VisibilitySuggestion = "public_safe" | "internal_only" | "needs_review";
 
@@ -756,7 +756,7 @@ export async function runOrganizationSemanticIntake(
   const country = asText(input.country ?? "");
   const city = asText(input.city ?? "");
   const district = asText(input.district ?? "");
-  const model = process.env.OPENAI_SEMANTIC_MODEL || DEFAULT_MODEL;
+  const model = getNavigatorModelDefinition("nano").modelName;
   const persist = input.persist !== false;
   const replaceExistingAiPrimary = input.replaceExistingAiPrimary ?? true;
   const classifiedByUserId = asText(input.classifiedByUserId ?? "") || null;

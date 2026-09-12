@@ -20,6 +20,7 @@ import {
   NAVIGATOR_MODEL_AUTO_SEED_EXPIRES_AT,
   NAVIGATOR_MODEL_CATALOG_VERIFIED_AT,
 } from "../../../lib/ai/navigatorModelCatalog";
+import { ensureNavigatorPriceSnapshotV1 } from "../../../lib/ai/navigatorPriceSnapshot.server";
 import { AI_ENABLED } from "../../../lib/ai/openaiConfig";
 import {
   completeAiAnalysisExecution,
@@ -850,6 +851,12 @@ async function reserveBudget(input: {
     p_cached_input_tokens: 0,
     p_max_output_tokens: MAX_OUTPUT_TOKENS,
   };
+
+  await ensureNavigatorPriceSnapshotV1({
+    tierCode: input.tierCode,
+    modelName: input.modelName,
+    maxAgeHours: 72,
+  });
 
   let { data, error } = await supabase.rpc(
     "preflight_ai_pilot_call_budget_v1",

@@ -9,9 +9,9 @@ import {
 } from "@/lib/admin/require-platform-admin";
 import { localizeGlobalSystemValueObject } from "@/lib/reality-core/global-system-value-object-localization";
 import {
+  attemptCuratorSystemValueObjectLocalizationV1,
   backfillCuratorSystemValueObjectLocalizationsV1,
-  buildCanonicalSystemValueObjectLocalizationV1,
-  hasCompleteCanonicalSystemValueObjectLocalizationV1,
+  createPendingCanonicalSystemValueObjectLocalizationV1,
 } from "@/lib/reality-core/global-system-value-object-localization.server";
 import {
   ActorContextError,
@@ -858,18 +858,6 @@ async function createSystemObject(input: {
     return { valueObjectId, canonicalKey: input.canonicalKey, title: input.localizedTitle, replay: true };
   }
 
-  const localizationEnvelope = await buildCanonicalSystemValueObjectLocalizationV1({
-    userId: input.guard.appUser.id,
-    actorId: input.actor.actorId,
-    entityKey: valueObjectId,
-    operationId: stableUuid(`ARCTOR_CURATOR_SYSTEM_LOCALIZATION_V1|${valueObjectId}|${hash}`),
-    curatorLocale: input.locale,
-    localizedTitle: input.localizedTitle,
-    localizedDescription: input.localizedDescription,
-    titleEn: input.titleEn,
-    descriptionEn: input.descriptionEn,
-  });
-
   const draftLocalizations: Record<string, { title: string; description: string }> = {
     en: { title: input.titleEn, description: input.descriptionEn },
   };
@@ -878,8 +866,18 @@ async function createSystemObject(input: {
     description: input.localizedDescription,
   };
 
+  const pendingLocalizationEnvelope =
+    createPendingCanonicalSystemValueObjectLocalizationV1({
+      curatorLocale: input.locale,
+      localizedTitle: input.localizedTitle,
+      localizedDescription: input.localizedDescription,
+      titleEn: input.titleEn,
+      descriptionEn: input.descriptionEn,
+    });
+  const localizationQueuedAt = new Date().toISOString();
+
   const metadataJson = {
-    localizedContent: localizationEnvelope,
+    localizedContent: pendingLocalizationEnvelope,
     contentLocalizationRuntime: "ARCTOR_CONTENT_LOCALIZATION_V1",
     systemValueObjectLocalizationRuntime:
       "ARCTOR_SYSTEM_VALUE_OBJECT_CANONICAL_ENGLISH_LOCALIZATION_V1",
@@ -895,9 +893,20 @@ async function createSystemObject(input: {
       publishedAt: new Date().toISOString(),
       canonicalKeyMode: "server_generated_v1",
       canonicalLocale: "en",
-      localizationState: "complete",
-      localizationLocales: [...CURATOR_LOCALES],
-      localizationCompletedAt: new Date().toISOString(),
+      creationLocale: input.locale,
+      localizationState: "pending",
+      localizationLocales: ["en", input.locale],
+      localizationMissingLocales: CURATOR_LOCALES.filter(
+        (locale) => locale !== "en" && locale !== input.locale,
+      ),
+      localizationAttemptCount: 0,
+      localizationQueuedAt,
+      localizationLastAttemptAt: null,
+      localizationNextAttemptAt: localizationQueuedAt,
+      localizationLastError: null,
+      localizationCompletedAt: null,
+      localizationRequestedByUserId: input.guard.appUser.id,
+      localizationRequestedByActorId: input.actor.actorId,
       nodeRole: input.role,
       localizations: draftLocalizations,
     },
@@ -987,11 +996,7 @@ async function createSystemObject(input: {
     post.facet_code !== semantic.facetCode ||
     post.origin_type_code !== "system_model" ||
     postMetadata.system_hidden_from_observation_ui === true ||
-    !hasCompleteCanonicalSystemValueObjectLocalizationV1({
-      metadata: postMetadata,
-      titleEn: input.titleEn,
-      descriptionEn: input.descriptionEn,
-    }) ||
+    !postMetadata.curator_system_draft_v1 ||
     !version ||
     version.scope_code !== "global" ||
     version.owner_actor_id !== null ||
@@ -999,7 +1004,30 @@ async function createSystemObject(input: {
   ) {
     throw new Error("CURATOR_SYSTEM_POSTCHECK_STATE_INVALID");
   }
-  return { valueObjectId, canonicalKey: input.canonicalKey, title: input.localizedTitle, replay: false };
+  let localization: Record<string, unknown>;
+  try {
+    localization = await attemptCuratorSystemValueObjectLocalizationV1({
+      valueObjectId,
+      fallbackUserId: input.guard.appUser.id,
+      fallbackActorId: input.actor.actorId,
+      force: true,
+    });
+  } catch (localizationError) {
+    const message =
+      localizationError instanceof Error
+        ? localizationError.message
+        : String(localizationError);
+    console.error("CURATOR_SYSTEM_LOCALIZATION_IMMEDIATE_ATTEMPT_FAILED", message);
+    localization = { ok: false, state: "pending", error: message };
+  }
+
+  return {
+    valueObjectId,
+    canonicalKey: input.canonicalKey,
+    title: input.localizedTitle,
+    replay: false,
+    localization,
+  };
 }
 
 function roleNameRu(role: NodeRoleCode) {

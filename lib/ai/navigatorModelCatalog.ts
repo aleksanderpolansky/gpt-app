@@ -18,9 +18,9 @@ export const ARCTOR_NAVIGATOR_MODEL_CATALOG_V1 =
   "ARCTOR_NAVIGATOR_MODEL_CATALOG_V1" as const;
 
 export const NAVIGATOR_MODEL_CATALOG_VERIFIED_AT =
-  "2026-09-04T00:00:00.000Z" as const;
+  "2026-09-12T00:00:00.000Z" as const;
 export const NAVIGATOR_MODEL_AUTO_SEED_EXPIRES_AT =
-  "2026-09-11T23:59:59.999Z" as const;
+  "2026-09-19T23:59:59.999Z" as const;
 
 const SOURCE_URL = "https://developers.openai.com/api/docs/models";
 

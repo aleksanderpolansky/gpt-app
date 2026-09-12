@@ -5,6 +5,8 @@ import {
   runAiJsonWithUsageMetadata,
   type RunAiJsonUsageMetadata,
 } from "../../../lib/ai/openaiClient";
+import { getNavigatorModelDefinition } from "../../../lib/ai/navigatorModelCatalog";
+import { ensureNavigatorPriceSnapshotV1 } from "../../../lib/ai/navigatorPriceSnapshot.server";
 import {
   completeAiAnalysisExecution,
   createAiAnalysisExecution,
@@ -428,32 +430,12 @@ function estimateInputTokensForBudgetUpperBound(input: {
 }
 
 async function resolveModel() {
-  const { data, error } = await supabase
-    .from("ai_model_tiers")
-    .select("tier_code,default_model_name,enabled")
-    .eq("tier_code", "standard")
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(
-      `AI_A3_1_SEMANTIC_REVIEW_MODEL_READ_FAILED:${error.message}`,
-    );
+  const definition = getNavigatorModelDefinition("standard");
+  const modelName = asText(definition?.modelName);
+  if (!definition || definition.tierCode !== "standard" || !modelName) {
+    throw new Error("AI_A3_1_SEMANTIC_REVIEW_STANDARD_MODEL_UNAVAILABLE");
   }
-
-  if (
-    !data ||
-    data.enabled !== true ||
-    !asText(data.default_model_name)
-  ) {
-    throw new Error(
-      "AI_A3_1_SEMANTIC_REVIEW_STANDARD_MODEL_UNAVAILABLE",
-    );
-  }
-
-  return {
-    tierCode: "standard",
-    modelName: asText(data.default_model_name),
-  };
+  return { tierCode: "standard", modelName };
 }
 
 async function reserveBudget(input: {
@@ -472,6 +454,12 @@ async function reserveBudget(input: {
     p_cached_input_tokens: 0,
     p_max_output_tokens: MAX_OUTPUT_TOKENS,
   };
+
+  await ensureNavigatorPriceSnapshotV1({
+    tierCode: input.tierCode,
+    modelName: input.modelName,
+    maxAgeHours: 72,
+  });
 
   let { data, error } = await supabase.rpc(
     "preflight_ai_pilot_call_budget_v1",

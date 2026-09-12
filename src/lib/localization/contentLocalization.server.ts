@@ -5,6 +5,8 @@ import {
   runAiJsonWithUsageMetadata,
   type RunAiJsonUsageMetadata,
 } from "../../../lib/ai/openaiClient";
+import { getNavigatorModelDefinition } from "../../../lib/ai/navigatorModelCatalog";
+import { ensureNavigatorPriceSnapshotV1 } from "../../../lib/ai/navigatorPriceSnapshot.server";
 import { supabase } from "../../../lib/supabase";
 import {
   completeAiAnalysisExecution,
@@ -30,7 +32,7 @@ import {
 export const ARCTOR_CONTENT_LOCALIZATION_RUNTIME = "ARCTOR_CONTENT_LOCALIZATION_V1" as const;
 
 const ROUTE_PATH = "/api/activity/quick-capture";
-const MODEL_TIER = "nano";
+const MODEL_TIER = "nano" as const;
 const MAX_BATCH_ITEMS = 5;
 const MAX_FIELDS_PER_ITEM = 12;
 const MAX_TOTAL_SOURCE_CHARS = 12_000;
@@ -161,15 +163,10 @@ function translationSchema(targetLocales: readonly ArctorContentLocale[]) {
 }
 
 async function getNanoModel() {
-  const { data, error } = await supabase
-    .from("ai_model_tiers")
-    .select("tier_code,default_model_name,enabled")
-    .eq("tier_code", MODEL_TIER)
-    .maybeSingle();
-  const row = asRecord(data);
-  const model = asText(row.default_model_name);
-  if (error || row.enabled !== true || !model) {
-    throw new Error(`CONTENT_LOCALIZATION_NANO_MODEL_UNAVAILABLE:${error?.message ?? "disabled"}`);
+  const definition = getNavigatorModelDefinition(MODEL_TIER);
+  const model = asText(definition?.modelName);
+  if (!definition || definition.tierCode !== MODEL_TIER || !model) {
+    throw new Error("CONTENT_LOCALIZATION_NANO_MODEL_UNAVAILABLE");
   }
   return model;
 }
@@ -189,6 +186,12 @@ async function reserveBudget(input: {
   model: string;
   estimatedInputTokens: number;
 }) {
+  await ensureNavigatorPriceSnapshotV1({
+    tierCode: MODEL_TIER,
+    modelName: input.model,
+    maxAgeHours: 72,
+  });
+
   const { data, error } = await supabase.rpc("preflight_ai_pilot_call_budget_v1", {
     p_app_user_id: input.userId,
     p_operation_id: input.operationId,
