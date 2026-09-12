@@ -1092,3 +1092,16 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - Список читает `system_value_object_relations`, комментарий куратора — из `activity_processing_logs`.
 - SQL/формулы/контекст типовой активности не менялись.
 - Recovery detail: docs/recovery/ARCTOR_RELATION_SEARCH_AND_LIST_V1_0_3_RU_20260912.md.
+
+## 2026-09-12 — Целевые ОН в Конструкторе последствий
+- Baseline: 7fdcc9f752c63a0042c052e1562a9d8b95b794e8.
+- Runtime-тест общего «Конструктора связей» выявил `RELATION_CONSTRUCTOR_NODE_ROLE_GUARD_REJECTED` на ручной связи leaf → intermediate.
+- Для curator manual relation hard-block по facet/node-role снят; совместимость с ограничениями реестра сохраняется как audit evidence, но не запрещает ручное решение куратора.
+- В «Конструкторе последствий» разблокирован поиск target ОН.
+- Target-кандидаты берутся только из активных `system_value_object_relations`; в список попадают только листовые системные ОН.
+- Для candidate discovery учитываются связи в обе стороны.
+- Target можно выбирать только после определения типовой активности.
+- Выбор target записывается append-oriented в `activity_processing_logs` и содержит activityTemplateId, parameter, source, target и relation evidence.
+- Поддерживается несколько target ОН для одной исходной пары.
+- Формулы/результирующие факты пока не создаются.
+- Recovery detail: docs/recovery/ARCTOR_CONSEQUENCE_TARGETS_AND_RELATION_GUARD_HOTFIX_V1_RU_20260912.md.

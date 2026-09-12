@@ -259,29 +259,33 @@ async function loadWritableRelationType(relationTypeCode: string) {
   return row;
 }
 
-function assertEndpointCompatibility(input: {
+function endpointCompatibilitySnapshot(input: {
   source: GlobalValueObjectRow;
   target: GlobalValueObjectRow;
   relationType: RelationTypeRow;
-}) {
+}): JsonRecord {
   const sourceFacet = text(input.source.facet_code);
   const targetFacet = text(input.target.facet_code);
   const sourceRole = text(input.source.node_role_code);
   const targetRole = text(input.target.node_role_code);
+  const sourceFacets = input.relationType.allowed_source_facet_codes ?? [];
+  const targetFacets = input.relationType.allowed_target_facet_codes ?? [];
+  const sourceRoles = input.relationType.allowed_source_node_roles ?? [];
+  const targetRoles = input.relationType.allowed_target_node_roles ?? [];
 
-  if (
-    !(input.relationType.allowed_source_facet_codes ?? []).includes(sourceFacet) ||
-    !(input.relationType.allowed_target_facet_codes ?? []).includes(targetFacet)
-  ) {
-    throw new Error("RELATION_CONSTRUCTOR_FACET_GUARD_REJECTED");
-  }
-
-  if (
-    !(input.relationType.allowed_source_node_roles ?? []).includes(sourceRole) ||
-    !(input.relationType.allowed_target_node_roles ?? []).includes(targetRole)
-  ) {
-    throw new Error("RELATION_CONSTRUCTOR_NODE_ROLE_GUARD_REJECTED");
-  }
+  return {
+    sourceFacet,
+    targetFacet,
+    sourceRole,
+    targetRole,
+    facetCompatible:
+      (sourceFacets.length === 0 || sourceFacets.includes(sourceFacet)) &&
+      (targetFacets.length === 0 || targetFacets.includes(targetFacet)),
+    nodeRoleCompatible:
+      (sourceRoles.length === 0 || sourceRoles.includes(sourceRole)) &&
+      (targetRoles.length === 0 || targetRoles.includes(targetRole)),
+    enforcementMode: "curator_manual_advisory_only",
+  };
 }
 
 async function findExistingRelation(
@@ -322,6 +326,7 @@ async function beginCuratorRationaleLog(input: {
   target: GlobalValueObjectRow;
   relationType: RelationTypeRow;
   comment: string;
+  registryCompatibility: JsonRecord;
 }) {
   const commentHash = crypto
     .createHash("sha256")
@@ -358,6 +363,7 @@ async function beginCuratorRationaleLog(input: {
       relationTypeCode: input.relationType.relation_type_code,
       curatorComment: input.comment,
       commentHash,
+      registryCompatibility: input.registryCompatibility,
     },
     started_at: now,
   });
@@ -493,7 +499,11 @@ export async function POST(request: Request) {
       loadWritableRelationType(relationTypeCode),
     ]);
 
-    assertEndpointCompatibility({ source, target, relationType });
+    const registryCompatibility = endpointCompatibilitySnapshot({
+      source,
+      target,
+      relationType,
+    });
 
     const rationaleLogId = await beginCuratorRationaleLog({
       guard,
@@ -501,6 +511,7 @@ export async function POST(request: Request) {
       target,
       relationType,
       comment,
+      registryCompatibility,
     });
 
     try {
@@ -579,8 +590,7 @@ export async function POST(request: Request) {
     const message = error instanceof Error ? error.message : String(error);
     const status =
       message.includes("NOT_AVAILABLE") ||
-      message.includes("NOT_WRITABLE") ||
-      message.includes("GUARD_REJECTED")
+      message.includes("NOT_WRITABLE")
         ? 409
         : 500;
     return errorResponse("RELATION_CONSTRUCTOR_POST_FAILED", message, status);
