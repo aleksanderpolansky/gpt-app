@@ -154,6 +154,7 @@ async function loadCatalog(localeValue: unknown) {
       .is("owner_user_id", null)
       .is("owner_actor_id", null)
       .eq("status", "active")
+      .eq("node_role_code", "leaf")
       .order("title", { ascending: true })
       .limit(5000),
     supabase
@@ -230,6 +231,10 @@ async function loadRelationEndpoints(sourceId: string, targetId: string) {
       row.owner_actor_id !== null
     ) {
       throw new Error(`RELATION_CONSTRUCTOR_${label}_NOT_AVAILABLE`);
+    }
+
+    if (row.node_role_code !== "leaf") {
+      throw new Error(`RELATION_CONSTRUCTOR_${label}_NOT_LEAF`);
     }
   }
 
@@ -590,7 +595,8 @@ export async function POST(request: Request) {
     const message = error instanceof Error ? error.message : String(error);
     const status =
       message.includes("NOT_AVAILABLE") ||
-      message.includes("NOT_WRITABLE")
+      message.includes("NOT_WRITABLE") ||
+      message.includes("NOT_LEAF")
         ? 409
         : 500;
     return errorResponse("RELATION_CONSTRUCTOR_POST_FAILED", message, status);

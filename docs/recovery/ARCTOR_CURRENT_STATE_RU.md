@@ -1105,3 +1105,12 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - Поддерживается несколько target ОН для одной исходной пары.
 - Формулы/результирующие факты пока не создаются.
 - Recovery detail: docs/recovery/ARCTOR_CONSEQUENCE_TARGETS_AND_RELATION_GUARD_HOTFIX_V1_RU_20260912.md.
+
+## 2026-09-12 — Конструктор связей: только листовые ОН
+- Baseline: b6d1f3f889f20389f0b3def2fab6bd6a587bb639.
+- После runtime-проверки подтверждено: `SYSTEM_RELATION_NODE_ROLE_GUARD_REJECTED` в БД оставляем.
+- Архитектурное правило уточнено: и исходный, и связанный ОН в «Конструкторе связей» должны быть листовыми.
+- API-каталог relation-constructor фильтрует `node_role_code=leaf`, поэтому оба поисковых поля показывают только листовые ОН.
+- Добавлена server-side проверка leaf-only, чтобы UI нельзя было обойти прямым POST.
+- DB schema/guard, формулы и consequence runtime не менялись.
+- Recovery detail: docs/recovery/ARCTOR_RELATION_CONSTRUCTOR_LEAF_ONLY_HOTFIX_V1_RU_20260912.md.
