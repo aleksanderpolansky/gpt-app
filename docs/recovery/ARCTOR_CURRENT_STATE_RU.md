@@ -1079,3 +1079,16 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - Типовая активность не является полем общей связи. Её контекст будет применяться позже в «Конструкторе последствий».
 - Формулы/результирующие факты не затронуты.
 - Recovery detail: docs/recovery/ARCTOR_RELATION_CONSTRUCTOR_V1_0_1_RU_20260912.md.
+
+## 2026-09-12 — Поиск ОН в конструкторе связей + список связей
+- Baseline: 4e8d1a99cca08fb73a7bb428909f74071eb3d74a.
+- Первая попытка V1 остановилась до commit/push на targeted ESLint: `src/app/admin/relations/page.tsx` нарушал `react-hooks/set-state-in-effect`. V1_0_1 исправляет lifecycle без ослабления lint gate.
+- Вторая попытка V1_0_1 остановилась до validator на navigation patcher: LF-only anchor не совпал с CRLF-файлом `global-navigation.tsx`. V1_0_2 делает patcher независимым от EOL и сохраняет исходный стиль перевода строк.
+- Третья попытка V1_0_2 прошла patcher, recovery, validator 22/22 и ESLint, но typecheck выявил неверную глубину относительного импорта Supabase в новом `/api/admin/relations`. V1_0_3 исправляет путь на `../../../../../lib/supabase` и проверяет его validator-ом.
+- Поля исходного и связанного ОН в `/admin/relation-constructor` заменены на `ObservationObjectCombobox`: ввод текста + выпадающий список, по образцу выбора родителя в кураторе.
+- Исправлена автоподстановка `sourceValueObjectId` после перехода с карты связей.
+- Добавлен `/admin/relations` со списком общих системных связей, поиском и кнопкой «Добавить связь».
+- В admin-навигации «Связи» расположены непосредственно под «Конструктором последствий».
+- Список читает `system_value_object_relations`, комментарий куратора — из `activity_processing_logs`.
+- SQL/формулы/контекст типовой активности не менялись.
+- Recovery detail: docs/recovery/ARCTOR_RELATION_SEARCH_AND_LIST_V1_0_3_RU_20260912.md.

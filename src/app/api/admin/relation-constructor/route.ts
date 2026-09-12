@@ -179,14 +179,20 @@ async function loadCatalog(localeValue: unknown) {
   }
 
   const objects = ((objectsResult.data ?? []) as GlobalValueObjectRow[])
-    .map((row) => localizeGlobalSystemValueObject(row, locale))
-    .map((row) => ({
-      id: row.id,
-      title: row.title,
-      description: row.description,
-      facetCode: row.facet_code,
-      nodeRoleCode: row.node_role_code,
-    }))
+    .map((row) => {
+      const localized = localizeGlobalSystemValueObject(row, locale);
+      const english = localizeGlobalSystemValueObject(row, "en");
+      return {
+        id: localized.id,
+        title: localized.title,
+        description: localized.description,
+        titleEn: english.title,
+        descriptionEn: english.description,
+        canonicalKey: localized.canonical_key,
+        facetCode: localized.facet_code,
+        nodeRoleCode: localized.node_role_code,
+      };
+    })
     .sort((left, right) => left.title.localeCompare(right.title, locale));
 
   const relationTypes = ((relationTypesResult.data ?? []) as RelationTypeRow[])

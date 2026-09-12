@@ -7,6 +7,7 @@ import {
   resolveSemanticRelationDescription,
   resolveSemanticRelationTitle,
 } from "@/data/value-object-semantic-relation-localization";
+import { ObservationObjectCombobox } from "@/components/observation-objects/observation-object-combobox";
 import { getLocaleSearchParam, type LocaleCode } from "@/i18n";
 import type { ValueObjectRelationTypeDto } from "@/types/value-object-semantic-relation";
 
@@ -14,6 +15,9 @@ type ObservationObjectOption = {
   id: string;
   title: string;
   description: string | null;
+  titleEn: string | null;
+  descriptionEn: string | null;
+  canonicalKey: string | null;
   facetCode: string | null;
   nodeRoleCode: string | null;
 };
@@ -49,6 +53,8 @@ const COPY: Record<
     comment: string;
     sourcePlaceholder: string;
     targetPlaceholder: string;
+    objectSearchPlaceholder: string;
+    objectEmpty: string;
     relationPlaceholder: string;
     commentPlaceholder: string;
     save: string;
@@ -69,6 +75,8 @@ const COPY: Record<
     comment: "Комментарий куратора",
     sourcePlaceholder: "Выберите исходный ОН…",
     targetPlaceholder: "Выберите связанный ОН…",
+    objectSearchPlaceholder: "Поиск по названию, описанию или английскому тексту…",
+    objectEmpty: "Подходящие объекты наблюдения не найдены.",
     relationPlaceholder: "Выберите вид связи…",
     commentPlaceholder:
       "Свободным текстом объясните, почему, по мнению куратора, эта связь существует.",
@@ -89,6 +97,8 @@ const COPY: Record<
     comment: "Curator comment",
     sourcePlaceholder: "Choose source object…",
     targetPlaceholder: "Choose related object…",
+    objectSearchPlaceholder: "Search by name, description or English text…",
+    objectEmpty: "No matching observation objects.",
     relationPlaceholder: "Choose relationship type…",
     commentPlaceholder:
       "Explain in free text why the curator considers this relationship to exist.",
@@ -109,6 +119,8 @@ const COPY: Record<
     comment: "Komentarz kuratora",
     sourcePlaceholder: "Wybierz obiekt źródłowy…",
     targetPlaceholder: "Wybierz obiekt powiązany…",
+    objectSearchPlaceholder: "Szukaj po nazwie, opisie lub tekście angielskim…",
+    objectEmpty: "Nie znaleziono pasujących obiektów obserwacji.",
     relationPlaceholder: "Wybierz typ relacji…",
     commentPlaceholder: "Opisz, dlaczego kurator uznaje, że ta relacja istnieje.",
     save: "Utwórz relację",
@@ -128,6 +140,8 @@ const COPY: Record<
     comment: "Коментар куратора",
     sourcePlaceholder: "Виберіть вихідний ОН…",
     targetPlaceholder: "Виберіть пов’язаний ОН…",
+    objectSearchPlaceholder: "Пошук за назвою, описом або англійським текстом…",
+    objectEmpty: "Відповідні об’єкти спостереження не знайдені.",
     relationPlaceholder: "Виберіть вид зв’язку…",
     commentPlaceholder: "Поясніть, чому куратор вважає, що цей зв’язок існує.",
     save: "Створити зв’язок",
@@ -147,6 +161,8 @@ const COPY: Record<
     comment: "Kurator-Kommentar",
     sourcePlaceholder: "Ausgangsobjekt wählen…",
     targetPlaceholder: "Verknüpftes Objekt wählen…",
+    objectSearchPlaceholder: "Nach Name, Beschreibung oder englischem Text suchen…",
+    objectEmpty: "Keine passenden Beobachtungsobjekte gefunden.",
     relationPlaceholder: "Beziehungstyp wählen…",
     commentPlaceholder: "Begründen Sie, warum diese Beziehung nach Ansicht des Kurators besteht.",
     save: "Beziehung erstellen",
@@ -166,6 +182,8 @@ const COPY: Record<
     comment: "Comentario del curador",
     sourcePlaceholder: "Elija el objeto de origen…",
     targetPlaceholder: "Elija el objeto relacionado…",
+    objectSearchPlaceholder: "Buscar por nombre, descripción o texto en inglés…",
+    objectEmpty: "No se encontraron objetos de observación coincidentes.",
     relationPlaceholder: "Elija el tipo de relación…",
     commentPlaceholder: "Explique por qué el curador considera que existe esta relación.",
     save: "Crear relación",
@@ -185,6 +203,8 @@ const COPY: Record<
     comment: "Komentář kurátora",
     sourcePlaceholder: "Vyberte výchozí objekt…",
     targetPlaceholder: "Vyberte související objekt…",
+    objectSearchPlaceholder: "Hledat podle názvu, popisu nebo anglického textu…",
+    objectEmpty: "Nebyly nalezeny odpovídající objekty pozorování.",
     relationPlaceholder: "Vyberte typ vztahu…",
     commentPlaceholder: "Vysvětlete, proč kurátor považuje tento vztah za existující.",
     save: "Vytvořit vztah",
@@ -202,11 +222,7 @@ export default function RelationConstructorPage() {
       ? "en"
       : getLocaleSearchParam(new URLSearchParams(window.location.search)),
   );
-  const [sourceValueObjectId, setSourceValueObjectId] = useState(() =>
-    typeof window === "undefined"
-      ? ""
-      : new URLSearchParams(window.location.search).get("sourceValueObjectId")?.trim() ?? "",
-  );
+  const [sourceValueObjectId, setSourceValueObjectId] = useState("");
   const [targetValueObjectId, setTargetValueObjectId] = useState("");
   const [relationTypeCode, setRelationTypeCode] = useState("");
   const [comment, setComment] = useState("");
@@ -239,11 +255,19 @@ export default function RelationConstructorPage() {
         const nextObjects = payload.objects ?? [];
         setObjects(nextObjects);
         setRelationTypes(payload.relationTypes ?? []);
+
+        const requestedSourceValueObjectId =
+          typeof window === "undefined"
+            ? ""
+            : new URLSearchParams(window.location.search)
+                .get("sourceValueObjectId")
+                ?.trim() ?? "";
+
         if (
-          sourceValueObjectId &&
-          !nextObjects.some((item) => item.id === sourceValueObjectId)
+          requestedSourceValueObjectId &&
+          nextObjects.some((item) => item.id === requestedSourceValueObjectId)
         ) {
-          setSourceValueObjectId("");
+          setSourceValueObjectId(requestedSourceValueObjectId);
         }
       })
       .catch((cause) => {
@@ -258,11 +282,39 @@ export default function RelationConstructorPage() {
     return () => {
       cancelled = true;
     };
-  }, [fetchCatalog, sourceValueObjectId]);
+  }, [fetchCatalog]);
 
   const targetObjects = useMemo(
     () => objects.filter((item) => item.id !== sourceValueObjectId),
     [objects, sourceValueObjectId],
+  );
+
+  const sourceComboboxOptions = useMemo(
+    () =>
+      objects.map((item) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        titleEn: item.titleEn,
+        descriptionEn: item.descriptionEn,
+        canonicalKey: item.canonicalKey,
+        meta: item.nodeRoleCode,
+      })),
+    [objects],
+  );
+
+  const targetComboboxOptions = useMemo(
+    () =>
+      targetObjects.map((item) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        titleEn: item.titleEn,
+        descriptionEn: item.descriptionEn,
+        canonicalKey: item.canonicalKey,
+        meta: item.nodeRoleCode,
+      })),
+    [targetObjects],
   );
 
   const selectedRelationType = useMemo(
@@ -347,44 +399,38 @@ export default function RelationConstructorPage() {
               <span className="text-sm font-semibold text-[#30344b]">
                 1. {copy.source}
               </span>
-              <select
+              <ObservationObjectCombobox
                 value={sourceValueObjectId}
-                onChange={(event) => {
-                  setSourceValueObjectId(event.target.value);
+                onChange={(value) => {
+                  setSourceValueObjectId(value);
                   setTargetValueObjectId("");
                   setSuccess(false);
                 }}
-                className="h-11 rounded-xl border border-[#d8dced] bg-white px-3 text-sm text-[#30344b] outline-none focus:border-[#3b6ef8]"
-              >
-                <option value="">{copy.sourcePlaceholder}</option>
-                {objects.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.title}
-                  </option>
-                ))}
-              </select>
+                options={sourceComboboxOptions}
+                placeholder={copy.sourcePlaceholder}
+                searchPlaceholder={copy.objectSearchPlaceholder}
+                emptyLabel={copy.objectEmpty}
+                ariaLabel={copy.source}
+              />
             </label>
 
             <label className="grid gap-2">
               <span className="text-sm font-semibold text-[#30344b]">
                 2. {copy.target}
               </span>
-              <select
+              <ObservationObjectCombobox
                 value={targetValueObjectId}
-                disabled={!sourceValueObjectId}
-                onChange={(event) => {
-                  setTargetValueObjectId(event.target.value);
+                onChange={(value) => {
+                  setTargetValueObjectId(value);
                   setSuccess(false);
                 }}
-                className="h-11 rounded-xl border border-[#d8dced] bg-white px-3 text-sm text-[#30344b] outline-none focus:border-[#3b6ef8] disabled:bg-[#f6f7fb] disabled:text-[#9ca3b8]"
-              >
-                <option value="">{copy.targetPlaceholder}</option>
-                {targetObjects.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.title}
-                  </option>
-                ))}
-              </select>
+                options={targetComboboxOptions}
+                placeholder={copy.targetPlaceholder}
+                searchPlaceholder={copy.objectSearchPlaceholder}
+                emptyLabel={copy.objectEmpty}
+                ariaLabel={copy.target}
+                disabled={!sourceValueObjectId}
+              />
             </label>
 
             <label className="grid gap-2">

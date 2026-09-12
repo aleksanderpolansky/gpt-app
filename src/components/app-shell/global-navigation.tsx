@@ -231,6 +231,23 @@ function getConsequenceConstructorLabel(locale: string, count: number) {
 }
 
 
+const RELATIONS_LIST_LABEL_BY_LOCALE: Record<string, string> = {
+  en: "Relationships",
+  pl: "Relacje",
+  ru: "Связи",
+  uk: "Зв’язки",
+  de: "Beziehungen",
+  es: "Relaciones",
+  cs: "Vztahy",
+};
+
+function getRelationsListLabel(locale: string) {
+  return (
+    RELATIONS_LIST_LABEL_BY_LOCALE[locale] ??
+    RELATIONS_LIST_LABEL_BY_LOCALE.en
+  );
+}
+
 function getComingSoonLabel(label: string, comingSoon?: boolean, comingSoonSuffix = getComingSoonSuffix("en")) {
   return comingSoon ? `${label}${comingSoonSuffix}` : label;
 }
@@ -754,6 +771,7 @@ export function GlobalSidebar({
   const isConsequenceConstructorActive = currentPathname.startsWith(
     "/admin/consequence-constructor",
   );
+  const isRelationsListActive = currentPathname.startsWith("/admin/relations");
   const isLocalizationQueueActive = currentPathname.startsWith("/admin/localization-jobs");
   const isSystemAiInstructionsActive =
     currentPathname === "/admin/ai-instructions";
@@ -766,6 +784,9 @@ export function GlobalSidebar({
     isUploadedFilesActive ||
     isLocalEditorsActive ||
     isRealityCuratorActive ||
+    isConsequenceConstructorActive ||
+    isRelationsListActive ||
+    isLocalizationQueueActive ||
     isSystemAiInstructionsActive ||
     isAdminUsersActive ||
     isAdminAiBillingActive ||
@@ -893,6 +914,12 @@ export function GlobalSidebar({
                     depth={1}
                     href={localeHref("/admin/consequence-constructor")}
                     active={isConsequenceConstructorActive}
+                  />
+                  <TreeItem
+                    label={getRelationsListLabel(locale)}
+                    depth={1}
+                    href={localeHref("/admin/relations")}
+                    active={isRelationsListActive}
                   />
                   <TreeItem
                     label={getLocalizationQueueLabel(locale, pendingLocalizationCount)}
