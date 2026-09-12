@@ -41,6 +41,7 @@ type ValueObjectRow = {
   metadata_json: unknown;
   facet_code: string | null;
   node_role_code: string | null;
+  ontology_node_role_code: string | null;
   status: string;
 };
 
@@ -113,6 +114,7 @@ export async function GET(request: Request) {
     .select(
       "id,relation_type_code,source_value_object_id,target_value_object_id,status,provenance_code,created_at,updated_at",
     )
+    .eq("status", "active")
     .order("updated_at", { ascending: false })
     .limit(5000);
 
@@ -152,7 +154,7 @@ export async function GET(request: Request) {
     supabase
       .from("value_objects")
       .select(
-        "id,title,description,canonical_key,metadata_json,facet_code,node_role_code,status",
+        "id,title,description,canonical_key,metadata_json,facet_code,node_role_code,ontology_node_role_code,status",
       )
       .in("id", valueObjectIds),
     supabase
@@ -215,7 +217,7 @@ export async function GET(request: Request) {
           title: localized.title,
           description: localized.description,
           facetCode: row.facet_code,
-          nodeRoleCode: row.node_role_code,
+          nodeRoleCode: row.ontology_node_role_code,
           status: row.status,
         },
       ] as const;

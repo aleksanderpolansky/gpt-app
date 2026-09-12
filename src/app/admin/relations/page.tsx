@@ -50,6 +50,11 @@ const COPY: Record<
     target: string;
     comment: string;
     updated: string;
+    actions: string;
+    edit: string;
+    delete: string;
+    deleting: string;
+    confirmDelete: string;
     active: string;
     inactive: string;
   }
@@ -67,6 +72,11 @@ const COPY: Record<
     target: "Связанный ОН",
     comment: "Комментарий куратора",
     updated: "Обновлено",
+    actions: "Действия",
+    edit: "Редактировать",
+    delete: "Удалить",
+    deleting: "Удаляем…",
+    confirmDelete: "Удалить эту связь? Она исчезнет с карты и из списка целей, но история останется в журнале.",
     active: "Активна",
     inactive: "Неактивна",
   },
@@ -83,6 +93,11 @@ const COPY: Record<
     target: "Related object",
     comment: "Curator comment",
     updated: "Updated",
+    actions: "Actions",
+    edit: "Edit",
+    delete: "Delete",
+    deleting: "Deleting…",
+    confirmDelete: "Delete this relationship? It will disappear from the map and target candidates, while the audit history remains.",
     active: "Active",
     inactive: "Inactive",
   },
@@ -99,6 +114,11 @@ const COPY: Record<
     target: "Obiekt powiązany",
     comment: "Komentarz kuratora",
     updated: "Zaktualizowano",
+    actions: "Działania",
+    edit: "Edytuj",
+    delete: "Usuń",
+    deleting: "Usuwanie…",
+    confirmDelete: "Usunąć tę relację? Zniknie z mapy i listy celów, ale historia pozostanie w dzienniku.",
     active: "Aktywna",
     inactive: "Nieaktywna",
   },
@@ -115,6 +135,11 @@ const COPY: Record<
     target: "Пов’язаний ОН",
     comment: "Коментар куратора",
     updated: "Оновлено",
+    actions: "Дії",
+    edit: "Редагувати",
+    delete: "Видалити",
+    deleting: "Видалення…",
+    confirmDelete: "Видалити цей зв’язок? Він зникне з карти та списку цілей, але історія залишиться в журналі.",
     active: "Активний",
     inactive: "Неактивний",
   },
@@ -131,6 +156,11 @@ const COPY: Record<
     target: "Verknüpftes Objekt",
     comment: "Kurator-Kommentar",
     updated: "Aktualisiert",
+    actions: "Aktionen",
+    edit: "Bearbeiten",
+    delete: "Löschen",
+    deleting: "Löschen…",
+    confirmDelete: "Diese Beziehung löschen? Sie verschwindet aus Karte und Zielauswahl, die Historie bleibt im Protokoll.",
     active: "Aktiv",
     inactive: "Inaktiv",
   },
@@ -147,6 +177,11 @@ const COPY: Record<
     target: "Objeto relacionado",
     comment: "Comentario del curador",
     updated: "Actualizado",
+    actions: "Acciones",
+    edit: "Editar",
+    delete: "Eliminar",
+    deleting: "Eliminando…",
+    confirmDelete: "¿Eliminar esta relación? Desaparecerá del mapa y de los objetivos, pero el historial quedará en el registro.",
     active: "Activa",
     inactive: "Inactiva",
   },
@@ -163,6 +198,11 @@ const COPY: Record<
     target: "Související objekt",
     comment: "Komentář kurátora",
     updated: "Aktualizováno",
+    actions: "Akce",
+    edit: "Upravit",
+    delete: "Smazat",
+    deleting: "Mazání…",
+    confirmDelete: "Smazat tento vztah? Zmizí z mapy a výběru cílů, historie zůstane v protokolu.",
     active: "Aktivní",
     inactive: "Neaktivní",
   },
@@ -186,6 +226,7 @@ export default function AdminRelationsPage() {
   const [relations, setRelations] = useState<RelationListItem[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [busyRelationId, setBusyRelationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const copy = COPY[locale] ?? COPY.en;
 
@@ -222,6 +263,31 @@ export default function AdminRelationsPage() {
       cancelled = true;
     };
   }, [fetchRelations]);
+
+  async function deleteRelation(item: RelationListItem) {
+    if (busyRelationId) return;
+    if (!window.confirm(copy.confirmDelete)) return;
+
+    setBusyRelationId(item.id);
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/admin/relation-constructor?relationId=${encodeURIComponent(item.id)}`,
+        { method: "DELETE" },
+      );
+      const payload = (await response.json()) as { ok?: boolean; error?: string };
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(payload.error || `HTTP ${response.status}`);
+      }
+      setRelations((current) =>
+        current.filter((relation) => relation.id !== item.id),
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setBusyRelationId(null);
+    }
+  }
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase();
@@ -308,12 +374,14 @@ export default function AdminRelationsPage() {
                   <th className="border-b border-[#e8eaf2] px-3 py-3">{copy.target}</th>
                   <th className="border-b border-[#e8eaf2] px-3 py-3">{copy.comment}</th>
                   <th className="border-b border-[#e8eaf2] px-3 py-3">{copy.updated}</th>
+                  <th className="border-b border-[#e8eaf2] px-3 py-3">{copy.actions}</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((item) => {
                   const sourceHref = `/value-objects/${encodeURIComponent(item.source.id)}${locale === "en" ? "" : `?locale=${encodeURIComponent(locale)}`}`;
                   const targetHref = `/value-objects/${encodeURIComponent(item.target.id)}${locale === "en" ? "" : `?locale=${encodeURIComponent(locale)}`}`;
+                  const editHref = `/admin/relation-constructor?relationId=${encodeURIComponent(item.id)}${locale === "en" ? "" : `&locale=${encodeURIComponent(locale)}`}`;
                   const relationLabel = resolveSemanticRelationTitle(
                     item.relationType,
                     locale,
@@ -349,6 +417,26 @@ export default function AdminRelationsPage() {
                       </td>
                       <td className="whitespace-nowrap border-b border-[#f0f1f6] px-3 py-4 text-xs text-[#7c8099]">
                         {formatDate(item.updatedAt, locale)}
+                      </td>
+                      <td className="whitespace-nowrap border-b border-[#f0f1f6] px-3 py-4">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={editHref}
+                            className="rounded-lg border border-[#cfd5ea] px-2.5 py-1.5 text-xs font-semibold text-[#315fe0] hover:bg-[#f4f6ff]"
+                          >
+                            {copy.edit}
+                          </Link>
+                          <button
+                            type="button"
+                            disabled={busyRelationId !== null}
+                            onClick={() => void deleteRelation(item)}
+                            className="rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {busyRelationId === item.id
+                              ? copy.deleting
+                              : copy.delete}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

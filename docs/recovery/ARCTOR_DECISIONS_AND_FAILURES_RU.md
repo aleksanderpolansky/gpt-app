@@ -1017,3 +1017,15 @@ V1 конструктора последствий поэтому создаёт
 
 ## 2026-09-12 — Каноническое поле структурной роли ОН
 Решение: для определения `root | intermediate | leaf` в Reality Curator и Relation Constructor источником истины является `value_objects.ontology_node_role_code`. Поле `node_role_code` не использовать для leaf-фильтрации. DB guard сохраняется. Relation Constructor допускает только leaf → leaf.
+
+## 2026-09-12 — Target можно выбирать до появления типовой активности
+Решение: consequence task имеет стабильный ID от raw signal + parameter + source leaf, поэтому выбор target может быть сделан сразу после появления общей связи ОН. Пока template отсутствует, target находится в состоянии `raw_pending_template`; после bind типовой активности тот же task получает activity context без потери target.
+
+## 2026-09-12 — Редактирование и удаление общей связи ОН
+Решение: редактирование выполняется через тот же четырёхполевой Relation Constructor. Удаление — не физический DELETE, а `status=inactive`, чтобы сохранить provenance/audit и не разрушать исторические ссылки. Активные карты, `/admin/relations` и consequence candidates читают только active relations.
+
+## 2026-09-12 — DB guard структурной роли
+Ручной production fix `guard_system_value_object_relation_v1()` обязательно фиксируется migration. Каноническая структурная роль — `ontology_node_role_code`; relation endpoints обязаны быть leaf→leaf. Legacy `node_role_code=structural` не используется для root/intermediate/leaf решения.
+
+## 2026-09-12 — Повтор V1.0.1 после whitespace-only failure
+Первая попытка пакета прошла validator 30/30, ESLint, TypeScript и production build, но `git diff --check` остановил релиз из-за одной лишней пустой строки в конце `src/app/api/admin/relation-constructor/route.ts`. V1.0.1 нормализует только EOF сгенерированных файлов перед проверками; функциональная логика пакета не изменена.

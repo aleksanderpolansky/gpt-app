@@ -50,6 +50,7 @@ type GlobalValueObjectRow = {
   metadata_json: unknown;
   facet_code: string | null;
   node_role_code: string | null;
+  ontology_node_role_code: string | null;
   scope_code: string | null;
   origin_type_code: string | null;
   owner_user_id: string | null;
@@ -183,13 +184,13 @@ async function buildTargetCandidates(
   const { data: objectRows, error: objectError } = await supabase
     .from("value_objects")
     .select(
-      "id,title,description,canonical_key,metadata_json,facet_code,node_role_code,scope_code,origin_type_code,owner_user_id,owner_actor_id,status",
+      "id,title,description,canonical_key,metadata_json,facet_code,node_role_code,ontology_node_role_code,scope_code,origin_type_code,owner_user_id,owner_actor_id,status",
     )
     .in("id", otherIds)
     .eq("scope_code", "global")
     .eq("origin_type_code", "system_model")
     .eq("status", "active")
-    .eq("node_role_code", "leaf")
+    .eq("ontology_node_role_code", "leaf")
     .is("owner_user_id", null)
     .is("owner_actor_id", null)
     .limit(10000);
@@ -265,10 +266,6 @@ async function readSelectedTargetsByTask(
   if (tasks.length === 0) return byTask;
 
   const taskIds = new Set(tasks.map((task) => task.id));
-  const templateByTask = new Map(
-    tasks.map((task) => [task.id, task.activityTemplateId] as const),
-  );
-
   const { data, error } = await supabase
     .from("activity_processing_logs")
     .select("metadata_json,started_at,created_at")
@@ -289,15 +286,9 @@ async function readSelectedTargetsByTask(
   for (const row of data ?? []) {
     const metadata = asRecord(row.metadata_json);
     const taskId = text(metadata.consequenceTaskId);
-    const activityTemplateId = text(metadata.activityTemplateId);
     const targetValueObjectId = text(metadata.targetValueObjectId);
 
-    if (
-      !taskIds.has(taskId) ||
-      !UUID_RE.test(activityTemplateId) ||
-      !UUID_RE.test(targetValueObjectId) ||
-      templateByTask.get(taskId) !== activityTemplateId
-    ) {
+    if (!taskIds.has(taskId) || !UUID_RE.test(targetValueObjectId)) {
       continue;
     }
 
@@ -337,10 +328,14 @@ async function enrichTasksWithTargets(
 
   return tasks.map((task) => {
     const targetCandidates = candidateMap.get(task.sourceValueObjectId) ?? [];
-    const selectedTargets = selectedMap.get(task.id) ?? [];
-    const targetSelectionState = !task.activityTemplateId
-      ? "awaiting_template"
-      : targetCandidates.length === 0
+    const allowedTargetIds = new Set(
+      targetCandidates.map((candidate) => candidate.id),
+    );
+    const selectedTargets = (selectedMap.get(task.id) ?? []).filter((target) =>
+      allowedTargetIds.has(target.targetValueObjectId),
+    );
+    const targetSelectionState =
+      targetCandidates.length === 0
         ? "no_related_leaf_objects"
         : selectedTargets.length > 0
           ? "selected"
@@ -391,7 +386,8 @@ export async function GET(request: Request) {
       targetSelectionEnabled: true,
       targetSelectionPolicy: "related_leaf_objects_only",
       relationDirectionPolicy: "either_direction_for_candidate_discovery",
-      contextualPairPolicy: "activity_specific_only",
+      contextualPairPolicy: "task_first_then_typical_activity",
+      targetSelectionBeforeTemplateAllowed: true,
       formulaWriteEnabled: false,
     });
   } catch (error) {
@@ -451,13 +447,6 @@ export async function POST(request: Request) {
       const tasks = await listConsequenceConstructorTasksV1();
       const task = tasks.find((item) => item.id === taskId) ?? null;
       if (!task) return errorResponse("CONSEQUENCE_TASK_NOT_FOUND", 404);
-      if (!task.activityTemplateId) {
-        return errorResponse(
-          "CONSEQUENCE_TEMPLATE_REQUIRED_BEFORE_TARGET",
-          409,
-        );
-      }
-
       const candidateMap = await buildTargetCandidates(
         [task.sourceValueObjectId],
         "en",
@@ -482,7 +471,6 @@ export async function POST(request: Request) {
         .contains("metadata_json", {
           eventCode: TARGET_SELECTED_EVENT,
           consequenceTaskId: task.id,
-          activityTemplateId: task.activityTemplateId,
           targetValueObjectId,
         })
         .limit(1);
@@ -521,7 +509,10 @@ export async function POST(request: Request) {
         metadata_json: {
           contract: TARGET_SELECTION_CONTRACT,
           eventCode: TARGET_SELECTED_EVENT,
-          contextualPairPolicy: "activity_specific_only",
+          contextualPairPolicy: "task_first_then_typical_activity",
+          activityContextStatus: task.activityTemplateId
+            ? "typical_bound"
+            : "raw_pending_template",
           consequenceTaskId: task.id,
           activityTemplateId: task.activityTemplateId,
           activityTemplateTitleSnapshot:

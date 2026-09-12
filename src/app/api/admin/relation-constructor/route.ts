@@ -418,6 +418,106 @@ async function finishCuratorRationaleLog(input: {
   }
 }
 
+async function loadRelationById(relationId: string): Promise<RelationRow | null> {
+  const { data, error } = await supabase
+    .from("system_value_object_relations")
+    .select(
+      "id,relation_type_code,source_value_object_id,target_value_object_id,status,provenance_code,created_at,updated_at",
+    )
+    .eq("id", relationId)
+    .limit(1);
+
+  if (error) {
+    throw new Error(
+      `RELATION_CONSTRUCTOR_RELATION_READ_FAILED:${error.message}`,
+    );
+  }
+
+  return (data?.[0] as RelationRow | undefined) ?? null;
+}
+
+async function loadLatestCuratorComment(
+  relationId: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("activity_processing_logs")
+    .select("metadata_json")
+    .eq("processor_name", PROCESSOR_NAME)
+    .eq("processor_version", PROCESSOR_VERSION)
+    .eq("processing_status", "completed")
+    .contains("output_json", { relationId })
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) {
+    throw new Error(
+      `RELATION_CONSTRUCTOR_COMMENT_READ_FAILED:${error.message}`,
+    );
+  }
+
+  for (const row of data ?? []) {
+    const metadata =
+      row.metadata_json &&
+      typeof row.metadata_json === "object" &&
+      !Array.isArray(row.metadata_json)
+        ? (row.metadata_json as JsonRecord)
+        : {};
+    const comment = text(metadata.curatorComment);
+    if (comment) return comment;
+  }
+
+  return null;
+}
+
+async function writeRelationAuditLog(input: {
+  guard: RequirePlatformAdminSuccess;
+  eventCode:
+    | "system_value_object_relation_updated"
+    | "system_value_object_relation_deleted";
+  relationId: string;
+  sourceValueObjectId: string;
+  targetValueObjectId: string;
+  relationTypeCode: string;
+  comment?: string | null;
+}) {
+  const now = new Date().toISOString();
+  const { error } = await supabase.from("activity_processing_logs").insert({
+    id: crypto.randomUUID(),
+    user_id: input.guard.appUser.id,
+    processor_name: PROCESSOR_NAME,
+    processor_version: PROCESSOR_VERSION,
+    processing_stage: "validate",
+    processing_status: "completed",
+    severity: "notice",
+    message:
+      input.eventCode === "system_value_object_relation_deleted"
+        ? "Reality curator system relation deleted"
+        : "Reality curator system relation updated",
+    input_json: {},
+    output_json: { relationId: input.relationId },
+    error_json: {},
+    metadata_json: {
+      contract: CONTRACT,
+      eventCode: input.eventCode,
+      actorKind: "curator",
+      provenance: "curator_action",
+      ...adminMetadata(input.guard),
+      sourceValueObjectId: input.sourceValueObjectId,
+      targetValueObjectId: input.targetValueObjectId,
+      relationTypeCode: input.relationTypeCode,
+      curatorComment: input.comment ?? null,
+      changedAt: now,
+    },
+    started_at: now,
+    finished_at: now,
+    duration_ms: 0,
+  });
+
+  if (error) {
+    throw new Error(`RELATION_CONSTRUCTOR_AUDIT_WRITE_FAILED:${error.message}`);
+  }
+}
+
 export async function GET(request: Request) {
   const guard = await requirePlatformAdmin();
   if (!guard.ok) return platformAdminErrorResponse(guard, ROUTE_MARKER);
@@ -425,10 +525,50 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const catalog = await loadCatalog(url.searchParams.get("locale"));
+    const relationId = text(url.searchParams.get("relationId"));
+
+    let editingRelation: {
+      id: string;
+      sourceValueObjectId: string;
+      targetValueObjectId: string;
+      relationTypeCode: string;
+      comment: string;
+      status: string;
+    } | null = null;
+
+    if (relationId) {
+      if (!UUID_RE.test(relationId)) {
+        return errorResponse(
+          "RELATION_CONSTRUCTOR_RELATION_ID_INVALID",
+          "relationId is invalid",
+          400,
+        );
+      }
+
+      const relation = await loadRelationById(relationId);
+      if (!relation || relation.status !== "active") {
+        return errorResponse(
+          "RELATION_CONSTRUCTOR_RELATION_NOT_FOUND",
+          "Active relation was not found",
+          404,
+        );
+      }
+
+      editingRelation = {
+        id: relation.id,
+        sourceValueObjectId: relation.source_value_object_id,
+        targetValueObjectId: relation.target_value_object_id,
+        relationTypeCode: relation.relation_type_code,
+        comment: (await loadLatestCuratorComment(relation.id)) ?? "",
+        status: relation.status,
+      };
+    }
+
     return NextResponse.json({
       ok: true,
       routeMarker: ROUTE_MARKER,
       ...catalog,
+      editingRelation,
       contract: CONTRACT,
       fields: [
         "sourceValueObjectId",
@@ -601,5 +741,230 @@ export async function POST(request: Request) {
         ? 409
         : 500;
     return errorResponse("RELATION_CONSTRUCTOR_POST_FAILED", message, status);
+  }
+}
+
+export async function PUT(request: Request) {
+  const guard = await requirePlatformAdmin();
+  if (!guard.ok) return platformAdminErrorResponse(guard, ROUTE_MARKER);
+
+  const relationId = text(new URL(request.url).searchParams.get("relationId"));
+  if (!UUID_RE.test(relationId)) {
+    return errorResponse(
+      "RELATION_CONSTRUCTOR_RELATION_ID_INVALID",
+      "relationId is invalid",
+      400,
+    );
+  }
+
+  let body: CreateBody;
+  try {
+    body = (await request.json()) as CreateBody;
+  } catch {
+    return errorResponse(
+      "RELATION_CONSTRUCTOR_JSON_INVALID",
+      "Invalid JSON body",
+      400,
+    );
+  }
+
+  const sourceValueObjectId = text(body.sourceValueObjectId);
+  const targetValueObjectId = text(body.targetValueObjectId);
+  const relationTypeCode = text(body.relationTypeCode);
+  const comment = text(body.comment);
+
+  if (!UUID_RE.test(sourceValueObjectId)) {
+    return errorResponse(
+      "RELATION_CONSTRUCTOR_SOURCE_INVALID",
+      "sourceValueObjectId is invalid",
+      400,
+    );
+  }
+  if (!UUID_RE.test(targetValueObjectId)) {
+    return errorResponse(
+      "RELATION_CONSTRUCTOR_TARGET_INVALID",
+      "targetValueObjectId is invalid",
+      400,
+    );
+  }
+  if (sourceValueObjectId === targetValueObjectId) {
+    return errorResponse(
+      "RELATION_CONSTRUCTOR_SELF_LINK_FORBIDDEN",
+      "Source and target observation objects must be different",
+      400,
+    );
+  }
+  if (!CODE_RE.test(relationTypeCode)) {
+    return errorResponse(
+      "RELATION_CONSTRUCTOR_TYPE_INVALID",
+      "relationTypeCode is invalid",
+      400,
+    );
+  }
+  if (!comment || comment.length > 4000) {
+    return errorResponse(
+      "RELATION_CONSTRUCTOR_COMMENT_REQUIRED",
+      "comment is required and must be 4000 characters or fewer",
+      400,
+    );
+  }
+
+  try {
+    const current = await loadRelationById(relationId);
+    if (!current || current.status !== "active") {
+      return errorResponse(
+        "RELATION_CONSTRUCTOR_RELATION_NOT_FOUND",
+        "Active relation was not found",
+        404,
+      );
+    }
+
+    const [{ source, target }, relationType] = await Promise.all([
+      loadRelationEndpoints(sourceValueObjectId, targetValueObjectId),
+      loadWritableRelationType(relationTypeCode),
+    ]);
+
+    let writeSourceId = source.id;
+    let writeTargetId = target.id;
+    if (relationType.directionality_code === "symmetric") {
+      if (writeSourceId.localeCompare(writeTargetId) > 0) {
+        [writeSourceId, writeTargetId] = [writeTargetId, writeSourceId];
+      }
+    }
+
+    const duplicate = await findExistingRelation(
+      relationType,
+      writeSourceId,
+      writeTargetId,
+    );
+    if (duplicate && duplicate.id !== relationId) {
+      return errorResponse(
+        "RELATION_CONSTRUCTOR_DUPLICATE_ACTIVE_RELATION",
+        "Another active relation with the same identity already exists",
+        409,
+      );
+    }
+
+    const { data, error } = await supabase
+      .from("system_value_object_relations")
+      .update({
+        relation_type_code: relationType.relation_type_code,
+        source_value_object_id: writeSourceId,
+        target_value_object_id: writeTargetId,
+        status: "active",
+        provenance_code: "curator_manual",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", relationId)
+      .select(
+        "id,relation_type_code,source_value_object_id,target_value_object_id,status,provenance_code,created_at,updated_at",
+      )
+      .single();
+
+    if (error || !data) {
+      throw new Error(
+        `RELATION_CONSTRUCTOR_RELATION_UPDATE_FAILED:${error?.message ?? "NO_ROW"}`,
+      );
+    }
+
+    const relation = data as RelationRow;
+    await writeRelationAuditLog({
+      guard,
+      eventCode: "system_value_object_relation_updated",
+      relationId: relation.id,
+      sourceValueObjectId: relation.source_value_object_id,
+      targetValueObjectId: relation.target_value_object_id,
+      relationTypeCode: relation.relation_type_code,
+      comment,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      routeMarker: ROUTE_MARKER,
+      relation: {
+        id: relation.id,
+        relationTypeCode: relation.relation_type_code,
+        sourceValueObjectId: relation.source_value_object_id,
+        targetValueObjectId: relation.target_value_object_id,
+        status: relation.status,
+      },
+      curatorCommentRecorded: true,
+      updated: true,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status =
+      message.includes("NOT_AVAILABLE") ||
+      message.includes("NOT_WRITABLE") ||
+      message.includes("NOT_LEAF") ||
+      message.includes("duplicate key")
+        ? 409
+        : 500;
+    return errorResponse("RELATION_CONSTRUCTOR_PUT_FAILED", message, status);
+  }
+}
+
+export async function DELETE(request: Request) {
+  const guard = await requirePlatformAdmin();
+  if (!guard.ok) return platformAdminErrorResponse(guard, ROUTE_MARKER);
+
+  const relationId = text(new URL(request.url).searchParams.get("relationId"));
+  if (!UUID_RE.test(relationId)) {
+    return errorResponse(
+      "RELATION_CONSTRUCTOR_RELATION_ID_INVALID",
+      "relationId is invalid",
+      400,
+    );
+  }
+
+  try {
+    const relation = await loadRelationById(relationId);
+    if (!relation || relation.status !== "active") {
+      return errorResponse(
+        "RELATION_CONSTRUCTOR_RELATION_NOT_FOUND",
+        "Active relation was not found",
+        404,
+      );
+    }
+
+    const { error } = await supabase
+      .from("system_value_object_relations")
+      .update({
+        status: "inactive",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", relationId)
+      .eq("status", "active");
+
+    if (error) {
+      throw new Error(
+        `RELATION_CONSTRUCTOR_RELATION_DELETE_FAILED:${error.message}`,
+      );
+    }
+
+    await writeRelationAuditLog({
+      guard,
+      eventCode: "system_value_object_relation_deleted",
+      relationId: relation.id,
+      sourceValueObjectId: relation.source_value_object_id,
+      targetValueObjectId: relation.target_value_object_id,
+      relationTypeCode: relation.relation_type_code,
+      comment: null,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      routeMarker: ROUTE_MARKER,
+      relationId,
+      deleted: true,
+      deleteMode: "soft_inactive",
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return errorResponse(
+      "RELATION_CONSTRUCTOR_DELETE_FAILED",
+      message,
+      500,
+    );
   }
 }

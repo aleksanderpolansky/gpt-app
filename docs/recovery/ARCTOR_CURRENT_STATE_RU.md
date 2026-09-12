@@ -1123,3 +1123,16 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - DB guard сохраняется; root/intermediate по-прежнему недопустимы.
 - SQL/formulas/consequence runtime не менялись.
 - Recovery detail: docs/recovery/ARCTOR_RELATION_CONSTRUCTOR_CANONICAL_LEAF_ROLE_HOTFIX_V1_RU_20260912.md.
+
+## 2026-09-12 — Target ОН без предварительной типовой активности + CRUD связей
+- Baseline: 18e6b49926b15d80fa475c42494b856ece110432.
+- Исправлен остаточный `node_role_code=leaf` в target discovery Конструктора последствий; используется `ontology_node_role_code=leaf`.
+- Target search разблокирован до назначения типовой активности.
+- Target selection хранится по стабильному consequenceTaskId и сохраняется при последующей привязке типовой активности.
+- Удалённая/изменённая общая связь автоматически исключает прежний target из текущего допустимого набора.
+- На `/admin/relations` добавлены `Редактировать` и `Удалить`.
+- Edit использует тот же 4-полевой Relation Constructor через `relationId`; PUT сохраняет изменения и audit event.
+- Delete = soft inactive + audit event; из активных карт/списков/candidates связь исчезает.
+- Добавлена migration, закрепляющая ручной production fix `guard_system_value_object_relation_v1()` на `ontology_node_role_code`.
+- Формулы пока не создаются.
+- Recovery detail: docs/recovery/ARCTOR_CONSEQUENCE_TARGET_UNLOCK_RELATION_EDIT_DELETE_V1_0_1_RU_20260912.md.

@@ -26,6 +26,14 @@ type CatalogResponse = {
   ok?: boolean;
   objects?: ObservationObjectOption[];
   relationTypes?: ValueObjectRelationTypeDto[];
+  editingRelation?: {
+    id: string;
+    sourceValueObjectId: string;
+    targetValueObjectId: string;
+    relationTypeCode: string;
+    comment: string;
+    status: string;
+  } | null;
   error?: string;
 };
 
@@ -216,6 +224,55 @@ const COPY: Record<
   },
 };
 
+
+const EDIT_COPY: Record<
+  LocaleCode,
+  { title: string; save: string; success: string; backToList: string }
+> = {
+  ru: {
+    title: "Редактирование связи",
+    save: "Сохранить изменения",
+    success: "Связь обновлена. Комментарий куратора сохранён.",
+    backToList: "Вернуться к списку связей",
+  },
+  en: {
+    title: "Edit relationship",
+    save: "Save changes",
+    success: "Relationship updated. Curator comment saved.",
+    backToList: "Back to relationships",
+  },
+  pl: {
+    title: "Edycja relacji",
+    save: "Zapisz zmiany",
+    success: "Relacja została zaktualizowana. Komentarz kuratora zapisano.",
+    backToList: "Wróć do relacji",
+  },
+  uk: {
+    title: "Редагування зв’язку",
+    save: "Зберегти зміни",
+    success: "Зв’язок оновлено. Коментар куратора збережено.",
+    backToList: "Повернутися до зв’язків",
+  },
+  de: {
+    title: "Beziehung bearbeiten",
+    save: "Änderungen speichern",
+    success: "Beziehung aktualisiert. Kurator-Kommentar gespeichert.",
+    backToList: "Zurück zu Beziehungen",
+  },
+  es: {
+    title: "Editar relación",
+    save: "Guardar cambios",
+    success: "Relación actualizada. Comentario del curador guardado.",
+    backToList: "Volver a relaciones",
+  },
+  cs: {
+    title: "Upravit vztah",
+    save: "Uložit změny",
+    success: "Vztah aktualizován. Komentář kurátora uložen.",
+    backToList: "Zpět na vztahy",
+  },
+};
+
 export default function RelationConstructorPage() {
   const [locale] = useState<LocaleCode>(() =>
     typeof window === "undefined"
@@ -232,12 +289,23 @@ export default function RelationConstructorPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [editingRelationId, setEditingRelationId] = useState("");
 
   const copy = COPY[locale] ?? COPY.en;
+  const editCopy = EDIT_COPY[locale] ?? EDIT_COPY.en;
+  const isEditing = Boolean(editingRelationId);
 
   const fetchCatalog = useCallback(async (): Promise<CatalogResponse> => {
+    const browserParams =
+      typeof window === "undefined"
+        ? new URLSearchParams()
+        : new URLSearchParams(window.location.search);
+    const relationId = browserParams.get("relationId")?.trim() ?? "";
+    const query = new URLSearchParams({ locale });
+    if (relationId) query.set("relationId", relationId);
+
     const response = await fetch(
-      `/api/admin/relation-constructor?locale=${encodeURIComponent(locale)}`,
+      `/api/admin/relation-constructor?${query.toString()}`,
       { cache: "no-store" },
     );
     const payload = (await response.json()) as CatalogResponse;
@@ -255,6 +323,15 @@ export default function RelationConstructorPage() {
         const nextObjects = payload.objects ?? [];
         setObjects(nextObjects);
         setRelationTypes(payload.relationTypes ?? []);
+
+        if (payload.editingRelation) {
+          setEditingRelationId(payload.editingRelation.id);
+          setSourceValueObjectId(payload.editingRelation.sourceValueObjectId);
+          setTargetValueObjectId(payload.editingRelation.targetValueObjectId);
+          setRelationTypeCode(payload.editingRelation.relationTypeCode);
+          setComment(payload.editingRelation.comment);
+          return;
+        }
 
         const requestedSourceValueObjectId =
           typeof window === "undefined"
@@ -339,8 +416,11 @@ export default function RelationConstructorPage() {
     setSuccess(false);
 
     try {
-      const response = await fetch("/api/admin/relation-constructor", {
-        method: "POST",
+      const endpoint = editingRelationId
+        ? `/api/admin/relation-constructor?relationId=${encodeURIComponent(editingRelationId)}`
+        : "/api/admin/relation-constructor";
+      const response = await fetch(endpoint, {
+        method: editingRelationId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sourceValueObjectId,
@@ -354,9 +434,11 @@ export default function RelationConstructorPage() {
         throw new Error(payload.error || `HTTP ${response.status}`);
       }
 
-      setTargetValueObjectId("");
-      setRelationTypeCode("");
-      setComment("");
+      if (!editingRelationId) {
+        setTargetValueObjectId("");
+        setRelationTypeCode("");
+        setComment("");
+      }
       setSuccess(true);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -374,7 +456,7 @@ export default function RelationConstructorPage() {
       <section className="rounded-2xl border border-[#e5e7f1] bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold text-[#1a1d2e]">{copy.title}</h1>
+            <h1 className="text-xl font-semibold text-[#1a1d2e]">{isEditing ? editCopy.title : copy.title}</h1>
             <p className="mt-2 max-w-4xl text-sm leading-6 text-[#6b7280]">
               {copy.subtitle}
             </p>
@@ -491,19 +573,32 @@ export default function RelationConstructorPage() {
 
             {success ? (
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-800">
-                <span>{copy.success}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTargetValueObjectId("");
-                    setRelationTypeCode("");
-                    setComment("");
-                    setSuccess(false);
-                  }}
-                  className="rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-                >
-                  {copy.addAnother}
-                </button>
+                <span>{isEditing ? editCopy.success : copy.success}</span>
+                {isEditing ? (
+                  <Link
+                    href={
+                      locale === "en"
+                        ? "/admin/relations"
+                        : `/admin/relations?locale=${encodeURIComponent(locale)}`
+                    }
+                    className="rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                  >
+                    {editCopy.backToList}
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTargetValueObjectId("");
+                      setRelationTypeCode("");
+                      setComment("");
+                      setSuccess(false);
+                    }}
+                    className="rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                  >
+                    {copy.addAnother}
+                  </button>
+                )}
               </div>
             ) : null}
 
@@ -514,7 +609,7 @@ export default function RelationConstructorPage() {
                 onClick={() => void saveRelation()}
                 className="rounded-xl bg-[#3b6ef8] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#315fe0] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {saving ? copy.saving : copy.save}
+                {saving ? copy.saving : isEditing ? editCopy.save : copy.save}
               </button>
             </div>
           </div>
