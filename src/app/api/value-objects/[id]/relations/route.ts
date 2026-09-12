@@ -281,27 +281,38 @@ export async function GET(request: Request, context: RouteContext) {
   }
 
   if (globalSystemValueObject) {
-    const [relationTypesResult, candidatesResult] = await Promise.all([
-      supabase
-        .from("value_object_relation_types")
-        .select(
-          "relation_type_code, directionality_code, from_scope_code, to_scope_code, title_key, description_key, reverse_title_key, reverse_description_key, allow_self_link, contract_version, display_order, status",
-        )
-        .eq("status", "active")
-        .order("display_order", { ascending: true })
-        .order("relation_type_code", { ascending: true }),
-      supabase
-        .from("value_objects")
-        .select(
-          "id, title, branch_type_code, object_kind, node_role_code, status, canonical_key, metadata_json",
-        )
-        .eq("scope_code", "global")
-        .eq("origin_type_code", "system_model")
-        .eq("status", "active")
-        .neq("id", valueObjectId)
-        .not("node_role_code", "is", null)
-        .order("title", { ascending: true }),
-    ]);
+    const [relationTypesResult, candidatesResult, systemRelationsResult] =
+      await Promise.all([
+        supabase
+          .from("value_object_relation_types")
+          .select(
+            "relation_type_code, directionality_code, from_scope_code, to_scope_code, title_key, description_key, reverse_title_key, reverse_description_key, allow_self_link, contract_version, display_order, status",
+          )
+          .eq("status", "active")
+          .order("display_order", { ascending: true })
+          .order("relation_type_code", { ascending: true }),
+        supabase
+          .from("value_objects")
+          .select(
+            "id, title, branch_type_code, object_kind, node_role_code, status, canonical_key, metadata_json",
+          )
+          .eq("scope_code", "global")
+          .eq("origin_type_code", "system_model")
+          .eq("status", "active")
+          .neq("id", valueObjectId)
+          .not("node_role_code", "is", null)
+          .order("title", { ascending: true }),
+        supabase
+          .from("system_value_object_relations")
+          .select(
+            "id,relation_type_code,source_value_object_id,target_value_object_id,status,provenance_code,created_at,updated_at",
+          )
+          .eq("status", "active")
+          .or(
+            `source_value_object_id.eq.${valueObjectId},target_value_object_id.eq.${valueObjectId}`,
+          )
+          .order("updated_at", { ascending: false }),
+      ]);
 
     if (relationTypesResult.error) {
       return NextResponse.json(
@@ -317,28 +328,97 @@ export async function GET(request: Request, context: RouteContext) {
       );
     }
 
+    if (systemRelationsResult.error) {
+      return NextResponse.json(
+        { ok: false, error: systemRelationsResult.error.message },
+        { status: 500 },
+      );
+    }
+
     const relationTypes = ((relationTypesResult.data ?? []) as RelationTypeRow[])
       .map(toRelationTypeDto)
       .filter((relationType) => relationType.status === "active");
+    const relationTypesByCode = new Map(
+      relationTypes.map((relationType) => [
+        relationType.relationTypeCode,
+        relationType,
+      ]),
+    );
 
-    const candidates = ((candidatesResult.data ?? []) as ValueObjectRow[])
-      .map((row) =>
-        toCandidateDto(localizeGlobalSystemValueObject(row, locale)),
-      )
+    const localizedCandidateRows = (
+      (candidatesResult.data ?? []) as ValueObjectRow[]
+    ).map((row) => localizeGlobalSystemValueObject(row, locale));
+
+    const candidates = localizedCandidateRows
+      .map(toCandidateDto)
       .sort((left, right) => left.title.localeCompare(right.title, locale));
+    const relatedById = new Map(
+      localizedCandidateRows.map((row) => [row.id, toCandidateDto(row)] as const),
+    );
+
+    const systemRelationRows = (systemRelationsResult.data ?? []) as Array<{
+      id: string;
+      relation_type_code: string;
+      source_value_object_id: string;
+      target_value_object_id: string;
+      status: string;
+      provenance_code: string;
+      created_at: string;
+      updated_at: string;
+    }>;
+
+    const relations: ValueObjectSemanticRelationDto[] = [];
+
+    for (const relation of systemRelationRows) {
+      const relationType = relationTypesByCode.get(relation.relation_type_code);
+      const relatedId =
+        relation.source_value_object_id === valueObjectId
+          ? relation.target_value_object_id
+          : relation.source_value_object_id;
+      const relatedValueObject = relatedById.get(relatedId);
+
+      if (!relationType || !relatedValueObject) continue;
+
+      let perspective: ValueObjectRelationPerspective = "outgoing";
+      if (relationType.directionalityCode === "symmetric") {
+        perspective = "symmetric";
+      } else if (relation.target_value_object_id === valueObjectId) {
+        perspective = "incoming";
+      }
+
+      relations.push({
+        id: relation.id,
+        relationTypeCode: relation.relation_type_code,
+        directionalityCode: relationType.directionalityCode,
+        perspective,
+        titleKey: relationType.titleKey,
+        descriptionKey: relationType.descriptionKey,
+        reverseTitleKey: relationType.reverseTitleKey,
+        reverseDescriptionKey: relationType.reverseDescriptionKey,
+        relatedValueObject,
+        status: "active",
+        provenanceCode: relation.provenance_code,
+        createdAt: relation.created_at,
+        updatedAt: relation.updated_at,
+        deactivatedAt: null,
+        reactivatedAt: null,
+        canDeactivate: false,
+        canReactivate: false,
+      });
+    }
 
     const response: ValueObjectSemanticRelationListResponse = {
       ok: true,
       valueObjectId,
       relationTypes,
       candidates,
-      relations: [],
+      relations,
     };
 
     return NextResponse.json(response, {
       headers: {
         "Cache-Control": "no-store",
-        "X-ARCTor-Read-Scope": "global-system-canonical-relation-types",
+        "X-ARCTor-Read-Scope": "global-system-canonical-relations",
       },
     });
   }

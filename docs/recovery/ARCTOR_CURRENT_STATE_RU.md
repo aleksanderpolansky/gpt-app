@@ -1069,3 +1069,13 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - Admin UI: /admin/consequence-constructor; nav: «Конструктор последствий · N».
 - SQL schema change: none.
 - Recovery detail: docs/recovery/ARCTOR_CONSEQUENCE_CONSTRUCTOR_TASKS_V1_RU_20260912.md.
+
+## 2026-09-12 — Конструктор связей ОН V1
+- Baseline: ca59d4e26fbf7936be158c7e9b18839065cd6214.
+- Добавлен `/admin/relation-constructor` с четырьмя полями: исходный ОН, связанный ОН, вид связи, комментарий куратора.
+- Кнопка «+ Добавить связь» встроена в блок «Карта связей ОН» и передаёт исходный ОН в конструктор.
+- Канонические системные связи пишутся в `system_value_object_relations`; комментарий сохраняется append-oriented в `activity_processing_logs`.
+- Общий relation read-path системных ОН теперь возвращает связи из `system_value_object_relations`, поэтому они видимы на карте.
+- Типовая активность не является полем общей связи. Её контекст будет применяться позже в «Конструкторе последствий».
+- Формулы/результирующие факты не затронуты.
+- Recovery detail: docs/recovery/ARCTOR_RELATION_CONSTRUCTOR_V1_0_1_RU_20260912.md.

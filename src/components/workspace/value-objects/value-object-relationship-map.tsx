@@ -1547,6 +1547,15 @@ function RelationshipMapInner({
           <p className="mt-2 text-[12px] leading-5 text-[#6b7280]">{copy.description}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {canManageRelations ? (
+            <Link
+              href={`/admin/relation-constructor?sourceValueObjectId=${encodeURIComponent(valueObjectId)}&locale=${encodeURIComponent(locale)}`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
+            >
+              <Plus size={15} />
+              {copy.addRelation}
+            </Link>
+          ) : null}
           {showDetailedMap ? (
             <>
               <button
