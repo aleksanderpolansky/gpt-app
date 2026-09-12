@@ -1114,3 +1114,12 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - Добавлена server-side проверка leaf-only, чтобы UI нельзя было обойти прямым POST.
 - DB schema/guard, формулы и consequence runtime не менялись.
 - Recovery detail: docs/recovery/ARCTOR_RELATION_CONSTRUCTOR_LEAF_ONLY_HOTFIX_V1_RU_20260912.md.
+
+## 2026-09-12 — Исправление пустого leaf-only каталога связей
+- Baseline: fdd08f7e29152a3a779eba7daf278b5bf8930382.
+- Предыдущий leaf-only hotfix успешно прошёл все проверки и был отправлен в main, но runtime показал 0 ОН в поиске.
+- Причина: фильтрация была сделана по legacy/auxiliary `node_role_code`, тогда как Reality Curator хранит структурную роль в `ontology_node_role_code`.
+- Relation Constructor теперь фильтрует и валидирует листовые ОН по `ontology_node_role_code=leaf`.
+- DB guard сохраняется; root/intermediate по-прежнему недопустимы.
+- SQL/formulas/consequence runtime не менялись.
+- Recovery detail: docs/recovery/ARCTOR_RELATION_CONSTRUCTOR_CANONICAL_LEAF_ROLE_HOTFIX_V1_RU_20260912.md.

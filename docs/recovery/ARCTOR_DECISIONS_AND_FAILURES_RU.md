@@ -1014,3 +1014,6 @@ V1 конструктора последствий поэтому создаёт
 
 ## 2026-09-12 — Relation Constructor: leaf-to-leaf only
 Решение: общий ручной «Конструктор связей» работает только с листовыми ОН на обоих концах связи. DB guard `SYSTEM_RELATION_NODE_ROLE_GUARD_REJECTED` сохраняется. UI/API-каталог не должен предлагать root/intermediate ОН; server POST дополнительно отклоняет non-leaf endpoint. Это согласует интерфейс с существующим инвариантом базы и исключает ситуацию, когда куратор выбирает заведомо недопустимую пару.
+
+## 2026-09-12 — Каноническое поле структурной роли ОН
+Решение: для определения `root | intermediate | leaf` в Reality Curator и Relation Constructor источником истины является `value_objects.ontology_node_role_code`. Поле `node_role_code` не использовать для leaf-фильтрации. DB guard сохраняется. Relation Constructor допускает только leaf → leaf.

@@ -40,6 +40,7 @@ type GlobalValueObjectRow = {
   metadata_json: unknown;
   facet_code: string | null;
   node_role_code: string | null;
+  ontology_node_role_code: string | null;
   scope_code: string | null;
   origin_type_code: string | null;
   owner_user_id: string | null;
@@ -147,14 +148,14 @@ async function loadCatalog(localeValue: unknown) {
     supabase
       .from("value_objects")
       .select(
-        "id,title,description,canonical_key,metadata_json,facet_code,node_role_code,scope_code,origin_type_code,owner_user_id,owner_actor_id,status",
+        "id,title,description,canonical_key,metadata_json,facet_code,node_role_code,ontology_node_role_code,scope_code,origin_type_code,owner_user_id,owner_actor_id,status",
       )
       .eq("scope_code", "global")
       .eq("origin_type_code", "system_model")
       .is("owner_user_id", null)
       .is("owner_actor_id", null)
       .eq("status", "active")
-      .eq("node_role_code", "leaf")
+      .eq("ontology_node_role_code", "leaf")
       .order("title", { ascending: true })
       .limit(5000),
     supabase
@@ -191,7 +192,7 @@ async function loadCatalog(localeValue: unknown) {
         descriptionEn: english.description,
         canonicalKey: localized.canonical_key,
         facetCode: localized.facet_code,
-        nodeRoleCode: localized.node_role_code,
+        nodeRoleCode: row.ontology_node_role_code,
       };
     })
     .sort((left, right) => left.title.localeCompare(right.title, locale));
@@ -206,7 +207,7 @@ async function loadRelationEndpoints(sourceId: string, targetId: string) {
   const { data, error } = await supabase
     .from("value_objects")
     .select(
-      "id,title,description,canonical_key,metadata_json,facet_code,node_role_code,scope_code,origin_type_code,owner_user_id,owner_actor_id,status",
+      "id,title,description,canonical_key,metadata_json,facet_code,node_role_code,ontology_node_role_code,scope_code,origin_type_code,owner_user_id,owner_actor_id,status",
     )
     .in("id", [sourceId, targetId]);
 
@@ -233,7 +234,7 @@ async function loadRelationEndpoints(sourceId: string, targetId: string) {
       throw new Error(`RELATION_CONSTRUCTOR_${label}_NOT_AVAILABLE`);
     }
 
-    if (row.node_role_code !== "leaf") {
+    if (row.ontology_node_role_code !== "leaf") {
       throw new Error(`RELATION_CONSTRUCTOR_${label}_NOT_LEAF`);
     }
   }
@@ -271,8 +272,8 @@ function endpointCompatibilitySnapshot(input: {
 }): JsonRecord {
   const sourceFacet = text(input.source.facet_code);
   const targetFacet = text(input.target.facet_code);
-  const sourceRole = text(input.source.node_role_code);
-  const targetRole = text(input.target.node_role_code);
+  const sourceRole = text(input.source.ontology_node_role_code);
+  const targetRole = text(input.target.ontology_node_role_code);
   const sourceFacets = input.relationType.allowed_source_facet_codes ?? [];
   const targetFacets = input.relationType.allowed_target_facet_codes ?? [];
   const sourceRoles = input.relationType.allowed_source_node_roles ?? [];
