@@ -1159,3 +1159,14 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - migration: `supabase/migrations/20260914190000_formula_rule_registry_v1.sql`;
 - подробный recovery: `docs/recovery/ARCTOR_FORMULA_RULE_REGISTRY_FOUNDATION_V1_0_1_RU_20260914.md`;
 - следующая точка: server CRUD + связывание draft rule с «Конструктором последствий», затем deterministic executor.
+
+## FORMULA RULE REGISTRY FOUNDATION V1.0.2 — 2026-09-15
+
+- baseline before change: `b0f5493792059a7cbff9324b31048eb190115e6e`;
+- V1.0.1 commit был фактически успешно отправлен в GitHub; launcher ошибочно принял обычный stderr `git push` за failure;
+- добавлен отдельный DB guard для `user` scope: `owner_actor_id` должен быть реально доступен `owner_user_id` через канонический `actor_public_profiles` + active `actors`;
+- проверка повторяет действующую модель `lib/actor-context.ts`: personal→person, avatar→avatar;
+- историческая migration V1 не переписывается; V1.0.2 — отдельная additive migration;
+- system/organization semantics, facts, lineage, recalculation queue и Target Standards этим hotfix не меняются;
+- production Supabase автоматически не меняется;
+- следующая точка: controlled production migration apply + read-only verification, затем server CRUD и draft-rule integration в «Конструктор последствий».
