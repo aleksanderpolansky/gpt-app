@@ -5,6 +5,10 @@ import {
   requirePlatformAdmin,
 } from "@/lib/admin/require-platform-admin";
 import { configureFormulaRuleDraftV1 } from "@/lib/reality-curator/formula-rule-builder.server";
+import {
+  getFormulaRulePublishReadinessV1,
+  recordFormulaRuleTestEvidenceV1,
+} from "@/lib/reality-curator/formula-rule-governance.server";
 import { testFormulaRuleDraftV1 } from "@/lib/reality-curator/formula-rule-test-runner.server";
 import {
   createFormulaRuleDraftV1,
@@ -32,6 +36,7 @@ function errorStatus(message: string) {
   if (message.endsWith("_NOT_FOUND")) return 404;
   if (message.startsWith("FORMULA_RULE_BUILDER_")) return 400;
   if (message.startsWith("FORMULA_RULE_TEST_")) return 400;
+  if (message.startsWith("FORMULA_RULE_GOVERNANCE_")) return 400;
   if (
     message.includes("_INVALID") ||
     message.includes("_MUST_BE_") ||
@@ -86,6 +91,8 @@ export async function GET() {
       draftWriteEnabled: true,
       testRunnerEnabled: true,
       testRunnerWriteEnabled: false,
+      testEvidenceEnabled: true,
+      publishReadinessEnabled: true,
       publishEnabled: false,
       formulaExecutionEnabled: false,
       factWriteEnabled: false,
@@ -186,6 +193,44 @@ export async function POST(request: Request) {
       });
     }
 
+    if (action === "record_test_evidence") {
+      const result = await recordFormulaRuleTestEvidenceV1({
+        ruleVersionId: text(body.ruleVersionId),
+        sampleInputs: asRecord(body.sampleInputs),
+        recorder: {
+          curatorAppUserId: guard.appUser.id,
+          curatorAdminId: guard.platformAdmin.id,
+          curatorRole: guard.platformAdmin.role,
+        },
+      });
+
+      return NextResponse.json({
+        ok: true,
+        routeMarker: ROUTE_MARKER,
+        action,
+        ...result,
+        publishEnabled: false,
+        formulaExecutionEnabled: false,
+        factWriteEnabled: false,
+      });
+    }
+
+    if (action === "publish_readiness") {
+      const result = await getFormulaRulePublishReadinessV1(
+        text(body.ruleVersionId),
+      );
+
+      return NextResponse.json({
+        ok: true,
+        routeMarker: ROUTE_MARKER,
+        action,
+        ...result,
+        publishEnabled: false,
+        formulaExecutionEnabled: false,
+        factWriteEnabled: false,
+      });
+    }
+
     if (action === "update_draft") {
       return NextResponse.json(
         {
@@ -193,7 +238,13 @@ export async function POST(request: Request) {
           routeMarker: ROUTE_MARKER,
           error:
             "FORMULA_RULE_RAW_DRAFT_UPDATE_RETIRED_USE_CONFIGURE_DRAFT",
-          allowedActions: ["create_draft", "configure_draft", "test_draft"],
+          allowedActions: [
+            "create_draft",
+            "configure_draft",
+            "test_draft",
+            "record_test_evidence",
+            "publish_readiness",
+          ],
         },
         { status: 410 },
       );
@@ -204,7 +255,13 @@ export async function POST(request: Request) {
         ok: false,
         routeMarker: ROUTE_MARKER,
         error: "FORMULA_RULE_ACTION_INVALID",
-        allowedActions: ["create_draft", "configure_draft", "test_draft"],
+        allowedActions: [
+          "create_draft",
+          "configure_draft",
+          "test_draft",
+          "record_test_evidence",
+          "publish_readiness",
+        ],
       },
       { status: 400 },
     );

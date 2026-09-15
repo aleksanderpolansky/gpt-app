@@ -467,6 +467,9 @@ export async function configureFormulaRuleDraftV1(
       resultFactRoleProvisional: false,
       configuredAt,
       builderContract: "ARCTOR_FORMULA_BUILDER_V1",
+      testEvidence: null,
+      testEvidenceState: "required_after_configuration",
+      testEvidenceInvalidatedAt: configuredAt,
     },
   });
 

@@ -1277,3 +1277,15 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - stale UI policy `fail` исправлена на canonical `zero`;
 - publish/executor/fact-write остаются выключены;
 - следующий gate: test-evidence contract + publish governance.
+## FORMULA TEST EVIDENCE + PUBLISH READINESS API V1 — 2026-09-15
+
+- baseline: `ed95992ea5c01fa6d3f8245f185365f2fcb6c80d`;
+- добавлен server governance layer для test evidence;
+- evidence записывается только после повторного deterministic no-write PASS с resolved unit algebra;
+- evidence связан SHA-256 fingerprint точной конфигурации формулы;
+- raw sample inputs/output в metadata не сохраняются, только hashes;
+- configure_draft инвалидирует старый evidence;
+- добавлен read-only `publish_readiness` с причинами блокировки;
+- фактический publish остаётся выключен;
+- executor/fact-write/lineage остаются выключены;
+- следующий этап: evidence/readiness UI, затем отдельный explicit publish gate.
