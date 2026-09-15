@@ -6,6 +6,7 @@ import {
   type FormulaInputSelectorV1,
   type FormulaMissingInputPolicy,
   type FormulaResultFactRole,
+  isFormulaExpressionNodeV1,
 } from "./formula-rule-registry.contract";
 import {
   listFormulaRuleRegistryV1,
@@ -13,6 +14,33 @@ import {
 } from "./formula-rule-registry.server";
 
 type JsonRecord = Record<string, unknown>;
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const INPUT_KEY_RE = /^[a-z][a-z0-9_]{0,63}$/;
+const INPUT_KINDS = new Set([
+  "source_fact",
+  "result_fact",
+  "snapshot",
+  "reference",
+]);
+const INPUT_WINDOWS = new Set([
+  "event",
+  "hour",
+  "day",
+  "week",
+  "month",
+  "rolling_7_days",
+  "rolling_30_days",
+]);
+const INPUT_SELECTIONS = new Set([
+  "latest",
+  "all",
+  "sum",
+  "average",
+  "count",
+  "count_unique_days",
+]);
 
 type FormulaTrigger =
   | "fact_created"
@@ -120,10 +148,13 @@ function validateExpressionNode(
   }
 
   switch (node.op) {
-    case "add":
     case "subtract":
-    case "multiply":
     case "divide":
+      assertExactArity(node, 2, "FORMULA_RULE_BUILDER_ARITY_INVALID");
+      break;
+
+    case "add":
+    case "multiply":
     case "min":
     case "max":
     case "coalesce":
@@ -174,18 +205,18 @@ function validateCondition(
   condition: JsonRecord,
   context: ExpressionValidationContext,
 ) {
-  if (Object.keys(condition).length === 0) return;
+  const keys = Object.keys(condition);
+  if (keys.length === 0) return;
 
-  const rawExpression = condition.expression;
-  if (
-    !rawExpression ||
-    typeof rawExpression !== "object" ||
-    Array.isArray(rawExpression)
-  ) {
-    throw new Error("FORMULA_RULE_BUILDER_CONDITION_EXPRESSION_REQUIRED");
+  if (keys.length !== 1 || keys[0] !== "expression") {
+    throw new Error("FORMULA_RULE_BUILDER_CONDITION_SHAPE_INVALID");
   }
 
-  const expression = rawExpression as FormulaExpressionNodeV1;
+  const rawExpression = condition.expression;
+  if (!isFormulaExpressionNodeV1(rawExpression)) {
+    throw new Error("FORMULA_RULE_BUILDER_CONDITION_EXPRESSION_INVALID");
+  }
+
   const booleanRootOps = new Set([
     "eq",
     "ne",
@@ -198,11 +229,11 @@ function validateCondition(
     "not",
   ]);
 
-  if (!booleanRootOps.has(expression.op)) {
+  if (!booleanRootOps.has(rawExpression.op)) {
     throw new Error("FORMULA_RULE_BUILDER_CONDITION_ROOT_NOT_BOOLEAN");
   }
 
-  validateExpressionNode(expression, context);
+  validateExpressionNode(rawExpression, context);
 }
 
 function validateInputs(inputs: FormulaInputSelectorV1[]) {
@@ -213,14 +244,54 @@ function validateInputs(inputs: FormulaInputSelectorV1[]) {
   const keys = new Set<string>();
 
   for (const input of inputs) {
-    if (!input || typeof input !== "object") {
+    if (!input || typeof input !== "object" || Array.isArray(input)) {
       throw new Error("FORMULA_RULE_BUILDER_INPUT_INVALID");
     }
 
     const key = text(input.key);
-    if (!key || keys.has(key)) {
+    if (!INPUT_KEY_RE.test(key) || keys.has(key)) {
       throw new Error("FORMULA_RULE_BUILDER_INPUT_KEY_INVALID_OR_DUPLICATE");
     }
+
+    if (!INPUT_KINDS.has(text(input.kind))) {
+      throw new Error("FORMULA_RULE_BUILDER_INPUT_KIND_INVALID");
+    }
+
+    if (
+      input.parameterDefinitionId !== undefined &&
+      !UUID_RE.test(text(input.parameterDefinitionId))
+    ) {
+      throw new Error("FORMULA_RULE_BUILDER_INPUT_PARAMETER_ID_INVALID");
+    }
+
+    if (
+      input.valueObjectId !== undefined &&
+      !UUID_RE.test(text(input.valueObjectId))
+    ) {
+      throw new Error("FORMULA_RULE_BUILDER_INPUT_VALUE_OBJECT_ID_INVALID");
+    }
+
+    if (
+      input.window !== undefined &&
+      !INPUT_WINDOWS.has(text(input.window))
+    ) {
+      throw new Error("FORMULA_RULE_BUILDER_INPUT_WINDOW_INVALID");
+    }
+
+    if (
+      input.selection !== undefined &&
+      !INPUT_SELECTIONS.has(text(input.selection))
+    ) {
+      throw new Error("FORMULA_RULE_BUILDER_INPUT_SELECTION_INVALID");
+    }
+
+    if (
+      input.required !== undefined &&
+      typeof input.required !== "boolean"
+    ) {
+      throw new Error("FORMULA_RULE_BUILDER_INPUT_REQUIRED_INVALID");
+    }
+
     keys.add(key);
   }
 
@@ -271,6 +342,18 @@ async function readTargetParameterUnit(parameterDefinitionId: string) {
 export async function configureFormulaRuleDraftV1(
   input: ConfigureFormulaRuleDraftV1Input,
 ) {
+  if (!input || typeof input !== "object") {
+    throw new Error("FORMULA_RULE_BUILDER_REQUEST_INVALID");
+  }
+
+  if (!UUID_RE.test(text(input.ruleVersionId))) {
+    throw new Error("FORMULA_RULE_BUILDER_VERSION_ID_INVALID");
+  }
+
+  if (!isFormulaExpressionNodeV1(input.expression)) {
+    throw new Error("FORMULA_RULE_BUILDER_EXPRESSION_INVALID");
+  }
+
   const registry = await listFormulaRuleRegistryV1();
 
   let matchedSeries: (typeof registry)[number] | null = null;

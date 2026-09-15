@@ -1228,3 +1228,13 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - publish/testing/executor/fact-write остаются выключены;
 - полная размерностная алгебра выражений ещё не включена;
 - следующий этап: Formula Builder UI V1.
+## FORMULA BUILDER VALIDATION HARDENING V1.0.1 — 2026-09-15
+
+- baseline: `f2fcbc64d83296de532db2a3e8e1219e576bb497`;
+- после post-commit review усилена runtime-граница HTTP JSON -> Formula Builder;
+- expression/condition теперь проходят structural AST guard;
+- selector kind/window/selection/UUID/required проверяются runtime;
+- condition принимает только `{}` или `{ expression: AST }`;
+- subtract/divide требуют ровно два аргумента;
+- schema/publish/executor/fact-write не меняются;
+- следующий этап: Formula Builder UI V1.
