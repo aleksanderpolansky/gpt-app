@@ -1205,3 +1205,14 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - publish/executor/fact-write остаются выключены;
 - SQL schema не меняется;
 - следующий этап: UI выбора target parameter и создания draft на странице конструктора.
+## CONSEQUENCE FORMULA DRAFT UI V1 — 2026-09-15
+
+- baseline: `d458bf66bb26c86b80fab89c9bd62afa0b714a47`;
+- UI «Конструктора последствий» показывает formula-draft block для каждого выбранного target ON;
+- отображаются active v2 profile, target-parameter candidates, readiness и существующие draft rules;
+- куратор может выбрать target parameter и вызвать существующий `create_formula_draft`;
+- повтор существующего target-parameter draft блокируется в UI, server idempotency сохранена;
+- математическое выражение по-прежнему не редактируется;
+- publish/testing/executor/fact-write остаются выключены;
+- локализация formula-draft UI добавлена для EN/RU/PL/UK/DE/ES/CS;
+- следующий этап: Formula Builder V1.
