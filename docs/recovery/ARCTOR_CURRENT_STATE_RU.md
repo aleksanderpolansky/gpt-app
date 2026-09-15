@@ -1216,3 +1216,15 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - publish/testing/executor/fact-write остаются выключены;
 - локализация formula-draft UI добавлена для EN/RU/PL/UK/DE/ES/CS;
 - следующий этап: Formula Builder V1.
+## FORMULA BUILDER VALIDATION API V1 — 2026-09-15
+
+- baseline: `67ed0775fd086677c39cfeb7dfe79aaa142ace43`;
+- добавлен `formula-rule-builder.server.ts`;
+- завершённый draft проходит AST arity/input-reference/required-input/condition/source-input validation;
+- consequence rule обязан сохранять исходный `source_fact` адрес;
+- result unit фиксируется на canonical unit target parameter;
+- после configure: `draftIncomplete=false`, `formulaState=configured`, placeholder снят;
+- внешний raw `update_draft` retired с HTTP 410, чтобы не обходить builder gate;
+- publish/testing/executor/fact-write остаются выключены;
+- полная размерностная алгебра выражений ещё не включена;
+- следующий этап: Formula Builder UI V1.

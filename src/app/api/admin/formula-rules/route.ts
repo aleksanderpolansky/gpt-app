@@ -1,13 +1,13 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 import {
   platformAdminErrorResponse,
   requirePlatformAdmin,
 } from "@/lib/admin/require-platform-admin";
+import { configureFormulaRuleDraftV1 } from "@/lib/reality-curator/formula-rule-builder.server";
 import {
   createFormulaRuleDraftV1,
   listFormulaRuleRegistryV1,
-  updateFormulaRuleDraftV1,
 } from "@/lib/reality-curator/formula-rule-registry.server";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +29,7 @@ function text(value: unknown): string {
 
 function errorStatus(message: string) {
   if (message.endsWith("_NOT_FOUND")) return 404;
+  if (message.startsWith("FORMULA_RULE_BUILDER_")) return 400;
   if (
     message.includes("_INVALID") ||
     message.includes("_MUST_BE_") ||
@@ -141,20 +142,40 @@ export async function POST(request: Request) {
       });
     }
 
-    if (action === "update_draft") {
-      const result = await updateFormulaRuleDraftV1(
-        body as Parameters<typeof updateFormulaRuleDraftV1>[0],
-      );
+    if (action === "configure_draft") {
+      const result = await configureFormulaRuleDraftV1({
+        ...(body as Parameters<typeof configureFormulaRuleDraftV1>[0]),
+        curatorMetadata: {
+          ...asRecord(body.curatorMetadata),
+          curatorAppUserId: guard.appUser.id,
+          curatorAdminId: guard.platformAdmin.id,
+          curatorRole: guard.platformAdmin.role,
+          builderProvenance: "admin_formula_rule_builder_v1",
+        },
+      });
 
       return NextResponse.json({
         ok: true,
         routeMarker: ROUTE_MARKER,
         action,
-        version: result,
+        ...result,
         publishEnabled: false,
         formulaExecutionEnabled: false,
         factWriteEnabled: false,
       });
+    }
+
+    if (action === "update_draft") {
+      return NextResponse.json(
+        {
+          ok: false,
+          routeMarker: ROUTE_MARKER,
+          error:
+            "FORMULA_RULE_RAW_DRAFT_UPDATE_RETIRED_USE_CONFIGURE_DRAFT",
+          allowedActions: ["create_draft", "configure_draft"],
+        },
+        { status: 410 },
+      );
     }
 
     return NextResponse.json(
@@ -162,7 +183,7 @@ export async function POST(request: Request) {
         ok: false,
         routeMarker: ROUTE_MARKER,
         error: "FORMULA_RULE_ACTION_INVALID",
-        allowedActions: ["create_draft", "update_draft"],
+        allowedActions: ["create_draft", "configure_draft"],
       },
       { status: 400 },
     );
