@@ -1238,3 +1238,16 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - subtract/divide требуют ровно два аргумента;
 - schema/publish/executor/fact-write не меняются;
 - следующий этап: Formula Builder UI V1.
+## FORMULA BUILDER UI V1 — 2026-09-15
+
+- baseline: `dc765aa59a5773281dfe8c428a3e202e33086be0`;
+- добавлена страница `/admin/formula-builder?versionId=...`;
+- draft из «Конструктора последствий» получает ссылку `Настроить формулу`;
+- UI редактирует inputs/condition/expression/triggers/result role/missing-input policy;
+- добавлены быстрые схемы source, ×, ÷, +, − constant;
+- сохранение идёт только через `configure_draft` и server validator;
+- JSON editor остаётся административным расширенным режимом V1;
+- publish/executor/fact-write остаются выключены;
+- первый launcher UI был остановлен ESLint `react-hooks/set-state-in-effect`, rollback=PASS, commit не создавался;
+- V1.0.1 запускает initial load через очищаемый `setTimeout(..., 0)`, без синхронного state update из effect body;
+- следующий gate: unit algebra + deterministic no-write test runner + test/publish governance.

@@ -147,6 +147,7 @@ type FormulaCopy = {
   noTargetParameters: string;
   awaitingFormula: string;
   profileVersion: string;
+  editFormula: string;
 };
 
 const COPY: Record<LocaleCode, Copy> = {
@@ -182,7 +183,7 @@ const FORMULA_COPY: Record<LocaleCode, FormulaCopy> = {
     sourceMissingFromProfile: "The source parameter is not in the active typical-activity profile.",
     noTargetParameters: "The target object has no active system parameters.",
     awaitingFormula: "The semantic address is saved. The formula itself is not configured yet.",
-    profileVersion: "Profile",
+    profileVersion: "Profile", editFormula: "Configure formula",
   },
   ru: {
     column: "Черновик формулы",
@@ -196,7 +197,7 @@ const FORMULA_COPY: Record<LocaleCode, FormulaCopy> = {
     sourceMissingFromProfile: "Исходный параметр отсутствует в активном профиле типовой активности.",
     noTargetParameters: "У целевого ОН нет активных системных параметров.",
     awaitingFormula: "Смысловой адрес сохранён. Саму формулу ещё нужно настроить.",
-    profileVersion: "Профиль",
+    profileVersion: "Профиль", editFormula: "Настроить формулу",
   },
   pl: {
     column: "Szkic formuły",
@@ -210,7 +211,7 @@ const FORMULA_COPY: Record<LocaleCode, FormulaCopy> = {
     sourceMissingFromProfile: "Parametru źródłowego nie ma w aktywnym profilu aktywności typowej.",
     noTargetParameters: "Obiekt docelowy nie ma aktywnych parametrów systemowych.",
     awaitingFormula: "Adres semantyczny zapisano. Sama formuła nie jest jeszcze skonfigurowana.",
-    profileVersion: "Profil",
+    profileVersion: "Profil", editFormula: "Skonfiguruj formułę",
   },
   uk: {
     column: "Чернетка формули",
@@ -224,7 +225,7 @@ const FORMULA_COPY: Record<LocaleCode, FormulaCopy> = {
     sourceMissingFromProfile: "Вихідного параметра немає в активному профілі типової активності.",
     noTargetParameters: "Цільовий ОН не має активних системних параметрів.",
     awaitingFormula: "Смислову адресу збережено. Саму формулу ще не налаштовано.",
-    profileVersion: "Профіль",
+    profileVersion: "Профіль", editFormula: "Налаштувати формулу",
   },
   de: {
     column: "Formelentwurf",
@@ -238,7 +239,7 @@ const FORMULA_COPY: Record<LocaleCode, FormulaCopy> = {
     sourceMissingFromProfile: "Der Quellparameter fehlt im aktiven Profil der typischen Aktivität.",
     noTargetParameters: "Das Zielobjekt hat keine aktiven Systemparameter.",
     awaitingFormula: "Die semantische Adresse ist gespeichert. Die Formel selbst ist noch nicht konfiguriert.",
-    profileVersion: "Profil",
+    profileVersion: "Profil", editFormula: "Formel konfigurieren",
   },
   es: {
     column: "Borrador de fórmula",
@@ -252,7 +253,7 @@ const FORMULA_COPY: Record<LocaleCode, FormulaCopy> = {
     sourceMissingFromProfile: "El parámetro de origen no está en el perfil activo de la actividad típica.",
     noTargetParameters: "El objeto objetivo no tiene parámetros de sistema activos.",
     awaitingFormula: "La dirección semántica está guardada. La fórmula aún no está configurada.",
-    profileVersion: "Perfil",
+    profileVersion: "Perfil", editFormula: "Configurar fórmula",
   },
   cs: {
     column: "Koncept vzorce",
@@ -266,7 +267,7 @@ const FORMULA_COPY: Record<LocaleCode, FormulaCopy> = {
     sourceMissingFromProfile: "Zdrojový parametr není v aktivním profilu typické aktivity.",
     noTargetParameters: "Cílový objekt nemá aktivní systémové parametry.",
     awaitingFormula: "Sémantická adresa je uložena. Samotný vzorec ještě není nakonfigurován.",
-    profileVersion: "Profil",
+    profileVersion: "Profil", editFormula: "Nastavit vzorec",
   },
 };
 
@@ -777,6 +778,14 @@ export default function AdminConsequenceConstructorPage() {
                                           <div className="mt-0.5 text-emerald-700">
                                             {formulaCopy.awaitingFormula}
                                           </div>
+                                          {draft.versionId ? (
+                                            <a
+                                              href={`/admin/formula-builder?versionId=${encodeURIComponent(draft.versionId)}&locale=${encodeURIComponent(locale)}`}
+                                              className="mt-2 inline-flex rounded-md border border-emerald-300 bg-white px-2 py-1 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-100"
+                                            >
+                                              {formulaCopy.editFormula}
+                                            </a>
+                                          ) : null}
                                         </div>
                                       ))}
                                     </div>
