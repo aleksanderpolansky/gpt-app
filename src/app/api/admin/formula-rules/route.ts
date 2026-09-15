@@ -5,6 +5,7 @@ import {
   requirePlatformAdmin,
 } from "@/lib/admin/require-platform-admin";
 import { configureFormulaRuleDraftV1 } from "@/lib/reality-curator/formula-rule-builder.server";
+import { testFormulaRuleDraftV1 } from "@/lib/reality-curator/formula-rule-test-runner.server";
 import {
   createFormulaRuleDraftV1,
   listFormulaRuleRegistryV1,
@@ -30,6 +31,7 @@ function text(value: unknown): string {
 function errorStatus(message: string) {
   if (message.endsWith("_NOT_FOUND")) return 404;
   if (message.startsWith("FORMULA_RULE_BUILDER_")) return 400;
+  if (message.startsWith("FORMULA_RULE_TEST_")) return 400;
   if (
     message.includes("_INVALID") ||
     message.includes("_MUST_BE_") ||
@@ -82,6 +84,8 @@ export async function GET() {
       series,
       count: series.length,
       draftWriteEnabled: true,
+      testRunnerEnabled: true,
+      testRunnerWriteEnabled: false,
       publishEnabled: false,
       formulaExecutionEnabled: false,
       factWriteEnabled: false,
@@ -165,6 +169,23 @@ export async function POST(request: Request) {
       });
     }
 
+    if (action === "test_draft") {
+      const result = await testFormulaRuleDraftV1({
+        ruleVersionId: text(body.ruleVersionId),
+        sampleInputs: asRecord(body.sampleInputs),
+      });
+
+      return NextResponse.json({
+        ok: true,
+        routeMarker: ROUTE_MARKER,
+        action,
+        ...result,
+        publishEnabled: false,
+        formulaExecutionEnabled: false,
+        factWriteEnabled: false,
+      });
+    }
+
     if (action === "update_draft") {
       return NextResponse.json(
         {
@@ -172,7 +193,7 @@ export async function POST(request: Request) {
           routeMarker: ROUTE_MARKER,
           error:
             "FORMULA_RULE_RAW_DRAFT_UPDATE_RETIRED_USE_CONFIGURE_DRAFT",
-          allowedActions: ["create_draft", "configure_draft"],
+          allowedActions: ["create_draft", "configure_draft", "test_draft"],
         },
         { status: 410 },
       );
@@ -183,7 +204,7 @@ export async function POST(request: Request) {
         ok: false,
         routeMarker: ROUTE_MARKER,
         error: "FORMULA_RULE_ACTION_INVALID",
-        allowedActions: ["create_draft", "configure_draft"],
+        allowedActions: ["create_draft", "configure_draft", "test_draft"],
       },
       { status: 400 },
     );

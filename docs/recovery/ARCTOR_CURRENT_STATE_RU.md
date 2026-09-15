@@ -1251,3 +1251,17 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - первый launcher UI был остановлен ESLint `react-hooks/set-state-in-effect`, rollback=PASS, commit не создавался;
 - V1.0.1 запускает initial load через очищаемый `setTimeout(..., 0)`, без синхронного state update из effect body;
 - следующий gate: unit algebra + deterministic no-write test runner + test/publish governance.
+## FORMULA UNIT ALGEBRA + NO-WRITE TEST RUNNER API V1 — 2026-09-15
+
+- baseline: `9b4589b3c401fdcaa5b228a888780a03a310e8bf`;
+- первый launcher остановлен TypeScript на несуществующей policy `fail`; rollback=PASS, commit не создавался;
+- V1.0.1 синхронизирован с canonical policies `insufficient_data/skip/zero`;
+- `zero` разрешён только для активных numeric inputs;
+- добавлен `test_draft` для configured formula version;
+- sample inputs задаются явно, user facts не читаются;
+- тест не пишет БД, факты, lineage или recalculation queue;
+- добавлена консервативная unit algebra V1;
+- составные физические размерности пока получают `unresolved`;
+- даже PASS не включает publish;
+- publish/executor/fact-write остаются выключены;
+- следующий этап: Test Panel UI, затем test-evidence/publish governance.
