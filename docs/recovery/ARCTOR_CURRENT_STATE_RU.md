@@ -1185,3 +1185,12 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - checkpoint launcher V1/V1.0.1/V1.0.2 ошибок production не вызвали и commit не создали; причины зафиксированы в отдельном recovery;
 - текущий production rollout подтверждается post-install evidence;
 - следующий этап: server CRUD rule series/version + draft-rule integration в «Конструктор последствий», затем deterministic executor.
+
+## FORMULA RULE REGISTRY — SERVER CRUD V1 — 2026-09-15
+
+- baseline: `f17dac3843e81acbc18daf19c4944d1721829b0e`;
+- добавлен server layer чтения реестра, создания series + draft v1 и обновления editable draft/testing version;
+- добавлен admin API `/api/admin/formula-rules`;
+- CRUD использует установленный production registry, новую SQL migration не добавляет;
+- publish/executor/fact-write/lineage/recalculation остаются выключены;
+- следующий этап: target parameter + draft-rule integration в «Конструктор последствий».
