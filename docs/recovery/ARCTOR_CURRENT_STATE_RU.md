@@ -1170,3 +1170,18 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - system/organization semantics, facts, lineage, recalculation queue и Target Standards этим hotfix не меняются;
 - production Supabase автоматически не меняется;
 - следующая точка: controlled production migration apply + read-only verification, затем server CRUD и draft-rule integration в «Конструктор последствий».
+
+## FORMULA RULE REGISTRY — PRODUCTION ROLLOUT V1 — 2026-09-15
+
+- production вручную через Supabase SQL Editor применены:
+  - `20260914190000_formula_rule_registry_v1.sql`;
+  - `20260915102000_formula_rule_registry_v1_0_2_owner_guard.sql`;
+- post-install verification: все table/view/function/trigger/RLS/policy checks = `true`;
+- реестр после установки пуст: `series_rows=0`, `version_rows=0`, `published_rows=0`;
+- пользовательский owner guard установлен и активен;
+- факты, lineage и recalculation queue rollout не изменял;
+- `supabase_migrations.schema_migrations` в remote DB отсутствует;
+- migration history вручную сейчас НЕ создаётся и две новые миграции отдельно НЕ маркируются;
+- checkpoint launcher V1/V1.0.1/V1.0.2 ошибок production не вызвали и commit не создали; причины зафиксированы в отдельном recovery;
+- текущий production rollout подтверждается post-install evidence;
+- следующий этап: server CRUD rule series/version + draft-rule integration в «Конструктор последствий», затем deterministic executor.
