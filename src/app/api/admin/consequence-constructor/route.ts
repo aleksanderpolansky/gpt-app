@@ -18,6 +18,10 @@ import {
   listConsequenceTemplateOptionsV1,
   reconcileConsequenceConstructorTasksV1,
 } from "@/lib/reality-curator/consequence-constructor.server";
+import {
+  createConsequenceFormulaDraftV1,
+  loadConsequenceFormulaContextsV1,
+} from "@/lib/reality-curator/consequence-formula-draft.server";
 import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +44,7 @@ type WorkBody = {
   taskId?: unknown;
   templateId?: unknown;
   targetValueObjectId?: unknown;
+  targetParameterDefinitionId?: unknown;
 };
 
 type GlobalValueObjectRow = {
@@ -326,7 +331,7 @@ async function enrichTasksWithTargets(
     readSelectedTargetsByTask(tasks),
   ]);
 
-  return tasks.map((task) => {
+  const baseTasks = tasks.map((task) => {
     const targetCandidates = candidateMap.get(task.sourceValueObjectId) ?? [];
     const allowedTargetIds = new Set(
       targetCandidates.map((candidate) => candidate.id),
@@ -349,6 +354,46 @@ async function enrichTasksWithTargets(
       selectedTargets,
     };
   });
+
+  const formulaContexts = await loadConsequenceFormulaContextsV1(
+    baseTasks.flatMap((task) =>
+      task.selectedTargets.map((target) => ({
+        taskId: task.id,
+        activityTemplateId: task.activityTemplateId,
+        sourceValueObjectId: task.sourceValueObjectId,
+        sourceParameterDefinitionId: task.parameterDefinitionId,
+        targetValueObjectId: target.targetValueObjectId,
+        targetValueObjectTitle: target.targetValueObjectTitle,
+      })),
+    ),
+  );
+
+  return baseTasks.map((task) => ({
+    ...task,
+    selectedTargets: task.selectedTargets.map((target) => {
+      const formulaContext = formulaContexts.get(
+        `${task.id}|${target.targetValueObjectId}`,
+      );
+
+      return {
+        ...target,
+        activeImpactProfileId:
+          formulaContext?.activeImpactProfileId ?? null,
+        activeImpactProfileVersionNo:
+          formulaContext?.activeImpactProfileVersionNo ?? null,
+        sourceParameterInProfile:
+          formulaContext?.sourceParameterInProfile ?? false,
+        formulaDraftReadiness:
+          formulaContext?.formulaDraftReadiness ??
+          (task.activityTemplateId
+            ? "missing_active_v2_profile"
+            : "awaiting_template"),
+        targetParameterCandidates:
+          formulaContext?.targetParameterCandidates ?? [],
+        draftRules: formulaContext?.draftRules ?? [],
+      };
+    }),
+  }));
 }
 
 export async function GET(request: Request) {
@@ -388,7 +433,10 @@ export async function GET(request: Request) {
       relationDirectionPolicy: "either_direction_for_candidate_discovery",
       contextualPairPolicy: "task_first_then_typical_activity",
       targetSelectionBeforeTemplateAllowed: true,
-      formulaWriteEnabled: false,
+      formulaDraftWriteEnabled: true,
+      formulaPublishEnabled: false,
+      formulaExecutionEnabled: false,
+      factWriteEnabled: false,
     });
   } catch (error) {
     return errorResponse(error);
@@ -551,6 +599,105 @@ export async function POST(request: Request) {
       });
     } catch (error) {
       return errorResponse(error);
+    }
+  }
+
+  if (action === "create_formula_draft") {
+    const taskId = text(body.taskId);
+    const targetValueObjectId = text(body.targetValueObjectId);
+    const targetParameterDefinitionId = text(
+      body.targetParameterDefinitionId,
+    );
+
+    if (!UUID_RE.test(taskId)) {
+      return errorResponse("CONSEQUENCE_FORMULA_TASK_ID_INVALID", 400);
+    }
+    if (!UUID_RE.test(targetValueObjectId)) {
+      return errorResponse(
+        "CONSEQUENCE_FORMULA_TARGET_VALUE_OBJECT_ID_INVALID",
+        400,
+      );
+    }
+    if (!UUID_RE.test(targetParameterDefinitionId)) {
+      return errorResponse(
+        "CONSEQUENCE_FORMULA_TARGET_PARAMETER_ID_INVALID",
+        400,
+      );
+    }
+
+    try {
+      const tasks = await listConsequenceConstructorTasksV1();
+      const task = tasks.find((item) => item.id === taskId) ?? null;
+      if (!task) {
+        return errorResponse("CONSEQUENCE_FORMULA_TASK_NOT_FOUND", 404);
+      }
+      if (!task.activityTemplateId) {
+        return errorResponse(
+          "CONSEQUENCE_FORMULA_TYPICAL_ACTIVITY_REQUIRED",
+          409,
+        );
+      }
+
+      const [candidateMap, selectedMap] = await Promise.all([
+        buildTargetCandidates([task.sourceValueObjectId], "en"),
+        readSelectedTargetsByTask([task]),
+      ]);
+
+      const candidate =
+        (candidateMap.get(task.sourceValueObjectId) ?? []).find(
+          (item) => item.id === targetValueObjectId,
+        ) ?? null;
+      if (!candidate) {
+        return errorResponse(
+          "CONSEQUENCE_FORMULA_TARGET_NOT_RELATED_LEAF_OBJECT",
+          409,
+        );
+      }
+
+      const selected = (selectedMap.get(task.id) ?? []).some(
+        (item) => item.targetValueObjectId === targetValueObjectId,
+      );
+      if (!selected) {
+        return errorResponse(
+          "CONSEQUENCE_FORMULA_TARGET_NOT_SELECTED",
+          409,
+        );
+      }
+
+      const result = await createConsequenceFormulaDraftV1({
+        taskId: task.id,
+        activityTemplateId: task.activityTemplateId,
+        sourceValueObjectId: task.sourceValueObjectId,
+        sourceParameterDefinitionId: task.parameterDefinitionId,
+        targetValueObjectId,
+        targetValueObjectTitle: candidate.title,
+        targetParameterDefinitionId,
+        curatorMetadata: adminMetadata(guard),
+      });
+
+      return NextResponse.json({
+        ok: true,
+        routeMarker: ROUTE_MARKER,
+        action,
+        ...result,
+        formulaPublishEnabled: false,
+        formulaExecutionEnabled: false,
+        factWriteEnabled: false,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const status = message.endsWith("_NOT_FOUND")
+        ? 404
+        : message.includes("_INVALID")
+          ? 400
+          : message.includes("_NOT_READY_") ||
+              message.includes("_NOT_SELECTED") ||
+              message.includes("_NOT_ASSIGNED_") ||
+              message.includes("_REQUIRED") ||
+              message.includes("_ARCHIVED")
+            ? 409
+            : 500;
+      return errorResponse(error, status);
     }
   }
 

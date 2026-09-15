@@ -1194,3 +1194,14 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - CRUD использует установленный production registry, новую SQL migration не добавляет;
 - publish/executor/fact-write/lineage/recalculation остаются выключены;
 - следующий этап: target parameter + draft-rule integration в «Конструктор последствий».
+
+## CONSEQUENCE FORMULA DRAFT API V1 — 2026-09-15
+
+- baseline: `284b6a5d172160bcd25ae2d0ea27a49c28707b97`;
+- consequence API теперь возвращает target-parameter candidates, active v2 profile readiness и существующие draft rules;
+- добавлен action `create_formula_draft`;
+- canonical rule identity основана на template + source ON/parameter + target ON/parameter, task id только provenance;
+- draft создаётся с placeholder `literal null` и `draftIncomplete=true`;
+- publish/executor/fact-write остаются выключены;
+- SQL schema не меняется;
+- следующий этап: UI выбора target parameter и создания draft на странице конструктора.
