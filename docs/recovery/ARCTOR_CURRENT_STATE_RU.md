@@ -1265,3 +1265,15 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - даже PASS не включает publish;
 - publish/executor/fact-write остаются выключены;
 - следующий этап: Test Panel UI, затем test-evidence/publish governance.
+## FORMULA TEST PANEL UI V1 — 2026-09-15
+
+- baseline: `78d584dabfe7434bc15fa4b1863c4ad4cb9bfd95`;
+- первый launcher Test Panel остановился на первом native git call до изменения проекта;
+- V1.0.1 исправляет конфликт `$Args` с PowerShell automatic `$args` и делает native calls явными;
+- Formula Builder получил отдельный no-write Test Panel;
+- sample inputs задаются вручную; user facts не читаются;
+- UI показывает output/unit algebra/testPassed/noWrite;
+- тестируется только последняя сохранённая configured version;
+- stale UI policy `fail` исправлена на canonical `zero`;
+- publish/executor/fact-write остаются выключены;
+- следующий gate: test-evidence contract + publish governance.

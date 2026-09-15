@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getLocaleSearchParam, type LocaleCode } from "@/i18n";
 
+import { FormulaTestPanel } from "./FormulaTestPanel";
+
 type JsonRecord = Record<string, unknown>;
 
 type FormulaVersion = {
@@ -17,7 +19,7 @@ type FormulaVersion = {
   trigger_contract_json: unknown;
   result_fact_role_code: "result" | "snapshot";
   result_unit_code: string | null;
-  missing_input_policy_code: "insufficient_data" | "skip" | "fail";
+  missing_input_policy_code: "insufficient_data" | "skip" | "zero";
   status_code:
     | "draft"
     | "testing"
@@ -413,7 +415,7 @@ export default function AdminFormulaBuilderPage() {
   ]);
   const [resultRole, setResultRole] = useState<"result" | "snapshot">("result");
   const [missingPolicy, setMissingPolicy] = useState<
-    "insufficient_data" | "skip" | "fail"
+    "insufficient_data" | "skip" | "zero"
   >("insufficient_data");
   const [quickMode, setQuickMode] = useState<
     "source" | "multiply" | "divide" | "add" | "subtract"
@@ -637,6 +639,10 @@ export default function AdminFormulaBuilderPage() {
 
   const editable =
     version?.status_code === "draft" || version?.status_code === "testing";
+  const formulaMetadata = version ? asRecord(version.metadata_json) : {};
+  const formulaConfigured =
+    formulaMetadata.draftIncomplete === false &&
+    formulaMetadata.formulaState === "configured";
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
@@ -830,7 +836,7 @@ export default function AdminFormulaBuilderPage() {
                       event.target.value as
                         | "insufficient_data"
                         | "skip"
-                        | "fail",
+                        | "zero",
                     )
                   }
                   disabled={!editable || busy}
@@ -838,7 +844,7 @@ export default function AdminFormulaBuilderPage() {
                 >
                   <option value="insufficient_data">insufficient_data</option>
                   <option value="skip">skip</option>
-                  <option value="fail">fail</option>
+                  <option value="zero">zero</option>
                 </select>
               </label>
             </div>
@@ -855,6 +861,14 @@ export default function AdminFormulaBuilderPage() {
             >
               {busy ? copy.saving : copy.save}
             </button>
+
+            <FormulaTestPanel
+              key={`${version.id}:${JSON.stringify(version.input_contract_json)}`}
+              locale={locale}
+              versionId={version.id}
+              configured={formulaConfigured}
+              inputContract={version.input_contract_json}
+            />
           </div>
         ) : null}
       </section>
