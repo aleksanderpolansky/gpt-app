@@ -1147,3 +1147,15 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - Первая попытка V1 остановилась на false-negative validator `PER_SOURCE_OUTGOING_TARGET_DISCOVERY_REMAINS`: validator ожидал буквальный `\\n`; rollback выполнен.
 - V1.0.1 использует whitespace-tolerant regex, функциональная логика hotfix не меняется.
 - Recovery detail: docs/recovery/ARCTOR_CONSEQUENCE_TARGET_CANDIDATE_FANOUT_HOTFIX_V1_0_1_RU_20260912.md.
+## FORMULA RULE REGISTRY FOUNDATION V1.0.1 - 2026-09-14
+
+- baseline before change: `06881dc12ed2617e8896fd46dedf25d382fad138`
+- добавлен многослойный реестр расчётных правил: `system | user | organization`;
+- пользовательский слой может ссылаться на глобальные ОН/параметры и на собственные actor-scoped ОН/параметры;
+- глобальная модель при этом не изменяется;
+- формула — `arctor_formula_v1` JSON-AST из закрытого набора операций, без произвольного кода;
+- значения по-прежнему живут в фактах; executor/result/lineage этим этапом не включены;
+- существующая `activity_fact_recalculation_queue` сохранена без изменений;
+- migration: `supabase/migrations/20260914190000_formula_rule_registry_v1.sql`;
+- подробный recovery: `docs/recovery/ARCTOR_FORMULA_RULE_REGISTRY_FOUNDATION_V1_0_1_RU_20260914.md`;
+- следующая точка: server CRUD + связывание draft rule с «Конструктором последствий», затем deterministic executor.
