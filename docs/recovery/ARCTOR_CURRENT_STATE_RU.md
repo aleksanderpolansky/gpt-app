@@ -1341,3 +1341,11 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - migration file is committed but NOT applied automatically;
 - no activity fact, formula execution, result/snapshot, lineage or recalculation writes are enabled;
 - next: manual migration rollout + one curator smoke, then system typical-activity materialization.
+## SYSTEM PARAMETER ASSIGNMENT MIGRATION ROLLOUT — 2026-09-16
+
+- migration `20260916123000_curator_system_parameter_assignment_v1.sql` manually applied and structurally verified;
+- `scope_code` is readable on `value_object_parameter_assignments`;
+- service-role RPC guard is reachable;
+- verification probe executed no DB writes;
+- no Formula Executor / fact / result / snapshot / lineage writes enabled;
+- next: one curator runtime smoke creating a real system parameter assignment.
