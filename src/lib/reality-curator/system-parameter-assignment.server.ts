@@ -77,6 +77,18 @@ export async function materializeSystemParameterAssignmentsV1(input: {
       );
     }
 
+    const scopeCompatibilityMigrationRequired =
+      error.code === "23514" &&
+      /value_object_parameter_assignments_scope_shape_gsr1_check|assignment_scope_code/i.test(
+        error.message,
+      );
+
+    if (scopeCompatibilityMigrationRequired) {
+      throw new Error(
+        "CURATOR_SYSTEM_PARAMETER_ASSIGNMENT_SCOPE_COMPAT_MIGRATION_REQUIRED",
+      );
+    }
+
     throw new Error(
       `CURATOR_SYSTEM_PARAMETER_ASSIGNMENT_SAVE_FAILED:${error.message}`,
     );
