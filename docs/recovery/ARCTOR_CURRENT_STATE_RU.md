@@ -1289,3 +1289,16 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - фактический publish остаётся выключен;
 - executor/fact-write/lineage остаются выключены;
 - следующий этап: evidence/readiness UI, затем отдельный explicit publish gate.
+## FORMULA EVIDENCE + PUBLISH READINESS UI V1 — 2026-09-16
+
+- baseline: `19550e8fa700e68802660a8cc0c9d75a00176bee`;
+- первый launcher UI был остановлен exact staged allowlist: page.tsx был no-op и не попал в staged set; rollback=PASS;
+- V1.0.1 не переписывает и не stage-ит неизменённый page.tsx;
+- Formula Test Panel показывает governance block для test evidence и publish readiness;
+- evidence можно записать только после evaluated no-write PASS с resolved unit algebra;
+- UI показывает evidence state/time и blocking reasons readiness;
+- фактический publish остаётся выключен;
+- executor/fact-write/lineage остаются выключены;
+- recovery incident с повторным launcher и CRLF/autocrlf диагностикой зафиксирован;
+- rollback pattern усилен: до mutation rollback не трогает project files;
+- следующий gate: explicit publish server action + transition/supersede governance.
