@@ -25,7 +25,17 @@ type PublishReadiness = {
   evidenceState?: string;
   evidenceRecordedAt?: string | null;
   formulaFingerprint?: string;
+  currentPublishedVersionId?: string | null;
+  requiresAtomicSupersede?: boolean;
   publishEnabled?: boolean;
+};
+
+type PublishResponse = {
+  ok?: boolean;
+  error?: string;
+  statusCode?: string;
+  publishedAt?: string | null;
+  formulaFingerprint?: string;
 };
 
 type EvidenceResponse = {
@@ -72,6 +82,13 @@ type Copy = {
   ready: string;
   notReady: string;
   evidenceSaved: string;
+  publishActionTitle: string;
+  publishActionHelp: string;
+  publishConfirm: string;
+  publishNow: string;
+  publishing: string;
+  publishSuccess: string;
+  firstPublicationOnly: string;
 };
 
 const COPY: Record<LocaleCode, Copy> = {
@@ -107,6 +124,13 @@ const COPY: Record<LocaleCode, Copy> = {
     ready: "Ready for future publish gate",
     notReady: "Not ready",
     evidenceSaved: "Test evidence recorded.",
+    publishActionTitle: "Explicit publication",
+    publishActionHelp: "Publication is a state change. It is available only when readiness is fully satisfied and it does not execute formulas or write facts.",
+    publishConfirm: "I confirm that I want to publish this tested formula version.",
+    publishNow: "Publish formula version",
+    publishing: "Publishing…",
+    publishSuccess: "Formula version published. Reloading…",
+    firstPublicationOnly: "V1 supports only the first published version in a series. Replacing an existing published version requires the later atomic supersede gate.",
   },
   ru: {
     title: "Проверка формулы без записи",
@@ -140,6 +164,13 @@ const COPY: Record<LocaleCode, Copy> = {
     ready: "Готово к будущему этапу публикации",
     notReady: "Не готово",
     evidenceSaved: "Доказательство теста зафиксировано.",
+    publishActionTitle: "Явная публикация",
+    publishActionHelp: "Публикация меняет состояние версии. Она доступна только после полного прохождения проверки готовности и не запускает формулу и не записывает факты.",
+    publishConfirm: "Я подтверждаю, что хочу опубликовать эту проверенную версию формулы.",
+    publishNow: "Опубликовать версию формулы",
+    publishing: "Публикуем…",
+    publishSuccess: "Версия формулы опубликована. Обновляем страницу…",
+    firstPublicationOnly: "V1 поддерживает только первую опубликованную версию в серии. Замена уже опубликованной версии потребует отдельного атомарного механизма supersede.",
   },
   pl: {
     title: "Test formuły bez zapisu",
@@ -173,6 +204,13 @@ const COPY: Record<LocaleCode, Copy> = {
     ready: "Gotowe do przyszłego etapu publikacji",
     notReady: "Brak gotowości",
     evidenceSaved: "Dowód testu zapisano.",
+    publishActionTitle: "Jawna publikacja",
+    publishActionHelp: "Publikacja zmienia stan wersji. Jest dostępna tylko po pełnym przejściu kontroli gotowości i nie uruchamia formuły ani nie zapisuje faktów.",
+    publishConfirm: "Potwierdzam, że chcę opublikować tę przetestowaną wersję formuły.",
+    publishNow: "Opublikuj wersję formuły",
+    publishing: "Publikowanie…",
+    publishSuccess: "Wersja formuły opublikowana. Odświeżanie…",
+    firstPublicationOnly: "V1 obsługuje tylko pierwszą opublikowaną wersję w serii. Zastąpienie istniejącej wersji wymaga późniejszego atomowego mechanizmu supersede.",
   },
   uk: {
     title: "Тест формули без запису",
@@ -206,6 +244,13 @@ const COPY: Record<LocaleCode, Copy> = {
     ready: "Готово до майбутнього етапу публікації",
     notReady: "Не готово",
     evidenceSaved: "Доказ тесту зафіксовано.",
+    publishActionTitle: "Явна публікація",
+    publishActionHelp: "Публікація змінює стан версії. Вона доступна лише після повної перевірки готовності й не запускає формулу та не записує факти.",
+    publishConfirm: "Я підтверджую, що хочу опублікувати цю перевірену версію формули.",
+    publishNow: "Опублікувати версію формули",
+    publishing: "Публікуємо…",
+    publishSuccess: "Версію формули опубліковано. Оновлюємо сторінку…",
+    firstPublicationOnly: "V1 підтримує лише першу опубліковану версію в серії. Заміна наявної опублікованої версії потребує окремого атомарного механізму supersede.",
   },
   de: {
     title: "Formeltest ohne Schreibzugriff",
@@ -239,6 +284,13 @@ const COPY: Record<LocaleCode, Copy> = {
     ready: "Bereit für den zukünftigen Veröffentlichungsschritt",
     notReady: "Nicht bereit",
     evidenceSaved: "Testnachweis gespeichert.",
+    publishActionTitle: "Explizite Veröffentlichung",
+    publishActionHelp: "Die Veröffentlichung ändert den Versionsstatus. Sie ist nur nach vollständiger Bereitschaft verfügbar und führt keine Formel aus und schreibt keine Fakten.",
+    publishConfirm: "Ich bestätige, dass ich diese getestete Formelversion veröffentlichen möchte.",
+    publishNow: "Formelversion veröffentlichen",
+    publishing: "Veröffentlichung…",
+    publishSuccess: "Formelversion veröffentlicht. Seite wird neu geladen…",
+    firstPublicationOnly: "V1 unterstützt nur die erste veröffentlichte Version einer Serie. Das Ersetzen einer vorhandenen Version erfordert später einen atomaren Supersede-Schritt.",
   },
   es: {
     title: "Prueba de fórmula sin escritura",
@@ -272,6 +324,13 @@ const COPY: Record<LocaleCode, Copy> = {
     ready: "Listo para el futuro paso de publicación",
     notReady: "No listo",
     evidenceSaved: "Evidencia de prueba registrada.",
+    publishActionTitle: "Publicación explícita",
+    publishActionHelp: "La publicación cambia el estado de la versión. Solo está disponible tras completar la preparación y no ejecuta fórmulas ni escribe hechos.",
+    publishConfirm: "Confirmo que quiero publicar esta versión de fórmula probada.",
+    publishNow: "Publicar versión de fórmula",
+    publishing: "Publicando…",
+    publishSuccess: "Versión de fórmula publicada. Recargando…",
+    firstPublicationOnly: "V1 solo admite la primera versión publicada de una serie. Reemplazar una versión existente requiere un paso atómico de supersede posterior.",
   },
   cs: {
     title: "Test vzorce bez zápisu",
@@ -305,6 +364,13 @@ const COPY: Record<LocaleCode, Copy> = {
     ready: "Připraveno pro budoucí krok publikace",
     notReady: "Není připraveno",
     evidenceSaved: "Důkaz testu uložen.",
+    publishActionTitle: "Výslovné publikování",
+    publishActionHelp: "Publikování mění stav verze. Je dostupné jen po úplném splnění připravenosti a nespouští vzorec ani nezapisuje fakta.",
+    publishConfirm: "Potvrzuji, že chci publikovat tuto otestovanou verzi vzorce.",
+    publishNow: "Publikovat verzi vzorce",
+    publishing: "Publikování…",
+    publishSuccess: "Verze vzorce publikována. Obnovování stránky…",
+    firstPublicationOnly: "V1 podporuje pouze první publikovanou verzi v sérii. Nahrazení existující verze vyžaduje pozdější atomický krok supersede.",
   },
 };
 
@@ -350,13 +416,14 @@ export function FormulaTestPanel({
   );
   const [busy, setBusy] = useState(false);
   const [governanceBusy, setGovernanceBusy] = useState<
-    "evidence" | "readiness" | null
+    "evidence" | "readiness" | "publish" | null
   >(null);
   const [error, setError] = useState<string | null>(null);
   const [governanceError, setGovernanceError] = useState<string | null>(null);
   const [governanceSuccess, setGovernanceSuccess] = useState<string | null>(null);
   const [result, setResult] = useState<TestResponse | null>(null);
   const [readiness, setReadiness] = useState<PublishReadiness | null>(null);
+  const [publishConfirmed, setPublishConfirmed] = useState(false);
 
   function parsedSampleInputs() {
     const parsed = JSON.parse(sampleText) as unknown;
@@ -458,6 +525,56 @@ export function FormulaTestPanel({
         readinessError instanceof Error
           ? readinessError.message
           : String(readinessError),
+      );
+    } finally {
+      setGovernanceBusy(null);
+    }
+  }
+
+  async function publishVersion() {
+    if (!readiness?.ready || readiness.publishEnabled !== true) return;
+    if (!publishConfirmed) return;
+
+    setGovernanceBusy("publish");
+    setGovernanceError(null);
+    setGovernanceSuccess(null);
+
+    try {
+      const response = await fetch("/api/admin/formula-rules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "publish_version",
+          ruleVersionId: versionId,
+          confirmationCode: "PUBLISH_FORMULA_RULE_V1",
+        }),
+      });
+
+      const payload = (await response.json()) as PublishResponse;
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(payload.error || `HTTP ${response.status}`);
+      }
+
+      setPublishConfirmed(false);
+      setReadiness({
+        ready: false,
+        reasons: ["version_published_reload_required"],
+        evidenceState: readiness.evidenceState,
+        evidenceRecordedAt: readiness.evidenceRecordedAt,
+        formulaFingerprint:
+          payload.formulaFingerprint ?? readiness.formulaFingerprint,
+        publishEnabled: false,
+      });
+      setGovernanceSuccess(copy.publishSuccess);
+
+      window.setTimeout(() => {
+        window.location.reload();
+      }, 1200);
+    } catch (publishError) {
+      setGovernanceError(
+        publishError instanceof Error
+          ? publishError.message
+          : String(publishError),
       );
     } finally {
       setGovernanceBusy(null);
@@ -628,6 +745,48 @@ export function FormulaTestPanel({
                 </ul>
               </div>
             ) : null}
+
+            <div className="rounded-lg border border-[#e5e7f1] bg-white p-3">
+              <div className="text-sm font-semibold text-[#23263a]">
+                {copy.publishActionTitle}
+              </div>
+              <p className="mt-1 text-xs leading-5 text-[#6b7280]">
+                {copy.publishActionHelp}
+              </p>
+              <p className="mt-2 text-xs leading-5 text-[#7c8099]">
+                {copy.firstPublicationOnly}
+              </p>
+
+              {readiness.ready && readiness.publishEnabled ? (
+                <div className="mt-3 space-y-3">
+                  <label className="flex items-start gap-2 text-xs leading-5 text-[#4a4f6a]">
+                    <input
+                      type="checkbox"
+                      checked={publishConfirmed}
+                      onChange={(event) =>
+                        setPublishConfirmed(event.target.checked)
+                      }
+                      disabled={governanceBusy !== null}
+                      className="mt-1"
+                    />
+                    <span>{copy.publishConfirm}</span>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => void publishVersion()}
+                    disabled={
+                      !publishConfirmed || governanceBusy !== null
+                    }
+                    className="rounded-lg border border-emerald-500 bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {governanceBusy === "publish"
+                      ? copy.publishing
+                      : copy.publishNow}
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </div>
         ) : null}
       </div>

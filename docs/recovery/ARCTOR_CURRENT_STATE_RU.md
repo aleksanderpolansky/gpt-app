@@ -1316,3 +1316,14 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - executor/fact-write/lineage остаются выключены;
 - SQL migration нет;
 - следующий этап: explicit Publish UI + live acceptance.
+## FORMULA EXPLICIT PUBLISH UI V1 — 2026-09-16
+
+- baseline: `2ef454d4c92ca898e232554bd03289b27a27848f`;
+- Formula Test Panel получил explicit Publish UI;
+- publish button видна только при server readiness ready=true + publishEnabled=true;
+- перед publish требуется отдельный checkbox подтверждения;
+- UI передаёт confirmation contract `PUBLISH_FORMULA_RULE_V1`;
+- после успешной publication UI reload-ит страницу для синхронизации immutable published status;
+- launcher сам ничего в Formula Registry не публикует;
+- automatic supersede/executor/fact-write остаются выключены;
+- следующий шаг после release: controlled live acceptance первой безопасной публикации.
