@@ -7,6 +7,7 @@ import {
 import { configureFormulaRuleDraftV1 } from "@/lib/reality-curator/formula-rule-builder.server";
 import {
   getFormulaRulePublishReadinessV1,
+  publishFormulaRuleVersionV1,
   recordFormulaRuleTestEvidenceV1,
 } from "@/lib/reality-curator/formula-rule-governance.server";
 import { testFormulaRuleDraftV1 } from "@/lib/reality-curator/formula-rule-test-runner.server";
@@ -36,6 +37,8 @@ function errorStatus(message: string) {
   if (message.endsWith("_NOT_FOUND")) return 404;
   if (message.startsWith("FORMULA_RULE_BUILDER_")) return 400;
   if (message.startsWith("FORMULA_RULE_TEST_")) return 400;
+  if (message.startsWith("FORMULA_RULE_PUBLISH_CONFLICT_")) return 409;
+  if (message.startsWith("FORMULA_RULE_PUBLISH_")) return 400;
   if (message.startsWith("FORMULA_RULE_GOVERNANCE_")) return 400;
   if (
     message.includes("_INVALID") ||
@@ -93,7 +96,8 @@ export async function GET() {
       testRunnerWriteEnabled: false,
       testEvidenceEnabled: true,
       publishReadinessEnabled: true,
-      publishEnabled: false,
+      explicitPublishGateEnabled: true,
+      publishEnabled: true,
       formulaExecutionEnabled: false,
       factWriteEnabled: false,
     });
@@ -225,7 +229,27 @@ export async function POST(request: Request) {
         routeMarker: ROUTE_MARKER,
         action,
         ...result,
-        publishEnabled: false,
+        formulaExecutionEnabled: false,
+        factWriteEnabled: false,
+      });
+    }
+
+    if (action === "publish_version") {
+      const result = await publishFormulaRuleVersionV1({
+        ruleVersionId: text(body.ruleVersionId),
+        confirmationCode: text(body.confirmationCode),
+        publisher: {
+          curatorAppUserId: guard.appUser.id,
+          curatorAdminId: guard.platformAdmin.id,
+          curatorRole: guard.platformAdmin.role,
+        },
+      });
+
+      return NextResponse.json({
+        ok: true,
+        routeMarker: ROUTE_MARKER,
+        action,
+        ...result,
         formulaExecutionEnabled: false,
         factWriteEnabled: false,
       });
@@ -244,6 +268,7 @@ export async function POST(request: Request) {
             "test_draft",
             "record_test_evidence",
             "publish_readiness",
+            "publish_version",
           ],
         },
         { status: 410 },
@@ -261,6 +286,7 @@ export async function POST(request: Request) {
           "test_draft",
           "record_test_evidence",
           "publish_readiness",
+          "publish_version",
         ],
       },
       { status: 400 },

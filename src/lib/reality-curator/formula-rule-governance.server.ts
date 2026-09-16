@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 
+import { supabase } from "../../../lib/supabase";
 import { testFormulaRuleDraftV1 } from "./formula-rule-test-runner.server";
 import {
   listFormulaRuleRegistryV1,
@@ -13,6 +14,10 @@ const TEST_EVIDENCE_CONTRACT =
   "ARCTOR_FORMULA_TEST_EVIDENCE_V1" as const;
 const PUBLISH_READINESS_CONTRACT =
   "ARCTOR_FORMULA_PUBLISH_READINESS_V1" as const;
+const PUBLISH_AUDIT_CONTRACT =
+  "ARCTOR_FORMULA_PUBLISH_AUDIT_V1" as const;
+const PUBLISH_CONFIRMATION_CODE =
+  "PUBLISH_FORMULA_RULE_V1" as const;
 
 type JsonRecord = Record<string, unknown>;
 
@@ -21,6 +26,12 @@ type RegistrySeries = Registry[number];
 type RegistryVersion = RegistrySeries["versions"][number];
 
 export type FormulaTestEvidenceRecorderV1 = {
+  curatorAppUserId: string;
+  curatorAdminId: string;
+  curatorRole: string;
+};
+
+export type FormulaRulePublisherV1 = {
   curatorAppUserId: string;
   curatorAdminId: string;
   curatorRole: string;
@@ -143,6 +154,11 @@ function readinessReasons(
     series,
     version,
   );
+  const publishedSibling =
+    series.versions.find(
+      (item) =>
+        item.id !== version.id && item.status_code === "published",
+    ) ?? null;
 
   if (series.status_code !== "active") {
     reasons.push("series_not_active");
@@ -190,14 +206,22 @@ function readinessReasons(
     reasons.push("unit_algebra_not_resolved");
   }
 
+  if (publishedSibling) {
+    reasons.push("published_version_requires_atomic_supersede");
+  }
+
+  const ready = reasons.length === 0;
+
   return {
     contract: PUBLISH_READINESS_CONTRACT,
-    ready: reasons.length === 0,
+    ready,
     reasons,
     formulaFingerprint: currentFingerprint,
     evidenceState: text(metadata.testEvidenceState) || "missing",
     evidenceRecordedAt: text(evidence.recordedAt) || null,
-    publishEnabled: false,
+    currentPublishedVersionId: publishedSibling?.id ?? null,
+    requiresAtomicSupersede: Boolean(publishedSibling),
+    publishEnabled: ready && !publishedSibling,
     formulaExecutionEnabled: false,
     factWriteEnabled: false,
   };
@@ -215,6 +239,134 @@ export async function getFormulaRulePublishReadinessV1(
     versionNo: version.version_no,
     versionStatusCode: version.status_code,
     ...readinessReasons(series, version),
+  };
+}
+
+export async function publishFormulaRuleVersionV1(input: {
+  ruleVersionId: string;
+  confirmationCode: string;
+  publisher: FormulaRulePublisherV1;
+}) {
+  const ruleVersionId = text(input?.ruleVersionId);
+  if (!UUID_RE.test(ruleVersionId)) {
+    throw new Error("FORMULA_RULE_GOVERNANCE_VERSION_ID_INVALID");
+  }
+
+  if (text(input.confirmationCode) !== PUBLISH_CONFIRMATION_CODE) {
+    throw new Error(
+      "FORMULA_RULE_GOVERNANCE_PUBLISH_CONFIRMATION_REQUIRED",
+    );
+  }
+
+  const before = await findRuleVersion(ruleVersionId);
+  const readiness = readinessReasons(before.series, before.version);
+
+  if (readiness.requiresAtomicSupersede) {
+    throw new Error(
+      "FORMULA_RULE_GOVERNANCE_PUBLISH_REQUIRES_ATOMIC_SUPERSEDE",
+    );
+  }
+
+  if (!readiness.ready) {
+    throw new Error(
+      `FORMULA_RULE_GOVERNANCE_PUBLISH_NOT_READY:${readiness.reasons.join(
+        ",",
+      )}`,
+    );
+  }
+
+  if (
+    before.version.status_code !== "draft" &&
+    before.version.status_code !== "testing"
+  ) {
+    throw new Error(
+      "FORMULA_RULE_GOVERNANCE_VERSION_NOT_PUBLISH_CANDIDATE",
+    );
+  }
+
+  const publishedAt = new Date().toISOString();
+  const metadata = asRecord(before.version.metadata_json);
+  const publishAudit = {
+    contract: PUBLISH_AUDIT_CONTRACT,
+    publishedAt,
+    formulaFingerprint: readiness.formulaFingerprint,
+    evidenceRecordedAt: readiness.evidenceRecordedAt,
+    previousPublishedVersionId: null,
+    supersedeMode: "none_first_publication_only",
+    publishedBy: {
+      curatorAppUserId: text(input.publisher.curatorAppUserId),
+      curatorAdminId: text(input.publisher.curatorAdminId),
+      curatorRole: text(input.publisher.curatorRole),
+    },
+  };
+
+  const { data, error } = await supabase
+    .from("activity_fact_calculation_rule_versions_v1")
+    .update({
+      status_code: "published",
+      published_at: publishedAt,
+      valid_from: publishedAt,
+      metadata_json: {
+        ...metadata,
+        publishState: "published",
+        publishContract: PUBLISH_AUDIT_CONTRACT,
+        publishAudit,
+      },
+    })
+    .eq("id", before.version.id)
+    .eq("updated_at", before.version.updated_at)
+    .in("status_code", ["draft", "testing"])
+    .select(
+      "id,rule_series_id,version_no,expression_language_code,input_contract_json,condition_contract_json,expression_contract_json,trigger_contract_json,result_fact_role_code,result_unit_code,missing_input_policy_code,status_code,supersedes_rule_version_id,published_at,valid_from,valid_to,metadata_json,created_at,updated_at",
+    )
+    .limit(1);
+
+  if (error) {
+    if (error.code === "23505") {
+      throw new Error(
+        "FORMULA_RULE_PUBLISH_CONFLICT_PUBLISHED_VERSION_ALREADY_EXISTS",
+      );
+    }
+
+    throw new Error(
+      `FORMULA_RULE_PUBLISH_UPDATE_FAILED:${error.message}`,
+    );
+  }
+
+  const published =
+    ((data as unknown as RegistryVersion[] | null) ?? [])[0] ?? null;
+
+  if (!published) {
+    throw new Error(
+      "FORMULA_RULE_PUBLISH_CONFLICT_CONCURRENT_MUTATION",
+    );
+  }
+
+  const publishedFingerprint = formulaRuleConfigurationFingerprintV1(
+    before.series,
+    published,
+  );
+
+  if (publishedFingerprint !== readiness.formulaFingerprint) {
+    throw new Error(
+      "FORMULA_RULE_PUBLISH_FINGERPRINT_CHANGED_DURING_TRANSITION",
+    );
+  }
+
+  return {
+    contract: "ARCTOR_FORMULA_EXPLICIT_PUBLISH_GATE_V1",
+    seriesId: before.series.id,
+    ruleCode: before.series.rule_code,
+    versionId: published.id,
+    versionNo: published.version_no,
+    statusCode: published.status_code,
+    publishedAt: published.published_at,
+    validFrom: published.valid_from,
+    formulaFingerprint: publishedFingerprint,
+    publishAudit,
+    publishEnabled: true,
+    formulaExecutionEnabled: false,
+    factWriteEnabled: false,
   };
 }
 

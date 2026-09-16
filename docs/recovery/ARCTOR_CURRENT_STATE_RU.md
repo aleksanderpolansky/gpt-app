@@ -1302,3 +1302,17 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - recovery incident с повторным launcher и CRLF/autocrlf диагностикой зафиксирован;
 - rollback pattern усилен: до mutation rollback не трогает project files;
 - следующий gate: explicit publish server action + transition/supersede governance.
+## FORMULA EXPLICIT PUBLISH GATE API V1 — 2026-09-16
+
+- baseline: `aa7a8ea83cd73595736ba24ffa8573c974ffe4ce`;
+- первый launcher остановлен до проверок/commit на ошибке PowerShell-патча `allowedActions`; rollback=PASS;
+- V1.0.1 заменяет single-quoted `.Replace` на exact-once patches и сохраняет dynamic readiness `publishEnabled`;
+- добавлен explicit `publish_version` с confirmation code;
+- publish повторно проверяет readiness/evidence fingerprint;
+- разрешена только первая publication внутри series;
+- existing published sibling блокирует publish до atomic supersede RPC;
+- transition ставит published status/time/valid_from и publish audit metadata;
+- optimistic updated_at guard защищает от concurrent mutation;
+- executor/fact-write/lineage остаются выключены;
+- SQL migration нет;
+- следующий этап: explicit Publish UI + live acceptance.
