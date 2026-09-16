@@ -7,6 +7,7 @@ import {
   requirePlatformAdmin,
   type RequirePlatformAdminSuccess,
 } from "@/lib/admin/require-platform-admin";
+import { materializeSystemParameterAssignmentsV1 } from "@/lib/reality-curator/system-parameter-assignment.server";
 import {
   getActivityParameterPresentation,
   getActivityUnitLabel,
@@ -796,10 +797,25 @@ export async function POST(request: Request) {
         );
       }
 
+      const assignmentMaterialization =
+        await materializeSystemParameterAssignmentsV1({
+          parameterDefinitionId,
+          valueObjectIds: mapping.mappings.map(
+            (item) => item.valueObjectId,
+          ),
+          curator: {
+            curatorAppUserId: guard.appUser.id,
+            curatorAdminId: guard.platformAdmin.id,
+            curatorRole: guard.platformAdmin.role,
+          },
+          idempotencyKey:
+            `${CONTRACT}:${signal.id}:${parameterDefinitionId}:materialize`,
+        });
+
       const resultSummaryRu =
-        `Для параметра подтверждён полный набор связанных листовых объектов наблюдения: ${mapping.mappingCount}.`;
+        `Для параметра подтверждён полный набор связанных листовых объектов наблюдения: ${mapping.mappingCount}. Назначения параметра материализованы в системной модели.`;
       const resultSummaryEn =
-        `The complete set of related leaf observation objects was confirmed for the parameter: ${mapping.mappingCount}.`;
+        `The complete set of related leaf observation objects was confirmed for the parameter: ${mapping.mappingCount}. Parameter assignments were materialized in the system model.`;
 
       const result = await appendLog({
         id: mappingSetConfirmedLogId(signal.id, parameterDefinitionId),
@@ -815,7 +831,10 @@ export async function POST(request: Request) {
           parameterDefinitionId,
           mappingIteration: mapping.mappingIteration,
           mappedLeafCount: mapping.mappingCount,
-          mappedLeafValueObjectIds: mapping.mappings.map((item) => item.valueObjectId),
+          mappedLeafValueObjectIds: mapping.mappings.map(
+            (item) => item.valueObjectId,
+          ),
+          parameterAssignmentMaterialization: assignmentMaterialization,
         },
       });
 

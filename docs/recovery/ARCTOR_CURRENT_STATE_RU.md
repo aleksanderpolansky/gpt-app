@@ -1327,3 +1327,17 @@ SQL/DB schema не менялись. Live acceptance production после push 
 - launcher сам ничего в Formula Registry не публикует;
 - automatic supersede/executor/fact-write остаются выключены;
 - следующий шаг после release: controlled live acceptance первой безопасной публикации.
+## CURATOR PARAMETER → ON MATERIALIZATION + DEFAULT POLICY V1 — 2026-09-16
+
+- baseline: `ea87bec80a4b1b413a06de04f11cb8cbada78a1c`;
+- V1.0.1 pre-run hardening: nullable system-leaf checks use `IS DISTINCT FROM`; `unnest(uuid[])` uses explicit column aliases;
+- curator flow `parameter -> 1..N leaf ON` remains unchanged;
+- confirmed mapping is now materialized into canonical parameter assignments through a service-role-only atomic RPC;
+- assignment model gains `scope_code=actor|system`;
+- legacy actor assignment behavior is preserved;
+- global system assignment is allowed only for `global + system_model + ontology leaf` and an active system parameter;
+- default-value policy contract added: explicit/measured values outrank actor/system typical values;
+- typical value is not a fact until applied to a concrete event;
+- migration file is committed but NOT applied automatically;
+- no activity fact, formula execution, result/snapshot, lineage or recalculation writes are enabled;
+- next: manual migration rollout + one curator smoke, then system typical-activity materialization.
