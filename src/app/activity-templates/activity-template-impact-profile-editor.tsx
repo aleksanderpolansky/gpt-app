@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { ActivityTemplateScopeTabs } from "./activity-template-scope-tabs";
+
 import { ActivityParameterAdminCatalog } from "./activity-parameter-admin-catalog";
 import {
   getActivityParameterPresentation,
@@ -877,6 +879,7 @@ export function ActivityTemplateImpactProfileEditor({
 
   return (
     <main className="min-h-full bg-[#f5f6fb] p-3 text-[#1a1d2e] sm:p-5">
+      <ActivityTemplateScopeTabs locale={locale} scope="user" />
       <div className="mx-auto grid w-full max-w-[1120px] gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="rounded-[20px] border border-black/[0.07] bg-white p-4 shadow-sm lg:sticky lg:top-4 lg:self-start">
           <h2 className="text-[15px] font-bold">{copy.listTitle}</h2>

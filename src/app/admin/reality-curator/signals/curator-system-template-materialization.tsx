@@ -599,7 +599,7 @@ CuratorSystemTemplateMaterialization({
 
         <div className="mt-3">
           <Link
-            href={`/activity-templates?locale=${locale}`}
+            href={`/activity-templates?scope=system&locale=${locale}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex min-h-10 items-center rounded-xl border border-emerald-300 bg-white px-3 py-2 text-sm font-bold text-emerald-800"
