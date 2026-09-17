@@ -4,6 +4,7 @@ import {
   platformAdminErrorResponse,
   requirePlatformAdmin,
 } from "@/lib/admin/require-platform-admin";
+import { loadSystemTypicalActivityCatalogV1 } from "@/lib/activity/typical-activity-catalog.server";
 import { supabase } from "../../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -195,6 +196,30 @@ export async function GET(
     );
 
   try {
+    const canonicalCatalog =
+      await loadSystemTypicalActivityCatalogV1({
+        limit: 5001,
+      });
+
+    const canonicalTemplate =
+      canonicalCatalog.find(
+        (row) =>
+          row.id === id,
+      );
+
+    if (!canonicalTemplate) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "System typical activity not found",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
+
     const {
       data: templateData,
       error: templateError,
@@ -219,30 +244,6 @@ export async function GET(
       .eq(
         "id",
         id,
-      )
-      .eq(
-        "template_scope",
-        "system",
-      )
-      .is(
-        "owner_user_id",
-        null,
-      )
-      .is(
-        "owner_actor_id",
-        null,
-      )
-      .is(
-        "organization_id",
-        null,
-      )
-      .eq(
-        "status",
-        "active",
-      )
-      .eq(
-        "is_active",
-        true,
       )
       .maybeSingle();
 

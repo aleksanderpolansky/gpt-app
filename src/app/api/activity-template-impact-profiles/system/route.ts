@@ -4,6 +4,7 @@ import {
   platformAdminErrorResponse,
   requirePlatformAdmin,
 } from "@/lib/admin/require-platform-admin";
+import { loadSystemTypicalActivityCatalogV1 } from "@/lib/activity/typical-activity-catalog.server";
 import { supabase } from "../../../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -172,6 +173,36 @@ export async function GET(
         .get("locale"),
     );
 
+  const canonicalCatalog =
+    await loadSystemTypicalActivityCatalogV1({
+      limit: 500,
+    });
+
+  const canonicalTemplateIds =
+    canonicalCatalog.map(
+      (row) =>
+        row.id,
+    );
+
+  if (
+    canonicalTemplateIds.length === 0
+  ) {
+    return NextResponse.json(
+      {
+        ok: true,
+        scope: "system",
+        locale,
+        templates: [],
+      },
+      {
+        headers: {
+          "Cache-Control":
+            "private, no-store, max-age=0",
+        },
+      },
+    );
+  }
+
   const {
     data: templatesData,
     error: templatesError,
@@ -191,37 +222,10 @@ export async function GET(
         "default_metadata_json",
       ].join(","),
     )
-    .eq(
-      "template_scope",
-      "system",
-    )
-    .is(
-      "owner_user_id",
-      null,
-    )
-    .is(
-      "owner_actor_id",
-      null,
-    )
-    .is(
-      "organization_id",
-      null,
-    )
-    .eq(
-      "status",
-      "active",
-    )
-    .eq(
-      "is_active",
-      true,
-    )
-    .order(
-      "updated_at",
-      {
-        ascending: false,
-      },
-    )
-    .limit(500);
+    .in(
+      "id",
+      canonicalTemplateIds,
+    );
 
   if (templatesError) {
     return NextResponse.json(
@@ -236,9 +240,49 @@ export async function GET(
     );
   }
 
+  const templateById =
+    new Map(
+      (
+        (templatesData ??
+          []) as unknown as TemplateRow[]
+      ).map(
+        (template) => [
+          template.id,
+          template,
+        ],
+      ),
+    );
+
   const templates =
-    (templatesData ??
-      []) as unknown as TemplateRow[];
+    canonicalCatalog
+      .map(
+        (row) =>
+          templateById.get(
+            row.id,
+          ),
+      )
+      .filter(
+        (
+          template,
+        ): template is TemplateRow =>
+          Boolean(template),
+      );
+
+  if (
+    templates.length !==
+    canonicalCatalog.length
+  ) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "SYSTEM_TYPICAL_ACTIVITY_CATALOG_DETAIL_MISMATCH",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
 
   const templateIds =
     templates.map(
