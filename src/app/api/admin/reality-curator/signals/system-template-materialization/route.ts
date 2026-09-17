@@ -1290,8 +1290,7 @@ export async function POST(
   try {
 
     body =
-      await request.json()
-        as WorkBody;
+      (await request.json()) as WorkBody;
 
   } catch {
 
