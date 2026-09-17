@@ -550,10 +550,18 @@ export function CuratorTemplateParameters({ signalId, locale, onChanged }: Props
             ) : null}
           </>
         ) : (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
-            <div className="text-sm font-extrabold text-emerald-900">{copy.allMapped}</div>
-            <div className="mt-1 text-xs leading-5 text-emerald-800">{copy.allMappedHint}</div>
-          </div>
+          <>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
+              <div className="text-sm font-extrabold text-emerald-900">{copy.allMapped}</div>
+              <div className="mt-1 text-xs leading-5 text-emerald-800">{copy.allMappedHint}</div>
+            </div>
+
+            <CuratorSystemTemplateMaterialization
+              signalId={signalId}
+              locale={locale}
+              onChanged={onChanged}
+            />
+          </>
         )}
       </div>
     );
