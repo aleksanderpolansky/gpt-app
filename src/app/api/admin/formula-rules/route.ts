@@ -5,6 +5,7 @@ import {
   requirePlatformAdmin,
 } from "@/lib/admin/require-platform-admin";
 import { configureFormulaRuleDraftV1 } from "@/lib/reality-curator/formula-rule-builder.server";
+import { materializePublishedFormulaRuleCalculationModelV1 } from "@/lib/reality-curator/calculation-model-rule-bridge.server";
 import {
   getFormulaRulePublishReadinessV1,
   publishFormulaRuleVersionV1,
@@ -255,6 +256,25 @@ export async function POST(request: Request) {
       });
     }
 
+    if (action === "materialize_calculation_model") {
+      const result =
+        await materializePublishedFormulaRuleCalculationModelV1({
+          ruleVersionId: text(body.ruleVersionId),
+          title: text(body.title) || null,
+          description: text(body.description) || null,
+          categoryCode: text(body.categoryCode) || "general",
+        });
+
+      return NextResponse.json({
+        ok: true,
+        routeMarker: ROUTE_MARKER,
+        action,
+        result,
+        formulaExecutionEnabled: false,
+        factWriteEnabled: false,
+      });
+    }
+
     if (action === "update_draft") {
       return NextResponse.json(
         {
@@ -269,6 +289,7 @@ export async function POST(request: Request) {
             "record_test_evidence",
             "publish_readiness",
             "publish_version",
+            "materialize_calculation_model",
           ],
         },
         { status: 410 },
@@ -287,6 +308,7 @@ export async function POST(request: Request) {
           "record_test_evidence",
           "publish_readiness",
           "publish_version",
+          "materialize_calculation_model",
         ],
       },
       { status: 400 },

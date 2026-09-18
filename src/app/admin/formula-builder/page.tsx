@@ -425,6 +425,8 @@ export default function AdminFormulaBuilderPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [catalogBusy, setCatalogBusy] = useState(false);
+  const [catalogSuccess, setCatalogSuccess] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -634,6 +636,49 @@ export default function AdminFormulaBuilderPage() {
       setError(saveError instanceof Error ? saveError.message : String(saveError));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function addPublishedFormulaToCatalog() {
+    if (!version || version.status_code !== "published") return;
+
+    setCatalogBusy(true);
+    setError(null);
+    setCatalogSuccess(null);
+
+    try {
+      const response = await fetch("/api/admin/formula-rules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "materialize_calculation_model",
+          ruleVersionId: version.id,
+          categoryCode: "general",
+        }),
+      });
+
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+      };
+
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(payload.error || `HTTP ${response.status}`);
+      }
+
+      setCatalogSuccess(
+        locale === "ru"
+          ? "Формула добавлена в общий каталог."
+          : "Formula added to the shared catalog.",
+      );
+    } catch (catalogError) {
+      setError(
+        catalogError instanceof Error
+          ? catalogError.message
+          : String(catalogError),
+      );
+    } finally {
+      setCatalogBusy(false);
     }
   }
 
@@ -861,6 +906,48 @@ export default function AdminFormulaBuilderPage() {
             >
               {busy ? copy.saving : copy.save}
             </button>
+
+            {version.status_code === "published" ? (
+              <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-4">
+                <div className="text-sm font-semibold text-violet-950">
+                  {locale === "ru"
+                    ? "Общий каталог формул"
+                    : "Shared formula catalog"}
+                </div>
+                <p className="mt-1 text-xs leading-5 text-violet-800">
+                  {locale === "ru"
+                    ? "Опубликованную версию можно явно сохранить как самостоятельную переиспользуемую расчётную модель. Исполнение формулы при этом не включается."
+                    : "A published rule version can be explicitly stored as an independent reusable calculation model. Formula execution remains disabled."}
+                </p>
+
+                {catalogSuccess ? (
+                  <div className="mt-3 text-sm font-medium text-emerald-700">
+                    {catalogSuccess}{" "}
+                    <a
+                      href={`/admin/formula-catalog?scope=${series.scope_code === "system" ? "system" : "user"}&locale=${encodeURIComponent(locale)}`}
+                      className="underline"
+                    >
+                      {locale === "ru" ? "Открыть каталог" : "Open catalog"}
+                    </a>
+                  </div>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={() => void addPublishedFormulaToCatalog()}
+                  disabled={catalogBusy}
+                  className="mt-3 rounded-lg bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-800 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {catalogBusy
+                    ? locale === "ru"
+                      ? "Добавляем…"
+                      : "Adding…"
+                    : locale === "ru"
+                      ? "Добавить в каталог формул"
+                      : "Add to formula catalog"}
+                </button>
+              </div>
+            ) : null}
 
             <FormulaTestPanel
               key={`${version.id}:${JSON.stringify(version.input_contract_json)}`}
