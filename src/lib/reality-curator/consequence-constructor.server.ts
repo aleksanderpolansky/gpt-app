@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 
+import { loadSystemTypicalActivityCatalogV1 } from "@/lib/activity/typical-activity-catalog.server";
 import { supabase } from "../../../lib/supabase";
 
 export const CONSEQUENCE_CONSTRUCTOR_CONTRACT =
@@ -87,6 +88,92 @@ function asRecord(value: unknown): JsonRecord {
 
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+type ConsequenceTemplateLocale =
+  | "en"
+  | "pl"
+  | "ru"
+  | "uk"
+  | "de"
+  | "es"
+  | "cs";
+
+type ConsequenceTemplateRow = {
+  id: string;
+  title: string;
+  short_title: string | null;
+  default_metadata_json: unknown;
+};
+
+function normalizeConsequenceTemplateLocale(
+  value: unknown,
+): ConsequenceTemplateLocale {
+  const locale = text(value);
+
+  return locale === "pl" ||
+    locale === "ru" ||
+    locale === "uk" ||
+    locale === "de" ||
+    locale === "es" ||
+    locale === "cs"
+    ? locale
+    : "en";
+}
+
+function localizeConsequenceTemplate(
+  template: ConsequenceTemplateRow,
+  localeValue: unknown,
+) {
+  const locale =
+    normalizeConsequenceTemplateLocale(
+      localeValue,
+    );
+
+  const metadata =
+    asRecord(
+      template.default_metadata_json,
+    );
+
+  const materialization =
+    asRecord(
+      metadata.curatorSystemMaterializationV1,
+    );
+
+  const localizations =
+    asRecord(
+      materialization.localizations,
+    );
+
+  const localized =
+    asRecord(
+      localizations[locale],
+    );
+
+  const english =
+    asRecord(
+      localizations.en,
+    );
+
+  return {
+    title:
+      text(localized.title) ||
+      text(english.title) ||
+      text(template.title) ||
+      template.id,
+
+    shortTitle:
+      text(localized.shortTitle) ||
+      text(english.shortTitle) ||
+      text(template.short_title) ||
+      null,
+
+    canonicalTitle:
+      text(template.title) ||
+      template.id,
+
+    locale,
+  };
 }
 
 function stableUuid(seed: string): string {
@@ -500,30 +587,101 @@ export async function listConsequenceConstructorTasksV1() {
   return [...tasksByContextKey.values()];
 }
 
-export async function listConsequenceTemplateOptionsV1(): Promise<
-  ConsequenceTemplateOption[]
-> {
+export async function listConsequenceTemplateOptionsV1(
+  localeValue?: unknown,
+): Promise<ConsequenceTemplateOption[]> {
+  const canonicalCatalog =
+    await loadSystemTypicalActivityCatalogV1({
+      limit: 5001,
+    });
+
+  const canonicalIds =
+    canonicalCatalog.map(
+      (row) => row.id,
+    );
+
+  if (canonicalIds.length === 0) {
+    return [];
+  }
+
   const { data, error } = await supabase
     .from("activity_templates")
-    .select("id,title,short_title")
-    .eq("template_scope", "system")
-    .eq("status", "active")
-    .eq("is_active", true)
-    .order("title", { ascending: true })
-    .limit(1000);
+    .select(
+      "id,title,short_title,default_metadata_json",
+    )
+    .in("id", canonicalIds)
+    .limit(5001);
+
   if (error) {
-    throw new Error(`CONSEQUENCE_TEMPLATE_OPTIONS_READ_FAILED:${error.message}`);
+    throw new Error(
+      `CONSEQUENCE_TEMPLATE_OPTIONS_READ_FAILED:${error.message}`,
+    );
   }
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    title: text(row.title) || row.id,
-    shortTitle: text(row.short_title) || null,
-  }));
+
+  const rows =
+    (data ?? []) as unknown as ConsequenceTemplateRow[];
+
+  const byId =
+    new Map(
+      rows.map(
+        (row) => [
+          row.id,
+          row,
+        ],
+      ),
+    );
+
+  const locale =
+    normalizeConsequenceTemplateLocale(
+      localeValue,
+    );
+
+  return canonicalCatalog
+    .map(
+      (catalogRow) =>
+        byId.get(
+          catalogRow.id,
+        ) ?? null,
+    )
+    .filter(
+      (
+        row,
+      ): row is ConsequenceTemplateRow =>
+        Boolean(row),
+    )
+    .map(
+      (row) => {
+        const localized =
+          localizeConsequenceTemplate(
+            row,
+            locale,
+          );
+
+        return {
+          id:
+            row.id,
+
+          title:
+            localized.title,
+
+          shortTitle:
+            localized.shortTitle,
+        };
+      },
+    )
+    .sort(
+      (left, right) =>
+        left.title.localeCompare(
+          right.title,
+          locale,
+        ),
+    );
 }
 
 export async function bindConsequenceTaskToTemplateV1(input: {
   taskId: string;
   templateId: string;
+  locale?: unknown;
   curatorMetadata?: JsonRecord;
 }) {
   if (!UUID_RE.test(input.taskId)) throw new Error("CONSEQUENCE_TASK_ID_INVALID");
@@ -545,21 +703,53 @@ export async function bindConsequenceTaskToTemplateV1(input: {
   const task = taskRows?.[0];
   if (!task) throw new Error("CONSEQUENCE_TASK_NOT_FOUND");
 
+  const canonicalCatalog =
+    await loadSystemTypicalActivityCatalogV1({
+      limit: 5001,
+    });
+
+  const canonicalTemplate =
+    canonicalCatalog.find(
+      (row) =>
+        row.id === input.templateId,
+    );
+
+  if (!canonicalTemplate) {
+    throw new Error(
+      "CONSEQUENCE_TEMPLATE_NOT_AVAILABLE",
+    );
+  }
+
   const { data: templateRows, error: templateError } = await supabase
     .from("activity_templates")
-    .select("id,title,short_title")
+    .select(
+      "id,title,short_title,default_metadata_json",
+    )
     .eq("id", input.templateId)
-    .eq("template_scope", "system")
-    .eq("status", "active")
-    .eq("is_active", true)
     .limit(1);
+
   if (templateError) {
     throw new Error(
       `CONSEQUENCE_BIND_TEMPLATE_READ_FAILED:${templateError.message}`,
     );
   }
-  const template = templateRows?.[0];
-  if (!template) throw new Error("CONSEQUENCE_TEMPLATE_NOT_AVAILABLE");
+
+  const template =
+    (
+      (templateRows ?? []) as unknown as ConsequenceTemplateRow[]
+    )[0] ?? null;
+
+  if (!template) {
+    throw new Error(
+      "CONSEQUENCE_TEMPLATE_NOT_AVAILABLE",
+    );
+  }
+
+  const localized =
+    localizeConsequenceTemplate(
+      template,
+      input.locale,
+    );
 
   const rawSignalId = text(task.raw_signal_id);
   if (!UUID_RE.test(rawSignalId)) {
@@ -604,8 +794,10 @@ export async function bindConsequenceTaskToTemplateV1(input: {
         eventCode: CONSEQUENCE_TEMPLATE_BOUND_EVENT,
         consequenceTaskId,
         selectedTemplateId: template.id,
-        selectedTemplateTitle: text(template.title) || template.id,
-        selectedTemplateShortTitle: text(template.short_title) || null,
+        selectedTemplateTitle: localized.title,
+        selectedTemplateCanonicalTitle: localized.canonicalTitle,
+        selectedTemplateShortTitle: localized.shortTitle,
+        selectedTemplateLocale: localized.locale,
         bindingScope: "all_consequence_tasks_of_raw_signal",
         contextualPairPolicy: CONSEQUENCE_CONTEXTUAL_PAIR_POLICY,
         generalObservationObjectRelationCreated: false,
@@ -624,7 +816,9 @@ export async function bindConsequenceTaskToTemplateV1(input: {
 
   return {
     templateId: template.id,
-    templateTitle: text(template.title) || template.id,
+    templateTitle: localized.title,
+    templateCanonicalTitle: localized.canonicalTitle,
+    templateLocale: localized.locale,
     rawSignalId,
     updatedTaskCount,
   };

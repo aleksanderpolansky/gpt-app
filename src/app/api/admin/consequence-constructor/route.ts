@@ -45,6 +45,7 @@ type WorkBody = {
   templateId?: unknown;
   targetValueObjectId?: unknown;
   targetParameterDefinitionId?: unknown;
+  locale?: unknown;
 };
 
 type GlobalValueObjectRow = {
@@ -413,13 +414,19 @@ export async function GET(request: Request) {
     }
 
     await reconcileConsequenceConstructorTasksV1({ limit: 1000 });
+    const locale =
+      url.searchParams.get("locale");
+
     const [tasks, templates] = await Promise.all([
       listConsequenceConstructorTasksV1(),
-      listConsequenceTemplateOptionsV1(),
+      listConsequenceTemplateOptionsV1(
+        locale,
+      ),
     ]);
+
     const enrichedTasks = await enrichTasksWithTargets(
       tasks,
-      url.searchParams.get("locale"),
+      locale,
     );
 
     return NextResponse.json({
@@ -461,6 +468,7 @@ export async function POST(request: Request) {
       const result = await bindConsequenceTaskToTemplateV1({
         taskId: text(body.taskId),
         templateId: text(body.templateId),
+        locale: body.locale,
         curatorMetadata: adminMetadata(guard),
       });
       return NextResponse.json({

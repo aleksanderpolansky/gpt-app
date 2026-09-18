@@ -383,6 +383,7 @@ export default function AdminConsequenceConstructorPage() {
           action: "bind_template",
           taskId: task.id,
           templateId,
+          locale,
         }),
       });
       const payload = (await response.json()) as QueueResponse;
