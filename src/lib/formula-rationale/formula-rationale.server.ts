@@ -1,12 +1,10 @@
+import crypto from "node:crypto";
+
 import type { LocaleCode } from "@/i18n";
 import {
   readHelpContentByKeys,
   writeHelpContentRevision,
 } from "@/lib/help/helpStore.server";
-import {
-  hashHelpSourceText,
-  translateHelpBlockAllLocales,
-} from "@/lib/help/helpTranslation.server";
 import type {
   HelpTranslations,
 } from "@/lib/help/helpTypes";
@@ -115,23 +113,15 @@ const FORMULA_RATIONALE_LOCALES: readonly LocaleCode[] = [
   "cs",
 ] as const;
 
-function sourceOnlyTranslations(
-  sourceLocale: LocaleCode,
-  sourceText: string,
-) {
-  const translations =
-    Object.fromEntries(
-      FORMULA_RATIONALE_LOCALES.map(
-        (locale) => [
-          locale,
-          locale === sourceLocale
-            ? sourceText
-            : "",
-        ],
-      ),
-    ) as HelpTranslations;
-
-  return translations;
+function emptyTranslations() {
+  return Object.fromEntries(
+    FORMULA_RATIONALE_LOCALES.map(
+      (locale) => [
+        locale,
+        "",
+      ],
+    ),
+  ) as HelpTranslations;
 }
 
 function currentRationaleRow(
@@ -147,59 +137,91 @@ function currentRationaleRow(
   );
 }
 
-export async function saveFormulaRationaleSource(
+function hashSourceText(
+  sourceText: string,
+) {
+  return crypto
+    .createHash(
+      "sha256",
+    )
+    .update(
+      sourceText,
+      "utf8",
+    )
+    .digest(
+      "hex",
+    );
+}
+
+export async function saveFormulaRationaleLocale(
   input: {
     ruleVersionId: string;
     section: FormulaRationaleSection;
-    sourceLocale: LocaleCode;
-    sourceText: string;
+    locale: LocaleCode;
+    text: string;
     updatedByAppUserId: string;
   },
 ) {
-  const sourceText =
-    input.sourceText.trim();
+  const text =
+    input.text.trim();
+
+  const helpKey =
+    formulaRationaleHelpKey(
+      input.ruleVersionId,
+      input.section,
+    );
+
+  const currentRows =
+    await readHelpContentByKeys([
+      helpKey,
+    ]);
+
+  const current =
+    currentRationaleRow(
+      currentRows,
+    );
+
+  const translations =
+    current
+      ? {
+          ...current.translations,
+        }
+      : emptyTranslations();
+
+  translations[
+    input.locale
+  ] = text;
 
   const row =
     await writeHelpContentRevision({
-      helpKey:
-        formulaRationaleHelpKey(
-          input.ruleVersionId,
-          input.section,
-        ),
+      helpKey,
       blockKind:
         "what",
       sourceLocale:
-        input.sourceLocale,
-      sourceText,
-      translations:
-        sourceOnlyTranslations(
-          input.sourceLocale,
-          sourceText,
-        ),
+        input.locale,
+      sourceText:
+        text,
+      translations,
       sourceHash:
-        hashHelpSourceText(
-          sourceText,
+        hashSourceText(
+          text,
         ),
       provider:
-        sourceText
-          ? "formula_rationale_source_save_v1"
-          : "none",
+        "formula_rationale_manual_locale_v1",
       modelName:
         null,
       reasoningEffort:
         null,
       responseId:
         null,
-      usage:
-        sourceText
-          ? {
-              translationState:
-                "pending",
-            }
-          : {
-              translationState:
-                "not_required",
-            },
+      usage: {
+        localizationMode:
+          "manual",
+        editedLocale:
+          input.locale,
+        machineTranslation:
+          false,
+      },
       updatedByAppUserId:
         input.updatedByAppUserId,
     });
@@ -209,153 +231,4 @@ export async function saveFormulaRationaleSource(
     input.section,
     row,
   );
-}
-
-export async function translateFormulaRationaleSection(
-  input: {
-    ruleVersionId: string;
-    section: FormulaRationaleSection;
-    sourceLocale: LocaleCode;
-    sourceText: string;
-    expectedRevision: number;
-    updatedByAppUserId: string;
-  },
-) {
-  const sourceText =
-    input.sourceText.trim();
-
-  const helpKey =
-    formulaRationaleHelpKey(
-      input.ruleVersionId,
-      input.section,
-    );
-
-  const beforeRows =
-    await readHelpContentByKeys([
-      helpKey,
-    ]);
-
-  const before =
-    currentRationaleRow(
-      beforeRows,
-    );
-
-  if (!before) {
-    throw new Error(
-      "FORMULA_RATIONALE_TRANSLATION_SOURCE_NOT_FOUND",
-    );
-  }
-
-  if (
-    before.revision !==
-      input.expectedRevision ||
-    before.sourceLocale !==
-      input.sourceLocale ||
-    before.sourceText !==
-      sourceText
-  ) {
-    return {
-      state:
-        "stale" as const,
-      content:
-        toFormulaRationaleRecord(
-          input.ruleVersionId,
-          input.section,
-          before,
-        ),
-    };
-  }
-
-  if (!sourceText) {
-    return {
-      state:
-        "not_required" as const,
-      content:
-        toFormulaRationaleRecord(
-          input.ruleVersionId,
-          input.section,
-          before,
-        ),
-    };
-  }
-
-  const translated =
-    await translateHelpBlockAllLocales({
-      sourceLocale:
-        input.sourceLocale,
-      sourceText,
-    });
-
-  const afterTranslationRows =
-    await readHelpContentByKeys([
-      helpKey,
-    ]);
-
-  const afterTranslation =
-    currentRationaleRow(
-      afterTranslationRows,
-    );
-
-  if (!afterTranslation) {
-    throw new Error(
-      "FORMULA_RATIONALE_TRANSLATION_SOURCE_DISAPPEARED",
-    );
-  }
-
-  if (
-    afterTranslation.revision !==
-      input.expectedRevision ||
-    afterTranslation.sourceLocale !==
-      input.sourceLocale ||
-    afterTranslation.sourceText !==
-      sourceText
-  ) {
-    return {
-      state:
-        "stale" as const,
-      content:
-        toFormulaRationaleRecord(
-          input.ruleVersionId,
-          input.section,
-          afterTranslation,
-        ),
-    };
-  }
-
-  const translatedRow =
-    await writeHelpContentRevision({
-      helpKey,
-      blockKind:
-        "what",
-      sourceLocale:
-        input.sourceLocale,
-      sourceText,
-      translations:
-        translated.translations,
-      sourceHash:
-        translated.sourceHash,
-      provider:
-        translated.provider,
-      modelName:
-        translated.modelName,
-      reasoningEffort:
-        translated.reasoningEffort,
-      responseId:
-        translated.responseId,
-      usage:
-        translated.usage,
-      updatedByAppUserId:
-        input.updatedByAppUserId,
-    });
-
-  return {
-    state:
-      "translated" as const,
-    content:
-      toFormulaRationaleRecord(
-        input.ruleVersionId,
-        input.section,
-        translatedRow,
-      ),
-  };
 }

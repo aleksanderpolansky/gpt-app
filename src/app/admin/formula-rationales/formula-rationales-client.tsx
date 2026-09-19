@@ -8,7 +8,6 @@ import {
   Loader2,
   Save,
   Search,
-  Sparkles,
 } from "lucide-react";
 import {
   useEffect,
@@ -57,11 +56,9 @@ type AdminPayload = {
   canEdit?: boolean;
   series?: FormulaSeries[];
   content?: FormulaRationaleRecord[];
-  translationModel?: {
-    modelName?: string;
-    displayName?: string;
-    reasoningEffort?: string;
-  };
+  localizationMode?: "manual";
+  machineTranslation?: false;
+  supportedLocales?: LocaleCode[];
 };
 
 type Copy = {
@@ -106,11 +103,11 @@ const COPY: Record<
     search:
       "Поиск по коду, версии, адресу или тексту…",
     model:
-      "Модель перевода",
+      "Редактируемая локализация",
     save:
       "Сохранить",
     saving:
-      "Переводим и сохраняем…",
+      "Сохраняем…",
     saved:
       "Сохранено",
     empty:
@@ -118,7 +115,7 @@ const COPY: Record<
     loadError:
       "Не удалось загрузить обоснования формул.",
     translationNote:
-      "Каждое сохранение заново переводит редактируемый раздел на все 7 языков и создаёт новую ревизию. Обоснование привязано к конкретной версии формулы и может редактироваться даже после публикации вычислительного контракта.",
+      "Автоматический перевод через API отключён. Переключите язык интерфейса в правом верхнем углу, вставьте заранее подготовленный текст для этой локализации и сохраните его. Остальные языки не изменяются.",
     formula:
       "Формула",
     version:
@@ -178,17 +175,17 @@ const COPY: Record<
       "Edytor wyjaśnień użytkownika dla każdej wersji formuły obliczeniowej ARCTor.",
     search:
       "Szukaj po kodzie, wersji, adresie lub tekście…",
-    model: "Model tłumaczenia",
+    model: "Edytowana lokalizacja",
     save: "Zapisz",
     saving:
-      "Tłumaczenie i zapis…",
+      "Zapisywanie…",
     saved: "Zapisano",
     empty:
       "Tekst nie został jeszcze uzupełniony.",
     loadError:
       "Nie udało się wczytać uzasadnień formuł.",
     translationNote:
-      "Każdy zapis ponownie tłumaczy edytowaną sekcję na 7 języków i tworzy nową rewizję.",
+      "Automatyczne tłumaczenie przez API jest wyłączone. Zmień język interfejsu, wklej przygotowany wcześniej tekst dla tej lokalizacji i zapisz. Pozostałe języki nie są zmieniane.",
     formula: "Formuła",
     version: "Wersja",
     status: "Stan",
@@ -244,11 +241,11 @@ const COPY: Record<
     search:
       "Search code, version, address, or text…",
     model:
-      "Translation model",
+      "Edited locale",
     save:
       "Save",
     saving:
-      "Translating and saving…",
+      "Saving…",
     saved:
       "Saved",
     empty:
@@ -256,7 +253,7 @@ const COPY: Record<
     loadError:
       "Could not load formula rationales.",
     translationNote:
-      "Every save freshly translates the edited section into all 7 languages and creates a new revision. The rationale is tied to one formula version and remains editable outside the immutable calculation contract.",
+      "Automatic API translation is disabled. Switch the interface language, paste the prepared text for that locale, and save it. Other locales remain unchanged.",
     formula:
       "Formula",
     version:
@@ -316,15 +313,15 @@ const COPY: Record<
       "Explicaciones para el usuario de cada versión de fórmula de ARCTor.",
     search:
       "Buscar por código, versión, dirección o texto…",
-    model: "Modelo de traducción",
+    model: "Localización editada",
     save: "Guardar",
-    saving: "Traduciendo y guardando…",
+    saving: "Guardando…",
     saved: "Guardado",
     empty: "Aún no hay texto.",
     loadError:
       "No se pudieron cargar las justificaciones.",
     translationNote:
-      "Cada guardado vuelve a traducir la sección a los 7 idiomas y crea una nueva revisión.",
+      "La traducción automática por API está desactivada. Cambie el idioma de la interfaz, pegue el texto preparado para esa localización y guárdelo. Los demás idiomas no cambian.",
     formula: "Fórmula",
     version: "Versión",
     status: "Estado",
@@ -378,11 +375,11 @@ const COPY: Record<
     search:
       "Пошук за кодом, версією, адресою або текстом…",
     model:
-      "Модель перекладу",
+      "Редагована локалізація",
     save:
       "Зберегти",
     saving:
-      "Перекладаємо і зберігаємо…",
+      "Зберігаємо…",
     saved:
       "Збережено",
     empty:
@@ -390,7 +387,7 @@ const COPY: Record<
     loadError:
       "Не вдалося завантажити обґрунтування.",
     translationNote:
-      "Кожне збереження заново перекладає розділ на всі 7 мов і створює нову ревізію.",
+      "Автоматичний переклад через API вимкнено. Змініть мову інтерфейсу, вставте підготовлений текст для цієї локалізації та збережіть. Інші мови не змінюються.",
     formula:
       "Формула",
     version:
@@ -452,11 +449,11 @@ const COPY: Record<
     search:
       "Nach Code, Version, Adresse oder Text suchen…",
     model:
-      "Übersetzungsmodell",
+      "Bearbeitete Lokalisierung",
     save:
       "Speichern",
     saving:
-      "Übersetzen und speichern…",
+      "Speichern…",
     saved:
       "Gespeichert",
     empty:
@@ -464,7 +461,7 @@ const COPY: Record<
     loadError:
       "Formelbegründungen konnten nicht geladen werden.",
     translationNote:
-      "Bei jedem Speichern wird der Abschnitt neu in alle 7 Sprachen übersetzt und als neue Revision gespeichert.",
+      "Die automatische API-Übersetzung ist deaktiviert. Wechseln Sie die Oberflächensprache, fügen Sie den vorbereiteten Text für diese Lokalisierung ein und speichern Sie ihn. Andere Sprachen bleiben unverändert.",
     formula:
       "Formel",
     version:
@@ -526,11 +523,11 @@ const COPY: Record<
     search:
       "Hledat podle kódu, verze, adresy nebo textu…",
     model:
-      "Překladový model",
+      "Upravovaná lokalizace",
     save:
       "Uložit",
     saving:
-      "Překládáme a ukládáme…",
+      "Ukládání…",
     saved:
       "Uloženo",
     empty:
@@ -538,7 +535,7 @@ const COPY: Record<
     loadError:
       "Odůvodnění vzorců se nepodařilo načíst.",
     translationNote:
-      "Každé uložení znovu přeloží oddíl do všech 7 jazyků a vytvoří novou revizi.",
+      "Automatický překlad přes API je vypnutý. Přepněte jazyk rozhraní, vložte připravený text pro danou lokalizaci a uložte jej. Ostatní jazyky se nemění.",
     formula:
       "Vzorec",
     version:
@@ -594,146 +591,15 @@ const COPY: Record<
   },
 };
 
-const FORMULA_RATIONALE_TRANSLATION_COPY: Record<
-  LocaleCode,
-  {
-    saving: string;
-    savedPending: string;
-    translating: string;
-    translated: string;
-    translationFailed: string;
-    stale: string;
-    retry: string;
-    pendingBadge: string;
-  }
-> = {
-  ru: {
-    saving:
-      "Сохраняем…",
-    savedPending:
-      "Сохранено. Перевод выполняется…",
-    translating:
-      "Переводим…",
-    translated:
-      "Сохранено и переведено",
-    translationFailed:
-      "Текст сохранён. Перевод не выполнен.",
-    stale:
-      "Текст изменился во время перевода. Переведите актуальную версию.",
-    retry:
-      "Повторить перевод",
-    pendingBadge:
-      "Перевод ожидается",
-  },
-  pl: {
-    saving:
-      "Zapisywanie…",
-    savedPending:
-      "Zapisano. Tłumaczenie w toku…",
-    translating:
-      "Tłumaczenie…",
-    translated:
-      "Zapisano i przetłumaczono",
-    translationFailed:
-      "Tekst zapisano. Tłumaczenie nie powiodło się.",
-    stale:
-      "Tekst zmienił się podczas tłumaczenia. Przetłumacz aktualną wersję.",
-    retry:
-      "Ponów tłumaczenie",
-    pendingBadge:
-      "Tłumaczenie oczekuje",
-  },
-  en: {
-    saving:
-      "Saving…",
-    savedPending:
-      "Saved. Translation is running…",
-    translating:
-      "Translating…",
-    translated:
-      "Saved and translated",
-    translationFailed:
-      "Text saved. Translation failed.",
-    stale:
-      "The text changed during translation. Translate the current revision.",
-    retry:
-      "Retry translation",
-    pendingBadge:
-      "Translation pending",
-  },
-  es: {
-    saving:
-      "Guardando…",
-    savedPending:
-      "Guardado. Traducción en curso…",
-    translating:
-      "Traduciendo…",
-    translated:
-      "Guardado y traducido",
-    translationFailed:
-      "Texto guardado. La traducción falló.",
-    stale:
-      "El texto cambió durante la traducción. Traduzca la revisión actual.",
-    retry:
-      "Reintentar traducción",
-    pendingBadge:
-      "Traducción pendiente",
-  },
-  uk: {
-    saving:
-      "Зберігаємо…",
-    savedPending:
-      "Збережено. Переклад виконується…",
-    translating:
-      "Перекладаємо…",
-    translated:
-      "Збережено і перекладено",
-    translationFailed:
-      "Текст збережено. Переклад не виконано.",
-    stale:
-      "Текст змінився під час перекладу. Перекладіть актуальну версію.",
-    retry:
-      "Повторити переклад",
-    pendingBadge:
-      "Переклад очікується",
-  },
-  de: {
-    saving:
-      "Speichern…",
-    savedPending:
-      "Gespeichert. Übersetzung läuft…",
-    translating:
-      "Übersetzen…",
-    translated:
-      "Gespeichert und übersetzt",
-    translationFailed:
-      "Text gespeichert. Übersetzung fehlgeschlagen.",
-    stale:
-      "Der Text wurde während der Übersetzung geändert. Übersetzen Sie die aktuelle Revision.",
-    retry:
-      "Übersetzung wiederholen",
-    pendingBadge:
-      "Übersetzung ausstehend",
-  },
-  cs: {
-    saving:
-      "Ukládání…",
-    savedPending:
-      "Uloženo. Překlad probíhá…",
-    translating:
-      "Překládání…",
-    translated:
-      "Uloženo a přeloženo",
-    translationFailed:
-      "Text byl uložen. Překlad se nezdařil.",
-    stale:
-      "Text se během překladu změnil. Přeložte aktuální revizi.",
-    retry:
-      "Opakovat překlad",
-    pendingBadge:
-      "Překlad čeká",
-  },
-};
+const FORMULA_RATIONALE_LOCALES: readonly LocaleCode[] = [
+  "ru",
+  "pl",
+  "en",
+  "es",
+  "uk",
+  "de",
+  "cs",
+] as const;
 
 function asRecord(
   value: unknown,
@@ -893,14 +759,6 @@ export function FormulaRationalesClient() {
     );
 
   const [
-    translatingKeys,
-    setTranslatingKeys,
-  ] =
-    useState<Set<string>>(
-      new Set(),
-    );
-
-  const [
     status,
     setStatus,
   ] =
@@ -987,12 +845,6 @@ export function FormulaRationalesClient() {
   const copy =
     COPY[locale] ??
     COPY.en;
-
-  const translationCopy =
-    FORMULA_RATIONALE_TRANSLATION_COPY[
-      locale
-    ] ??
-    FORMULA_RATIONALE_TRANSLATION_COPY.en;
 
   const contentByKey =
     useMemo(() => {
@@ -1178,135 +1030,6 @@ export function FormulaRationalesClient() {
     );
   }
 
-  async function translate(
-    versionId: string,
-    section: FormulaRationaleSection,
-    content: FormulaRationaleRecord,
-  ) {
-    const key =
-      formulaRationaleRecordKey(
-        versionId,
-        section,
-      );
-
-    if (
-      !content.sourceText.trim()
-    ) {
-      return;
-    }
-
-    setTranslatingKeys(
-      (current) => {
-        const next =
-          new Set(
-            current,
-          );
-
-        next.add(
-          key,
-        );
-
-        return next;
-      },
-    );
-
-    setStatus(
-      (current) => ({
-        ...current,
-        [key]:
-          translationCopy.translating,
-      }),
-    );
-
-    try {
-      const response =
-        await fetch(
-          "/api/admin/formula-rationales",
-          {
-            method:
-              "POST",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            body:
-              JSON.stringify({
-                ruleVersionId:
-                  versionId,
-                section,
-                sourceLocale:
-                  content.sourceLocale,
-                sourceText:
-                  content.sourceText,
-                expectedRevision:
-                  content.revision,
-              }),
-          },
-        );
-
-      const data =
-        await response.json() as {
-          ok?: boolean;
-          error?: string;
-          translationState?:
-            | "translated"
-            | "stale"
-            | "not_required";
-          content?: FormulaRationaleRecord;
-        };
-
-      if (
-        !response.ok ||
-        !data.ok ||
-        !data.content
-      ) {
-        throw new Error(
-          data.error ||
-            `HTTP_${response.status}`,
-        );
-      }
-
-      replaceContent(
-        key,
-        data.content,
-      );
-
-      setStatus(
-        (current) => ({
-          ...current,
-          [key]:
-            data.translationState ===
-            "stale"
-              ? translationCopy.stale
-              : translationCopy.translated,
-        }),
-      );
-    } catch {
-      setStatus(
-        (current) => ({
-          ...current,
-          [key]:
-            translationCopy.translationFailed,
-        }),
-      );
-    } finally {
-      setTranslatingKeys(
-        (current) => {
-          const next =
-            new Set(
-              current,
-            );
-
-          next.delete(
-            key,
-          );
-
-          return next;
-        },
-      );
-    }
-  }
-
   async function save(
     versionId: string,
     section: FormulaRationaleSection,
@@ -1361,9 +1084,8 @@ export function FormulaRationalesClient() {
         await response.json() as {
           ok?: boolean;
           error?: string;
-          translationState?:
-            | "pending"
-            | "not_required";
+          localizationMode?: "manual";
+          machineTranslation?: false;
           content?: FormulaRationaleRecord;
         };
 
@@ -1375,6 +1097,15 @@ export function FormulaRationalesClient() {
         throw new Error(
           data.error ||
             `HTTP_${response.status}`,
+        );
+      }
+
+      if (
+        data.machineTranslation !==
+        false
+      ) {
+        throw new Error(
+          "FORMULA_RATIONALE_MANUAL_MODE_EXPECTED",
         );
       }
 
@@ -1405,27 +1136,9 @@ export function FormulaRationalesClient() {
         (current) => ({
           ...current,
           [key]:
-            data.translationState ===
-            "pending"
-              ? translationCopy.savedPending
-              : copy.saved,
+            copy.saved,
         }),
       );
-
-      setSavingKey(
-        null,
-      );
-
-      if (
-        data.translationState ===
-        "pending"
-      ) {
-        void translate(
-          versionId,
-          section,
-          data.content,
-        );
-      }
     } catch (cause) {
       setStatus(
         (current) => ({
@@ -1436,12 +1149,13 @@ export function FormulaRationalesClient() {
               : "UNKNOWN",
         }),
       );
-
+    } finally {
       setSavingKey(
         null,
       );
     }
   }
+
   function toggleVersion(
     versionId: string,
   ) {
@@ -1514,29 +1228,12 @@ export function FormulaRationalesClient() {
           </div>
 
           <div className="rounded-2xl border border-[#dbe4ff] bg-[#eef2ff] px-4 py-3 text-xs text-[#4a4f6a]">
-            <div className="flex items-center gap-2 font-bold text-[#3b6ef8]">
-              <Sparkles
-                size={14}
-              />
+            <div className="font-bold text-[#3b6ef8]">
               {copy.model}
             </div>
             <div className="mt-1 font-semibold">
-              {
-                payload
-                  ?.translationModel
-                  ?.displayName ??
-                payload
-                  ?.translationModel
-                  ?.modelName ??
-                "—"
-              }
-              {" · "}
-              {
-                payload
-                  ?.translationModel
-                  ?.reasoningEffort ??
-                "—"
-              }
+              {locale.toUpperCase()}
+              {" · manual"}
             </div>
           </div>
         </div>
@@ -1774,14 +1471,17 @@ export function FormulaRationalesClient() {
                                           ?.trim(),
                                       );
 
-                                    const translationPending =
-                                      contentRecord?.provider ===
-                                      "formula_rationale_source_save_v1";
-
-                                    const translating =
-                                      translatingKeys.has(
-                                        key,
-                                      );
+                                    const coverageCount =
+                                      FORMULA_RATIONALE_LOCALES.filter(
+                                        (localeCode) =>
+                                          Boolean(
+                                            contentRecord
+                                              ?.translations?.[
+                                              localeCode
+                                            ]
+                                              ?.trim(),
+                                          ),
+                                      ).length;
 
                                     return (
                                       <section
@@ -1798,41 +1498,59 @@ export function FormulaRationalesClient() {
                                           }
 
                                           {
-                                            translating
+                                            exists
                                               ? (
-                                                  <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-medium text-amber-700">
-                                                    <Loader2
-                                                      size={12}
-                                                      className="animate-spin"
-                                                    />
+                                                  <CheckCircle2
+                                                    size={13}
+                                                    className="ml-auto text-emerald-500"
+                                                  />
+                                                )
+                                              : (
+                                                  <span className="ml-auto text-[10px] font-medium text-[#9ca3b8]">
                                                     {
-                                                      translationCopy.translating
+                                                      copy.empty
                                                     }
                                                   </span>
                                                 )
-                                              : translationPending
-                                                ? (
-                                                    <span className="ml-auto text-[10px] font-medium text-amber-700">
-                                                      {
-                                                        translationCopy.pendingBadge
-                                                      }
-                                                    </span>
-                                                  )
-                                                : exists
-                                                  ? (
-                                                      <CheckCircle2
-                                                        size={13}
-                                                        className="ml-auto text-emerald-500"
-                                                      />
-                                                    )
-                                                  : (
-                                                      <span className="ml-auto text-[10px] font-medium text-[#9ca3b8]">
-                                                        {
-                                                          copy.empty
-                                                        }
-                                                      </span>
-                                                    )
                                           }
+                                        </div>
+
+                                        <div className="mb-2 flex flex-wrap gap-1">
+                                          {
+                                            FORMULA_RATIONALE_LOCALES.map(
+                                              (localeCode) => {
+                                                const filled =
+                                                  Boolean(
+                                                    contentRecord
+                                                      ?.translations?.[
+                                                      localeCode
+                                                    ]
+                                                      ?.trim(),
+                                                  );
+
+                                                return (
+                                                  <span
+                                                    key={
+                                                      localeCode
+                                                    }
+                                                    className={
+                                                      filled
+                                                        ? "rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700"
+                                                        : "rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-400"
+                                                    }
+                                                  >
+                                                    {localeCode.toUpperCase()}
+                                                    {" "}
+                                                    {filled ? "✓" : "—"}
+                                                  </span>
+                                                );
+                                              },
+                                            )
+                                          }
+
+                                          <span className="ml-auto px-1 py-1 text-[10px] font-semibold text-[#8a91a5]">
+                                            {coverageCount}/7
+                                          </span>
                                         </div>
 
                                         <textarea
@@ -1880,73 +1598,43 @@ export function FormulaRationalesClient() {
                                           {
                                             payload?.canEdit
                                               ? (
-                                                  <div className="flex flex-wrap justify-end gap-2">
+                                                  <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                      void save(
+                                                        version.id,
+                                                        section,
+                                                      )
+                                                    }
+                                                    disabled={
+                                                      savingKey !==
+                                                      null
+                                                    }
+                                                    className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#3b6ef8] px-3 text-xs font-bold text-white shadow-sm hover:bg-[#315ed8] disabled:cursor-wait disabled:opacity-60"
+                                                  >
                                                     {
-                                                      translationPending &&
-                                                      contentRecord &&
-                                                      !translating
+                                                      savingKey ===
+                                                      key
                                                         ? (
-                                                            <button
-                                                              type="button"
-                                                              onClick={() =>
-                                                                void translate(
-                                                                  version.id,
-                                                                  section,
-                                                                  contentRecord,
-                                                                )
-                                                              }
-                                                              disabled={
-                                                                savingKey !==
-                                                                null
-                                                              }
-                                                              className="inline-flex h-9 items-center rounded-xl border border-amber-300 bg-amber-50 px-3 text-xs font-bold text-amber-800 hover:bg-amber-100 disabled:opacity-60"
-                                                            >
-                                                              {
-                                                                translationCopy.retry
-                                                              }
-                                                            </button>
+                                                            <Loader2
+                                                              size={14}
+                                                              className="animate-spin"
+                                                            />
                                                           )
-                                                        : null
+                                                        : (
+                                                            <Save
+                                                              size={14}
+                                                            />
+                                                          )
                                                     }
 
-                                                    <button
-                                                      type="button"
-                                                      onClick={() =>
-                                                        void save(
-                                                          version.id,
-                                                          section,
-                                                        )
-                                                      }
-                                                      disabled={
-                                                        savingKey !==
-                                                        null
-                                                      }
-                                                      className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#3b6ef8] px-3 text-xs font-bold text-white shadow-sm hover:bg-[#315ed8] disabled:cursor-wait disabled:opacity-60"
-                                                    >
-                                                      {
-                                                        savingKey ===
-                                                        key
-                                                          ? (
-                                                              <Loader2
-                                                                size={14}
-                                                                className="animate-spin"
-                                                              />
-                                                            )
-                                                          : (
-                                                              <Save
-                                                                size={14}
-                                                              />
-                                                            )
-                                                      }
-
-                                                      {
-                                                        savingKey ===
-                                                        key
-                                                          ? translationCopy.saving
-                                                          : copy.save
-                                                      }
-                                                    </button>
-                                                  </div>
+                                                    {
+                                                      savingKey ===
+                                                      key
+                                                        ? copy.saving
+                                                        : copy.save
+                                                    }
+                                                  </button>
                                                 )
                                               : null
                                           }

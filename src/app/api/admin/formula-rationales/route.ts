@@ -8,18 +8,11 @@ import {
   requirePlatformAdmin,
 } from "@/lib/admin/require-platform-admin";
 import {
-  HELP_TRANSLATION_POLICY_V1,
-} from "@/lib/help/helpTranslation.server";
-import {
-  getNavigatorModelDefinition,
-} from "../../../../../lib/ai/navigatorModelCatalog";
-import {
   isFormulaRationaleSection,
 } from "@/lib/formula-rationale/formula-rationale";
 import {
   readFormulaRationalesForVersionIds,
-  saveFormulaRationaleSource,
-  translateFormulaRationaleSection,
+  saveFormulaRationaleLocale,
 } from "@/lib/formula-rationale/formula-rationale.server";
 import {
   listFormulaRuleRegistryV1,
@@ -103,11 +96,6 @@ export async function GET() {
       content,
     } = await loadRegistryAndContent();
 
-    const frontier =
-      getNavigatorModelDefinition(
-        "pro",
-      );
-
     return NextResponse.json({
       ok: true,
       routeMarker: ROUTE_MARKER,
@@ -118,14 +106,19 @@ export async function GET() {
         appUserId: guard.appUser.id,
         role: guard.platformAdmin.role,
       },
-      translationPolicy:
-        HELP_TRANSLATION_POLICY_V1,
-      translationModel: {
-        modelName: frontier.modelName,
-        displayName: frontier.displayName,
-        reasoningEffort:
-          frontier.reasoningEffort,
-      },
+      localizationMode:
+        "manual",
+      machineTranslation:
+        false,
+      supportedLocales: [
+        "ru",
+        "pl",
+        "en",
+        "es",
+        "uk",
+        "de",
+        "cs",
+      ],
       series,
       content,
     });
@@ -286,8 +279,15 @@ export async function PUT(
     }
 
     const content =
-      await saveFormulaRationaleSource({
-        ...fields,
+      await saveFormulaRationaleLocale({
+        ruleVersionId:
+          fields.ruleVersionId,
+        section:
+          fields.section,
+        locale:
+          fields.sourceLocale,
+        text:
+          fields.sourceText,
         updatedByAppUserId:
           guard.appUser.id,
       });
@@ -296,13 +296,11 @@ export async function PUT(
       ok: true,
       routeMarker:
         ROUTE_MARKER,
+      localizationMode:
+        "manual",
+      machineTranslation:
+        false,
       content,
-      translationState:
-        content.sourceText
-          ? "pending"
-          : "not_required",
-      translationPolicy:
-        HELP_TRANSLATION_POLICY_V1,
     });
   } catch (error) {
     return errorResponse(
@@ -312,98 +310,26 @@ export async function PUT(
   }
 }
 
-export async function POST(
-  request: Request,
-) {
-  const guard =
-    await requirePlatformAdmin({
-      allowedRoles: [
-        "owner",
-        "admin",
-      ],
-    });
-
-  if (!guard.ok) {
-    return platformAdminErrorResponse(
-      guard,
-      ROUTE_MARKER,
-    );
-  }
-
-  try {
-    const parsed =
-      await request
-        .json()
-        .catch(() => null);
-
-    const body =
-      mutationBody(
-        parsed,
-      );
-
-    const fields =
-      readCommonMutationFields(
-        body,
-      );
-
-    const expectedRevision =
-      typeof body.expectedRevision ===
-        "number" &&
-      Number.isInteger(
-        body.expectedRevision,
-      ) &&
-      body.expectedRevision > 0
-        ? body.expectedRevision
-        : null;
-
-    if (
-      expectedRevision ===
-      null
-    ) {
-      return errorResponse(
-        new Error(
-          "FORMULA_RATIONALE_EXPECTED_REVISION_REQUIRED",
-        ),
-      );
-    }
-
-    const versionExists =
-      await validateVersionExists(
-        fields.ruleVersionId,
-      );
-
-    if (!versionExists) {
-      return errorResponse(
-        new Error(
-          "FORMULA_RATIONALE_VERSION_NOT_FOUND",
-        ),
-        404,
-      );
-    }
-
-    const result =
-      await translateFormulaRationaleSection({
-        ...fields,
-        expectedRevision,
-        updatedByAppUserId:
-          guard.appUser.id,
-      });
-
-    return NextResponse.json({
-      ok: true,
+export async function POST() {
+  return NextResponse.json(
+    {
+      ok: false,
       routeMarker:
         ROUTE_MARKER,
-      translationState:
-        result.state,
-      content:
-        result.content,
-      translationPolicy:
-        HELP_TRANSLATION_POLICY_V1,
-    });
-  } catch (error) {
-    return errorResponse(
-      error,
-      500,
-    );
-  }
+      error:
+        "FORMULA_RATIONALE_MACHINE_TRANSLATION_DISABLED",
+      localizationMode:
+        "manual",
+      machineTranslation:
+        false,
+    },
+    {
+      status:
+        405,
+      headers: {
+        Allow:
+          "GET, PUT",
+      },
+    },
+  );
 }
