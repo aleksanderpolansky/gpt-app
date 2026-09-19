@@ -14,6 +14,7 @@ import {
 import {
   bindConsequenceTaskToTemplateV1,
   countConsequenceConstructorTasksV1,
+  getConsequenceConstructorTaskV1,
   listConsequenceConstructorTasksV1,
   listConsequenceTemplateOptionsV1,
   reconcileConsequenceConstructorTasksV1,
@@ -414,24 +415,173 @@ export async function GET(request: Request) {
     }
 
     await reconcileConsequenceConstructorTasksV1({ limit: 1000 });
+
     const locale =
       url.searchParams.get("locale");
 
-    const [tasks, templates] = await Promise.all([
-      listConsequenceConstructorTasksV1(),
-      listConsequenceTemplateOptionsV1(
-        locale,
-      ),
-    ]);
+    const taskId =
+      text(
+        url.searchParams.get(
+          "taskId",
+        ),
+      );
 
-    const enrichedTasks = await enrichTasksWithTargets(
-      tasks,
-      locale,
-    );
+    const listOnly =
+      url.searchParams.get(
+        "view",
+      ) ===
+      "list";
+
+    if (taskId) {
+      if (
+        !UUID_RE.test(
+          taskId,
+        )
+      ) {
+        return errorResponse(
+          "CONSEQUENCE_TASK_ID_INVALID",
+          400,
+        );
+      }
+
+      const [
+        task,
+        templates,
+      ] =
+        await Promise.all([
+          getConsequenceConstructorTaskV1(
+            taskId,
+          ),
+          listConsequenceTemplateOptionsV1(
+            locale,
+          ),
+        ]);
+
+      if (!task) {
+        return errorResponse(
+          "CONSEQUENCE_TASK_NOT_FOUND",
+          404,
+        );
+      }
+
+      const enrichedTasks =
+        await enrichTasksWithTargets(
+          [
+            task,
+          ],
+          locale,
+        );
+
+      return NextResponse.json({
+        ok:
+          true,
+        routeMarker:
+          ROUTE_MARKER,
+        view:
+          "detail",
+        pendingCount:
+          1,
+        tasks:
+          enrichedTasks,
+        templates,
+        targetSelectionEnabled:
+          true,
+        targetSelectionPolicy:
+          "related_leaf_objects_only",
+        relationDirectionPolicy:
+          "either_direction_for_candidate_discovery",
+        contextualPairPolicy:
+          "task_first_then_typical_activity",
+        targetSelectionBeforeTemplateAllowed:
+          true,
+        formulaDraftWriteEnabled:
+          true,
+        formulaPublishEnabled:
+          true,
+        formulaExecutionEnabled:
+          false,
+        factWriteEnabled:
+          false,
+      });
+    }
+
+    const tasks =
+      await listConsequenceConstructorTasksV1();
+
+    if (listOnly) {
+      const selectedMap =
+        await readSelectedTargetsByTask(
+          tasks,
+        );
+
+      const listTasks =
+        tasks.map(
+          (task) => {
+            const selectedTargets =
+              selectedMap.get(
+                task.id,
+              ) ??
+              [];
+
+            return {
+              ...task,
+              targetValueObjectId:
+                selectedTargets[0]
+                  ?.targetValueObjectId ??
+                null,
+              targetSelectionState:
+                selectedTargets.length >
+                0
+                  ? "selected"
+                  : "ready",
+              targetCandidates:
+                [],
+              selectedTargets,
+            };
+          },
+        );
+
+      return NextResponse.json({
+        ok:
+          true,
+        routeMarker:
+          ROUTE_MARKER,
+        view:
+          "list",
+        pendingCount:
+          listTasks.length,
+        tasks:
+          listTasks,
+        templates:
+          [],
+        detailHydration:
+          "on_demand",
+        targetCandidatesLoaded:
+          false,
+        formulaContextsLoaded:
+          false,
+        formulaExecutionEnabled:
+          false,
+        factWriteEnabled:
+          false,
+      });
+    }
+
+    const templates =
+      await listConsequenceTemplateOptionsV1(
+        locale,
+      );
+
+    const enrichedTasks =
+      await enrichTasksWithTargets(
+        tasks,
+        locale,
+      );
 
     return NextResponse.json({
       ok: true,
       routeMarker: ROUTE_MARKER,
+      view: "legacy_full",
       pendingCount: enrichedTasks.length,
       tasks: enrichedTasks,
       templates,
@@ -441,7 +591,7 @@ export async function GET(request: Request) {
       contextualPairPolicy: "task_first_then_typical_activity",
       targetSelectionBeforeTemplateAllowed: true,
       formulaDraftWriteEnabled: true,
-      formulaPublishEnabled: false,
+      formulaPublishEnabled: true,
       formulaExecutionEnabled: false,
       factWriteEnabled: false,
     });
@@ -500,9 +650,17 @@ export async function POST(request: Request) {
     }
 
     try {
-      const tasks = await listConsequenceConstructorTasksV1();
-      const task = tasks.find((item) => item.id === taskId) ?? null;
-      if (!task) return errorResponse("CONSEQUENCE_TASK_NOT_FOUND", 404);
+      const task =
+        await getConsequenceConstructorTaskV1(
+          taskId,
+        );
+
+      if (!task) {
+        return errorResponse(
+          "CONSEQUENCE_TASK_NOT_FOUND",
+          404,
+        );
+      }
       const candidateMap = await buildTargetCandidates(
         [task.sourceValueObjectId],
         "en",
@@ -634,10 +792,16 @@ export async function POST(request: Request) {
     }
 
     try {
-      const tasks = await listConsequenceConstructorTasksV1();
-      const task = tasks.find((item) => item.id === taskId) ?? null;
+      const task =
+        await getConsequenceConstructorTaskV1(
+          taskId,
+        );
+
       if (!task) {
-        return errorResponse("CONSEQUENCE_FORMULA_TASK_NOT_FOUND", 404);
+        return errorResponse(
+          "CONSEQUENCE_FORMULA_TASK_NOT_FOUND",
+          404,
+        );
       }
       if (!task.activityTemplateId) {
         return errorResponse(

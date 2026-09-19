@@ -93,6 +93,7 @@ type TemplateOption = {
 
 type QueueResponse = {
   ok?: boolean;
+  view?: "list" | "detail" | "legacy_full";
   pendingCount?: number;
   tasks?: ConsequenceTask[];
   templates?: TemplateOption[];
@@ -172,7 +173,7 @@ const TARGET_COPY: Record<LocaleCode, TargetCopy> = {
 
 const FORMULA_COPY: Record<LocaleCode, FormulaCopy> = {
   en: {
-    column: "Formula draft",
+    column: "Formula",
     targetParameter: "Target parameter",
     chooseParameter: "Choose target parameter…",
     createDraft: "Create draft",
@@ -186,7 +187,7 @@ const FORMULA_COPY: Record<LocaleCode, FormulaCopy> = {
     profileVersion: "Profile", editFormula: "Configure formula",
   },
   ru: {
-    column: "Черновик формулы",
+    column: "Формула",
     targetParameter: "Целевой параметр",
     chooseParameter: "Выберите целевой параметр…",
     createDraft: "Создать черновик",
@@ -200,7 +201,7 @@ const FORMULA_COPY: Record<LocaleCode, FormulaCopy> = {
     profileVersion: "Профиль", editFormula: "Настроить формулу",
   },
   pl: {
-    column: "Szkic formuły",
+    column: "Formuła",
     targetParameter: "Parametr docelowy",
     chooseParameter: "Wybierz parametr docelowy…",
     createDraft: "Utwórz szkic",
@@ -214,7 +215,7 @@ const FORMULA_COPY: Record<LocaleCode, FormulaCopy> = {
     profileVersion: "Profil", editFormula: "Skonfiguruj formułę",
   },
   uk: {
-    column: "Чернетка формули",
+    column: "Формула",
     targetParameter: "Цільовий параметр",
     chooseParameter: "Оберіть цільовий параметр…",
     createDraft: "Створити чернетку",
@@ -228,7 +229,7 @@ const FORMULA_COPY: Record<LocaleCode, FormulaCopy> = {
     profileVersion: "Профіль", editFormula: "Налаштувати формулу",
   },
   de: {
-    column: "Formelentwurf",
+    column: "Formel",
     targetParameter: "Zielparameter",
     chooseParameter: "Zielparameter wählen…",
     createDraft: "Entwurf erstellen",
@@ -242,7 +243,7 @@ const FORMULA_COPY: Record<LocaleCode, FormulaCopy> = {
     profileVersion: "Profil", editFormula: "Formel konfigurieren",
   },
   es: {
-    column: "Borrador de fórmula",
+    column: "Fórmula",
     targetParameter: "Parámetro objetivo",
     chooseParameter: "Seleccione el parámetro objetivo…",
     createDraft: "Crear borrador",
@@ -256,7 +257,7 @@ const FORMULA_COPY: Record<LocaleCode, FormulaCopy> = {
     profileVersion: "Perfil", editFormula: "Configurar fórmula",
   },
   cs: {
-    column: "Koncept vzorce",
+    column: "Vzorec",
     targetParameter: "Cílový parametr",
     chooseParameter: "Vyberte cílový parametr…",
     createDraft: "Vytvořit koncept",
@@ -271,12 +272,79 @@ const FORMULA_COPY: Record<LocaleCode, FormulaCopy> = {
   },
 };
 
+const OPEN_TASK_COPY: Record<LocaleCode, string> = {
+  en: "Open",
+  ru: "Открыть",
+  pl: "Otwórz",
+  uk: "Відкрити",
+  de: "Öffnen",
+  es: "Abrir",
+  cs: "Otevřít",
+};
+
+const BACK_TO_QUEUE_COPY: Record<LocaleCode, string> = {
+  en: "Back to consequence queue",
+  ru: "Назад к списку последствий",
+  pl: "Wróć do kolejki konsekwencji",
+  uk: "Назад до списку наслідків",
+  de: "Zurück zur Folgenliste",
+  es: "Volver a la lista de consecuencias",
+  cs: "Zpět na seznam důsledků",
+};
+
+const TARGET_COUNT_COPY: Record<LocaleCode, string> = {
+  en: "Targets",
+  ru: "Целей",
+  pl: "Celów",
+  uk: "Цілей",
+  de: "Ziele",
+  es: "Objetivos",
+  cs: "Cíle",
+};
+
+const PUBLISHED_COPY: Record<LocaleCode, string> = {
+  en: "Published",
+  ru: "Опубликована",
+  pl: "Opublikowana",
+  uk: "Опублікована",
+  de: "Veröffentlicht",
+  es: "Publicada",
+  cs: "Publikováno",
+};
+
+const OPEN_FORMULA_COPY: Record<LocaleCode, string> = {
+  en: "Open formula",
+  ru: "Открыть формулу",
+  pl: "Otwórz formułę",
+  uk: "Відкрити формулу",
+  de: "Formel öffnen",
+  es: "Abrir fórmula",
+  cs: "Otevřít vzorec",
+};
+
 export default function AdminConsequenceConstructorPage() {
   const [locale] = useState<LocaleCode>(() =>
     typeof window === "undefined"
       ? "en"
       : getLocaleSearchParam(new URLSearchParams(window.location.search)),
   );
+
+  const [detailTaskId] = useState<string | null>(() => {
+    if (
+      typeof window ===
+      "undefined"
+    ) {
+      return null;
+    }
+
+    const match =
+      window.location.pathname.match(
+        /\/admin\/consequence-constructor\/([0-9a-f-]{36})\/?$/i,
+      );
+
+    return match?.[1] ??
+      null;
+  });
   const [tasks, setTasks] = useState<ConsequenceTask[]>([]);
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [selectedTemplateByTask, setSelectedTemplateByTask] = useState<
@@ -302,8 +370,25 @@ export default function AdminConsequenceConstructorPage() {
   );
 
   const fetchTasks = useCallback(async (): Promise<QueueResponse> => {
+    const search =
+      new URLSearchParams({
+        locale,
+      });
+
+    if (detailTaskId) {
+      search.set(
+        "taskId",
+        detailTaskId,
+      );
+    } else {
+      search.set(
+        "view",
+        "list",
+      );
+    }
+
     const response = await fetch(
-      `/api/admin/consequence-constructor?locale=${encodeURIComponent(locale)}`,
+      `/api/admin/consequence-constructor?${search.toString()}`,
       { cache: "no-store" },
     );
     const payload = (await response.json()) as QueueResponse;
@@ -311,7 +396,7 @@ export default function AdminConsequenceConstructorPage() {
       throw new Error(payload.error || `HTTP ${response.status}`);
     }
     return payload;
-  }, [locale]);
+  }, [detailTaskId, locale]);
 
   const applyPayload = useCallback((payload: QueueResponse) => {
     const nextTasks = payload.tasks ?? [];
@@ -328,7 +413,7 @@ export default function AdminConsequenceConstructorPage() {
     setSelectedTargetParameterByKey(
       Object.fromEntries(
         nextTasks.flatMap((task) =>
-          task.selectedTargets.map((target) => [
+          (task.selectedTargets ?? []).map((target) => [
             `${task.id}:${target.targetValueObjectId}`,
             "",
           ]),
@@ -475,6 +560,15 @@ export default function AdminConsequenceConstructorPage() {
       <section className="rounded-2xl border border-[#e5e7f1] bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
+            {detailTaskId ? (
+              <a
+                href={`/admin/consequence-constructor?locale=${encodeURIComponent(locale)}`}
+                className="mb-3 inline-flex text-xs font-semibold text-[#3b6ef8] hover:underline"
+              >
+                ← {BACK_TO_QUEUE_COPY[locale] ?? BACK_TO_QUEUE_COPY.en}
+              </a>
+            ) : null}
+
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-semibold text-[#1a1d2e]">{copy.title}</h1>
               <span className="rounded-full bg-[#eef2ff] px-2.5 py-1 text-xs font-semibold text-[#3b6ef8]">
@@ -494,9 +588,11 @@ export default function AdminConsequenceConstructorPage() {
           </button>
         </div>
 
-        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
-          {copy.ruleNote}
-        </div>
+        {detailTaskId ? (
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+            {copy.ruleNote}
+          </div>
+        ) : null}
 
         {error ? (
           <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -512,7 +608,108 @@ export default function AdminConsequenceConstructorPage() {
           <p className="mt-6 text-sm text-[#6b7280]">{copy.empty}</p>
         ) : null}
 
-        {!loading && tasks.length > 0 ? (
+        {!loading && tasks.length > 0 && !detailTaskId ? (
+          <div className="mt-5 overflow-x-auto">
+            <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
+              <thead>
+                <tr className="text-xs uppercase tracking-wide text-[#8a8fa8]">
+                  <th className="border-b border-[#eceef5] px-3 py-2">
+                    {copy.activity}
+                  </th>
+                  <th className="border-b border-[#eceef5] px-3 py-2">
+                    {copy.parameter}
+                  </th>
+                  <th className="border-b border-[#eceef5] px-3 py-2">
+                    {copy.source}
+                  </th>
+                  <th className="border-b border-[#eceef5] px-3 py-2">
+                    {copy.state}
+                  </th>
+                  <th className="border-b border-[#eceef5] px-3 py-2" />
+                </tr>
+              </thead>
+
+              <tbody>
+                {tasks.map((task) => {
+                  const selectedCount =
+                    (task.selectedTargets ?? []).length;
+
+                  const stateLabel =
+                    task.activityTemplateId
+                      ? selectedCount > 0
+                        ? `${TARGET_COUNT_COPY[locale] ?? TARGET_COUNT_COPY.en}: ${selectedCount}`
+                        : targetCopy.ready
+                      : copy.waitingTemplate;
+
+                  return (
+                    <tr
+                      key={task.id}
+                      className="align-top hover:bg-[#fbfbfe]"
+                    >
+                      <td className="min-w-[320px] border-b border-[#f0f1f6] px-3 py-3">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`rounded-full px-2 py-1 text-[11px] font-semibold ${
+                              task.activityKind === "typical"
+                                ? "bg-emerald-50 text-emerald-700"
+                                : "bg-amber-50 text-amber-700"
+                            }`}
+                          >
+                            {task.activityKind === "typical"
+                              ? copy.typical
+                              : copy.raw}
+                          </span>
+
+                          <span className="font-medium text-[#23263a]">
+                            {task.activityTitle}
+                          </span>
+                        </div>
+
+                        {task.activityKind === "typical" ? (
+                          <div className="mt-1 text-xs text-[#8a8fa8]">
+                            {copy.rawOrigin}: {task.rawActivityTitle}
+                          </div>
+                        ) : null}
+                      </td>
+
+                      <td className="min-w-[220px] border-b border-[#f0f1f6] px-3 py-3">
+                        <div className="font-medium text-[#23263a]">
+                          {task.parameterTitle}
+                        </div>
+                        <div className="mt-1 text-xs text-[#8a8fa8]">
+                          {task.parameterCode || task.parameterDefinitionId}
+                        </div>
+                      </td>
+
+                      <td className="min-w-[260px] border-b border-[#f0f1f6] px-3 py-3">
+                        <div className="font-medium text-[#23263a]">
+                          {task.sourceValueObjectTitle}
+                        </div>
+                      </td>
+
+                      <td className="min-w-[180px] border-b border-[#f0f1f6] px-3 py-3">
+                        <span className="rounded-full bg-[#f1f5ff] px-2 py-1 text-xs font-semibold text-[#5367c7]">
+                          {stateLabel}
+                        </span>
+                      </td>
+
+                      <td className="border-b border-[#f0f1f6] px-3 py-3 text-right">
+                        <a
+                          href={`/admin/consequence-constructor/${encodeURIComponent(task.id)}?locale=${encodeURIComponent(locale)}`}
+                          className="inline-flex whitespace-nowrap rounded-lg border border-[#cfd5ea] bg-white px-3 py-2 text-xs font-semibold text-[#3b6ef8] hover:bg-[#f4f6ff]"
+                        >
+                          {OPEN_TASK_COPY[locale] ?? OPEN_TASK_COPY.en}
+                        </a>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+
+        {!loading && tasks.length > 0 && detailTaskId ? (
           <div className="mt-5 overflow-x-auto">
             <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
               <thead>
@@ -773,18 +970,23 @@ export default function AdminConsequenceConstructorPage() {
                                           className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-[11px] text-emerald-800"
                                         >
                                           <div className="font-semibold">
-                                            {formulaCopy.draftReady}:{" "}
-                                            {draft.targetParameterTitle}
+                                            {draft.versionStatusCode === "published"
+                                              ? `${PUBLISHED_COPY[locale] ?? PUBLISHED_COPY.en} · v${draft.versionNo ?? 1}`
+                                              : `${formulaCopy.draftReady}: ${draft.targetParameterTitle}`}
                                           </div>
                                           <div className="mt-0.5 text-emerald-700">
-                                            {formulaCopy.awaitingFormula}
+                                            {draft.versionStatusCode === "published"
+                                              ? draft.targetParameterTitle
+                                              : formulaCopy.awaitingFormula}
                                           </div>
                                           {draft.versionId ? (
                                             <a
                                               href={`/admin/formula-builder?versionId=${encodeURIComponent(draft.versionId)}&locale=${encodeURIComponent(locale)}`}
                                               className="mt-2 inline-flex rounded-md border border-emerald-300 bg-white px-2 py-1 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-100"
                                             >
-                                              {formulaCopy.editFormula}
+                                              {draft.versionStatusCode === "published"
+                                                ? OPEN_FORMULA_COPY[locale] ?? OPEN_FORMULA_COPY.en
+                                                : formulaCopy.editFormula}
                                             </a>
                                           ) : null}
                                         </div>

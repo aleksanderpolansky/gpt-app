@@ -587,6 +587,275 @@ export async function listConsequenceConstructorTasksV1() {
   return [...tasksByContextKey.values()];
 }
 
+export async function getConsequenceConstructorTaskV1(
+  taskIdValue: string,
+): Promise<ConsequenceConstructorTaskView | null> {
+  const taskIdValueNormalized =
+    text(
+      taskIdValue,
+    );
+
+  if (
+    !UUID_RE.test(
+      taskIdValueNormalized,
+    )
+  ) {
+    throw new Error(
+      "CONSEQUENCE_TASK_ID_INVALID",
+    );
+  }
+
+  const {
+    data:
+      taskRows,
+    error:
+      taskError,
+  } =
+    await supabase
+      .from(
+        "activity_processing_logs",
+      )
+      .select(
+        "id,user_id,raw_signal_id,activity_event_id,metadata_json,started_at,created_at",
+      )
+      .eq(
+        "id",
+        taskIdValueNormalized,
+      )
+      .eq(
+        "processor_name",
+        CONSEQUENCE_CONSTRUCTOR_PROCESSOR,
+      )
+      .eq(
+        "processor_version",
+        CONSEQUENCE_CONSTRUCTOR_PROCESSOR_VERSION,
+      )
+      .contains(
+        "metadata_json",
+        {
+          eventCode:
+            CONSEQUENCE_TASK_CREATED_EVENT,
+        },
+      )
+      .limit(
+        1,
+      );
+
+  if (taskError) {
+    throw new Error(
+      `CONSEQUENCE_TASK_DETAIL_READ_FAILED:${taskError.message}`,
+    );
+  }
+
+  const row =
+    (
+      (taskRows ??
+        []) as unknown as ConsequenceTaskRow[]
+    )[0] ??
+    null;
+
+  if (!row) {
+    return null;
+  }
+
+  const metadata =
+    asRecord(
+      row.metadata_json,
+    );
+
+  const rawSignalId =
+    text(
+      metadata.rawSignalId,
+    ) ||
+    text(
+      row.raw_signal_id,
+    );
+
+  const activityEventId =
+    text(
+      metadata.activityEventId,
+    ) ||
+    text(
+      row.activity_event_id,
+    );
+
+  const parameterDefinitionId =
+    text(
+      metadata.parameterDefinitionId,
+    );
+
+  const sourceValueObjectId =
+    text(
+      metadata.sourceValueObjectId,
+    );
+
+  if (
+    !UUID_RE.test(
+      rawSignalId,
+    ) ||
+    !UUID_RE.test(
+      activityEventId,
+    ) ||
+    !UUID_RE.test(
+      parameterDefinitionId,
+    ) ||
+    !UUID_RE.test(
+      sourceValueObjectId,
+    )
+  ) {
+    throw new Error(
+      "CONSEQUENCE_TASK_DETAIL_CONTEXT_INVALID",
+    );
+  }
+
+  const [
+    bindingResult,
+    dynamicContext,
+  ] =
+    await Promise.all([
+      supabase
+        .from(
+          "activity_processing_logs",
+        )
+        .select(
+          "metadata_json,started_at,created_at",
+        )
+        .eq(
+          "processor_name",
+          CONSEQUENCE_CONSTRUCTOR_PROCESSOR,
+        )
+        .eq(
+          "processor_version",
+          CONSEQUENCE_CONSTRUCTOR_PROCESSOR_VERSION,
+        )
+        .contains(
+          "metadata_json",
+          {
+            eventCode:
+              CONSEQUENCE_TEMPLATE_BOUND_EVENT,
+            consequenceTaskId:
+              row.id,
+          },
+        )
+        .order(
+          "started_at",
+          {
+            ascending:
+              false,
+          },
+        )
+        .limit(
+          1,
+        ),
+      readDefaultTemplateContext(
+        rawSignalId,
+      ),
+    ]);
+
+  if (
+    bindingResult.error
+  ) {
+    throw new Error(
+      `CONSEQUENCE_TASK_DETAIL_BINDING_READ_FAILED:${bindingResult.error.message}`,
+    );
+  }
+
+  const bindingMetadata =
+    asRecord(
+      bindingResult.data?.[0]
+        ?.metadata_json,
+    );
+
+  const boundTemplateId =
+    text(
+      bindingMetadata.selectedTemplateId,
+    );
+
+  const initialTemplateId =
+    text(
+      metadata.activityTemplateId,
+    );
+
+  const activityTemplateId =
+    UUID_RE.test(
+      boundTemplateId,
+    )
+      ? boundTemplateId
+      : dynamicContext.activityTemplateId ??
+        (
+          UUID_RE.test(
+            initialTemplateId,
+          )
+            ? initialTemplateId
+            : null
+        );
+
+  const activityTemplateTitle =
+    activityTemplateId
+      ? text(
+          bindingMetadata.selectedTemplateTitle,
+        ) ||
+        dynamicContext.activityTemplateTitle ||
+        text(
+          metadata.activityTemplateTitleSnapshot,
+        ) ||
+        activityTemplateId
+      : null;
+
+  const rawActivityTitle =
+    text(
+      metadata.rawActivityTitleSnapshot,
+    ) ||
+    "Сырая активность";
+
+  return {
+    id:
+      row.id,
+    rawSignalId,
+    activityEventId,
+    activityKind:
+      activityTemplateId
+        ? "typical"
+        : "raw",
+    activityTitle:
+      activityTemplateTitle ||
+      rawActivityTitle,
+    activityTemplateId,
+    activityTemplateTitle,
+    rawActivityTitle,
+    parameterDefinitionId,
+    parameterCode:
+      text(
+        metadata.parameterCode,
+      ),
+    parameterTitle:
+      text(
+        metadata.parameterTitleSnapshot,
+      ) ||
+      text(
+        metadata.parameterCode,
+      ) ||
+      parameterDefinitionId,
+    sourceValueObjectId,
+    sourceValueObjectTitle:
+      text(
+        metadata.sourceValueObjectTitleSnapshot,
+      ) ||
+      sourceValueObjectId,
+    targetValueObjectId:
+      null,
+    targetSelectionState:
+      "locked_pending_relations",
+    state:
+      activityTemplateId
+        ? "awaiting_relations"
+        : "awaiting_template",
+    createdAt:
+      row.started_at ||
+      row.created_at,
+  };
+}
+
 export async function listConsequenceTemplateOptionsV1(
   localeValue?: unknown,
 ): Promise<ConsequenceTemplateOption[]> {
