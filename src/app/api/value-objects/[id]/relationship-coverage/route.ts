@@ -41,6 +41,7 @@ type ValueObjectRow = {
   title: string;
   facet_code: string | null;
   node_role_code: string | null;
+  ontology_node_role_code: string | null;
   root_value_object_id: string | null;
   owner_user_id: string | null;
   owner_actor_id: string | null;
@@ -150,7 +151,7 @@ async function loadObject(id: string) {
   const { data, error } = await supabase
     .from("value_objects")
     .select(
-      "id,title,facet_code,node_role_code,root_value_object_id,owner_user_id,owner_actor_id,status,canonical_key,metadata_json",
+      "id,title,facet_code,node_role_code,ontology_node_role_code,root_value_object_id,owner_user_id,owner_actor_id,status,canonical_key,metadata_json",
     )
     .eq("id", id)
     .maybeSingle();
@@ -208,6 +209,38 @@ function crossPlaneZoneKey(
   return `plane:${otherPlane}`;
 }
 
+function registryAllows(
+  allowed: string[] | null,
+  value: string | null | undefined,
+) {
+  return (
+    !allowed ||
+    allowed.length === 0 ||
+    (Boolean(value) && allowed.includes(value as string))
+  );
+}
+
+function relationTypeAllowsEndpoint(
+  relationType: RelationTypeRow,
+  object: ValueObjectRow,
+  endpoint: "source" | "target",
+) {
+  const facetAllowed =
+    endpoint === "source"
+      ? relationType.allowed_source_facet_codes
+      : relationType.allowed_target_facet_codes;
+
+  const roleAllowed =
+    endpoint === "source"
+      ? relationType.allowed_source_node_roles
+      : relationType.allowed_target_node_roles;
+
+  return (
+    registryAllows(facetAllowed, object.facet_code) &&
+    registryAllows(roleAllowed, object.ontology_node_role_code)
+  );
+}
+
 async function responseForObject(id: string, localeValue: unknown) {
   const locale = normalizeGlobalSystemValueObjectLocale(localeValue);
   const targetRaw = await loadObject(id);
@@ -258,7 +291,7 @@ async function responseForObject(id: string, localeValue: unknown) {
     const { data, error } = await supabase
       .from("value_objects")
       .select(
-        "id,title,facet_code,node_role_code,root_value_object_id,owner_user_id,owner_actor_id,status,canonical_key,metadata_json",
+        "id,title,facet_code,node_role_code,ontology_node_role_code,root_value_object_id,owner_user_id,owner_actor_id,status,canonical_key,metadata_json",
       )
       .in("id", relatedIds);
     if (error) throw error;
@@ -270,7 +303,7 @@ async function responseForObject(id: string, localeValue: unknown) {
 
   const { data: globalCandidatesData, error: globalCandidatesError } = await supabase
     .from("value_objects")
-    .select("id,title,facet_code,node_role_code,root_value_object_id,owner_user_id,owner_actor_id,status,canonical_key,metadata_json")
+    .select("id,title,facet_code,node_role_code,ontology_node_role_code,root_value_object_id,owner_user_id,owner_actor_id,status,canonical_key,metadata_json")
     .is("owner_user_id", null)
     .is("owner_actor_id", null)
     .eq("status", "active")
@@ -283,16 +316,27 @@ async function responseForObject(id: string, localeValue: unknown) {
       id: object.id,
       title: object.title,
       facetCode: object.facet_code,
-      nodeRoleCode: object.node_role_code,
+      nodeRoleCode: object.ontology_node_role_code,
       plane: planeOf(object),
     }))
     .sort((left, right) => left.title.localeCompare(right.title, locale));
 
   const relationZones = relationTypes.flatMap((relationType) => {
+    const sourceAllowed =
+      relationTypeAllowsEndpoint(relationType, target, "source");
+
+    const targetAllowed =
+      relationTypeAllowsEndpoint(relationType, target, "target");
+
     const directions: RelationDirection[] =
       relationType.directionality_code === "symmetric"
-        ? ["symmetric"]
-        : ["outgoing", "incoming"];
+        ? sourceAllowed || targetAllowed
+          ? ["symmetric"]
+          : []
+        : [
+            ...(sourceAllowed ? (["outgoing"] as const) : []),
+            ...(targetAllowed ? (["incoming"] as const) : []),
+          ];
 
     return directions.map((direction) => {
       const zoneKey = `relation:${relationType.relation_type_code}:${direction}`;
@@ -316,7 +360,7 @@ async function responseForObject(id: string, localeValue: unknown) {
             id: object.id,
             title: object.title,
             facetCode: object.facet_code,
-            nodeRoleCode: object.node_role_code,
+            nodeRoleCode: object.ontology_node_role_code,
             plane: planeOf(object),
           };
         })
@@ -355,7 +399,7 @@ async function responseForObject(id: string, localeValue: unknown) {
             id: object.id,
             title: object.title,
             facetCode: object.facet_code,
-            nodeRoleCode: object.node_role_code,
+            nodeRoleCode: object.ontology_node_role_code,
             plane,
           };
         })
@@ -395,7 +439,7 @@ async function responseForObject(id: string, localeValue: unknown) {
       id: target.id,
       title: target.title,
       facetCode: target.facet_code,
-      nodeRoleCode: target.node_role_code,
+      nodeRoleCode: target.ontology_node_role_code,
       plane: currentPlane,
     },
     relationZones,
@@ -545,8 +589,8 @@ export async function POST(
       }
       const sourceFacet = source.facet_code ?? "";
       const targetFacet = destination.facet_code ?? "";
-      const sourceRole = source.node_role_code ?? "";
-      const targetRole = destination.node_role_code ?? "";
+      const sourceRole = source.ontology_node_role_code ?? "";
+      const targetRole = destination.ontology_node_role_code ?? "";
       if (
         !(relationType.allowed_source_facet_codes ?? []).includes(sourceFacet) ||
         !(relationType.allowed_target_facet_codes ?? []).includes(targetFacet) ||

@@ -18,6 +18,7 @@ const DIMENSION_CODES = new Set([
   "count",
   "volume",
   "mass",
+  "force",
   "energy",
   "money",
   "rate",

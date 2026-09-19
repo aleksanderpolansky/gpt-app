@@ -75,6 +75,24 @@ const SYSTEM_PARAMETER_TITLES: Record<string, Record<ActivityParameterLocale, st
     es: "Volumen de líquido",
     cs: "Objem tekutiny",
   },
+  "mass": {
+    en: "Mass",
+    pl: "Masa",
+    ru: "Масса",
+    uk: "Маса",
+    de: "Masse",
+    es: "Masa",
+    cs: "Hmotnost",
+  },
+  "force": {
+    en: "Force",
+    pl: "Siła",
+    ru: "Сила",
+    uk: "Сила",
+    de: "Kraft",
+    es: "Fuerza",
+    cs: "Síla",
+  },
   "body_mass": {
     en: "Body mass",
     pl: "Masa ciała",
@@ -366,6 +384,24 @@ const SYSTEM_PARAMETER_TITLES: Record<string, Record<ActivityParameterLocale, st
 };
 
 const SYSTEM_PARAMETER_DESCRIPTIONS: Readonly<Record<string, Readonly<Record<ActivityParameterLocale, string>>>> = {
+  mass: {
+    en: "Mass of an object, substance or body; the measured subject is defined by the linked leaf observation object.",
+    pl: "Masa obiektu, substancji lub ciała; przedmiot pomiaru określa powiązany liściowy obiekt obserwacji.",
+    ru: "Масса объекта, вещества или тела; предмет измерения определяется связанным листовым объектом наблюдения.",
+    uk: "Маса об’єкта, речовини або тіла; предмет вимірювання визначається пов’язаним листовим об’єктом спостереження.",
+    de: "Masse eines Objekts, Stoffes oder Körpers; der Messgegenstand wird durch das verknüpfte Blatt-Beobachtungsobjekt bestimmt.",
+    es: "Masa de un objeto, sustancia o cuerpo; el objeto medido lo define el objeto de observación hoja vinculado.",
+    cs: "Hmotnost objektu, látky nebo těla; předmět měření určuje propojený listový objekt pozorování.",
+  },
+  force: {
+    en: "Mechanical force; the affected object and the precise measurement meaning are defined by the linked leaf observation object.",
+    pl: "Siła mechaniczna; obiekt oddziaływania i dokładny sens pomiaru określa powiązany liściowy obiekt obserwacji.",
+    ru: "Механическая сила; объект воздействия и точный смысл измерения определяются связанным листовым объектом наблюдения.",
+    uk: "Механічна сила; об’єкт впливу та точний зміст вимірювання визначаються пов’язаним листовим об’єктом спостереження.",
+    de: "Mechanische Kraft; das betroffene Objekt und die genaue Messbedeutung werden durch das verknüpfte Blatt-Beobachtungsobjekt bestimmt.",
+    es: "Fuerza mecánica; el objeto afectado y el significado exacto de la medición los define el objeto de observación hoja vinculado.",
+    cs: "Mechanická síla; ovlivněný objekt a přesný význam měření určuje propojený listový objekt pozorování.",
+  },
   count: {
     en: "Number of discrete units, actions, events or objects; what is being counted is defined by the linked leaf observation object.",
     pl: "Liczba dyskretnych jednostek, działań, zdarzeń lub obiektów; przedmiot zliczania określa powiązany liściowy obiekt obserwacji.",
@@ -402,6 +438,7 @@ const UNIT_LABELS: Record<string, Partial<Record<ActivityParameterLocale, string
   gram: { en: "g", pl: "g", ru: "г", uk: "г", de: "g", es: "g", cs: "g" },
   kilogram: { en: "kg", pl: "kg", ru: "кг", uk: "кг", de: "kg", es: "kg", cs: "kg" },
   milligram: { en: "mg", pl: "mg", ru: "мг", uk: "мг", de: "mg", es: "mg", cs: "mg" },
+  newton: { en: "N", pl: "N", ru: "Н", uk: "Н", de: "N", es: "N", cs: "N" },
   kcal: { en: "kcal", pl: "kcal", ru: "ккал", uk: "ккал", de: "kcal", es: "kcal", cs: "kcal" },
   kilojoule: { en: "kJ", pl: "kJ", ru: "кДж", uk: "кДж", de: "kJ", es: "kJ", cs: "kJ" },
   pln: { en: "PLN", pl: "PLN", ru: "PLN", uk: "PLN", de: "PLN", es: "PLN", cs: "PLN" },

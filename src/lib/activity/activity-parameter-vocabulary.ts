@@ -8,6 +8,7 @@ const DIMENSION_LABELS: LocalizedCodeTable = {
   count: { en: "Count", pl: "Liczba", ru: "Количество", uk: "Кількість", de: "Anzahl", es: "Cantidad", cs: "Počet" },
   volume: { en: "Volume", pl: "Objętość", ru: "Объём", uk: "Обʼєм", de: "Volumen", es: "Volumen", cs: "Objem" },
   mass: { en: "Mass", pl: "Masa", ru: "Масса", uk: "Маса", de: "Masse", es: "Masa", cs: "Hmotnost" },
+  force: { en: "Force", pl: "Siła", ru: "Сила", uk: "Сила", de: "Kraft", es: "Fuerza", cs: "Síla" },
   energy: { en: "Energy", pl: "Energia", ru: "Энергия", uk: "Енергія", de: "Energie", es: "Energía", cs: "Energie" },
   money: { en: "Money", pl: "Kwota pieniężna", ru: "Денежная сумма", uk: "Грошова сума", de: "Geldbetrag", es: "Importe monetario", cs: "Peněžní částka" },
   rate: { en: "Rate / speed", pl: "Częstość / tempo", ru: "Частота / скорость", uk: "Частота / швидкість", de: "Rate / Geschwindigkeit", es: "Frecuencia / velocidad", cs: "Frekvence / rychlost" },

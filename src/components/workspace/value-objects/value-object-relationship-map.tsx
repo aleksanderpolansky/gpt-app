@@ -68,6 +68,7 @@ type DetailLevel = "overview" | "work" | "detailed";
 type SemanticBlockKey =
   | "structure"
   | "correspondence"
+  | "classification"
   | "dependency_support"
   | "influence_conflict"
   | "cross_plane"
@@ -426,6 +427,10 @@ const BLOCK_COPY: Record<LocaleCode, BlockCopy> = {
         title: "Correspondence and subject",
         description: "Related objects and objects describing the same subject.",
       },
+      classification: {
+        title: "Classification and type",
+        description: "Links between concrete or context-specific observation objects and their reusable general types.",
+      },
       dependency_support: {
         title: "Dependency and support",
         description: "Dependencies, prerequisites and support in both directions.",
@@ -461,6 +466,10 @@ const BLOCK_COPY: Record<LocaleCode, BlockCopy> = {
       correspondence: {
         title: "Powiązanie i ten sam przedmiot",
         description: "Obiekty powiązane i opisujące ten sam przedmiot obserwacji.",
+      },
+      classification: {
+        title: "Klasyfikacja i typ",
+        description: "Relacje między konkretnymi lub kontekstowymi obiektami obserwacji a ich ogólnymi typami wielokrotnego użytku.",
       },
       dependency_support: {
         title: "Zależność i wsparcie",
@@ -498,6 +507,10 @@ const BLOCK_COPY: Record<LocaleCode, BlockCopy> = {
         title: "Соответствие и общий предмет",
         description: "Связанные ОН и объекты, описывающие тот же предмет наблюдения.",
       },
+      classification: {
+        title: "Классификация и тип",
+        description: "Связи конкретных или контекстных ОН с их повторно используемыми общими типами.",
+      },
       dependency_support: {
         title: "Зависимость и поддержка",
         description: "Зависимости, необходимые условия и поддержка в обоих направлениях.",
@@ -533,6 +546,10 @@ const BLOCK_COPY: Record<LocaleCode, BlockCopy> = {
       correspondence: {
         title: "Відповідність і спільний предмет",
         description: "Пов’язані об’єкти та об’єкти, що описують той самий предмет спостереження.",
+      },
+      classification: {
+        title: "Класифікація і тип",
+        description: "Зв’язки конкретних або контекстних об’єктів спостереження з їхніми загальними багаторазово використовуваними типами.",
       },
       dependency_support: {
         title: "Залежність і підтримка",
@@ -570,6 +587,10 @@ const BLOCK_COPY: Record<LocaleCode, BlockCopy> = {
         title: "Zuordnung und gleicher Gegenstand",
         description: "Verknüpfte Objekte und Objekte mit demselben Beobachtungsgegenstand.",
       },
+      classification: {
+        title: "Klassifikation und Typ",
+        description: "Beziehungen zwischen konkreten oder kontextspezifischen Beobachtungsobjekten und ihren wiederverwendbaren allgemeinen Typen.",
+      },
       dependency_support: {
         title: "Abhängigkeit und Unterstützung",
         description: "Abhängigkeiten, Voraussetzungen und Unterstützung in beide Richtungen.",
@@ -606,6 +627,10 @@ const BLOCK_COPY: Record<LocaleCode, BlockCopy> = {
         title: "Correspondencia y mismo sujeto",
         description: "Objetos relacionados y objetos que describen el mismo sujeto.",
       },
+      classification: {
+        title: "Clasificación y tipo",
+        description: "Relaciones entre objetos de observación concretos o contextuales y sus tipos generales reutilizables.",
+      },
       dependency_support: {
         title: "Dependencia y apoyo",
         description: "Dependencias, requisitos y apoyo en ambas direcciones.",
@@ -641,6 +666,10 @@ const BLOCK_COPY: Record<LocaleCode, BlockCopy> = {
       correspondence: {
         title: "Souvislost a stejný předmět",
         description: "Související objekty a objekty popisující stejný předmět pozorování.",
+      },
+      classification: {
+        title: "Klasifikace a typ",
+        description: "Vztahy mezi konkrétními nebo kontextovými objekty pozorování a jejich znovupoužitelnými obecnými typy.",
       },
       dependency_support: {
         title: "Závislost a podpora",
@@ -695,6 +724,7 @@ const MORE_ACTIONS_LABELS: Record<LocaleCode, string> = {
 const BLOCK_ORDER: readonly SemanticBlockKey[] = [
   "structure",
   "correspondence",
+  "classification",
   "dependency_support",
   "influence_conflict",
   "cross_plane",
@@ -704,6 +734,7 @@ const BLOCK_ORDER: readonly SemanticBlockKey[] = [
 const BLOCK_PALETTE_INDEX: Record<SemanticBlockKey, number> = {
   structure: 0,
   correspondence: 4,
+  classification: 3,
   dependency_support: 5,
   influence_conflict: 7,
   cross_plane: 2,
@@ -712,11 +743,12 @@ const BLOCK_PALETTE_INDEX: Record<SemanticBlockKey, number> = {
 
 const BLOCK_POSITIONS: Record<SemanticBlockKey, { x: number; y: number }> = {
   structure: { x: 520, y: 20 },
-  correspondence: { x: 60, y: 210 },
-  dependency_support: { x: 60, y: 520 },
-  influence_conflict: { x: 1010, y: 520 },
-  cross_plane: { x: 1010, y: 210 },
-  other: { x: 520, y: 760 },
+  correspondence: { x: 60, y: 190 },
+  classification: { x: 60, y: 420 },
+  dependency_support: { x: 60, y: 650 },
+  cross_plane: { x: 1010, y: 190 },
+  influence_conflict: { x: 1010, y: 510 },
+  other: { x: 520, y: 820 },
 };
 
 function summarizeReview(zones: RelationshipZone[]): ReviewSummary {
@@ -760,6 +792,10 @@ function blockKeyForZone(zone: RelationshipZone): SemanticBlockKey {
 
   if (relationCode === "related_to" || relationCode === "same_subject_as") {
     return "correspondence";
+  }
+
+  if (relationCode === "classified_as") {
+    return "classification";
   }
 
   if (relationCode === "supports" || relationCode === "depends_on") {

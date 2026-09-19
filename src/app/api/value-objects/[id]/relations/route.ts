@@ -34,6 +34,8 @@ type ValueObjectRow = {
   branch_type_code: string | null;
   object_kind: string | null;
   node_role_code: string | null;
+  ontology_node_role_code?: string | null;
+  facet_code?: string | null;
   status: string;
   scope_code?: string | null;
   origin_type_code?: string | null;
@@ -54,6 +56,11 @@ type RelationTypeRow = {
   contract_version: number;
   display_order: number;
   status: string;
+  canonical_write_policy_code?: string | null;
+  allowed_source_facet_codes?: string[] | null;
+  allowed_target_facet_codes?: string[] | null;
+  allowed_source_node_roles?: string[] | null;
+  allowed_target_node_roles?: string[] | null;
 };
 
 type RelationRow = {
@@ -144,9 +151,49 @@ function toCandidateDto(row: ValueObjectRow): ValueObjectRelationCandidateDto {
     title: row.title,
     branchTypeCode: row.branch_type_code,
     objectKind: row.object_kind,
-    nodeRoleCode: row.node_role_code,
+    nodeRoleCode:
+      row.ontology_node_role_code ??
+      row.node_role_code,
     status: row.status,
   };
+}
+
+function relationRegistryAllows(
+  allowed: string[] | null | undefined,
+  value: string | null | undefined,
+) {
+  return (
+    !allowed ||
+    allowed.length === 0 ||
+    (Boolean(value) && allowed.includes(value as string))
+  );
+}
+
+function relationTypeAppliesToGlobalObject(
+  relationType: RelationTypeRow,
+  object: ValueObjectRow,
+) {
+  const sourceAllowed =
+    relationRegistryAllows(
+      relationType.allowed_source_facet_codes,
+      object.facet_code,
+    ) &&
+    relationRegistryAllows(
+      relationType.allowed_source_node_roles,
+      object.ontology_node_role_code,
+    );
+
+  const targetAllowed =
+    relationRegistryAllows(
+      relationType.allowed_target_facet_codes,
+      object.facet_code,
+    ) &&
+    relationRegistryAllows(
+      relationType.allowed_target_node_roles,
+      object.ontology_node_role_code,
+    );
+
+  return sourceAllowed || targetAllowed;
 }
 
 async function resolveRouteActorContext(): Promise<
@@ -195,7 +242,7 @@ async function readGlobalSystemValueObject(valueObjectId: string) {
   return supabase
     .from("value_objects")
     .select(
-      "id,title,branch_type_code,object_kind,node_role_code,status,scope_code,origin_type_code",
+      "id,title,branch_type_code,object_kind,node_role_code,ontology_node_role_code,facet_code,status,scope_code,origin_type_code",
     )
     .eq("id", valueObjectId)
     .eq("scope_code", "global")
@@ -286,15 +333,16 @@ export async function GET(request: Request, context: RouteContext) {
         supabase
           .from("value_object_relation_types")
           .select(
-            "relation_type_code, directionality_code, from_scope_code, to_scope_code, title_key, description_key, reverse_title_key, reverse_description_key, allow_self_link, contract_version, display_order, status",
+            "relation_type_code, directionality_code, from_scope_code, to_scope_code, title_key, description_key, reverse_title_key, reverse_description_key, allow_self_link, contract_version, display_order, status, canonical_write_policy_code, allowed_source_facet_codes, allowed_target_facet_codes, allowed_source_node_roles, allowed_target_node_roles",
           )
           .eq("status", "active")
+          .eq("canonical_write_policy_code", "enabled")
           .order("display_order", { ascending: true })
           .order("relation_type_code", { ascending: true }),
         supabase
           .from("value_objects")
           .select(
-            "id, title, branch_type_code, object_kind, node_role_code, status, canonical_key, metadata_json",
+            "id, title, branch_type_code, object_kind, node_role_code, ontology_node_role_code, facet_code, status, canonical_key, metadata_json",
           )
           .eq("scope_code", "global")
           .eq("origin_type_code", "system_model")
@@ -335,7 +383,16 @@ export async function GET(request: Request, context: RouteContext) {
       );
     }
 
-    const relationTypes = ((relationTypesResult.data ?? []) as RelationTypeRow[])
+    const globalRelationTypeRows =
+      (relationTypesResult.data ?? []) as RelationTypeRow[];
+
+    const relationTypes = globalRelationTypeRows
+      .filter((relationType) =>
+        relationTypeAppliesToGlobalObject(
+          relationType,
+          globalSystemValueObject as ValueObjectRow,
+        ),
+      )
       .map(toRelationTypeDto)
       .filter((relationType) => relationType.status === "active");
     const relationTypesByCode = new Map(

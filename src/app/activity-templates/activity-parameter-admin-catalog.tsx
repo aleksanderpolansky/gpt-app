@@ -51,7 +51,7 @@ type FormState = {
 };
 
 const DIMENSIONS = [
-  "time", "distance", "count", "volume", "mass", "energy", "money", "rate",
+  "time", "distance", "count", "volume", "mass", "force", "energy", "money", "rate",
   "score", "temperature", "text", "boolean", "timestamp", "pressure", "ratio",
   "sound_level", "illuminance",
 ] as const;

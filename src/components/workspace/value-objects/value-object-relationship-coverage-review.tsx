@@ -69,6 +69,8 @@ export type CoverageSnapshot = CoverageResponse;
 const RU_RELATIONS: Record<string, string> = {
   related_to: "Связан с",
   same_subject_as: "Тот же предмет наблюдения",
+  classified_as: "Относится к типу",
+  "classified_as:incoming": "Имеет частные проявления",
   supports: "Поддерживает",
   "supports:incoming": "Поддерживается",
   depends_on: "Зависит от",
