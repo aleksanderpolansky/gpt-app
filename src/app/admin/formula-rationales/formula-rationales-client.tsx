@@ -594,6 +594,147 @@ const COPY: Record<
   },
 };
 
+const FORMULA_RATIONALE_TRANSLATION_COPY: Record<
+  LocaleCode,
+  {
+    saving: string;
+    savedPending: string;
+    translating: string;
+    translated: string;
+    translationFailed: string;
+    stale: string;
+    retry: string;
+    pendingBadge: string;
+  }
+> = {
+  ru: {
+    saving:
+      "Сохраняем…",
+    savedPending:
+      "Сохранено. Перевод выполняется…",
+    translating:
+      "Переводим…",
+    translated:
+      "Сохранено и переведено",
+    translationFailed:
+      "Текст сохранён. Перевод не выполнен.",
+    stale:
+      "Текст изменился во время перевода. Переведите актуальную версию.",
+    retry:
+      "Повторить перевод",
+    pendingBadge:
+      "Перевод ожидается",
+  },
+  pl: {
+    saving:
+      "Zapisywanie…",
+    savedPending:
+      "Zapisano. Tłumaczenie w toku…",
+    translating:
+      "Tłumaczenie…",
+    translated:
+      "Zapisano i przetłumaczono",
+    translationFailed:
+      "Tekst zapisano. Tłumaczenie nie powiodło się.",
+    stale:
+      "Tekst zmienił się podczas tłumaczenia. Przetłumacz aktualną wersję.",
+    retry:
+      "Ponów tłumaczenie",
+    pendingBadge:
+      "Tłumaczenie oczekuje",
+  },
+  en: {
+    saving:
+      "Saving…",
+    savedPending:
+      "Saved. Translation is running…",
+    translating:
+      "Translating…",
+    translated:
+      "Saved and translated",
+    translationFailed:
+      "Text saved. Translation failed.",
+    stale:
+      "The text changed during translation. Translate the current revision.",
+    retry:
+      "Retry translation",
+    pendingBadge:
+      "Translation pending",
+  },
+  es: {
+    saving:
+      "Guardando…",
+    savedPending:
+      "Guardado. Traducción en curso…",
+    translating:
+      "Traduciendo…",
+    translated:
+      "Guardado y traducido",
+    translationFailed:
+      "Texto guardado. La traducción falló.",
+    stale:
+      "El texto cambió durante la traducción. Traduzca la revisión actual.",
+    retry:
+      "Reintentar traducción",
+    pendingBadge:
+      "Traducción pendiente",
+  },
+  uk: {
+    saving:
+      "Зберігаємо…",
+    savedPending:
+      "Збережено. Переклад виконується…",
+    translating:
+      "Перекладаємо…",
+    translated:
+      "Збережено і перекладено",
+    translationFailed:
+      "Текст збережено. Переклад не виконано.",
+    stale:
+      "Текст змінився під час перекладу. Перекладіть актуальну версію.",
+    retry:
+      "Повторити переклад",
+    pendingBadge:
+      "Переклад очікується",
+  },
+  de: {
+    saving:
+      "Speichern…",
+    savedPending:
+      "Gespeichert. Übersetzung läuft…",
+    translating:
+      "Übersetzen…",
+    translated:
+      "Gespeichert und übersetzt",
+    translationFailed:
+      "Text gespeichert. Übersetzung fehlgeschlagen.",
+    stale:
+      "Der Text wurde während der Übersetzung geändert. Übersetzen Sie die aktuelle Revision.",
+    retry:
+      "Übersetzung wiederholen",
+    pendingBadge:
+      "Übersetzung ausstehend",
+  },
+  cs: {
+    saving:
+      "Ukládání…",
+    savedPending:
+      "Uloženo. Překlad probíhá…",
+    translating:
+      "Překládání…",
+    translated:
+      "Uloženo a přeloženo",
+    translationFailed:
+      "Text byl uložen. Překlad se nezdařil.",
+    stale:
+      "Text se během překladu změnil. Přeložte aktuální revizi.",
+    retry:
+      "Opakovat překlad",
+    pendingBadge:
+      "Překlad čeká",
+  },
+};
+
 function asRecord(
   value: unknown,
 ) {
@@ -752,6 +893,14 @@ export function FormulaRationalesClient() {
     );
 
   const [
+    translatingKeys,
+    setTranslatingKeys,
+  ] =
+    useState<Set<string>>(
+      new Set(),
+    );
+
+  const [
     status,
     setStatus,
   ] =
@@ -838,6 +987,12 @@ export function FormulaRationalesClient() {
   const copy =
     COPY[locale] ??
     COPY.en;
+
+  const translationCopy =
+    FORMULA_RATIONALE_TRANSLATION_COPY[
+      locale
+    ] ??
+    FORMULA_RATIONALE_TRANSLATION_COPY.en;
 
   const contentByKey =
     useMemo(() => {
@@ -998,6 +1153,160 @@ export function FormulaRationalesClient() {
     );
   }
 
+  function replaceContent(
+    key: string,
+    content: FormulaRationaleRecord,
+  ) {
+    setPayload(
+      (current) =>
+        current
+          ? {
+              ...current,
+              content: [
+                ...(
+                  current.content ??
+                  []
+                ).filter(
+                  (item) =>
+                    contentKey(item) !==
+                    key,
+                ),
+                content,
+              ],
+            }
+          : current,
+    );
+  }
+
+  async function translate(
+    versionId: string,
+    section: FormulaRationaleSection,
+    content: FormulaRationaleRecord,
+  ) {
+    const key =
+      formulaRationaleRecordKey(
+        versionId,
+        section,
+      );
+
+    if (
+      !content.sourceText.trim()
+    ) {
+      return;
+    }
+
+    setTranslatingKeys(
+      (current) => {
+        const next =
+          new Set(
+            current,
+          );
+
+        next.add(
+          key,
+        );
+
+        return next;
+      },
+    );
+
+    setStatus(
+      (current) => ({
+        ...current,
+        [key]:
+          translationCopy.translating,
+      }),
+    );
+
+    try {
+      const response =
+        await fetch(
+          "/api/admin/formula-rationales",
+          {
+            method:
+              "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body:
+              JSON.stringify({
+                ruleVersionId:
+                  versionId,
+                section,
+                sourceLocale:
+                  content.sourceLocale,
+                sourceText:
+                  content.sourceText,
+                expectedRevision:
+                  content.revision,
+              }),
+          },
+        );
+
+      const data =
+        await response.json() as {
+          ok?: boolean;
+          error?: string;
+          translationState?:
+            | "translated"
+            | "stale"
+            | "not_required";
+          content?: FormulaRationaleRecord;
+        };
+
+      if (
+        !response.ok ||
+        !data.ok ||
+        !data.content
+      ) {
+        throw new Error(
+          data.error ||
+            `HTTP_${response.status}`,
+        );
+      }
+
+      replaceContent(
+        key,
+        data.content,
+      );
+
+      setStatus(
+        (current) => ({
+          ...current,
+          [key]:
+            data.translationState ===
+            "stale"
+              ? translationCopy.stale
+              : translationCopy.translated,
+        }),
+      );
+    } catch {
+      setStatus(
+        (current) => ({
+          ...current,
+          [key]:
+            translationCopy.translationFailed,
+        }),
+      );
+    } finally {
+      setTranslatingKeys(
+        (current) => {
+          const next =
+            new Set(
+              current,
+            );
+
+          next.delete(
+            key,
+          );
+
+          return next;
+        },
+      );
+    }
+  }
+
   async function save(
     versionId: string,
     section: FormulaRationaleSection,
@@ -1014,7 +1323,10 @@ export function FormulaRationalesClient() {
         section,
       );
 
-    setSavingKey(key);
+    setSavingKey(
+      key,
+    );
+
     setStatus(
       (current) => ({
         ...current,
@@ -1049,6 +1361,9 @@ export function FormulaRationalesClient() {
         await response.json() as {
           ok?: boolean;
           error?: string;
+          translationState?:
+            | "pending"
+            | "not_required";
           content?: FormulaRationaleRecord;
         };
 
@@ -1063,24 +1378,9 @@ export function FormulaRationalesClient() {
         );
       }
 
-      setPayload(
-        (current) =>
-          current
-            ? {
-                ...current,
-                content: [
-                  ...(
-                    current.content ??
-                    []
-                  ).filter(
-                    (item) =>
-                      contentKey(item) !==
-                      key,
-                  ),
-                  data.content!,
-                ],
-              }
-            : current,
+      replaceContent(
+        key,
+        data.content,
       );
 
       setDrafts(
@@ -1105,9 +1405,27 @@ export function FormulaRationalesClient() {
         (current) => ({
           ...current,
           [key]:
-            copy.saved,
+            data.translationState ===
+            "pending"
+              ? translationCopy.savedPending
+              : copy.saved,
         }),
       );
+
+      setSavingKey(
+        null,
+      );
+
+      if (
+        data.translationState ===
+        "pending"
+      ) {
+        void translate(
+          versionId,
+          section,
+          data.content,
+        );
+      }
     } catch (cause) {
       setStatus(
         (current) => ({
@@ -1118,11 +1436,12 @@ export function FormulaRationalesClient() {
               : "UNKNOWN",
         }),
       );
-    } finally {
-      setSavingKey(null);
+
+      setSavingKey(
+        null,
+      );
     }
   }
-
   function toggleVersion(
     versionId: string,
   ) {
@@ -1441,16 +1760,27 @@ export function FormulaRationalesClient() {
                                         section,
                                       );
 
+                                    const contentRecord =
+                                      contentByKey.get(
+                                        key,
+                                      );
+
                                     const exists =
                                       Boolean(
-                                        contentByKey
-                                          .get(
-                                            key,
-                                          )
+                                        contentRecord
                                           ?.translations?.[
                                           locale
                                         ]
                                           ?.trim(),
+                                      );
+
+                                    const translationPending =
+                                      contentRecord?.provider ===
+                                      "formula_rationale_source_save_v1";
+
+                                    const translating =
+                                      translatingKeys.has(
+                                        key,
                                       );
 
                                     return (
@@ -1468,20 +1798,40 @@ export function FormulaRationalesClient() {
                                           }
 
                                           {
-                                            exists
+                                            translating
                                               ? (
-                                                  <CheckCircle2
-                                                    size={13}
-                                                    className="ml-auto text-emerald-500"
-                                                  />
-                                                )
-                                              : (
-                                                  <span className="ml-auto text-[10px] font-medium text-[#9ca3b8]">
+                                                  <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-medium text-amber-700">
+                                                    <Loader2
+                                                      size={12}
+                                                      className="animate-spin"
+                                                    />
                                                     {
-                                                      copy.empty
+                                                      translationCopy.translating
                                                     }
                                                   </span>
                                                 )
+                                              : translationPending
+                                                ? (
+                                                    <span className="ml-auto text-[10px] font-medium text-amber-700">
+                                                      {
+                                                        translationCopy.pendingBadge
+                                                      }
+                                                    </span>
+                                                  )
+                                                : exists
+                                                  ? (
+                                                      <CheckCircle2
+                                                        size={13}
+                                                        className="ml-auto text-emerald-500"
+                                                      />
+                                                    )
+                                                  : (
+                                                      <span className="ml-auto text-[10px] font-medium text-[#9ca3b8]">
+                                                        {
+                                                          copy.empty
+                                                        }
+                                                      </span>
+                                                    )
                                           }
                                         </div>
 
@@ -1530,43 +1880,73 @@ export function FormulaRationalesClient() {
                                           {
                                             payload?.canEdit
                                               ? (
-                                                  <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                      void save(
-                                                        version.id,
-                                                        section,
-                                                      )
-                                                    }
-                                                    disabled={
-                                                      savingKey !==
-                                                      null
-                                                    }
-                                                    className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#3b6ef8] px-3 text-xs font-bold text-white shadow-sm hover:bg-[#315ed8] disabled:cursor-wait disabled:opacity-60"
-                                                  >
+                                                  <div className="flex flex-wrap justify-end gap-2">
                                                     {
-                                                      savingKey ===
-                                                      key
+                                                      translationPending &&
+                                                      contentRecord &&
+                                                      !translating
                                                         ? (
-                                                            <Loader2
-                                                              size={14}
-                                                              className="animate-spin"
-                                                            />
+                                                            <button
+                                                              type="button"
+                                                              onClick={() =>
+                                                                void translate(
+                                                                  version.id,
+                                                                  section,
+                                                                  contentRecord,
+                                                                )
+                                                              }
+                                                              disabled={
+                                                                savingKey !==
+                                                                null
+                                                              }
+                                                              className="inline-flex h-9 items-center rounded-xl border border-amber-300 bg-amber-50 px-3 text-xs font-bold text-amber-800 hover:bg-amber-100 disabled:opacity-60"
+                                                            >
+                                                              {
+                                                                translationCopy.retry
+                                                              }
+                                                            </button>
                                                           )
-                                                        : (
-                                                            <Save
-                                                              size={14}
-                                                            />
-                                                          )
+                                                        : null
                                                     }
 
-                                                    {
-                                                      savingKey ===
-                                                      key
-                                                        ? copy.saving
-                                                        : copy.save
-                                                    }
-                                                  </button>
+                                                    <button
+                                                      type="button"
+                                                      onClick={() =>
+                                                        void save(
+                                                          version.id,
+                                                          section,
+                                                        )
+                                                      }
+                                                      disabled={
+                                                        savingKey !==
+                                                        null
+                                                      }
+                                                      className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#3b6ef8] px-3 text-xs font-bold text-white shadow-sm hover:bg-[#315ed8] disabled:cursor-wait disabled:opacity-60"
+                                                    >
+                                                      {
+                                                        savingKey ===
+                                                        key
+                                                          ? (
+                                                              <Loader2
+                                                                size={14}
+                                                                className="animate-spin"
+                                                              />
+                                                            )
+                                                          : (
+                                                              <Save
+                                                                size={14}
+                                                              />
+                                                            )
+                                                      }
+
+                                                      {
+                                                        savingKey ===
+                                                        key
+                                                          ? translationCopy.saving
+                                                          : copy.save
+                                                      }
+                                                    </button>
+                                                  </div>
                                                 )
                                               : null
                                           }

@@ -4,8 +4,12 @@ import {
   writeHelpContentRevision,
 } from "@/lib/help/helpStore.server";
 import {
+  hashHelpSourceText,
   translateHelpBlockAllLocales,
 } from "@/lib/help/helpTranslation.server";
+import type {
+  HelpTranslations,
+} from "@/lib/help/helpTypes";
 import {
   FORMULA_RATIONALE_SECTIONS,
   formulaRationaleHelpKey,
@@ -101,7 +105,49 @@ export async function readFormulaRationalesForVersionIds(
   return result;
 }
 
-export async function writeFormulaRationaleSection(
+const FORMULA_RATIONALE_LOCALES: readonly LocaleCode[] = [
+  "ru",
+  "pl",
+  "en",
+  "es",
+  "uk",
+  "de",
+  "cs",
+] as const;
+
+function sourceOnlyTranslations(
+  sourceLocale: LocaleCode,
+  sourceText: string,
+) {
+  const translations =
+    Object.fromEntries(
+      FORMULA_RATIONALE_LOCALES.map(
+        (locale) => [
+          locale,
+          locale === sourceLocale
+            ? sourceText
+            : "",
+        ],
+      ),
+    ) as HelpTranslations;
+
+  return translations;
+}
+
+function currentRationaleRow(
+  rows: HelpRow[],
+) {
+  return (
+    rows.find(
+      (row) =>
+        row.blockKind ===
+        "what",
+    ) ??
+    null
+  );
+}
+
+export async function saveFormulaRationaleSource(
   input: {
     ruleVersionId: string;
     section: FormulaRationaleSection;
@@ -110,35 +156,206 @@ export async function writeFormulaRationaleSection(
     updatedByAppUserId: string;
   },
 ) {
-  const sourceText = input.sourceText.trim();
+  const sourceText =
+    input.sourceText.trim();
 
-  const translated =
-    await translateHelpBlockAllLocales({
-      sourceLocale: input.sourceLocale,
+  const row =
+    await writeHelpContentRevision({
+      helpKey:
+        formulaRationaleHelpKey(
+          input.ruleVersionId,
+          input.section,
+        ),
+      blockKind:
+        "what",
+      sourceLocale:
+        input.sourceLocale,
       sourceText,
+      translations:
+        sourceOnlyTranslations(
+          input.sourceLocale,
+          sourceText,
+        ),
+      sourceHash:
+        hashHelpSourceText(
+          sourceText,
+        ),
+      provider:
+        sourceText
+          ? "formula_rationale_source_save_v1"
+          : "none",
+      modelName:
+        null,
+      reasoningEffort:
+        null,
+      responseId:
+        null,
+      usage:
+        sourceText
+          ? {
+              translationState:
+                "pending",
+            }
+          : {
+              translationState:
+                "not_required",
+            },
+      updatedByAppUserId:
+        input.updatedByAppUserId,
     });
-
-  const row = await writeHelpContentRevision({
-    helpKey: formulaRationaleHelpKey(
-      input.ruleVersionId,
-      input.section,
-    ),
-    blockKind: "what",
-    sourceLocale: input.sourceLocale,
-    sourceText,
-    translations: translated.translations,
-    sourceHash: translated.sourceHash,
-    provider: translated.provider,
-    modelName: translated.modelName,
-    reasoningEffort: translated.reasoningEffort,
-    responseId: translated.responseId,
-    usage: translated.usage,
-    updatedByAppUserId: input.updatedByAppUserId,
-  });
 
   return toFormulaRationaleRecord(
     input.ruleVersionId,
     input.section,
     row,
   );
+}
+
+export async function translateFormulaRationaleSection(
+  input: {
+    ruleVersionId: string;
+    section: FormulaRationaleSection;
+    sourceLocale: LocaleCode;
+    sourceText: string;
+    expectedRevision: number;
+    updatedByAppUserId: string;
+  },
+) {
+  const sourceText =
+    input.sourceText.trim();
+
+  const helpKey =
+    formulaRationaleHelpKey(
+      input.ruleVersionId,
+      input.section,
+    );
+
+  const beforeRows =
+    await readHelpContentByKeys([
+      helpKey,
+    ]);
+
+  const before =
+    currentRationaleRow(
+      beforeRows,
+    );
+
+  if (!before) {
+    throw new Error(
+      "FORMULA_RATIONALE_TRANSLATION_SOURCE_NOT_FOUND",
+    );
+  }
+
+  if (
+    before.revision !==
+      input.expectedRevision ||
+    before.sourceLocale !==
+      input.sourceLocale ||
+    before.sourceText !==
+      sourceText
+  ) {
+    return {
+      state:
+        "stale" as const,
+      content:
+        toFormulaRationaleRecord(
+          input.ruleVersionId,
+          input.section,
+          before,
+        ),
+    };
+  }
+
+  if (!sourceText) {
+    return {
+      state:
+        "not_required" as const,
+      content:
+        toFormulaRationaleRecord(
+          input.ruleVersionId,
+          input.section,
+          before,
+        ),
+    };
+  }
+
+  const translated =
+    await translateHelpBlockAllLocales({
+      sourceLocale:
+        input.sourceLocale,
+      sourceText,
+    });
+
+  const afterTranslationRows =
+    await readHelpContentByKeys([
+      helpKey,
+    ]);
+
+  const afterTranslation =
+    currentRationaleRow(
+      afterTranslationRows,
+    );
+
+  if (!afterTranslation) {
+    throw new Error(
+      "FORMULA_RATIONALE_TRANSLATION_SOURCE_DISAPPEARED",
+    );
+  }
+
+  if (
+    afterTranslation.revision !==
+      input.expectedRevision ||
+    afterTranslation.sourceLocale !==
+      input.sourceLocale ||
+    afterTranslation.sourceText !==
+      sourceText
+  ) {
+    return {
+      state:
+        "stale" as const,
+      content:
+        toFormulaRationaleRecord(
+          input.ruleVersionId,
+          input.section,
+          afterTranslation,
+        ),
+    };
+  }
+
+  const translatedRow =
+    await writeHelpContentRevision({
+      helpKey,
+      blockKind:
+        "what",
+      sourceLocale:
+        input.sourceLocale,
+      sourceText,
+      translations:
+        translated.translations,
+      sourceHash:
+        translated.sourceHash,
+      provider:
+        translated.provider,
+      modelName:
+        translated.modelName,
+      reasoningEffort:
+        translated.reasoningEffort,
+      responseId:
+        translated.responseId,
+      usage:
+        translated.usage,
+      updatedByAppUserId:
+        input.updatedByAppUserId,
+    });
+
+  return {
+    state:
+      "translated" as const,
+    content:
+      toFormulaRationaleRecord(
+        input.ruleVersionId,
+        input.section,
+        translatedRow,
+      ),
+  };
 }
