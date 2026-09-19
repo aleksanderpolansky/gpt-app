@@ -28,7 +28,7 @@ import { supabase } from "../../../../../lib/supabase";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const ROUTE_MARKER = "admin-consequence-constructor-v1-1" as const;
+const ROUTE_MARKER = "admin-consequence-constructor-v1-2" as const;
 const CONSEQUENCE_PROCESSOR = "reality_curator_consequence_constructor" as const;
 const CONSEQUENCE_PROCESSOR_VERSION = "1" as const;
 const TARGET_SELECTED_EVENT = "consequence_constructor_target_selected" as const;
@@ -321,6 +321,89 @@ async function readSelectedTargetsByTask(
   return byTask;
 }
 
+async function filterSelectedTargetsToCurrentCandidates(
+  tasks: Awaited<ReturnType<typeof listConsequenceConstructorTasksV1>>,
+  selectedHistoryMap: Map<string, SelectedTarget[]>,
+  localeValue: unknown,
+) {
+  const tasksWithSelections =
+    tasks.filter(
+      (task) =>
+        (
+          selectedHistoryMap.get(
+            task.id,
+          ) ??
+          []
+        ).length >
+        0,
+    );
+
+  if (
+    tasksWithSelections.length ===
+    0
+  ) {
+    return new Map<string, SelectedTarget[]>();
+  }
+
+  const candidateMap =
+    await buildTargetCandidates(
+      tasksWithSelections.map(
+        (task) =>
+          task.sourceValueObjectId,
+      ),
+      localeValue,
+    );
+
+  const currentMap =
+    new Map<
+      string,
+      SelectedTarget[]
+    >();
+
+  for (
+    const task
+    of tasksWithSelections
+  ) {
+    const allowedTargetIds =
+      new Set(
+        (
+          candidateMap.get(
+            task.sourceValueObjectId,
+          ) ??
+          []
+        ).map(
+          (candidate) =>
+            candidate.id,
+        ),
+      );
+
+    const currentTargets =
+      (
+        selectedHistoryMap.get(
+          task.id,
+        ) ??
+        []
+      ).filter(
+        (target) =>
+          allowedTargetIds.has(
+            target.targetValueObjectId,
+          ),
+      );
+
+    if (
+      currentTargets.length >
+      0
+    ) {
+      currentMap.set(
+        task.id,
+        currentTargets,
+      );
+    }
+  }
+
+  return currentMap;
+}
+
 async function enrichTasksWithTargets(
   tasks: Awaited<ReturnType<typeof listConsequenceConstructorTasksV1>>,
   localeValue: unknown,
@@ -509,9 +592,16 @@ export async function GET(request: Request) {
       await listConsequenceConstructorTasksV1();
 
     if (listOnly) {
-      const selectedMap =
+      const selectedHistoryMap =
         await readSelectedTargetsByTask(
           tasks,
+        );
+
+      const selectedMap =
+        await filterSelectedTargetsToCurrentCandidates(
+          tasks,
+          selectedHistoryMap,
+          locale,
         );
 
       const listTasks =
@@ -556,6 +646,10 @@ export async function GET(request: Request) {
           [],
         detailHydration:
           "on_demand",
+        selectedTargetCountPolicy:
+          "current_active_related_leaf_only",
+        historicalSelectionsRetained:
+          true,
         targetCandidatesLoaded:
           false,
         formulaContextsLoaded:
