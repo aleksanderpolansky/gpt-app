@@ -375,6 +375,16 @@ const COPY: Record<LocaleCode, Copy> = {
   },
 };
 
+const FORMULA_RATIONALE_ADMIN_LABEL: Record<LocaleCode, string> = {
+  ru: "Обоснование формулы",
+  pl: "Uzasadnienie formuły",
+  en: "Formula rationale",
+  es: "Justificación de la fórmula",
+  uk: "Обґрунтування формули",
+  de: "Formelbegründung",
+  cs: "Odůvodnění vzorce",
+};
+
 const TRIGGERS = [
   "fact_created",
   "fact_corrected",
@@ -782,6 +792,16 @@ export default function AdminFormulaBuilderPage() {
 
         {series && version ? (
           <div className="mt-6 space-y-5">
+            <div className="flex justify-end">
+              <a
+                href={`/admin/formula-rationales?versionId=${encodeURIComponent(version.id)}&locale=${encodeURIComponent(locale)}`}
+                className="inline-flex min-h-10 items-center rounded-xl border border-[#cfd5ea] bg-white px-4 text-sm font-semibold text-[#3b6ef8] hover:bg-[#f4f6ff]"
+              >
+                {FORMULA_RATIONALE_ADMIN_LABEL[locale] ??
+                  FORMULA_RATIONALE_ADMIN_LABEL.en}
+              </a>
+            </div>
+
             <div className="grid gap-3 md:grid-cols-2">
               <Info label={copy.rule} value={series.rule_code} />
               <Info label={copy.scope} value={series.scope_code} />

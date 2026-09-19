@@ -778,6 +778,8 @@ export function GlobalSidebar({
   const isAdminUsersActive = currentPathname === "/admin/users";
   const isAdminAiBillingActive = currentPathname === "/admin/ai-billing";
   const isHelpSystemActive = currentPathname === "/admin/help-system";
+  const isFormulaRationalesActive =
+    currentPathname === "/admin/formula-rationales";
   const isDashboardSectionActive =
     isDashboardActive ||
     isUserAiProcessingActive ||
@@ -791,6 +793,7 @@ export function GlobalSidebar({
     isAdminUsersActive ||
     isAdminAiBillingActive ||
     isHelpSystemActive ||
+    isFormulaRationalesActive ||
     isActivityTemplatesActive;
   const isCalendarActive = currentPathname.startsWith("/calendar");
   const isObservationObjectsActive = currentPathname.startsWith("/value-objects");
@@ -952,6 +955,12 @@ export function GlobalSidebar({
                 depth={1}
                 href={localeHref("/admin/help-system")}
                 active={isHelpSystemActive}
+              />
+              <TreeItem
+                label={t("navigation.formulaRationales")}
+                depth={1}
+                href={localeHref("/admin/formula-rationales")}
+                active={isFormulaRationalesActive}
               />
               {adminCanEdit ? (
                 <TreeItem

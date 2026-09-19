@@ -143,6 +143,16 @@ type ActivityFactsCopy = {
 
 const SUPPORTED_LOCALES: Locale[] = ["en", "pl", "ru", "uk", "de", "es", "cs"];
 
+const FORMULA_RATIONALE_LINK_LABEL: Record<Locale, string> = {
+  en: "How was this calculated?",
+  pl: "Jak to obliczono?",
+  ru: "Как рассчитано?",
+  uk: "Як це розраховано?",
+  de: "Wie wurde das berechnet?",
+  es: "¿Cómo se calculó?",
+  cs: "Jak to bylo vypočteno?",
+};
+
 const COPY: Record<Locale, ActivityFactsCopy> = {
   en: {
     pageTitle: "Activity facts",
@@ -1643,6 +1653,16 @@ function ActivityFactsPageContent() {
                     ? `${selectedFact.calculationRuleCode} · ${selectedFact.calculationRuleVersion ?? "—"}`
                     : "—"}
                 </strong>
+
+                {selectedFact.calculationRuleCode &&
+                selectedFact.calculationRuleVersion ? (
+                  <Link
+                    href={`/formula-rationale?ruleCode=${encodeURIComponent(selectedFact.calculationRuleCode)}&version=${encodeURIComponent(selectedFact.calculationRuleVersion)}&locale=${encodeURIComponent(locale)}`}
+                    className="mt-3 inline-flex rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 no-underline transition hover:bg-blue-100"
+                  >
+                    {FORMULA_RATIONALE_LINK_LABEL[locale]}
+                  </Link>
+                ) : null}
               </div>
 
               <div className="rounded-[22px] border border-slate-200 p-4 md:col-span-2">
