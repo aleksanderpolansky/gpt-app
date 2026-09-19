@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase";
 import {
   type FormulaExpressionNodeV1,
   type FormulaInputSelectorV1,
+  type FormulaScientificConstantV1,
   isFormulaExpressionNodeV1,
 } from "./formula-rule-registry.contract";
 import { listFormulaRuleRegistryV1 } from "./formula-rule-registry.server";
@@ -44,6 +45,43 @@ function object(value: unknown): JsonRecord {
 
 function own(record: JsonRecord, key: string) {
   return Object.prototype.hasOwnProperty.call(record, key);
+}
+
+function scientificConstantMap(
+  metadata: JsonRecord,
+) {
+  const raw =
+    Array.isArray(metadata.scientificConstants)
+      ? metadata.scientificConstants
+      : [];
+
+  const result =
+    new Map<string, FormulaScientificConstantV1>();
+
+  for (const item of raw) {
+    if (
+      !item ||
+      typeof item !== "object" ||
+      Array.isArray(item)
+    ) {
+      continue;
+    }
+
+    const constant =
+      item as FormulaScientificConstantV1;
+
+    const key = text(constant.key);
+
+    if (
+      key &&
+      typeof constant.value === "number" &&
+      Number.isFinite(constant.value)
+    ) {
+      result.set(key, constant);
+    }
+  }
+
+  return result;
 }
 
 function known(
@@ -131,30 +169,108 @@ function bool(shape: Shape, op: string) {
   return shape.valueType === "boolean" ? shape : bad(`${op}:boolean_required`);
 }
 
-function literalShape(value: unknown): Shape {
-  if (typeof value === "number") {
-    return Number.isFinite(value)
+function literalShape(
+  node: FormulaExpressionNodeV1,
+  constants: Map<string, FormulaScientificConstantV1>,
+): Shape {
+  const constantKey =
+    text(node.constantKey);
+
+  if (constantKey) {
+    const constant =
+      constants.get(constantKey);
+
+    if (!constant) {
+      return bad(
+        "literal:scientific_constant_missing",
+      );
+    }
+
+    if (
+      typeof node.value !== "number" ||
+      !Number.isFinite(node.value) ||
+      node.value !== constant.value
+    ) {
+      return bad(
+        "literal:scientific_constant_value_mismatch",
+      );
+    }
+
+    const dimension =
+      text(constant.dimensionCode);
+
+    const unit =
+      text(constant.unitCode);
+
+    if (
+      dimension === "dimensionless" ||
+      dimension === "ratio" ||
+      unit === "one"
+    ) {
+      return known(
+        "numeric",
+        null,
+        null,
+        true,
+        [`literal:constant:${constantKey}`],
+      );
+    }
+
+    return known(
+      "numeric",
+      dimension || null,
+      unit || null,
+      false,
+      [`literal:constant:${constantKey}`],
+    );
+  }
+
+  if (typeof node.value === "number") {
+    return Number.isFinite(node.value)
       ? known("numeric", null, null, true)
       : bad("literal:non_finite");
   }
-  if (typeof value === "boolean") return known("boolean", "boolean", null);
-  if (typeof value === "string") return known("text", "text", null);
-  return bad("literal:null_not_complete");
+
+  if (typeof node.value === "boolean") {
+    return known("boolean", "boolean", null);
+  }
+
+  if (typeof node.value === "string") {
+    return known("text", "text", null);
+  }
+
+  return bad(
+    "literal:null_not_complete",
+  );
 }
 
 function infer(
   node: FormulaExpressionNodeV1,
   inputShapes: Map<string, Shape>,
+  constants: Map<string, FormulaScientificConstantV1>,
   depth = 0,
 ): Shape {
   if (depth > 32) return bad("expression:too_deep");
 
-  if (node.op === "literal") return literalShape(node.value);
+  if (node.op === "literal") {
+    return literalShape(
+      node,
+      constants,
+    );
+  }
   if (node.op === "input") {
     return inputShapes.get(text(node.input)) ?? unknown(`input:${text(node.input)}:unknown`);
   }
 
-  const args = (node.args ?? []).map((arg) => infer(arg, inputShapes, depth + 1));
+  const args =
+    (node.args ?? []).map((arg) =>
+      infer(
+        arg,
+        inputShapes,
+        constants,
+        depth + 1,
+      ),
+    );
   if (args.some((shape) => shape.state === "incompatible")) {
     return bad(`${node.op}:child_incompatible`);
   }
@@ -174,9 +290,57 @@ function infer(
       if (n.some((shape) => shape.state === "incompatible")) return bad("multiply:numeric_required");
       if (n.some((shape) => shape.state === "unknown")) return unknown("multiply:child_unknown");
       const dimensionful = n.filter((shape) => !shape.scalar);
-      if (dimensionful.length === 0) return known("numeric", null, null, true, issues(n));
-      if (dimensionful.length === 1) return { ...dimensionful[0], issues: issues(n) };
-      return unknown("multiply:compound_dimension_not_modeled");
+      if (dimensionful.length === 0) {
+        return known(
+          "numeric",
+          null,
+          null,
+          true,
+          issues(n),
+        );
+      }
+
+      if (dimensionful.length === 1) {
+        return {
+          ...dimensionful[0],
+          issues: issues(n),
+        };
+      }
+
+      if (dimensionful.length === 2) {
+        const mass =
+          dimensionful.find(
+            (shape) =>
+              shape.dimension === "mass" &&
+              shape.unit === "kilogram",
+          ) ?? null;
+
+        const acceleration =
+          dimensionful.find(
+            (shape) =>
+              shape.dimension ===
+                "acceleration" &&
+              shape.unit ===
+                "meter_per_second_squared",
+          ) ?? null;
+
+        if (mass && acceleration) {
+          return known(
+            "numeric",
+            "force",
+            "newton",
+            false,
+            [
+              ...issues(n),
+              "multiply:mass_acceleration_to_force",
+            ],
+          );
+        }
+      }
+
+      return unknown(
+        "multiply:compound_dimension_not_modeled",
+      );
     }
 
     case "divide": {
@@ -587,7 +751,12 @@ export async function testFormulaRuleDraftV1(input: {
     throw new Error("FORMULA_RULE_TEST_VERSION_NOT_TESTABLE");
   }
 
-  const metadata = object(version.metadata_json);
+  const metadata =
+    object(version.metadata_json);
+
+  const scientificConstants =
+    scientificConstantMap(metadata);
+
   if (metadata.draftIncomplete !== false || text(metadata.formulaState) !== "configured") {
     throw new Error("FORMULA_RULE_TEST_DRAFT_NOT_CONFIGURED");
   }
@@ -680,7 +849,14 @@ export async function testFormulaRuleDraftV1(input: {
     inputShapes.set(text(selector.key), selectorShape(selector, defs));
   }
 
-  const unitAlgebra = algebra(infer(expression, inputShapes), targetShape(target));
+  const unitAlgebra = algebra(
+    infer(
+      expression,
+      inputShapes,
+      scientificConstants,
+    ),
+    targetShape(target),
+  );
   if (unitAlgebra.status === "incompatible") {
     throw new Error(`FORMULA_RULE_TEST_UNIT_ALGEBRA_INCOMPATIBLE:${unitAlgebra.issues.join("|")}`);
   }
@@ -689,7 +865,11 @@ export async function testFormulaRuleDraftV1(input: {
     if (!isFormulaExpressionNodeV1(condition.expression)) {
       throw new Error("FORMULA_RULE_TEST_CONDITION_INVALID");
     }
-    const conditionShape = infer(condition.expression, inputShapes);
+    const conditionShape = infer(
+      condition.expression,
+      inputShapes,
+      scientificConstants,
+    );
     if (
       conditionShape.state === "incompatible" ||
       (conditionShape.state === "known" && conditionShape.valueType !== "boolean")

@@ -91,6 +91,8 @@ type Copy = {
   configured: string;
   validationNote: string;
   advancedNote: string;
+  scientificConstants?: string;
+  scientificConstantsHelp?: string;
 };
 
 const COPY: Record<LocaleCode, Copy> = {
@@ -135,6 +137,10 @@ const COPY: Record<LocaleCode, Copy> = {
       "The server validates AST structure, input references, required inputs, source semantic address and result unit.",
     advancedNote:
       "This V1 combines simple quick patterns with an advanced JSON editor. A later UI can replace JSON editing without changing the rule contract.",
+    scientificConstants:
+      "Scientific constants",
+    scientificConstantsHelp:
+      "Named physical constants and study coefficients with value, unit, source, applicability and version.",
   },
   ru: {
     title: "Конструктор формулы",
@@ -177,6 +183,10 @@ const COPY: Record<LocaleCode, Copy> = {
       "Сервер проверяет структуру формулы, ссылки на входы, обязательные входы, исходный смысловой адрес и единицу результата.",
     advancedNote:
       "V1 сочетает простые готовые схемы и расширенный JSON-редактор. Позже JSON можно заменить визуальными блоками без изменения контракта правил.",
+    scientificConstants:
+      "Научные константы и коэффициенты",
+    scientificConstantsHelp:
+      "Именованные физические константы и исследовательские коэффициенты: значение, единица, источник, область применимости и версия.",
   },
   pl: {
     title: "Konstruktor formuły",
@@ -406,6 +416,10 @@ export default function AdminFormulaBuilderPage() {
   const [version, setVersion] = useState<FormulaVersion | null>(null);
   const [inputsText, setInputsText] = useState("[]");
   const [conditionText, setConditionText] = useState("{}");
+  const [
+    scientificConstantsText,
+    setScientificConstantsText,
+  ] = useState("[]");
   const [expressionText, setExpressionText] = useState(
     '{\n  "op": "literal",\n  "value": null\n}',
   );
@@ -471,6 +485,22 @@ export default function AdminFormulaBuilderPage() {
           op: "literal",
           value: null,
         }),
+      );
+
+      const loadedFormulaMetadata =
+        asRecord(
+          matchedVersion.metadata_json,
+        );
+
+      setScientificConstantsText(
+        prettyJson(
+          Array.isArray(
+            loadedFormulaMetadata.scientificConstants,
+          )
+            ? loadedFormulaMetadata.scientificConstants
+            : [],
+          [],
+        ),
       );
 
       const rawTriggers = Array.isArray(matchedVersion.trigger_contract_json)
@@ -583,11 +613,27 @@ export default function AdminFormulaBuilderPage() {
     try {
       const parsedInputs = JSON.parse(inputsText) as unknown;
       const parsedCondition = JSON.parse(conditionText) as unknown;
-      const parsedExpression = JSON.parse(expressionText) as unknown;
+      const parsedExpression =
+        JSON.parse(expressionText) as unknown;
+
+      const parsedScientificConstants =
+        JSON.parse(
+          scientificConstantsText,
+        ) as unknown;
 
       if (!Array.isArray(parsedInputs)) {
         throw new Error("FORMULA_BUILDER_INPUTS_MUST_BE_ARRAY");
       }
+      if (
+        !Array.isArray(
+          parsedScientificConstants,
+        )
+      ) {
+        throw new Error(
+          "FORMULA_BUILDER_SCIENTIFIC_CONSTANTS_MUST_BE_ARRAY",
+        );
+      }
+
       if (
         !parsedCondition ||
         typeof parsedCondition !== "object" ||
@@ -615,6 +661,8 @@ export default function AdminFormulaBuilderPage() {
           inputs: parsedInputs,
           condition: parsedCondition,
           expression: parsedExpression,
+          scientificConstants:
+            parsedScientificConstants,
           triggers,
           resultFactRole: resultRole,
           resultUnitCode: version.result_unit_code,
@@ -814,6 +862,27 @@ export default function AdminFormulaBuilderPage() {
               onChange={setInputsText}
               disabled={!editable || busy}
               rows={12}
+            />
+
+            <JsonEditor
+              label={
+                copy.scientificConstants ??
+                "Scientific constants"
+              }
+              help={
+                copy.scientificConstantsHelp ??
+                "Named constants with scientific provenance."
+              }
+              value={
+                scientificConstantsText
+              }
+              onChange={
+                setScientificConstantsText
+              }
+              disabled={
+                !editable || busy
+              }
+              rows={14}
             />
 
             <JsonEditor

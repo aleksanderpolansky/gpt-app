@@ -79,16 +79,32 @@ export type FormulaExpressionNodeV1 = {
   input?: string;
   value?: number | string | boolean | null;
   digits?: number;
+  constantKey?: string;
 };
 
 export type FormulaInputSelectorV1 = {
   key: string;
+  label?: string;
   kind: "source_fact" | "result_fact" | "snapshot" | "reference";
   parameterDefinitionId?: string;
   valueObjectId?: string;
   window?: "event" | "hour" | "day" | "week" | "month" | "rolling_7_days" | "rolling_30_days";
   selection?: "latest" | "all" | "sum" | "average" | "count" | "count_unique_days";
   required?: boolean;
+};
+
+export type FormulaScientificConstantV1 = {
+  key: string;
+  kind: "physical_constant" | "study_coefficient";
+  label: string;
+  value: number;
+  dimensionCode: string;
+  unitCode: string;
+  sourceTitle: string;
+  sourceReference: string;
+  sourceYear?: number;
+  applicability: string;
+  version: string;
 };
 
 export type FormulaRuleVersionContractV1 = {
@@ -126,6 +142,12 @@ export function isFormulaExpressionNodeV1(
   }
 
   if (value.input !== undefined && typeof value.input !== "string") return false;
+  if (
+    value.constantKey !== undefined &&
+    typeof value.constantKey !== "string"
+  ) {
+    return false;
+  }
   if (
     value.digits !== undefined &&
     (typeof value.digits !== "number" ||

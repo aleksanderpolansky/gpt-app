@@ -106,6 +106,14 @@ function fingerprintPayload(
   series: RegistrySeries,
   version: RegistryVersion,
 ) {
+  const metadata =
+    asRecord(version.metadata_json);
+
+  const scientificConstantsForFingerprint =
+    Array.isArray(metadata.scientificConstants)
+      ? metadata.scientificConstants
+      : null;
+
   return {
     contract: "ARCTOR_FORMULA_CONFIGURATION_FINGERPRINT_V1",
     series: {
@@ -132,6 +140,12 @@ function fingerprintPayload(
       resultFactRoleCode: version.result_fact_role_code,
       resultUnitCode: version.result_unit_code,
       missingInputPolicyCode: version.missing_input_policy_code,
+      ...(scientificConstantsForFingerprint
+        ? {
+            scientificConstants:
+              scientificConstantsForFingerprint,
+          }
+        : {}),
     },
   };
 }

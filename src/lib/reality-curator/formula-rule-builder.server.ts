@@ -6,6 +6,7 @@ import {
   type FormulaInputSelectorV1,
   type FormulaMissingInputPolicy,
   type FormulaResultFactRole,
+  type FormulaScientificConstantV1,
   isFormulaExpressionNodeV1,
 } from "./formula-rule-registry.contract";
 import {
@@ -18,6 +19,8 @@ type JsonRecord = Record<string, unknown>;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const INPUT_KEY_RE = /^[a-z][a-z0-9_]{0,63}$/;
+const SCIENTIFIC_CONSTANT_KEY_RE =
+  /^[a-z][a-z0-9_]{0,63}$/;
 const INPUT_KINDS = new Set([
   "source_fact",
   "result_fact",
@@ -59,6 +62,7 @@ export type ConfigureFormulaRuleDraftV1Input = {
   inputs: FormulaInputSelectorV1[];
   condition?: JsonRecord;
   expression: FormulaExpressionNodeV1;
+  scientificConstants?: FormulaScientificConstantV1[];
   triggers: FormulaTrigger[];
   resultFactRole: FormulaResultFactRole;
   resultUnitCode?: string | null;
@@ -69,6 +73,8 @@ export type ConfigureFormulaRuleDraftV1Input = {
 type ExpressionValidationContext = {
   inputKeys: Set<string>;
   usedInputKeys: Set<string>;
+  constants: Map<string, FormulaScientificConstantV1>;
+  usedConstantKeys: Set<string>;
 };
 
 function text(value: unknown): string {
@@ -79,6 +85,110 @@ function asRecord(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as JsonRecord)
     : {};
+}
+
+function validateScientificConstants(value: unknown) {
+  const raw = value ?? [];
+
+  if (!Array.isArray(raw) || raw.length > 64) {
+    throw new Error(
+      "FORMULA_RULE_BUILDER_SCIENTIFIC_CONSTANTS_INVALID",
+    );
+  }
+
+  const constants =
+    new Map<string, FormulaScientificConstantV1>();
+
+  for (const item of raw) {
+    if (
+      !item ||
+      typeof item !== "object" ||
+      Array.isArray(item)
+    ) {
+      throw new Error(
+        "FORMULA_RULE_BUILDER_SCIENTIFIC_CONSTANT_INVALID",
+      );
+    }
+
+    const constant =
+      item as FormulaScientificConstantV1;
+
+    const key = text(constant.key);
+    const label = text(constant.label);
+    const dimensionCode =
+      text(constant.dimensionCode);
+    const unitCode =
+      text(constant.unitCode);
+    const sourceTitle =
+      text(constant.sourceTitle);
+    const sourceReference =
+      text(constant.sourceReference);
+    const applicability =
+      text(constant.applicability);
+    const version =
+      text(constant.version);
+
+    if (
+      !SCIENTIFIC_CONSTANT_KEY_RE.test(key) ||
+      constants.has(key)
+    ) {
+      throw new Error(
+        "FORMULA_RULE_BUILDER_SCIENTIFIC_CONSTANT_KEY_INVALID",
+      );
+    }
+
+    if (
+      constant.kind !== "physical_constant" &&
+      constant.kind !== "study_coefficient"
+    ) {
+      throw new Error(
+        "FORMULA_RULE_BUILDER_SCIENTIFIC_CONSTANT_KIND_INVALID",
+      );
+    }
+
+    if (
+      !label ||
+      typeof constant.value !== "number" ||
+      !Number.isFinite(constant.value) ||
+      !dimensionCode ||
+      !unitCode ||
+      !sourceTitle ||
+      !sourceReference ||
+      !applicability ||
+      !version
+    ) {
+      throw new Error(
+        "FORMULA_RULE_BUILDER_SCIENTIFIC_CONSTANT_FIELDS_INVALID",
+      );
+    }
+
+    if (
+      constant.sourceYear !== undefined &&
+      (
+        !Number.isInteger(constant.sourceYear) ||
+        constant.sourceYear < 1800 ||
+        constant.sourceYear > 2200
+      )
+    ) {
+      throw new Error(
+        "FORMULA_RULE_BUILDER_SCIENTIFIC_CONSTANT_YEAR_INVALID",
+      );
+    }
+
+    constants.set(key, {
+      ...constant,
+      key,
+      label,
+      dimensionCode,
+      unitCode,
+      sourceTitle,
+      sourceReference,
+      applicability,
+      version,
+    });
+  }
+
+  return constants;
 }
 
 function assertExactArity(
@@ -114,20 +224,74 @@ function validateExpressionNode(
 
   if (node.op === "literal") {
     if (args.length > 0 || node.input !== undefined) {
-      throw new Error("FORMULA_RULE_BUILDER_LITERAL_SHAPE_INVALID");
+      throw new Error(
+        "FORMULA_RULE_BUILDER_LITERAL_SHAPE_INVALID",
+      );
     }
+
     if (node.value === undefined || node.value === null) {
-      throw new Error("FORMULA_RULE_BUILDER_PLACEHOLDER_LITERAL_NOT_COMPLETE");
+      throw new Error(
+        "FORMULA_RULE_BUILDER_PLACEHOLDER_LITERAL_NOT_COMPLETE",
+      );
     }
+
     if (node.digits !== undefined) {
-      throw new Error("FORMULA_RULE_BUILDER_LITERAL_DIGITS_INVALID");
+      throw new Error(
+        "FORMULA_RULE_BUILDER_LITERAL_DIGITS_INVALID",
+      );
     }
+
+    if (node.constantKey !== undefined) {
+      const constantKey =
+        text(node.constantKey);
+
+      if (
+        !SCIENTIFIC_CONSTANT_KEY_RE.test(
+          constantKey,
+        )
+      ) {
+        throw new Error(
+          "FORMULA_RULE_BUILDER_LITERAL_CONSTANT_KEY_INVALID",
+        );
+      }
+
+      const constant =
+        context.constants.get(constantKey);
+
+      if (!constant) {
+        throw new Error(
+          "FORMULA_RULE_BUILDER_LITERAL_CONSTANT_UNKNOWN",
+        );
+      }
+
+      if (
+        typeof node.value !== "number" ||
+        !Number.isFinite(node.value) ||
+        node.value !== constant.value
+      ) {
+        throw new Error(
+          "FORMULA_RULE_BUILDER_LITERAL_CONSTANT_VALUE_MISMATCH",
+        );
+      }
+
+      context.usedConstantKeys.add(
+        constantKey,
+      );
+    }
+
     return;
   }
 
   if (node.op === "input") {
-    if (args.length > 0 || node.value !== undefined || node.digits !== undefined) {
-      throw new Error("FORMULA_RULE_BUILDER_INPUT_SHAPE_INVALID");
+    if (
+      args.length > 0 ||
+      node.value !== undefined ||
+      node.digits !== undefined ||
+      node.constantKey !== undefined
+    ) {
+      throw new Error(
+        "FORMULA_RULE_BUILDER_INPUT_CONSTANT_KEY_INVALID",
+      );
     }
 
     const inputKey = text(node.input);
@@ -139,8 +303,14 @@ function validateExpressionNode(
     return;
   }
 
-  if (node.input !== undefined || node.value !== undefined) {
-    throw new Error("FORMULA_RULE_BUILDER_OPERATOR_SHAPE_INVALID");
+  if (
+    node.input !== undefined ||
+    node.value !== undefined ||
+    node.constantKey !== undefined
+  ) {
+    throw new Error(
+      "FORMULA_RULE_BUILDER_OPERATOR_CONSTANT_KEY_INVALID",
+    );
   }
 
   if (node.op !== "round" && node.digits !== undefined) {
@@ -250,7 +420,22 @@ function validateInputs(inputs: FormulaInputSelectorV1[]) {
 
     const key = text(input.key);
     if (!INPUT_KEY_RE.test(key) || keys.has(key)) {
-      throw new Error("FORMULA_RULE_BUILDER_INPUT_KEY_INVALID_OR_DUPLICATE");
+      throw new Error(
+        "FORMULA_RULE_BUILDER_INPUT_KEY_INVALID_OR_DUPLICATE",
+      );
+    }
+
+    if (
+      input.label !== undefined &&
+      (
+        typeof input.label !== "string" ||
+        !input.label.trim() ||
+        input.label.trim().length > 300
+      )
+    ) {
+      throw new Error(
+        "FORMULA_RULE_BUILDER_INPUT_LABEL_INVALID",
+      );
     }
 
     if (!INPUT_KINDS.has(text(input.kind))) {
@@ -384,6 +569,12 @@ export async function configureFormulaRuleDraftV1(
   }
 
   const inputKeys = validateInputs(input.inputs);
+
+  const scientificConstantsMap =
+    validateScientificConstants(
+      input.scientificConstants ?? [],
+    );
+
   validateTriggers(input.triggers);
 
   if (!FORMULA_RESULT_FACT_ROLES.includes(input.resultFactRole)) {
@@ -397,6 +588,8 @@ export async function configureFormulaRuleDraftV1(
   const validationContext: ExpressionValidationContext = {
     inputKeys,
     usedInputKeys: new Set<string>(),
+    constants: scientificConstantsMap,
+    usedConstantKeys: new Set<string>(),
   };
 
   validateExpressionNode(input.expression, validationContext);
@@ -406,7 +599,25 @@ export async function configureFormulaRuleDraftV1(
     throw new Error("FORMULA_RULE_BUILDER_CONDITION_INVALID");
   }
 
-  validateCondition(condition, validationContext);
+  validateCondition(
+    condition,
+    validationContext,
+  );
+
+  for (
+    const constantKey
+    of scientificConstantsMap.keys()
+  ) {
+    if (
+      !validationContext.usedConstantKeys.has(
+        constantKey,
+      )
+    ) {
+      throw new Error(
+        `FORMULA_RULE_BUILDER_SCIENTIFIC_CONSTANT_UNUSED:${constantKey}`,
+      );
+    }
+  }
 
   for (const selector of input.inputs) {
     if (selector.required === true && !validationContext.usedInputKeys.has(selector.key)) {
@@ -460,6 +671,14 @@ export async function configureFormulaRuleDraftV1(
     versionMetadata: {
       ...currentMetadata,
       ...(input.curatorMetadata ?? {}),
+      scientificConstantsContract:
+        "ARCTOR_FORMULA_SCIENTIFIC_CONSTANTS_V1",
+      scientificConstants:
+        [...scientificConstantsMap.values()],
+      scientificConstantsState:
+        scientificConstantsMap.size > 0
+          ? "declared"
+          : "none",
       formulaState: "configured",
       draftState: "configured",
       draftIncomplete: false,
