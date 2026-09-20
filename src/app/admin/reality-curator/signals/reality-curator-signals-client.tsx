@@ -42,6 +42,10 @@ type JourneyEvent = {
 type CuratorSignal = {
   kind: "missing_typical_activity";
   status: "new";
+  queueReason: "not_found" | "rejected_automatic_match";
+  rejectedTemplateId: string | null;
+  rejectedTemplateTitle: string | null;
+  rejectedAt: string | null;
   signalId: string;
   activityEventId: string | null;
   userId: string;
@@ -93,6 +97,7 @@ type Copy = {
   loadError: string;
   signalType: string;
   signalTypeValue: string;
+  rejectedMatchValue: string;
   sourceText: string;
   measurements: string;
   noMeasurements: string;
@@ -130,6 +135,7 @@ const COPY: Record<LocaleCode, Copy> = {
     loadError: "Не удалось загрузить очередь куратора.",
     signalType: "Причина сигнала",
     signalTypeValue: "Не найдена типовая активность",
+    rejectedMatchValue: "Автоматически найденное соответствие отклонено",
     sourceText: "Сообщение пользователя",
     measurements: "Выявленные параметры",
     noMeasurements: "Измеримые параметры не выявлены.",
@@ -163,6 +169,7 @@ const COPY: Record<LocaleCode, Copy> = {
     loadError: "Could not load the curator queue.",
     signalType: "Signal reason",
     signalTypeValue: "No typical activity found",
+    rejectedMatchValue: "Automatically found match was rejected",
     sourceText: "User message",
     measurements: "Detected measurements",
     noMeasurements: "No measurable parameters were detected.",
@@ -196,6 +203,7 @@ const COPY: Record<LocaleCode, Copy> = {
     loadError: "Nie udało się wczytać kolejki kuratora.",
     signalType: "Powód sygnału",
     signalTypeValue: "Nie znaleziono typowej aktywności",
+    rejectedMatchValue: "Automatycznie znalezione dopasowanie zostało odrzucone",
     sourceText: "Wiadomość użytkownika",
     measurements: "Wykryte parametry",
     noMeasurements: "Nie wykryto mierzalnych parametrów.",
@@ -229,6 +237,7 @@ const COPY: Record<LocaleCode, Copy> = {
     loadError: "Не вдалося завантажити чергу куратора.",
     signalType: "Причина сигналу",
     signalTypeValue: "Не знайдено типової активності",
+    rejectedMatchValue: "Автоматично знайдену відповідність відхилено",
     sourceText: "Повідомлення користувача",
     measurements: "Виявлені параметри",
     noMeasurements: "Вимірюваних параметрів не виявлено.",
@@ -262,6 +271,7 @@ const COPY: Record<LocaleCode, Copy> = {
     loadError: "Die Kuratorenwarteschlange konnte nicht geladen werden.",
     signalType: "Signalgrund",
     signalTypeValue: "Keine typische Aktivität gefunden",
+    rejectedMatchValue: "Automatisch gefundene Zuordnung wurde abgelehnt",
     sourceText: "Benutzernachricht",
     measurements: "Erkannte Parameter",
     noMeasurements: "Keine messbaren Parameter erkannt.",
@@ -295,6 +305,7 @@ const COPY: Record<LocaleCode, Copy> = {
     loadError: "No se pudo cargar la cola del curador.",
     signalType: "Motivo de la señal",
     signalTypeValue: "No se encontró actividad típica",
+    rejectedMatchValue: "Se rechazó la coincidencia encontrada automáticamente",
     sourceText: "Mensaje del usuario",
     measurements: "Parámetros detectados",
     noMeasurements: "No se detectaron parámetros medibles.",
@@ -328,6 +339,7 @@ const COPY: Record<LocaleCode, Copy> = {
     loadError: "Frontu kurátora se nepodařilo načíst.",
     signalType: "Důvod signálu",
     signalTypeValue: "Nebyla nalezena typická aktivita",
+    rejectedMatchValue: "Automaticky nalezená shoda byla odmítnuta",
     sourceText: "Zpráva uživatele",
     measurements: "Zjištěné parametry",
     noMeasurements: "Nebyly zjištěny měřitelné parametry.",
@@ -557,7 +569,16 @@ export function RealityCuratorSignalsClient() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="text-[10px] font-bold uppercase tracking-[0.17em] text-amber-700">{copy.signalType}</div>
-                  <div className="mt-1 text-base font-extrabold text-[#1a1d2e]">{copy.signalTypeValue}</div>
+                  <div className="mt-1 text-base font-extrabold text-[#1a1d2e]">
+                    {signal.queueReason === "rejected_automatic_match"
+                      ? copy.rejectedMatchValue
+                      : copy.signalTypeValue}
+                  </div>
+                  {signal.queueReason === "rejected_automatic_match" && signal.rejectedTemplateTitle ? (
+                    <div className="mt-1 text-xs font-semibold text-[#7c8099]">
+                      {signal.rejectedTemplateTitle}
+                    </div>
+                  ) : null}
                 </div>
                 <div className="text-xs font-semibold text-[#7c8099]">{copy.analyzedAt}: {formatDate(signal.analyzedAt, locale)}</div>
               </div>

@@ -87,6 +87,7 @@ function buildCuratorSignal(row: RawActivitySignalRow) {
 
   const activityEventId =
     text(analysis.activityEventId) || text(row.output_event_id) || null;
+  const rejection = asRecord(analysis.userTypicalActivityRejectionV1);
   const sourceText =
     text(raw.inputText) ||
     text(asRecord(normalized.durableResult).sourceText) ||
@@ -95,6 +96,13 @@ function buildCuratorSignal(row: RawActivitySignalRow) {
   return {
     kind: "missing_typical_activity" as const,
     status: "new" as const,
+    queueReason:
+      text(rejection.contract) === "ARCTOR_USER_TYPICAL_ACTIVITY_REJECTION_V1"
+        ? ("rejected_automatic_match" as const)
+        : ("not_found" as const),
+    rejectedTemplateId: text(rejection.rejectedTemplateId) || null,
+    rejectedTemplateTitle: text(rejection.rejectedTemplateTitle) || null,
+    rejectedAt: text(rejection.rejectedAt) || null,
     sourceType: row.source_type,
     idempotencyKey: row.idempotency_key,
     signalId: row.id,

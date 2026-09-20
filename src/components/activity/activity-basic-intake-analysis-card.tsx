@@ -76,6 +76,11 @@ const COPY: Record<Locale, {
   retry: string;
   retrying: string;
   retryFailed: string;
+  foundAutomatically: string;
+  rejectMatch: string;
+  rejectingMatch: string;
+  rejectedMatch: string;
+  rejectFailed: string;
 }> = {
   ru: {
     completed: "Завершенная активность",
@@ -95,6 +100,11 @@ const COPY: Record<Locale, {
     retry: "Повторить AI-анализ",
     retrying: "Повторный AI-анализ…",
     retryFailed: "Не удалось повторить AI-анализ.",
+    foundAutomatically: "Типовая активность найдена автоматически:",
+    rejectMatch: "Неверное соответствие",
+    rejectingMatch: "Отклоняем соответствие…",
+    rejectedMatch: "Соответствие отклонено. Активность передана Куратору модели.",
+    rejectFailed: "Не удалось отклонить соответствие.",
   },
   en: {
     completed: "Completed activity",
@@ -114,6 +124,11 @@ const COPY: Record<Locale, {
     retry: "Retry AI analysis",
     retrying: "Retrying AI analysis…",
     retryFailed: "Could not retry the AI analysis.",
+    foundAutomatically: "Typical activity found automatically:",
+    rejectMatch: "Wrong match",
+    rejectingMatch: "Rejecting match…",
+    rejectedMatch: "The match was rejected. The activity was sent to the Reality Curator.",
+    rejectFailed: "Could not reject the match.",
   },
   pl: {
     completed: "Zakończona aktywność",
@@ -133,6 +148,11 @@ const COPY: Record<Locale, {
     retry: "Ponów analizę AI",
     retrying: "Ponawianie analizy AI…",
     retryFailed: "Nie udało się ponowić analizy AI.",
+    foundAutomatically: "Typowa aktywność została znaleziona automatycznie:",
+    rejectMatch: "Błędne dopasowanie",
+    rejectingMatch: "Odrzucanie dopasowania…",
+    rejectedMatch: "Dopasowanie odrzucono. Aktywność przekazano do Kuratora modelu.",
+    rejectFailed: "Nie udało się odrzucić dopasowania.",
   },
   uk: {
     completed: "Завершена активність",
@@ -152,6 +172,11 @@ const COPY: Record<Locale, {
     retry: "Повторити AI-аналіз",
     retrying: "Повторний AI-аналіз…",
     retryFailed: "Не вдалося повторити AI-аналіз.",
+    foundAutomatically: "Типову активність знайдено автоматично:",
+    rejectMatch: "Неправильна відповідність",
+    rejectingMatch: "Відхиляємо відповідність…",
+    rejectedMatch: "Відповідність відхилено. Активність передано Куратору моделі.",
+    rejectFailed: "Не вдалося відхилити відповідність.",
   },
   de: {
     completed: "Abgeschlossene Aktivität",
@@ -171,6 +196,11 @@ const COPY: Record<Locale, {
     retry: "KI-Analyse erneut ausführen",
     retrying: "KI-Analyse wird erneut ausgeführt…",
     retryFailed: "Die KI-Analyse konnte nicht erneut ausgeführt werden.",
+    foundAutomatically: "Typische Aktivität wurde automatisch gefunden:",
+    rejectMatch: "Falsche Zuordnung",
+    rejectingMatch: "Zuordnung wird abgelehnt…",
+    rejectedMatch: "Die Zuordnung wurde abgelehnt. Die Aktivität wurde an den Reality Curator gesendet.",
+    rejectFailed: "Die Zuordnung konnte nicht abgelehnt werden.",
   },
   es: {
     completed: "Actividad completada",
@@ -190,6 +220,11 @@ const COPY: Record<Locale, {
     retry: "Repetir análisis de IA",
     retrying: "Repitiendo análisis de IA…",
     retryFailed: "No se pudo repetir el análisis de IA.",
+    foundAutomatically: "Actividad típica encontrada automáticamente:",
+    rejectMatch: "Coincidencia incorrecta",
+    rejectingMatch: "Rechazando coincidencia…",
+    rejectedMatch: "Se rechazó la coincidencia. La actividad se envió al Curador del modelo.",
+    rejectFailed: "No se pudo rechazar la coincidencia.",
   },
   cs: {
     completed: "Dokončená aktivita",
@@ -209,6 +244,11 @@ const COPY: Record<Locale, {
     retry: "Opakovat AI analýzu",
     retrying: "Opakuje se AI analýza…",
     retryFailed: "AI analýzu se nepodařilo zopakovat.",
+    foundAutomatically: "Typická aktivita byla nalezena automaticky:",
+    rejectMatch: "Nesprávná shoda",
+    rejectingMatch: "Odmítání shody…",
+    rejectedMatch: "Shoda byla odmítnuta. Aktivita byla odeslána Kurátorovi modelu.",
+    rejectFailed: "Shodu se nepodařilo odmítnout.",
   },
 };
 
@@ -340,6 +380,9 @@ export function ActivityBasicIntakeAnalysisCard({
   const [retryResult, setRetryResult] = useState<IntakeAnalysis | null>(null);
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState(false);
+  const [rejectingTemplateId, setRejectingTemplateId] = useState<string | null>(null);
+  const [rejectError, setRejectError] = useState(false);
+  const [rejectedMatch, setRejectedMatch] = useState(false);
   const displayedAnalysis =
     analysis &&
     retryResult?.activityEventId === analysis?.activityEventId
@@ -438,6 +481,49 @@ export function ActivityBasicIntakeAnalysisCard({
     }
   };
 
+
+  const handleRejectMatch = async (candidate: TemplateCandidate) => {
+    const activityEventId = displayedAnalysis.activityEventId?.trim();
+    const templateId = candidate.templateId?.trim();
+    if (!activityEventId || !templateId || rejectingTemplateId) return;
+
+    setRejectingTemplateId(templateId);
+    setRejectError(false);
+    setRejectedMatch(false);
+
+    try {
+      const response = await fetch("/api/activity/intake-analysis/reject-template-match", {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ activityEventId, templateId }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            analysis?: IntakeAnalysis;
+            error?: string;
+          }
+        | null;
+
+      if (!response.ok || payload?.ok !== true || !payload.analysis) {
+        throw new Error(payload?.error || `Reject failed: ${response.status}`);
+      }
+
+      setRetryResult(payload.analysis);
+      setRejectedMatch(true);
+    } catch {
+      setRejectError(true);
+    } finally {
+      setRejectingTemplateId(null);
+    }
+  };
+
   return (
     <div className="mt-3 rounded-xl border border-[#dbe3f6] bg-white p-3 shadow-[0_1px_2px_rgba(32,45,80,0.04)]">
       {displayedAnalysis.analysisMode === "safe_server_fallback" ? (
@@ -500,18 +586,44 @@ export function ActivityBasicIntakeAnalysisCard({
 
       <div className="mt-3 border-t border-[#edf0f7] pt-3">
         <div className="text-xs font-bold leading-relaxed text-[#31384f]">
-          {ui.candidates}
+          {candidates.length > 0 && searchCompleted
+            ? ui.foundAutomatically
+            : ui.candidates}
         </div>
+
+        {rejectedMatch ? (
+          <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">
+            {ui.rejectedMatch}
+          </div>
+        ) : null}
+
+        {rejectError ? (
+          <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">
+            {ui.rejectFailed}
+          </div>
+        ) : null}
 
         {candidates.length > 0 ? (
           <div className="mt-2 grid gap-2">
             {candidates.map((candidate) => (
               <div
                 key={candidate.templateId || candidate.title}
-                className="flex items-center gap-2 rounded-lg border border-[#dbe3f6] bg-[#fbfcff] px-3 py-2 text-xs font-bold text-[#2f477f]"
+                className="flex flex-wrap items-center gap-2 rounded-lg border border-[#dbe3f6] bg-[#fbfcff] px-3 py-2 text-xs font-bold text-[#2f477f]"
               >
                 <span className="h-2 w-2 flex-shrink-0 rounded-full bg-[#3b6ef8]" />
-                <span className="min-w-0 truncate">{candidate.title}</span>
+                <span className="min-w-0 flex-1 truncate">{candidate.title}</span>
+                {searchCompleted && candidate.templateId ? (
+                  <button
+                    type="button"
+                    disabled={Boolean(rejectingTemplateId)}
+                    onClick={() => void handleRejectMatch(candidate)}
+                    className="rounded-md border border-rose-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-rose-700 hover:bg-rose-50 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {rejectingTemplateId === candidate.templateId
+                      ? ui.rejectingMatch
+                      : ui.rejectMatch}
+                  </button>
+                ) : null}
               </div>
             ))}
           </div>

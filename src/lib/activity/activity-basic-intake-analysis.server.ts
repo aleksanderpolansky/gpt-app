@@ -658,6 +658,57 @@ function deterministicTemplateFallback(candidates: Candidate[]) {
     }));
 }
 
+async function localizeTemplateCandidateTitles<T extends {
+  templateId: string;
+  title: string;
+}>(candidates: T[], locale: string): Promise<T[]> {
+  if (candidates.length === 0) return candidates;
+
+  const localeCode =
+    locale === "en" ||
+    locale === "pl" ||
+    locale === "ru" ||
+    locale === "uk" ||
+    locale === "de" ||
+    locale === "es" ||
+    locale === "cs"
+      ? locale
+      : "en";
+
+  const ids = Array.from(new Set(candidates.map((candidate) => candidate.templateId)));
+  const { data, error } = await supabase
+    .from("activity_templates")
+    .select("id,title,default_metadata_json")
+    .in("id", ids);
+
+  if (error) {
+    console.error("BASIC_INTAKE_TEMPLATE_LOCALIZATION_READ_FAILED", error.message);
+    return candidates;
+  }
+
+  const titleById = new Map<string, string>();
+  for (const row of data ?? []) {
+    const metadata = asRecord(row.default_metadata_json);
+    const curator = asRecord(metadata.curatorSystemMaterializationV1);
+    const localizations = asRecord(curator.localizations);
+    const requested = asRecord(localizations[localeCode]);
+    const english = asRecord(localizations.en);
+    const localizedTitle =
+      text(requested.title) ||
+      text(english.title) ||
+      text(row.title);
+
+    if (localizedTitle) {
+      titleById.set(String(row.id), localizedTitle);
+    }
+  }
+
+  return candidates.map((candidate) => ({
+    ...candidate,
+    title: titleById.get(candidate.templateId) || candidate.title,
+  }));
+}
+
 function estimateBudgetInputTokens(input: {
   system: string;
   user: unknown;
@@ -1261,7 +1312,10 @@ export async function analyzeBasicActivityIntakeV1(input: {
       : providerCallStarted
         ? "failed"
         : "not_attempted";
-    const templateCandidates = deterministicTemplateFallback(candidates);
+    const templateCandidates = await localizeTemplateCandidateTitles(
+      deterministicTemplateFallback(candidates),
+      input.locale,
+    );
     const analyzedAt = new Date().toISOString();
     const analysis = {
       contract: ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1,
@@ -1523,9 +1577,12 @@ Hard rules:
       validateMeasurements(response.parsed.measurements, sourceText),
       deterministicMeasurements,
     );
-    const templateCandidates = validateTemplateMatches(
-      response.parsed.templateMatches,
-      candidates,
+    const templateCandidates = await localizeTemplateCandidateTitles(
+      validateTemplateMatches(
+        response.parsed.templateMatches,
+        candidates,
+      ),
+      input.locale,
     );
 
     const typicalActivitySearchCompleted = !candidateLoadWarning;
