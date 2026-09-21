@@ -16,6 +16,29 @@ type Locale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
 type FactMetricValue = number | string | boolean | null;
 
+type CanonicalAssignment = {
+  contract: "ARCTOR_E03_SOURCE_FACT_MATERIALIZATION_V1";
+  mode: "system_profile";
+  rawSignalId: string;
+  templateId: string;
+  profileId: string;
+  profileVersionNo: number | null;
+  routingResolution: "unique_system_assignment_within_active_profile_v1";
+  valueOriginCode: "user_explicit";
+  sourceReliabilityCode: "user_reported";
+  precisionEvidenceStoredInProvenance: boolean;
+  approximate: boolean | null;
+  rawFragment: string | null;
+};
+
+type FinalValueObjectLink = {
+  valueObjectId: string;
+  sourceCode: string | null;
+  sourceTemplateProfileId: string | null;
+  confidence: number | null;
+  isMaterialized: boolean | null;
+};
+
 type ActivityFact = {
   factId: string | null;
   userId: string | null;
@@ -56,6 +79,8 @@ type ActivityFact = {
     title: string;
     canonicalKey: string | null;
   }>;
+  finalValueObjectLinks?: FinalValueObjectLink[];
+  canonicalAssignment?: CanonicalAssignment | null;
 };
 
 type FactsViewMode = "cards" | "table";
@@ -650,6 +675,24 @@ const FACT_DISPLAY_CODES: Record<Locale, FactDisplayCodeCopy> = {
   },
 };
 
+const CANONICAL_E03_SOURCE_LABEL: Record<Locale, string> = {
+  en: "User reported · system extracted",
+  pl: "Podane przez użytkownika · wyodrębnione przez system",
+  ru: "Сообщено пользователем · извлечено системой",
+  uk: "Повідомлено користувачем · видобуто системою",
+  de: "Vom Benutzer angegeben · vom System extrahiert",
+  es: "Informado por el usuario · extraído por el sistema",
+  cs: "Uvedeno uživatelem · extrahováno systémem",
+};
+
+function factSourceLabel(fact: ActivityFact, locale: Locale) {
+  if (fact.canonicalAssignment?.mode === "system_profile") {
+    return CANONICAL_E03_SOURCE_LABEL[locale];
+  }
+
+  return localizeFactCode(locale, "sources", fact.sourceType);
+}
+
 function localizeFactCode(
   locale: Locale,
   kind: keyof FactDisplayCodeCopy,
@@ -746,10 +789,12 @@ function buildQuery(params: {
   valueObjectId: string;
   activityEventId: string;
   factStatus: string;
+  locale: Locale;
 }) {
   const search = new URLSearchParams();
 
   search.set("limit", params.limit || "50");
+  search.set("locale", params.locale);
 
   if (params.semanticObjectKey.trim()) {
     search.set("semanticObjectKey", params.semanticObjectKey.trim());
@@ -1037,8 +1082,9 @@ function ActivityFactsPageContent() {
       valueObjectId,
       activityEventId,
       factStatus,
+      locale,
     });
-  }, [limit, semanticObjectKey, valueObjectId, activityEventId, factStatus]);
+  }, [limit, semanticObjectKey, valueObjectId, activityEventId, factStatus, locale]);
 
   const facts = useMemo<ActivityFact[]>(
     () => state.response?.facts ?? [],
@@ -1064,7 +1110,7 @@ function ActivityFactsPageContent() {
         value: formatMetricValue(fact.metricValue),
         unit: localizeFactCode(locale, "units", fact.unit),
         status: getStatusLabel(fact.factStatus, copy),
-        source: localizeFactCode(locale, "sources", fact.sourceType),
+        source: factSourceLabel(fact, locale),
         confidence:
           typeof fact.confidence === "number"
             ? `${Math.round(fact.confidence * 100)}%`
@@ -1571,7 +1617,7 @@ function ActivityFactsPageContent() {
                 <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
                   {copy.source}
                 </div>
-                <strong className="mt-2 block">{selectedFact.sourceType ?? "—"}</strong>
+                <strong className="mt-2 block">{factSourceLabel(selectedFact, locale)}</strong>
               </div>
 
               <div className="rounded-[22px] border border-slate-200 p-4">

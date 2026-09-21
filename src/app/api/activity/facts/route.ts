@@ -7,6 +7,7 @@ import {
 import { auth0 } from "../../../../../lib/auth0";
 import { supabase } from "../../../../../lib/supabase";
 import { groupMutualFactProjections } from "@/lib/activity/mutualLinks";
+import { resolveActorValueObjectReadLocalizationsV1 } from "@/lib/localization/valueObjectReadLocalization.server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -14,6 +15,7 @@ export const runtime = "nodejs";
 const ENDPOINT = "/api/activity/facts" as const;
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
+const E03_SOURCE_FACT_CONTRACT = "ARCTOR_E03_SOURCE_FACT_MATERIALIZATION_V1" as const;
 
 type Row = Record<string, unknown>;
 
@@ -47,6 +49,115 @@ function asString(value: unknown): string | null {
 
 function asNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value
+        .map((item) => asString(item))
+        .filter((item): item is string => Boolean(item))
+    : [];
+}
+
+type E03CanonicalAssignment = {
+  contract: typeof E03_SOURCE_FACT_CONTRACT;
+  mode: "system_profile";
+  rawSignalId: string;
+  templateId: string;
+  profileId: string;
+  profileVersionNo: number | null;
+  routingResolution: "unique_system_assignment_within_active_profile_v1";
+  valueOriginCode: "user_explicit";
+  sourceReliabilityCode: "user_reported";
+  precisionEvidenceStoredInProvenance: boolean;
+  approximate: boolean | null;
+  rawFragment: string | null;
+};
+
+function readE03AssignmentRows(rawSignalRows: Row[]) {
+  const byFactId = new Map<string, E03CanonicalAssignment>();
+
+  for (const signal of rawSignalRows) {
+    const rawSignalId = asString(signal.id);
+    const preview = asRecord(signal.normalized_preview_json);
+    const analysis = asRecord(preview.basicIntakeAnalysisV1);
+    const materialization = asRecord(analysis.sourceFactMaterializationV1);
+
+    if (
+      !rawSignalId ||
+      materialization.contract !== E03_SOURCE_FACT_CONTRACT ||
+      !["materialized", "idempotent_replay"].includes(
+        asString(materialization.status) ?? "",
+      )
+    ) {
+      continue;
+    }
+
+    const templateId = asString(materialization.templateId);
+    const profileId = asString(materialization.profileId);
+    const factIds = asStringArray(materialization.factIds);
+    if (!templateId || !profileId || factIds.length === 0) {
+      continue;
+    }
+
+    for (const factId of factIds) {
+      if (byFactId.has(factId)) continue;
+
+      const assignment: E03CanonicalAssignment = {
+        contract: E03_SOURCE_FACT_CONTRACT,
+        mode: "system_profile",
+        rawSignalId,
+        templateId,
+        profileId,
+        profileVersionNo: asNumber(materialization.profileVersionNo),
+        routingResolution:
+          "unique_system_assignment_within_active_profile_v1",
+        valueOriginCode: "user_explicit",
+        sourceReliabilityCode: "user_reported",
+        precisionEvidenceStoredInProvenance:
+          materialization.precisionEvidenceStoredInProvenance === true,
+        approximate: null,
+        rawFragment: null,
+      };
+
+      byFactId.set(factId, assignment);
+    }  }
+
+  return byFactId;
+}
+
+function enrichE03AssignmentForMeasure(
+  assignment: E03CanonicalAssignment | null,
+  measureType: string | null,
+  rawSignalRows: Row[],
+): E03CanonicalAssignment | null {
+  if (!assignment || !measureType) return assignment;
+
+  const signal = rawSignalRows.find(
+    (row) => asString(row.id) === assignment.rawSignalId,
+  );
+  if (!signal) return assignment;
+
+  const preview = asRecord(signal.normalized_preview_json);
+  const analysis = asRecord(preview.basicIntakeAnalysisV1);
+  const matches = (Array.isArray(analysis.measurements)
+    ? analysis.measurements
+    : []
+  )
+    .map((item) => asRecord(item))
+    .filter((item) => asString(item.parameterCode) === measureType);
+
+  if (matches.length !== 1) return assignment;
+
+  const measurement = matches[0];
+  return {
+    ...assignment,
+    approximate:
+      typeof measurement.approximate === "boolean"
+        ? measurement.approximate
+        : null,
+    rawFragment: asString(measurement.rawFragment),
+  };
 }
 
 function asBoolean(value: unknown): boolean | null {
@@ -219,6 +330,7 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
+  const locale = parseOptionalFilter(url.searchParams, "locale") ?? "en";
   const limit = parseLimit(url.searchParams);
   const semanticObjectKey = parseOptionalFilter(
     url.searchParams,
@@ -605,7 +717,7 @@ export async function GET(request: Request) {
     ),
   );
 
-  const [activityLookup, valueObjectLookup] = await Promise.all([
+  const [activityLookup, valueObjectLookup, rawSignalLookup] = await Promise.all([
     activityIds.length > 0
       ? supabase
           .from("activity_events")
@@ -618,13 +730,22 @@ export async function GET(request: Request) {
       ? supabase
           .from("value_objects")
           .select(
-            "id,title,canonical_key,ontology_node_role_code,node_role_code",
+            "id,title,canonical_key,metadata_json,ontology_node_role_code,node_role_code",
           )
           .in("id", finalValueObjectIds)
       : Promise.resolve({ data: [], error: null }),
+    activityIds.length > 0
+      ? supabase
+          .from("raw_activity_signals")
+          .select("id,output_event_id,normalized_preview_json,updated_at")
+          .eq("user_id", context.appUserId)
+          .eq("source_type", "manual_chat")
+          .in("output_event_id", activityIds)
+          .order("updated_at", { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
-  if (activityLookup.error || valueObjectLookup.error) {
+  if (activityLookup.error || valueObjectLookup.error || rawSignalLookup.error) {
     return NextResponse.json(
       {
         ok: false,
@@ -632,7 +753,9 @@ export async function GET(request: Request) {
         readStatus: "error",
         errorCode: "ACTIVITY_FACTS_READ_ENRICHMENT_FAILED",
         errorMessage:
-          activityLookup.error?.message ?? valueObjectLookup.error?.message,
+          activityLookup.error?.message ??
+          valueObjectLookup.error?.message ??
+          rawSignalLookup.error?.message,
       },
       { status: 500 },
     );
@@ -645,27 +768,60 @@ export async function GET(request: Request) {
     if (id) activityTitleById.set(id, asString(record.title) ?? id);
   }
 
+  const authorizedValueObjectRows = (valueObjectLookup.data ?? [])
+    .map((row) => asRecord(row))
+    .filter((record) => {
+      const id = asString(record.id);
+      const ontologyRole = asString(record.ontology_node_role_code);
+      const legacyRole = asString(record.node_role_code);
+      return Boolean(
+        id && (ontologyRole === "leaf" || legacyRole === "activity_leaf"),
+      );
+    });
+
+  const localizedValueObjects = await resolveActorValueObjectReadLocalizationsV1({
+    entities: authorizedValueObjectRows.flatMap((record) => {
+      const id = asString(record.id);
+      return id
+        ? [
+            {
+              id,
+              title: record.title,
+              metadata_json: record.metadata_json,
+            },
+          ]
+        : [];
+    }),
+    targetLocale: locale,
+    fieldCodes: ["title"],
+  });
+
   const valueObjectById = new Map<
     string,
     { id: string; title: string; canonicalKey: string | null }
   >();
-  for (const row of valueObjectLookup.data ?? []) {
-    const record = asRecord(row);
+  for (const record of authorizedValueObjectRows) {
     const id = asString(record.id);
-    const ontologyRole = asString(record.ontology_node_role_code);
-    const legacyRole = asString(record.node_role_code);
-    if (
-      !id ||
-      (ontologyRole !== "leaf" && legacyRole !== "activity_leaf")
-    ) {
-      continue;
-    }
+    if (!id) continue;
+
+    const localizedTitle =
+      localizedValueObjects.fieldsById.get(id)?.title ?? null;
+
     valueObjectById.set(id, {
       id,
-      title: asString(record.title) ?? asString(record.canonical_key) ?? id,
+      title:
+        localizedTitle ??
+        asString(record.title) ??
+        asString(record.canonical_key) ??
+        id,
       canonicalKey: asString(record.canonical_key),
     });
   }
+
+  const rawSignalRows = Array.isArray(rawSignalLookup.data)
+    ? rawSignalLookup.data.map((row) => asRecord(row))
+    : [];
+  const e03AssignmentByFactId = readE03AssignmentRows(rawSignalRows);
 
   const grouped = groupMutualFactProjections(
     projectionRowsForGrouping.flatMap((fact) => {
@@ -754,6 +910,13 @@ export async function GET(request: Request) {
       derivationInputs: factId
         ? derivationInputsByResultFactId.get(factId) ?? []
         : [],
+      canonicalAssignment: enrichE03AssignmentForMeasure(
+        group.projectionFactIds
+          .map((projectionFactId) => e03AssignmentByFactId.get(projectionFactId) ?? null)
+          .find((value): value is E03CanonicalAssignment => Boolean(value)) ?? null,
+        group.measureType,
+        rawSignalRows,
+      ),
     };
   });
 
@@ -771,6 +934,11 @@ export async function GET(request: Request) {
         valueObjects: groupValueObjects,
         finalValueObjectLinks: finalLinkList,
         derivationInputs: derivationInputsByResultFactId.get(factId) ?? [],
+        canonicalAssignment: enrichE03AssignmentForMeasure(
+          e03AssignmentByFactId.get(factId) ?? null,
+          fact.measureType,
+          rawSignalRows,
+        ),
       };
     });
 
@@ -805,9 +973,9 @@ export async function GET(request: Request) {
       },
       schemaMode: {
         source:
-          "activity_object_facts + activity_fact_value_object_links_effective_v1",
+          "activity_object_facts + activity_fact_value_object_links_effective_v1 + E03 durable materialization evidence",
         strategy:
-          "measure-centric grouping for activity facts plus standalone result/snapshot facts; final effective fact tags; derivation lineage exposed from activity_fact_derivation_inputs_v1",
+          "measure-centric grouping; canonical E03 system-profile assignments are read-only in the fact UI; legacy/unresolved facts retain governed semantic tagging; derivation lineage exposed from activity_fact_derivation_inputs_v1",
         metricValueRule:
           "Legacy page metric values remain compatibility reads from activity_object_facts; dashboard analytics uses activity_fact_analytics_inputs_v1 canonical measure values.",
       },
@@ -818,7 +986,7 @@ export async function GET(request: Request) {
       },
       nextSteps: {
         factTagging:
-          "Review semantic suggestions and persist final leaf tags through replace_activity_fact_value_object_links_v1.",
+          "Canonical E03 system-profile assignments are read-only. Manual semantic tagging remains available only for legacy/unresolved facts.",
       },
     },
     { status: 200 },

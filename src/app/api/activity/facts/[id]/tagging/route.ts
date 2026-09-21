@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const MAX_LINKS = 80;
+const E03_SOURCE_FACT_CONTRACT = "ARCTOR_E03_SOURCE_FACT_MATERIALIZATION_V1";
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -44,6 +45,53 @@ function asString(value: unknown): string | null {
 
 function asBoolean(value: unknown): boolean {
   return value === true;
+}
+
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value
+        .map((item) => asString(item))
+        .filter((item): item is string => Boolean(item))
+    : [];
+}
+
+async function isCanonicalE03Fact(input: {
+  factId: string;
+  appUserId: string;
+  activityEventId: string | null;
+}) {
+  if (!input.activityEventId) return false;
+
+  const { data, error } = await supabase
+    .from("raw_activity_signals")
+    .select("normalized_preview_json")
+    .eq("user_id", input.appUserId)
+    .eq("source_type", "manual_chat")
+    .eq("output_event_id", input.activityEventId)
+    .order("updated_at", { ascending: false })
+    .limit(10);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  for (const raw of data ?? []) {
+    const row = asRecord(raw);
+    const preview = asRecord(row.normalized_preview_json);
+    const analysis = asRecord(preview.basicIntakeAnalysisV1);
+    const materialization = asRecord(analysis.sourceFactMaterializationV1);
+    const status = asString(materialization.status);
+
+    if (
+      materialization.contract === E03_SOURCE_FACT_CONTRACT &&
+      (status === "materialized" || status === "idempotent_replay") &&
+      asStringArray(materialization.factIds).includes(input.factId)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function invalid(message: string, status = 400) {
@@ -291,6 +339,28 @@ export async function PUT(request: Request, routeContext: RouteContext) {
   const owned = await loadOwnedFact(factId, appUser.id, personActor.id);
   if (owned.error) return invalid(owned.error, 500);
   if (!owned.fact) return invalid("Fact not found or access denied", 404);
+
+  try {
+    const canonicalE03 = await isCanonicalE03Fact({
+      factId,
+      appUserId: appUser.id,
+      activityEventId: asString(owned.fact.activity_event_id),
+    });
+
+    if (canonicalE03) {
+      return invalid(
+        "Canonical E03 system-profile assignments are read-only on the fact-tagging endpoint. Correct the source activity instead.",
+        409,
+      );
+    }
+  } catch (error) {
+    return invalid(
+      error instanceof Error
+        ? error.message
+        : "Could not verify canonical E03 assignment ownership",
+      500,
+    );
+  }
 
   let body: unknown;
   try {

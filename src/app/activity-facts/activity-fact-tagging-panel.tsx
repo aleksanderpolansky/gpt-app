@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 type FactForTagging = {
   factId: string | null;
+  activityEventId?: string | null;
   activityTitle?: string | null;
   semanticObjectKey: string | null;
   measureType: string | null;
@@ -12,6 +14,20 @@ type FactForTagging = {
     title: string;
     canonicalKey: string | null;
   }>;
+  canonicalAssignment?: {
+    contract: "ARCTOR_E03_SOURCE_FACT_MATERIALIZATION_V1";
+    mode: "system_profile";
+    rawSignalId: string;
+    templateId: string;
+    profileId: string;
+    profileVersionNo: number | null;
+    routingResolution: "unique_system_assignment_within_active_profile_v1";
+    valueOriginCode: "user_explicit";
+    sourceReliabilityCode: "user_reported";
+    precisionEvidenceStoredInProvenance: boolean;
+    approximate: boolean | null;
+    rawFragment: string | null;
+  } | null;
 };
 
 type TagLink = {
@@ -295,6 +311,146 @@ const COPY: Record<string, Copy> = {
   },
 };
 
+type CanonicalCopy = {
+  title: string;
+  subtitle: string;
+  assignment: string;
+  profile: string;
+  route: string;
+  source: string;
+  sourceValue: string;
+  precision: string;
+  approximate: string;
+  exact: string;
+  provenanceStored: string;
+  provenanceNotMarked: string;
+  correctionTitle: string;
+  correctionHint: string;
+  openActivity: string;
+};
+
+const CANONICAL_COPY: Record<string, CanonicalCopy> = {
+  en: {
+    title: "Canonical observation-object assignment",
+    subtitle: "This source fact was routed by the published system typical-activity profile. The legacy manual tagging workflow is disabled for this fact.",
+    assignment: "Assigned observation object",
+    profile: "System profile",
+    route: "Routing",
+    source: "Value provenance",
+    sourceValue: "User reported · system extracted and normalized",
+    precision: "Precision",
+    approximate: "Approximate value",
+    exact: "Exact / no approximation marker",
+    provenanceStored: "Precision evidence stored in provenance",
+    provenanceNotMarked: "No approximation evidence stored",
+    correctionTitle: "Correction path",
+    correctionHint: "System-profile assignments are not rewritten manually on the fact card. If the match is wrong, return to the source activity and use its correction workflow.",
+    openActivity: "Open source activity",
+  },
+  ru: {
+    title: "Каноническое назначение ОН",
+    subtitle: "Этот исходный факт направлен опубликованным системным профилем типовой активности. Устаревший ручной контур назначения ОН для такого факта отключён.",
+    assignment: "Назначенный объект наблюдения",
+    profile: "Системный профиль",
+    route: "Маршрут",
+    source: "Происхождение значения",
+    sourceValue: "Сообщено пользователем · извлечено и нормализовано системой",
+    precision: "Точность",
+    approximate: "Приблизительное значение",
+    exact: "Точное / без признака приблизительности",
+    provenanceStored: "Признак точности сохранён в происхождении",
+    provenanceNotMarked: "Признак приблизительности не зафиксирован",
+    correctionTitle: "Путь исправления",
+    correctionHint: "Системное назначение нельзя вручную перепривязать на карточке факта. Если связь неверна, вернитесь к исходной активности и используйте её контролируемый контур исправления.",
+    openActivity: "Открыть исходную активность",
+  },
+  pl: {
+    title: "Kanoniczne przypisanie obiektu obserwacji",
+    subtitle: "Ten fakt źródłowy został skierowany przez opublikowany profil systemowej aktywności typowej. Stary ręczny obieg tagowania jest dla niego wyłączony.",
+    assignment: "Przypisany obiekt obserwacji",
+    profile: "Profil systemowy",
+    route: "Trasowanie",
+    source: "Pochodzenie wartości",
+    sourceValue: "Podane przez użytkownika · wyodrębnione i znormalizowane przez system",
+    precision: "Dokładność",
+    approximate: "Wartość przybliżona",
+    exact: "Dokładna / bez znacznika przybliżenia",
+    provenanceStored: "Informacja o dokładności zapisana w pochodzeniu",
+    provenanceNotMarked: "Brak zapisanego znacznika przybliżenia",
+    correctionTitle: "Ścieżka korekty",
+    correctionHint: "Przypisania profilu systemowego nie są ręcznie przepinane na karcie faktu. Jeśli powiązanie jest błędne, wróć do aktywności źródłowej.",
+    openActivity: "Otwórz aktywność źródłową",
+  },
+  uk: {
+    title: "Канонічне призначення ОН",
+    subtitle: "Цей вихідний факт спрямовано опублікованим системним профілем типової активності. Старий ручний контур призначення для нього вимкнено.",
+    assignment: "Призначений об’єкт спостереження",
+    profile: "Системний профіль",
+    route: "Маршрут",
+    source: "Походження значення",
+    sourceValue: "Повідомлено користувачем · видобуто й нормалізовано системою",
+    precision: "Точність",
+    approximate: "Приблизне значення",
+    exact: "Точне / без ознаки приблизності",
+    provenanceStored: "Ознаку точності збережено в походженні",
+    provenanceNotMarked: "Ознаку приблизності не зафіксовано",
+    correctionTitle: "Шлях виправлення",
+    correctionHint: "Системне призначення не переприв’язується вручну на картці факту. Якщо зв’язок хибний, поверніться до вихідної активності.",
+    openActivity: "Відкрити вихідну активність",
+  },
+  de: {
+    title: "Kanonische Zuordnung zum Beobachtungsobjekt",
+    subtitle: "Dieser Quellfakt wurde durch das veröffentlichte Systemprofil der typischen Aktivität geroutet. Der alte manuelle Tagging-Workflow ist deaktiviert.",
+    assignment: "Zugeordnetes Beobachtungsobjekt",
+    profile: "Systemprofil",
+    route: "Routing",
+    source: "Wertprovenienz",
+    sourceValue: "Vom Benutzer angegeben · vom System extrahiert und normalisiert",
+    precision: "Genauigkeit",
+    approximate: "Ungefährer Wert",
+    exact: "Exakt / ohne Näherungsmarker",
+    provenanceStored: "Genauigkeitsnachweis in der Provenienz gespeichert",
+    provenanceNotMarked: "Kein Näherungsnachweis gespeichert",
+    correctionTitle: "Korrekturpfad",
+    correctionHint: "Systemprofil-Zuordnungen werden auf der Faktkarte nicht manuell geändert. Bei einer falschen Zuordnung zur Quellaktivität zurückkehren.",
+    openActivity: "Quellaktivität öffnen",
+  },
+  es: {
+    title: "Asignación canónica del objeto de observación",
+    subtitle: "Este hecho fuente fue enrutado por el perfil del sistema de la actividad típica publicada. El flujo manual heredado queda desactivado.",
+    assignment: "Objeto de observación asignado",
+    profile: "Perfil del sistema",
+    route: "Enrutamiento",
+    source: "Procedencia del valor",
+    sourceValue: "Informado por el usuario · extraído y normalizado por el sistema",
+    precision: "Precisión",
+    approximate: "Valor aproximado",
+    exact: "Exacto / sin marca de aproximación",
+    provenanceStored: "La evidencia de precisión está guardada en la procedencia",
+    provenanceNotMarked: "No hay evidencia de aproximación guardada",
+    correctionTitle: "Ruta de corrección",
+    correctionHint: "Las asignaciones del perfil del sistema no se reasignan manualmente en la ficha del hecho. Si es incorrecta, vuelve a la actividad fuente.",
+    openActivity: "Abrir actividad fuente",
+  },
+  cs: {
+    title: "Kanonické přiřazení objektu pozorování",
+    subtitle: "Tento zdrojový fakt byl směrován publikovaným systémovým profilem typické aktivity. Starý ruční postup tagování je vypnut.",
+    assignment: "Přiřazený objekt pozorování",
+    profile: "Systémový profil",
+    route: "Směrování",
+    source: "Původ hodnoty",
+    sourceValue: "Uvedeno uživatelem · extrahováno a normalizováno systémem",
+    precision: "Přesnost",
+    approximate: "Přibližná hodnota",
+    exact: "Přesná / bez značky přibližnosti",
+    provenanceStored: "Informace o přesnosti je uložena v provenienci",
+    provenanceNotMarked: "Není uložen znak přibližnosti",
+    correctionTitle: "Cesta opravy",
+    correctionHint: "Přiřazení systémového profilu se na kartě faktu ručně nepřepojuje. Pokud je chybné, vraťte se ke zdrojové aktivitě.",
+    openActivity: "Otevřít zdrojovou aktivitu",
+  },
+};
+
 function getCopy(locale: string) {
   return COPY[locale] ?? COPY.en;
 }
@@ -422,6 +578,17 @@ export function ActivityFactTaggingPanel({
     let cancelled = false;
 
     async function load() {
+      if (fact.canonicalAssignment?.mode === "system_profile") {
+        setSavedLinks([]);
+        setDraftLinks([]);
+        setSuggestions([]);
+        setRejectedIds(new Set());
+        setManualResults([]);
+        setStatus("idle");
+        setMessage("");
+        return;
+      }
+
       if (!fact.factId) {
         setSavedLinks([]);
         setDraftLinks([]);
@@ -471,7 +638,7 @@ export function ActivityFactTaggingPanel({
     return () => {
       cancelled = true;
     };
-  }, [copy.error, fact.factId]);
+  }, [copy.error, fact.canonicalAssignment?.mode, fact.factId]);
 
   async function analyze() {
     if (!semanticQuery || status === "analyzing") return;
@@ -641,6 +808,120 @@ export function ActivityFactTaggingPanel({
       setStatus("error");
       setMessage(error instanceof Error ? error.message : copy.error);
     }
+  }
+
+  if (fact.canonicalAssignment?.mode === "system_profile") {
+    const canonical = fact.canonicalAssignment;
+    const canonicalCopy = CANONICAL_COPY[locale] ?? CANONICAL_COPY.en;
+    const assignmentTitles = (fact.valueObjects ?? []).map((item) => item.title);
+    const profileVersion =
+      canonical.profileVersionNo !== null
+        ? `v${canonical.profileVersionNo}`
+        : "v—";
+
+    return (
+      <div className="rounded-[22px] border border-emerald-200 bg-emerald-50/40 p-5 md:col-span-2 xl:col-span-4">
+        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700">
+          {canonicalCopy.title}
+        </div>
+        <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-600">
+          {canonicalCopy.subtitle}
+        </p>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-[18px] border border-emerald-200 bg-white p-4 md:col-span-2">
+            <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+              {canonicalCopy.assignment}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {assignmentTitles.length > 0 ? (
+                assignmentTitles.map((title) => (
+                  <span
+                    key={title}
+                    className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-800"
+                  >
+                    {title}
+                  </span>
+                ))
+              ) : (
+                <span className="text-sm font-bold text-slate-500">—</span>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-[18px] border border-slate-200 bg-white p-4">
+            <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+              {canonicalCopy.profile}
+            </div>
+            <div className="mt-2 text-sm font-black text-slate-900">{profileVersion}</div>
+            <div className="mt-1 break-all font-mono text-[10px] text-slate-500">
+              {canonical.profileId}
+            </div>
+          </div>
+
+          <div className="rounded-[18px] border border-slate-200 bg-white p-4">
+            <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+              {canonicalCopy.route}
+            </div>
+            <div className="mt-2 text-sm font-black text-slate-900">
+              {fact.measureType ?? "—"} → {assignmentTitles.join(", ") || "—"}
+            </div>
+            <div className="mt-1 text-[10px] font-semibold text-slate-500">
+              system profile → parameter assignment → leaf
+            </div>
+          </div>
+
+          <div className="rounded-[18px] border border-slate-200 bg-white p-4 md:col-span-2">
+            <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+              {canonicalCopy.source}
+            </div>
+            <div className="mt-2 text-sm font-black text-slate-900">
+              {canonicalCopy.sourceValue}
+            </div>
+          </div>
+
+          <div className="rounded-[18px] border border-slate-200 bg-white p-4 md:col-span-2">
+            <div className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+              {canonicalCopy.precision}
+            </div>
+            <div className="mt-2 text-sm font-black text-slate-900">
+              {canonical.approximate === true
+                ? canonicalCopy.approximate
+                : canonical.approximate === false
+                  ? canonicalCopy.exact
+                  : "—"}
+            </div>
+            {canonical.rawFragment ? (
+              <div className="mt-1 text-xs font-semibold text-slate-600">
+                “{canonical.rawFragment}”
+              </div>
+            ) : null}
+            <div className="mt-1 text-[10px] font-semibold text-slate-500">
+              {canonical.precisionEvidenceStoredInProvenance
+                ? canonicalCopy.provenanceStored
+                : canonicalCopy.provenanceNotMarked}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-[18px] border border-blue-100 bg-white p-4">
+          <div className="text-xs font-black text-slate-900">
+            {canonicalCopy.correctionTitle}
+          </div>
+          <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+            {canonicalCopy.correctionHint}
+          </p>
+          {fact.activityEventId ? (
+            <Link
+              href={`/activity-ai-lab?locale=${encodeURIComponent(locale)}&activityEventId=${encodeURIComponent(fact.activityEventId)}`}
+              className="mt-3 inline-flex rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 no-underline hover:bg-blue-100"
+            >
+              {canonicalCopy.openActivity}
+            </Link>
+          ) : null}
+        </div>
+      </div>
+    );
   }
 
   return (
