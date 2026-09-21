@@ -14,6 +14,8 @@ export const runtime = "nodejs";
 
 const ENDPOINT = "/api/activity/facts/snapshots" as const;
 const SNAPSHOT_CONTRACT = "ARCTOR_USER_STATE_SNAPSHOT_CAPTURE_V1" as const;
+const STATES_AND_NEEDS_ROOT_ID =
+  "6ba4ecf1-8a05-5eaa-b280-4eb7aff2a42a" as const;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -77,6 +79,7 @@ type ValueObjectRow = {
   scope_code: string;
   origin_type_code: string;
   ontology_node_role_code: string | null;
+  root_value_object_id: string | null;
   status: string;
 };
 
@@ -276,12 +279,13 @@ async function systemSnapshotOptions(input: {
   const { data: valueObjectData, error: valueObjectError } = await supabase
     .from("value_objects")
     .select(
-      "id,canonical_key,title,metadata_json,scope_code,origin_type_code,ontology_node_role_code,status",
+      "id,canonical_key,title,metadata_json,scope_code,origin_type_code,ontology_node_role_code,root_value_object_id,status",
     )
     .in("id", valueObjectIds)
     .eq("scope_code", "global")
     .eq("origin_type_code", "system_model")
     .eq("ontology_node_role_code", "leaf")
+    .eq("root_value_object_id", STATES_AND_NEEDS_ROOT_ID)
     .eq("status", "active")
     .limit(3000);
 
@@ -502,12 +506,13 @@ export async function POST(request: Request) {
       supabase
         .from("value_objects")
         .select(
-          "id,canonical_key,title,metadata_json,scope_code,origin_type_code,ontology_node_role_code,status",
+          "id,canonical_key,title,metadata_json,scope_code,origin_type_code,ontology_node_role_code,root_value_object_id,status",
         )
         .eq("id", assignment.value_object_id)
         .eq("scope_code", "global")
         .eq("origin_type_code", "system_model")
         .eq("ontology_node_role_code", "leaf")
+        .eq("root_value_object_id", STATES_AND_NEEDS_ROOT_ID)
         .eq("status", "active")
         .maybeSingle(),
     ]);
