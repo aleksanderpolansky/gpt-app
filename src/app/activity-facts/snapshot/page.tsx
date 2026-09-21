@@ -452,20 +452,20 @@ function SnapshotCapturePageContent() {
   }
 
   return (
-    <main className="min-h-[calc(100vh-5rem)] bg-[#eef2f7] px-4 py-6 text-[#101632] sm:px-6 lg:px-10">
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
-        <section className="rounded-[32px] border border-black/[0.06] bg-white p-6 shadow-sm sm:p-8">
-          <p className="text-[12px] font-black uppercase tracking-[0.18em] text-emerald-600">
+    <main className="min-h-[calc(100vh-5rem)] bg-[#f4f6fb] px-3 py-4 text-[#101632] sm:px-5 lg:px-6">
+      <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-4">
+        <section className="py-1">
+          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#747da0]">
             {copy.eyebrow}
           </p>
-          <h1 className="mt-3 text-3xl font-black tracking-[-0.03em] sm:text-4xl">
+          <h1 className="mt-1 text-2xl font-black tracking-[-0.02em]">
             {copy.title}
           </h1>
-          <p className="mt-3 max-w-3xl text-base font-medium leading-7 text-[#69708f]">
+          <p className="mt-1 max-w-3xl text-sm font-medium leading-6 text-[#69708f]">
             {copy.subtitle}
           </p>
 
-          <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
             <p className="text-sm font-black text-emerald-900">
               {copy.explanationTitle}
             </p>
@@ -482,23 +482,23 @@ function SnapshotCapturePageContent() {
 
           <Link
             href={`/activity-facts?locale=${locale}`}
-            className="mt-5 inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 shadow-sm hover:bg-slate-50"
+            className="mt-4 inline-flex min-h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-black text-slate-700 shadow-sm hover:bg-slate-50"
           >
             ← {copy.back}
           </Link>
         </section>
 
-        <section className="rounded-[28px] border border-black/[0.06] bg-white p-6 shadow-sm">
+        <section className="rounded-2xl border border-black/[0.06] bg-white p-4 shadow-sm">
           {loading ? (
             <p className="text-sm font-bold text-[#69708f]">
               {copy.loading}
             </p>
           ) : options.length === 0 ? (
-            <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">
+            <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">
               {copy.noOptions}
             </p>
           ) : (
-            <form className="grid gap-5" onSubmit={submit}>
+            <form className="grid gap-4" onSubmit={submit}>
               <div className="grid gap-4">
                 <label className="grid gap-2">
                   <span className="text-sm font-black">{copy.searchLabel}</span>
@@ -507,7 +507,7 @@ function SnapshotCapturePageContent() {
                     value={targetQuery}
                     onChange={(event) => setTargetQuery(event.target.value)}
                     placeholder={copy.searchPlaceholder}
-                    className="min-h-12 rounded-2xl border border-slate-200 px-4 font-bold outline-none focus:border-blue-400"
+                    className="min-h-11 rounded-xl border border-slate-200 px-4 font-bold outline-none focus:border-blue-400"
                   />
                 </label>
 
@@ -527,7 +527,7 @@ function SnapshotCapturePageContent() {
                         ) ?? null;
                       setUnit(nextOption?.canonicalUnitCode ?? "");
                     }}
-                    className="min-h-12 rounded-2xl border border-slate-200 bg-white px-4 font-bold outline-none focus:border-blue-400"
+                    className="min-h-11 rounded-xl border border-slate-200 bg-white px-4 font-bold outline-none focus:border-blue-400"
                     required
                   >
                     <option value="">—</option>
@@ -544,7 +544,7 @@ function SnapshotCapturePageContent() {
                     {optionsForSelect.length} / {options.length}
                   </p>
                   {options.length > 0 && optionsForSelect.length === 0 ? (
-                    <p className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold text-amber-800">
+                    <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold text-amber-800">
                       {copy.searchEmpty}
                     </p>
                   ) : null}
@@ -559,7 +559,7 @@ function SnapshotCapturePageContent() {
                     step="any"
                     value={value}
                     onChange={(event) => setValue(event.target.value)}
-                    className="min-h-12 rounded-2xl border border-slate-200 px-4 font-bold outline-none focus:border-blue-400"
+                    className="min-h-11 rounded-xl border border-slate-200 px-4 font-bold outline-none focus:border-blue-400"
                     required
                   />
                 </label>
@@ -569,7 +569,7 @@ function SnapshotCapturePageContent() {
                   <select
                     value={unit}
                     onChange={(event) => setUnit(event.target.value)}
-                    className="min-h-12 rounded-2xl border border-slate-200 bg-white px-4 font-bold outline-none focus:border-blue-400"
+                    className="min-h-11 rounded-xl border border-slate-200 bg-white px-4 font-bold outline-none focus:border-blue-400"
                     required
                   >
                     {(selectedOption?.allowedUnitCodes ?? []).map(
@@ -589,7 +589,7 @@ function SnapshotCapturePageContent() {
                   type="datetime-local"
                   value={effectiveAt}
                   onChange={(event) => setEffectiveAt(event.target.value)}
-                  className="min-h-12 rounded-2xl border border-slate-200 px-4 font-bold outline-none focus:border-blue-400"
+                  className="min-h-11 rounded-xl border border-slate-200 px-4 font-bold outline-none focus:border-blue-400"
                   required
                 />
               </label>
@@ -601,18 +601,18 @@ function SnapshotCapturePageContent() {
                   value={sourceText}
                   onChange={(event) => setSourceText(event.target.value)}
                   placeholder={copy.sourceHint}
-                  className="min-h-12 rounded-2xl border border-slate-200 px-4 font-bold outline-none focus:border-blue-400"
+                  className="min-h-11 rounded-xl border border-slate-200 px-4 font-bold outline-none focus:border-blue-400"
                 />
               </label>
 
               {errorMessage ? (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-800">
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-800">
                   {errorMessage}
                 </div>
               ) : null}
 
               {successFactId ? (
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-800">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-800">
                   <p>{copy.success}</p>
                   <Link
                     href={`/activity-facts?collection=snapshot&locale=${locale}`}
@@ -626,7 +626,7 @@ function SnapshotCapturePageContent() {
               <button
                 type="submit"
                 disabled={saving || !selectedOption}
-                className="min-h-12 rounded-2xl bg-emerald-600 px-5 text-sm font-black text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-11 rounded-xl bg-emerald-600 px-5 text-sm font-black text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {saving ? copy.saving : copy.submit}
               </button>
@@ -634,7 +634,7 @@ function SnapshotCapturePageContent() {
           )}
 
           {!loading && errorMessage && options.length === 0 ? (
-            <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-800">
+            <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-800">
               {errorMessage}
             </div>
           ) : null}

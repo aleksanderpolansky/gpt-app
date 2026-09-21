@@ -24,6 +24,16 @@ const SNAPSHOT_CAPTURE_ACTION_LABELS: Record<Locale, string> = {
   cs: "Přidat snímek stavu",
 };
 
+const FACTS_PAGE_EYEBROW: Record<Locale, string> = {
+  en: "FACTS",
+  pl: "FAKTY",
+  ru: "ФАКТЫ",
+  uk: "ФАКТИ",
+  de: "FAKTEN",
+  es: "HECHOS",
+  cs: "FAKTA",
+};
+
 type FactMetricValue = number | string | boolean | null;
 
 type CanonicalAssignment = {
@@ -935,11 +945,11 @@ function SummaryCard({
   readonly tone: string;
 }) {
   return (
-    <div className="rounded-[24px] border border-black/[0.06] bg-white p-5 shadow-sm">
-      <div className="text-[11px] font-black uppercase tracking-[0.16em] text-[#747da0]">
+    <div className="rounded-2xl border border-black/[0.06] bg-white p-4 shadow-sm">
+      <div className="text-[10px] font-black uppercase tracking-[0.14em] text-[#747da0]">
         {label}
       </div>
-      <div className={`mt-3 text-4xl font-black ${tone}`}>{value}</div>
+      <div className={`mt-2 text-3xl font-black ${tone}`}>{value}</div>
     </div>
   );
 }
@@ -960,7 +970,7 @@ function FactRow({
   return (
     <article
       className={[
-        "grid gap-4 rounded-[22px] border p-4 transition sm:grid-cols-[1.2fr_1fr_0.8fr_0.75fr_auto]",
+        "grid gap-4 rounded-2xl border p-3.5 transition sm:grid-cols-[1.2fr_1fr_0.8fr_0.75fr_auto]",
         selected ? "border-blue-300 bg-blue-50/70" : "border-black/[0.07] bg-white hover:bg-slate-50",
       ].join(" ")}
     >
@@ -1031,7 +1041,7 @@ function FactRow({
           {copy.measure}
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="inline-flex min-w-12 items-center justify-center rounded-2xl bg-indigo-50 px-3 py-2 text-xl font-black text-blue-700">
+          <span className="inline-flex min-w-12 items-center justify-center rounded-xl bg-indigo-50 px-3 py-1.5 text-lg font-black text-blue-700">
             {formatMetricValue(fact.metricValue)}
           </span>
           <span className="text-sm font-black text-slate-900">{fact.unit ?? "—"}</span>
@@ -1061,7 +1071,7 @@ function FactRow({
         <button
           type="button"
           onClick={onSelect}
-          className="min-h-10 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-900 shadow-sm transition hover:border-blue-300 hover:text-blue-700"
+          className="min-h-9 rounded-xl border border-slate-200 bg-white px-3 text-sm font-black text-slate-900 shadow-sm transition hover:border-blue-300 hover:text-blue-700"
         >
           {copy.details}
         </button>
@@ -1088,10 +1098,10 @@ function FactGroup({
   readonly onSelect: (factId: string | null) => void;
 }) {
   return (
-    <section className="rounded-[28px] border border-black/[0.06] bg-white p-4 shadow-sm sm:p-5">
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+    <section className="rounded-2xl border border-black/[0.06] bg-white p-4 shadow-sm">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-black text-[#101632]">{title}</h2>
+          <h2 className="text-lg font-black text-[#101632]">{title}</h2>
           <p className="mt-1 text-sm font-medium text-[#69708f]">{subtitle}</p>
         </div>
         <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-black text-slate-700">
@@ -1100,7 +1110,7 @@ function FactGroup({
       </div>
 
       {facts.length === 0 ? (
-        <div className="rounded-[22px] border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm font-bold text-slate-500">
+        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center text-sm font-bold text-slate-500">
           {copy.noFactsInGroup}
         </div>
       ) : (
@@ -1388,18 +1398,18 @@ function ActivityFactsPageContent() {
   }, [loadFacts]);
 
   return (
-    <main className="min-h-[calc(100vh-5rem)] bg-[#eef2f7] px-4 py-6 text-[#101632] sm:px-6 lg:px-10">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
-        <section className="rounded-[32px] border border-black/[0.06] bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex flex-wrap items-start justify-between gap-5">
+    <main className="min-h-[calc(100vh-5rem)] bg-[#f4f6fb] px-3 py-4 text-[#101632] sm:px-5 lg:px-6">
+      <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-4">
+        <section className="py-1">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-3xl">
-              <p className="text-[12px] font-black uppercase tracking-[0.18em] text-blue-600">
-                Activity facts
+              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#747da0]">
+                {FACTS_PAGE_EYEBROW[locale]}
               </p>
-              <h1 className="mt-3 text-3xl font-black tracking-[-0.03em] text-[#101632] sm:text-4xl">
+              <h1 className="mt-1 text-2xl font-black tracking-[-0.02em] text-[#101632]">
                 {copy.pageTitle}
               </h1>
-              <p className="mt-3 text-base font-medium leading-7 text-[#69708f]">
+              <p className="mt-1 text-sm font-medium leading-6 text-[#69708f]">
                 {copy.pageSubtitle}
               </p>
             </div>
@@ -1407,7 +1417,7 @@ function ActivityFactsPageContent() {
             <div className="flex flex-wrap items-center gap-3">
               <Link
                 href={`/activity-facts/snapshot?locale=${locale}`}
-                className="inline-flex min-h-11 items-center rounded-2xl border border-emerald-200 bg-emerald-50 px-5 text-sm font-black text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-100"
+                className="inline-flex min-h-10 items-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-black text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-100"
               >
                 {SNAPSHOT_CAPTURE_ACTION_LABELS[locale]}
               </Link>
@@ -1415,7 +1425,7 @@ function ActivityFactsPageContent() {
               <button
                 type="button"
                 onClick={loadFacts}
-                className="min-h-11 rounded-2xl border border-blue-200 bg-blue-50 px-5 text-sm font-black text-blue-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-100"
+                className="min-h-10 rounded-xl border border-blue-200 bg-white px-4 text-sm font-black text-blue-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-50"
               >
                 {copy.refresh}
               </button>
@@ -1423,7 +1433,7 @@ function ActivityFactsPageContent() {
           </div>
         </section>
 
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <SummaryCard label={copy.summaryAll} value={facts.length} tone="text-slate-900" />
           <SummaryCard
             label={collectionCopy.completed.label}
@@ -1443,7 +1453,7 @@ function ActivityFactsPageContent() {
           <SummaryCard label={copy.summaryOther} value={factCollections.other.length} tone="text-amber-600" />
         </section>
 
-        <section className="rounded-[28px] border border-black/[0.06] bg-white p-5 shadow-sm sm:p-6">
+        <section className="flex flex-col gap-2">
           <div className="flex flex-wrap gap-2">
             {(["all", "planned", "completed", "snapshot", "other"] as FactCollectionKey[]).map((collection) => {
               const isActive = activeCollection === collection;
@@ -1452,7 +1462,7 @@ function ActivityFactsPageContent() {
                   key={collection}
                   href={`/activity-facts?locale=${encodeURIComponent(locale)}&collection=${collection}`}
                   className={[
-                    "inline-flex min-h-10 items-center rounded-xl border px-4 text-sm font-black no-underline transition",
+                    "inline-flex min-h-9 items-center rounded-lg border px-3 text-sm font-black no-underline transition",
                     isActive
                       ? "border-blue-600 bg-blue-600 text-white shadow-sm"
                       : "border-slate-200 bg-white text-[#556080] hover:bg-slate-50",
@@ -1472,13 +1482,13 @@ function ActivityFactsPageContent() {
             })}
           </div>
 
-          <p className="mt-4 text-sm font-medium leading-6 text-[#69708f]">
+          <p className="text-sm font-medium leading-6 text-[#69708f]">
             {collectionCopy[activeCollection].subtitle}
           </p>
         </section>
 
         <div className="flex justify-end">
-          <div className="inline-flex rounded-xl bg-[#f5f6fb] p-1 shadow-sm">
+          <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
             <button
               type="button"
               onClick={() => setViewMode("cards")}
@@ -1508,7 +1518,7 @@ function ActivityFactsPageContent() {
           </div>
         </div>
 
-        <section className="rounded-[28px] border border-black/[0.06] bg-white p-5 shadow-sm sm:p-6">
+        <section className="rounded-2xl border border-black/[0.06] bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h2 className="text-xl font-black text-[#101632]">{copy.filters}</h2>
@@ -1537,7 +1547,7 @@ function ActivityFactsPageContent() {
               <select
                 value={limit}
                 onChange={(event) => setLimit(event.target.value)}
-                className="min-h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
+                className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
               >
                 <option value="10">10</option>
                 <option value="25">25</option>
@@ -1553,7 +1563,7 @@ function ActivityFactsPageContent() {
               <select
                 value={factStatus}
                 onChange={(event) => setFactStatus(event.target.value)}
-                className="min-h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
+                className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
               >
                 <option value="">{copy.allStatuses}</option>
                 <option value="confirmed">{getStatusLabel("confirmed", copy)}</option>
@@ -1578,7 +1588,7 @@ function ActivityFactsPageContent() {
                   value={semanticObjectKey}
                   onChange={(event) => setSemanticObjectKey(event.target.value)}
                   placeholder="walk"
-                  className="min-h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
+                  className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
                 />
               </label>
 
@@ -1590,7 +1600,7 @@ function ActivityFactsPageContent() {
                   value={valueObjectId}
                   onChange={(event) => setValueObjectId(event.target.value)}
                   placeholder="uuid"
-                  className="min-h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
+                  className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
                 />
               </label>
 
@@ -1602,7 +1612,7 @@ function ActivityFactsPageContent() {
                   value={activityEventId}
                   onChange={(event) => setActivityEventId(event.target.value)}
                   placeholder="uuid"
-                  className="min-h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
+                  className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
                 />
               </label>
             </div>
@@ -1612,7 +1622,7 @@ function ActivityFactsPageContent() {
             <button
               type="button"
               onClick={loadFacts}
-              className="min-h-11 rounded-2xl bg-[#101632] px-5 text-sm font-black text-white shadow-sm transition hover:bg-[#1b2345]"
+              className="min-h-11 rounded-xl bg-[#101632] px-5 text-sm font-black text-white shadow-sm transition hover:bg-[#1b2345]"
             >
               {copy.apply}
             </button>
@@ -1620,7 +1630,7 @@ function ActivityFactsPageContent() {
             <button
               type="button"
               onClick={resetFilters}
-              className="min-h-11 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-900 shadow-sm transition hover:border-blue-300 hover:text-blue-700"
+              className="min-h-11 rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-900 shadow-sm transition hover:border-blue-300 hover:text-blue-700"
             >
               {copy.reset}
             </button>
@@ -1628,7 +1638,7 @@ function ActivityFactsPageContent() {
         </section>
 
         {viewMode === "table" ? (
-          <section className="rounded-[28px] border border-black/[0.06] bg-white p-3 shadow-sm sm:p-4">
+          <section className="rounded-2xl border border-black/[0.06] bg-white p-3 shadow-sm">
             <ArctorTabulator<FactTableRow>
               data={factTableRows}
               columns={factTableColumns}
@@ -1650,7 +1660,7 @@ function ActivityFactsPageContent() {
           />
         )}
 
-        <section className="rounded-[28px] border border-black/[0.06] bg-white p-5 shadow-sm sm:p-6">
+        <section className="rounded-2xl border border-black/[0.06] bg-white p-4 shadow-sm">
           <p className="text-[12px] font-black uppercase tracking-[0.18em] text-blue-600">
             {copy.details}
           </p>
@@ -1658,7 +1668,7 @@ function ActivityFactsPageContent() {
 
           {selectedFact ? (
             <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-[22px] border border-indigo-200 bg-indigo-50/50 p-4">
+              <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
                 <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
                   {FACT_CARD_LABELS[locale].role}
                 </div>
@@ -1667,28 +1677,28 @@ function ActivityFactsPageContent() {
                 </strong>
               </div>
 
-              <div className="rounded-[22px] border border-slate-200 p-4">
+              <div className="rounded-xl border border-slate-200 p-4">
                 <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
                   {copy.type}
                 </div>
                 <strong className="mt-2 block">{selectedFact.measureType ?? "—"}</strong>
               </div>
 
-              <div className="rounded-[22px] border border-slate-200 p-4">
+              <div className="rounded-xl border border-slate-200 p-4">
                 <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
                   {copy.value}
                 </div>
                 <strong className="mt-2 block">{formatMetricValue(selectedFact.metricValue)}</strong>
               </div>
 
-              <div className="rounded-[22px] border border-slate-200 p-4">
+              <div className="rounded-xl border border-slate-200 p-4">
                 <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
                   {copy.unit}
                 </div>
                 <strong className="mt-2 block">{selectedFact.unit ?? "—"}</strong>
               </div>
 
-              <div className="rounded-[22px] border border-slate-200 p-4">
+              <div className="rounded-xl border border-slate-200 p-4">
                 <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
                   {copy.status}
                 </div>
@@ -1702,7 +1712,7 @@ function ActivityFactsPageContent() {
                 </span>
               </div>
 
-              <div className="rounded-[22px] border border-slate-200 p-4 md:col-span-2">
+              <div className="rounded-xl border border-slate-200 p-4 md:col-span-2">
                 <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
                   {copy.semantic}
                 </div>
@@ -1725,21 +1735,21 @@ function ActivityFactsPageContent() {
                 </div>
               </div>
 
-              <div className="rounded-[22px] border border-slate-200 p-4">
+              <div className="rounded-xl border border-slate-200 p-4">
                 <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
                   {copy.createdAt}
                 </div>
                 <strong className="mt-2 block">{formatDate(selectedFact.createdAt, locale)}</strong>
               </div>
 
-              <div className="rounded-[22px] border border-slate-200 p-4">
+              <div className="rounded-xl border border-slate-200 p-4">
                 <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
                   {copy.source}
                 </div>
                 <strong className="mt-2 block">{factSourceLabel(selectedFact, locale)}</strong>
               </div>
 
-              <div className="rounded-[22px] border border-slate-200 p-4">
+              <div className="rounded-xl border border-slate-200 p-4">
                 <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
                   {copy.confidence}
                 </div>
@@ -1750,7 +1760,7 @@ function ActivityFactsPageContent() {
                 </strong>
               </div>
 
-              <div className="rounded-[22px] border border-slate-200 p-4 md:col-span-2">
+              <div className="rounded-xl border border-slate-200 p-4 md:col-span-2">
                 <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
                   {copy.factActivity}
                 </div>
@@ -1769,7 +1779,7 @@ function ActivityFactsPageContent() {
                 </div>
               </div>
 
-              <div className="rounded-[22px] border border-slate-200 p-4">
+              <div className="rounded-xl border border-slate-200 p-4">
                 <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
                   {FACT_CARD_LABELS[locale].effectiveAt}
                 </div>
@@ -1778,7 +1788,7 @@ function ActivityFactsPageContent() {
                 </strong>
               </div>
 
-              <div className="rounded-[22px] border border-slate-200 p-4">
+              <div className="rounded-xl border border-slate-200 p-4">
                 <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
                   {FACT_CARD_LABELS[locale].validity}
                 </div>
@@ -1787,7 +1797,7 @@ function ActivityFactsPageContent() {
                 </strong>
               </div>
 
-              <div className="rounded-[22px] border border-slate-200 p-4">
+              <div className="rounded-xl border border-slate-200 p-4">
                 <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
                   {FACT_CARD_LABELS[locale].snapshotWindow}
                 </div>
@@ -1798,7 +1808,7 @@ function ActivityFactsPageContent() {
                 </strong>
               </div>
 
-              <div className="rounded-[22px] border border-slate-200 p-4">
+              <div className="rounded-xl border border-slate-200 p-4">
                 <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
                   {FACT_CARD_LABELS[locale].previousSnapshot}
                 </div>
@@ -1809,7 +1819,7 @@ function ActivityFactsPageContent() {
                 </strong>
               </div>
 
-              <div className="rounded-[22px] border border-slate-200 p-4 md:col-span-2">
+              <div className="rounded-xl border border-slate-200 p-4 md:col-span-2">
                 <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
                   {FACT_CARD_LABELS[locale].calculationRule}
                 </div>
@@ -1830,7 +1840,7 @@ function ActivityFactsPageContent() {
                 ) : null}
               </div>
 
-              <div className="rounded-[22px] border border-slate-200 p-4 md:col-span-2">
+              <div className="rounded-xl border border-slate-200 p-4 md:col-span-2">
                 <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
                   {FACT_CARD_LABELS[locale].calculationInputs}
                 </div>
