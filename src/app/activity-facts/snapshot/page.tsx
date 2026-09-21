@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
+import { FormEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 type Locale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
@@ -303,6 +303,9 @@ function SnapshotCapturePageContent() {
   const [effectiveAt, setEffectiveAt] = useState(localDateTimeValue());
   const [sourceText, setSourceText] = useState("");
   const [targetQuery, setTargetQuery] = useState("");
+  const [targetSearchOpen, setTargetSearchOpen] = useState(false);
+  const [targetActiveIndex, setTargetActiveIndex] = useState(-1);
+  const targetBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [clientRequestId, setClientRequestId] = useState(() =>
     crypto.randomUUID(),
   );
@@ -391,13 +394,26 @@ function SnapshotCapturePageContent() {
     });
   }, [options, targetQuery]);
 
-  const optionsForSelect = useMemo(() => {
+  const searchableOptions = useMemo(() => {
     if (selectedOption && !filteredOptions.some((option) => option.assignmentId === selectedOption.assignmentId)) {
       return [selectedOption, ...filteredOptions];
     }
 
     return filteredOptions;
   }, [filteredOptions, selectedOption]);
+
+  function selectTargetOption(option: SnapshotOption) {
+    if (targetBlurTimerRef.current) {
+      clearTimeout(targetBlurTimerRef.current);
+      targetBlurTimerRef.current = null;
+    }
+
+    setAssignmentId(option.assignmentId);
+    setUnit(option.canonicalUnitCode);
+    setTargetQuery(formatSnapshotOptionLabel(option));
+    setTargetSearchOpen(false);
+    setTargetActiveIndex(-1);
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -499,56 +515,171 @@ function SnapshotCapturePageContent() {
             </p>
           ) : (
             <form className="grid gap-4" onSubmit={submit}>
-              <div className="grid gap-4">
-                <label className="grid gap-2">
-                  <span className="text-sm font-black">{copy.searchLabel}</span>
-                  <input
-                    type="text"
-                    value={targetQuery}
-                    onChange={(event) => setTargetQuery(event.target.value)}
-                    placeholder={copy.searchPlaceholder}
-                    className="min-h-11 rounded-xl border border-[rgba(0,0,0,0.08)] px-4 font-bold outline-none focus:border-[#3b6ef8]"
-                  />
+              <div className="grid gap-2">
+                <label htmlFor="snapshot-target-search" className="text-sm font-black">
+                  {copy.target}
                 </label>
+                <span className="text-xs font-medium leading-5 text-[#7c8099]">
+                  {copy.targetHint}
+                </span>
 
-                <label className="grid gap-2">
-                  <span className="text-sm font-black">{copy.target}</span>
-                  <span className="text-xs font-medium leading-5 text-[#7c8099]">
-                    {copy.targetHint}
-                  </span>
-                  <select
-                    value={assignmentId}
-                    onChange={(event) => {
-                      const nextAssignmentId = event.target.value;
-                      setAssignmentId(nextAssignmentId);
-                      const nextOption =
-                        options.find(
-                          (option) => option.assignmentId === nextAssignmentId,
-                        ) ?? null;
-                      setUnit(nextOption?.canonicalUnitCode ?? "");
+                <div className="relative">
+                  <input
+                    id="snapshot-target-search"
+                    type="text"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded={targetSearchOpen}
+                    aria-controls="snapshot-target-options"
+                    aria-activedescendant={
+                      targetSearchOpen &&
+                      targetActiveIndex >= 0 &&
+                      searchableOptions[targetActiveIndex]
+                        ? `snapshot-target-option-${searchableOptions[targetActiveIndex].assignmentId}`
+                        : undefined
+                    }
+                    value={targetQuery}
+                    onFocus={() => {
+                      if (targetBlurTimerRef.current) {
+                        clearTimeout(targetBlurTimerRef.current);
+                        targetBlurTimerRef.current = null;
+                      }
+                      setTargetSearchOpen(true);
                     }}
-                    className="min-h-11 rounded-xl border border-[rgba(0,0,0,0.08)] bg-white px-4 font-bold outline-none focus:border-[#3b6ef8]"
+                    onBlur={() => {
+                      targetBlurTimerRef.current = setTimeout(() => {
+                        setTargetSearchOpen(false);
+                        setTargetActiveIndex(-1);
+                      }, 120);
+                    }}
+                    onChange={(event) => {
+                      const nextQuery = event.target.value;
+                      setTargetQuery(nextQuery);
+                      setTargetSearchOpen(true);
+                      setTargetActiveIndex(-1);
+
+                      if (
+                        selectedOption &&
+                        nextQuery !== formatSnapshotOptionLabel(selectedOption)
+                      ) {
+                        setAssignmentId("");
+                        setUnit("");
+                      }
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "ArrowDown") {
+                        event.preventDefault();
+                        setTargetSearchOpen(true);
+                        setTargetActiveIndex((current) => {
+                          if (searchableOptions.length === 0) return -1;
+                          return current < searchableOptions.length - 1
+                            ? current + 1
+                            : 0;
+                        });
+                        return;
+                      }
+
+                      if (event.key === "ArrowUp") {
+                        event.preventDefault();
+                        setTargetSearchOpen(true);
+                        setTargetActiveIndex((current) => {
+                          if (searchableOptions.length === 0) return -1;
+                          return current > 0
+                            ? current - 1
+                            : searchableOptions.length - 1;
+                        });
+                        return;
+                      }
+
+                      if (
+                        event.key === "Enter" &&
+                        targetSearchOpen &&
+                        targetActiveIndex >= 0 &&
+                        searchableOptions[targetActiveIndex]
+                      ) {
+                        event.preventDefault();
+                        selectTargetOption(searchableOptions[targetActiveIndex]);
+                        return;
+                      }
+
+                      if (event.key === "Escape") {
+                        setTargetSearchOpen(false);
+                        setTargetActiveIndex(-1);
+                      }
+                    }}
+                    placeholder={copy.searchPlaceholder}
+                    className="min-h-11 w-full rounded-xl border border-[rgba(0,0,0,0.08)] bg-white px-4 pr-12 font-bold outline-none focus:border-[#3b6ef8]"
+                    autoComplete="off"
                     required
+                  />
+
+                  <button
+                    type="button"
+                    aria-label={copy.searchLabel}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      setTargetSearchOpen((open) => !open);
+                      setTargetActiveIndex(-1);
+                    }}
+                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-[#7c8099]"
                   >
-                    <option value="">—</option>
-                    {optionsForSelect.map((option) => (
-                      <option
-                        key={option.assignmentId}
-                        value={option.assignmentId}
-                      >
-                        {formatSnapshotOptionLabel(option)}
-                      </option>
-                    ))}
-                  </select>
+                    <span aria-hidden="true">⌄</span>
+                  </button>
+
+                  {targetSearchOpen ? (
+                    <div
+                      id="snapshot-target-options"
+                      role="listbox"
+                      className="absolute z-30 mt-1 max-h-72 w-full overflow-auto rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-1 shadow-lg"
+                    >
+                      {searchableOptions.length > 0 ? (
+                        searchableOptions.map((option, index) => {
+                          const active = index === targetActiveIndex;
+                          const selected =
+                            option.assignmentId === selectedOption?.assignmentId;
+
+                          return (
+                            <button
+                              id={`snapshot-target-option-${option.assignmentId}`}
+                              key={option.assignmentId}
+                              type="button"
+                              role="option"
+                              aria-selected={selected}
+                              onMouseDown={(event) => event.preventDefault()}
+                              onMouseEnter={() => setTargetActiveIndex(index)}
+                              onClick={() => selectTargetOption(option)}
+                              className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-bold ${
+                                active || selected
+                                  ? "bg-[#eef2ff] text-[#1a1d2e]"
+                                  : "text-[#1a1d2e] hover:bg-[#f5f6fb]"
+                              }`}
+                            >
+                              <span>{formatSnapshotOptionLabel(option)}</span>
+                              {selected ? (
+                                <span className="ml-3 text-[#3b6ef8]">✓</span>
+                              ) : null}
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <div className="rounded-lg bg-[#f5f6fb] px-3 py-3 text-xs font-medium text-[#5a5f7a]">
+                          {copy.searchEmpty}
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="flex items-center justify-between gap-3">
                   <p className="text-xs font-medium text-[#7c8099]">
-                    {optionsForSelect.length} / {options.length}
+                    {searchableOptions.length} / {options.length}
                   </p>
-                  {options.length > 0 && optionsForSelect.length === 0 ? (
-                    <p className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#f5f6fb] p-3 text-xs font-medium text-[#5a5f7a]">
-                      {copy.searchEmpty}
+                  {selectedOption ? (
+                    <p className="text-xs font-bold text-[#3b6ef8]">
+                      {formatSnapshotOptionLabel(selectedOption)}
                     </p>
                   ) : null}
-                </label>
+                </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
