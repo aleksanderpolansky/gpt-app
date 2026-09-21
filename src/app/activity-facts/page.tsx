@@ -14,6 +14,16 @@ import { ActivityFactTaggingPanel } from "./activity-fact-tagging-panel";
 
 type Locale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
+const SNAPSHOT_CAPTURE_ACTION_LABELS: Record<Locale, string> = {
+  en: "Add state snapshot",
+  pl: "Dodaj przekrój stanu",
+  ru: "Добавить факт-срез",
+  uk: "Додати факт-зріз",
+  de: "Zustandsschnitt hinzufügen",
+  es: "Añadir corte de estado",
+  cs: "Přidat snímek stavu",
+};
+
 type FactMetricValue = number | string | boolean | null;
 
 type CanonicalAssignment = {
@@ -1311,13 +1321,22 @@ function ActivityFactsPageContent() {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={loadFacts}
-              className="min-h-11 rounded-2xl border border-blue-200 bg-blue-50 px-5 text-sm font-black text-blue-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-100"
-            >
-              {copy.refresh}
-            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                href={`/activity-facts/snapshot?locale=${locale}`}
+                className="inline-flex min-h-11 items-center rounded-2xl border border-emerald-200 bg-emerald-50 px-5 text-sm font-black text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-100"
+              >
+                {SNAPSHOT_CAPTURE_ACTION_LABELS[locale]}
+              </Link>
+
+              <button
+                type="button"
+                onClick={loadFacts}
+                className="min-h-11 rounded-2xl border border-blue-200 bg-blue-50 px-5 text-sm font-black text-blue-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-100"
+              >
+                {copy.refresh}
+              </button>
+            </div>
           </div>
         </section>
 
