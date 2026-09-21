@@ -188,6 +188,68 @@ const FORMULA_RATIONALE_LINK_LABEL: Record<Locale, string> = {
   cs: "Jak to bylo vypočteno?",
 };
 
+type FactCollectionKey = "all" | "planned" | "completed" | "snapshot" | "other";
+
+const FACT_COLLECTION_COPY: Record<Locale, Record<FactCollectionKey, { label: string; subtitle: string }>> = {
+  en: {
+    all: { label: "All values", subtitle: "All saved facts, including activity values and state snapshots." },
+    planned: { label: "Planned values", subtitle: "Values from future and prognostic activities." },
+    completed: { label: "Completed activities", subtitle: "Values extracted from completed activities." },
+    snapshot: { label: "State snapshots", subtitle: "State values added separately from activities." },
+    other: { label: "Other values", subtitle: "Values with a non-standard status or requiring a separate review." },
+  },
+  pl: {
+    all: { label: "Wszystkie wartości", subtitle: "Wszystkie zapisane fakty, w tym wartości aktywności i przekroje stanu." },
+    planned: { label: "Wartości planowane", subtitle: "Wartości z przyszłych i prognostycznych aktywności." },
+    completed: { label: "Wykonane aktywności", subtitle: "Wartości wyodrębnione z wykonanych aktywności." },
+    snapshot: { label: "Przekroje stanu", subtitle: "Wartości stanu dodane niezależnie od aktywności." },
+    other: { label: "Pozostałe wartości", subtitle: "Wartości z niestandardowym statusem albo wymagające osobnego przeglądu." },
+  },
+  ru: {
+    all: { label: "Все значения", subtitle: "Все сохранённые факты, включая значения активностей и факт-срезы состояния." },
+    planned: { label: "Плановые значения", subtitle: "Значения из будущих и прогнозных активностей." },
+    completed: { label: "Завершённые активности", subtitle: "Значения, извлечённые из завершённых активностей." },
+    snapshot: { label: "Состояния", subtitle: "Факт-срезы состояния, добавленные отдельно от активности." },
+    other: { label: "Прочие значения", subtitle: "Значения с нестандартным статусом или требующие отдельного просмотра." },
+  },
+  uk: {
+    all: { label: "Усі значення", subtitle: "Усі збережені факти, включно зі значеннями активностей і фактами-зрізами стану." },
+    planned: { label: "Планові значення", subtitle: "Значення з майбутніх і прогностичних активностей." },
+    completed: { label: "Завершені активності", subtitle: "Значення, витягнуті із завершених активностей." },
+    snapshot: { label: "Стани", subtitle: "Факти-зрізи стану, додані окремо від активності." },
+    other: { label: "Інші значення", subtitle: "Значення з нестандартним статусом або ті, що потребують окремого перегляду." },
+  },
+  de: {
+    all: { label: "Alle Werte", subtitle: "Alle gespeicherten Fakten, einschließlich Aktivitätswerten und Zustandsschnitten." },
+    planned: { label: "Geplante Werte", subtitle: "Werte aus zukünftigen und prognostischen Aktivitäten." },
+    completed: { label: "Abgeschlossene Aktivitäten", subtitle: "Werte, die aus abgeschlossenen Aktivitäten extrahiert wurden." },
+    snapshot: { label: "Zustände", subtitle: "Zustandsschnitte, die unabhängig von Aktivitäten hinzugefügt wurden." },
+    other: { label: "Sonstige Werte", subtitle: "Werte mit nicht standardisiertem Status oder besonderem Prüfbedarf." },
+  },
+  es: {
+    all: { label: "Todos los valores", subtitle: "Todos los hechos guardados, incluidos valores de actividad y cortes de estado." },
+    planned: { label: "Valores planificados", subtitle: "Valores procedentes de actividades futuras y pronósticas." },
+    completed: { label: "Actividades completadas", subtitle: "Valores extraídos de actividades completadas." },
+    snapshot: { label: "Estados", subtitle: "Cortes de estado añadidos por separado de las actividades." },
+    other: { label: "Otros valores", subtitle: "Valores con estado no estándar o que requieren una revisión aparte." },
+  },
+  cs: {
+    all: { label: "Všechny hodnoty", subtitle: "Všechny uložené fakty včetně hodnot aktivit a snímků stavu." },
+    planned: { label: "Plánované hodnoty", subtitle: "Hodnoty z budoucích a prognostických aktivit." },
+    completed: { label: "Dokončené aktivity", subtitle: "Hodnoty získané z dokončených aktivit." },
+    snapshot: { label: "Stavy", subtitle: "Snímky stavu přidané samostatně mimo aktivity." },
+    other: { label: "Ostatní hodnoty", subtitle: "Hodnoty s nestandardním stavem nebo vyžadující samostatnou kontrolu." },
+  },
+};
+
+function normalizeCollection(value: string | null): FactCollectionKey {
+  if (value === "planned") return "planned";
+  if (value === "completed") return "completed";
+  if (value === "snapshot") return "snapshot";
+  if (value === "other") return "other";
+  return "all";
+}
+
 const COPY: Record<Locale, ActivityFactsCopy> = {
   en: {
     pageTitle: "Activity facts",
@@ -1072,6 +1134,16 @@ function ActivityFactsPageContent() {
   const locale = normalizeLocale(searchParams.get("locale"));
   const copy = COPY[locale];
 
+  const collectionCopy = FACT_COLLECTION_COPY[locale];
+  const activeCollection =
+    searchParams.get("collection") !== null
+      ? normalizeCollection(searchParams.get("collection"))
+      : searchParams.get("factRoleCode") === "snapshot"
+        ? "snapshot"
+        : searchParams.get("factStatus") === "proposed"
+          ? "planned"
+          : "all";
+
   const [limit, setLimit] = useState(searchParams.get("limit") ?? "50");
   const [semanticObjectKey, setSemanticObjectKey] = useState(searchParams.get("semanticObjectKey") ?? "");
   const [valueObjectId, setValueObjectId] = useState(searchParams.get("valueObjectId") ?? "");
@@ -1101,12 +1173,23 @@ function ActivityFactsPageContent() {
     [state.response],
   );
   const groupedFacts = useMemo(() => groupFacts(facts), [facts]);
+  const factCollections = useMemo<Record<FactCollectionKey, ActivityFact[]>>(
+    () => ({
+      all: facts,
+      planned: groupedFacts.proposed,
+      completed: groupedFacts.confirmed.filter((fact) => fact.factRoleCode !== "snapshot"),
+      snapshot: facts.filter((fact) => fact.factRoleCode === "snapshot"),
+      other: groupedFacts.other.filter((fact) => fact.factRoleCode !== "snapshot"),
+    }),
+    [facts, groupedFacts],
+  );
+  const visibleFacts = factCollections[activeCollection];
   const selectedFact =
-    facts.find((fact) => fact.factId === selectedFactId) ?? facts[0] ?? null;
+    visibleFacts.find((fact) => fact.factId === selectedFactId) ?? visibleFacts[0] ?? null;
 
   const factTableRows = useMemo<FactTableRow[]>(
     () =>
-      facts.map((fact, index) => ({
+      visibleFacts.map((fact, index) => ({
         id: fact.factId ?? `${fact.activityEventId ?? "fact"}-${index}`,
         date: formatDate(fact.createdAt, locale),
         activity:
@@ -1127,7 +1210,7 @@ function ActivityFactsPageContent() {
             : "—",
         fact,
       })),
-    [copy, facts, locale],
+    [copy, locale, visibleFacts],
   );
 
   const factTableColumns = useMemo<ArctorTableColumn<FactTableRow>[]>(
@@ -1340,11 +1423,11 @@ function ActivityFactsPageContent() {
           </div>
         </section>
 
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <SummaryCard label={copy.summaryAll} value={facts.length} tone="text-slate-900" />
           <SummaryCard
-            label={copy.summaryConfirmed}
-            value={groupedFacts.confirmed.length}
+            label={collectionCopy.completed.label}
+            value={factCollections.completed.length}
             tone="text-emerald-600"
           />
           <SummaryCard
@@ -1352,7 +1435,46 @@ function ActivityFactsPageContent() {
             value={groupedFacts.proposed.length}
             tone="text-blue-600"
           />
-          <SummaryCard label={copy.summaryOther} value={groupedFacts.other.length} tone="text-amber-600" />
+          <SummaryCard
+            label={collectionCopy.snapshot.label}
+            value={factCollections.snapshot.length}
+            tone="text-violet-600"
+          />
+          <SummaryCard label={copy.summaryOther} value={factCollections.other.length} tone="text-amber-600" />
+        </section>
+
+        <section className="rounded-[28px] border border-black/[0.06] bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-wrap gap-2">
+            {(["all", "planned", "completed", "snapshot", "other"] as FactCollectionKey[]).map((collection) => {
+              const isActive = activeCollection === collection;
+              return (
+                <Link
+                  key={collection}
+                  href={`/activity-facts?locale=${encodeURIComponent(locale)}&collection=${collection}`}
+                  className={[
+                    "inline-flex min-h-10 items-center rounded-xl border px-4 text-sm font-black no-underline transition",
+                    isActive
+                      ? "border-blue-600 bg-blue-600 text-white shadow-sm"
+                      : "border-slate-200 bg-white text-[#556080] hover:bg-slate-50",
+                  ].join(" ")}
+                >
+                  {collectionCopy[collection].label}
+                  <span
+                    className={[
+                      "ml-2 inline-flex min-w-6 justify-center rounded-full px-2 py-0.5 text-xs font-black",
+                      isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600",
+                    ].join(" ")}
+                  >
+                    {factCollections[collection].length}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+
+          <p className="mt-4 text-sm font-medium leading-6 text-[#69708f]">
+            {collectionCopy[activeCollection].subtitle}
+          </p>
         </section>
 
         <div className="flex justify-end">
@@ -1517,37 +1639,15 @@ function ActivityFactsPageContent() {
             />
           </section>
         ) : (
-          <>
-            <FactGroup
-              title={copy.proposedTitle}
-              subtitle={copy.proposedSubtitle}
-              facts={groupedFacts.proposed}
-              locale={locale}
-              copy={copy}
-              selectedFact={selectedFact}
-              onSelect={setSelectedFactId}
-            />
-
-            <FactGroup
-              title={copy.confirmedTitle}
-              subtitle={copy.confirmedSubtitle}
-              facts={groupedFacts.confirmed}
-              locale={locale}
-              copy={copy}
-              selectedFact={selectedFact}
-              onSelect={setSelectedFactId}
-            />
-
-            <FactGroup
-              title={copy.otherTitle}
-              subtitle={copy.otherSubtitle}
-              facts={groupedFacts.other}
-              locale={locale}
-              copy={copy}
-              selectedFact={selectedFact}
-              onSelect={setSelectedFactId}
-            />
-          </>
+          <FactGroup
+            title={collectionCopy[activeCollection].label}
+            subtitle={collectionCopy[activeCollection].subtitle}
+            facts={visibleFacts}
+            locale={locale}
+            copy={copy}
+            selectedFact={selectedFact}
+            onSelect={setSelectedFactId}
+          />
         )}
 
         <section className="rounded-[28px] border border-black/[0.06] bg-white p-5 shadow-sm sm:p-6">

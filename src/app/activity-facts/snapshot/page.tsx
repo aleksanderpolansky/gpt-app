@@ -31,6 +31,9 @@ type Copy = {
   explanationExamples: string;
   explanationNotSnapshot: string;
   targetHint: string;
+  searchLabel: string;
+  searchPlaceholder: string;
+  searchEmpty: string;
   back: string;
   target: string;
   value: string;
@@ -62,6 +65,9 @@ const COPY: Record<Locale, Copy> = {
       "Not a snapshot: walk duration, exercise repetitions or floors climbed. Those values belong to a particular activity and are recorded as source facts.",
     targetHint:
       "Choose a property that describes the object's state at the selected moment, not the result of a particular action.",
+    searchLabel: "Search in the list",
+    searchPlaceholder: "Type part of the observation object or parameter name",
+    searchEmpty: "No system assignments match the search.",
     back: "Back to facts",
     target: "Observation object and parameter",
     value: "Value",
@@ -91,6 +97,9 @@ const COPY: Record<Locale, Copy> = {
       "Nie jest przekrojem: czas spaceru, liczba powtórzeń ćwiczenia ani liczba pokonanych pięter. Takie wartości należą do konkretnej aktywności i są zapisywane jako fakty źródłowe.",
     targetHint:
       "Wybierz właściwość opisującą stan obiektu w wybranym momencie, a nie wynik konkretnego działania.",
+    searchLabel: "Szukaj na liście",
+    searchPlaceholder: "Wpisz fragment nazwy obiektu obserwacji albo parametru",
+    searchEmpty: "Żadne przypisanie systemowe nie pasuje do wyszukiwania.",
     back: "Wróć do faktów",
     target: "Obiekt obserwacji i parametr",
     value: "Wartość",
@@ -120,6 +129,9 @@ const COPY: Record<Locale, Copy> = {
       "Не является фактом-срезом: продолжительность прогулки, количество повторений упражнения или число пройденных этажей. Такие значения относятся к конкретной активности и записываются как исходные факты.",
     targetHint:
       "Выберите свойство, значение которого характеризует состояние объекта на указанный момент, а не результат отдельного действия.",
+    searchLabel: "Поиск по списку",
+    searchPlaceholder: "Введите часть названия ОН или параметра",
+    searchEmpty: "Системные назначения по такому поиску не найдены.",
     back: "Вернуться к фактам",
     target: "Объект наблюдения и параметр",
     value: "Значение",
@@ -149,6 +161,9 @@ const COPY: Record<Locale, Copy> = {
       "Не є фактом-зрізом: тривалість прогулянки, кількість повторень вправи або кількість пройдених поверхів. Такі значення належать до конкретної активності та записуються як вихідні факти.",
     targetHint:
       "Оберіть властивість, значення якої характеризує стан об’єкта у вказаний момент, а не результат окремої дії.",
+    searchLabel: "Пошук у списку",
+    searchPlaceholder: "Введіть частину назви об’єкта спостереження або параметра",
+    searchEmpty: "За цим пошуком системних призначень не знайдено.",
     back: "Повернутися до фактів",
     target: "Об’єкт спостереження і параметр",
     value: "Значення",
@@ -178,6 +193,9 @@ const COPY: Record<Locale, Copy> = {
       "Kein Zustandsschnitt sind Gehzeit, Wiederholungen einer Übung oder gestiegene Stockwerke. Solche Werte gehören zu einer konkreten Aktivität und werden als Quellfakten gespeichert.",
     targetHint:
       "Wählen Sie eine Eigenschaft, die den Zustand des Objekts zum angegebenen Zeitpunkt beschreibt, nicht das Ergebnis einer einzelnen Handlung.",
+    searchLabel: "In der Liste suchen",
+    searchPlaceholder: "Geben Sie einen Teil des Beobachtungsobjekts oder Parameternamens ein",
+    searchEmpty: "Keine Systemzuordnung passt zu dieser Suche.",
     back: "Zurück zu Fakten",
     target: "Beobachtungsobjekt und Parameter",
     value: "Wert",
@@ -207,6 +225,9 @@ const COPY: Record<Locale, Copy> = {
       "No es un corte: duración de una caminata, repeticiones de un ejercicio o pisos subidos. Esos valores pertenecen a una actividad concreta y se guardan como hechos fuente.",
     targetHint:
       "Elija una propiedad que describa el estado del objeto en el momento indicado, no el resultado de una acción concreta.",
+    searchLabel: "Buscar en la lista",
+    searchPlaceholder: "Escriba una parte del nombre del objeto de observación o del parámetro",
+    searchEmpty: "Ninguna asignación del sistema coincide con la búsqueda.",
     back: "Volver a hechos",
     target: "Objeto de observación y parámetro",
     value: "Valor",
@@ -236,6 +257,9 @@ const COPY: Record<Locale, Copy> = {
       "Snímkem není délka chůze, počet opakování cviku ani počet vystoupaných pater. Tyto hodnoty patří ke konkrétní aktivitě a ukládají se jako zdrojová fakta.",
     targetHint:
       "Vyberte vlastnost, která popisuje stav objektu v uvedeném okamžiku, nikoli výsledek jednotlivé činnosti.",
+    searchLabel: "Hledat v seznamu",
+    searchPlaceholder: "Zadejte část názvu objektu pozorování nebo parametru",
+    searchEmpty: "Žádné systémové přiřazení neodpovídá hledání.",
     back: "Zpět k faktům",
     target: "Objekt pozorování a parametr",
     value: "Hodnota",
@@ -257,6 +281,10 @@ function normalizeLocale(value: string | null): Locale {
   return value && value in COPY ? (value as Locale) : "en";
 }
 
+function formatSnapshotOptionLabel(option: SnapshotOption) {
+  return `${option.valueObjectTitle} · ${option.parameterTitle}`;
+}
+
 function localDateTimeValue() {
   const now = new Date();
   const offsetMs = now.getTimezoneOffset() * 60_000;
@@ -274,6 +302,7 @@ function SnapshotCapturePageContent() {
   const [unit, setUnit] = useState("");
   const [effectiveAt, setEffectiveAt] = useState(localDateTimeValue());
   const [sourceText, setSourceText] = useState("");
+  const [targetQuery, setTargetQuery] = useState("");
   const [clientRequestId, setClientRequestId] = useState(() =>
     crypto.randomUUID(),
   );
@@ -314,6 +343,7 @@ function SnapshotCapturePageContent() {
 
         setAssignmentId("");
         setUnit("");
+        setTargetQuery("");
       } catch (error) {
         if (!cancelled) {
           setErrorMessage(
@@ -338,6 +368,36 @@ function SnapshotCapturePageContent() {
       null,
     [assignmentId, options],
   );
+
+  const filteredOptions = useMemo(() => {
+    const query = targetQuery.trim().toLowerCase();
+
+    if (!query) {
+      return options;
+    }
+
+    return options.filter((option) => {
+      const haystack = [
+        formatSnapshotOptionLabel(option),
+        option.valueObjectTitle,
+        option.parameterTitle,
+        option.valueObjectCanonicalKey,
+        option.parameterCode,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(query);
+    });
+  }, [options, targetQuery]);
+
+  const optionsForSelect = useMemo(() => {
+    if (selectedOption && !filteredOptions.some((option) => option.assignmentId === selectedOption.assignmentId)) {
+      return [selectedOption, ...filteredOptions];
+    }
+
+    return filteredOptions;
+  }, [filteredOptions, selectedOption]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -439,36 +499,57 @@ function SnapshotCapturePageContent() {
             </p>
           ) : (
             <form className="grid gap-5" onSubmit={submit}>
-              <label className="grid gap-2">
-                <span className="text-sm font-black">{copy.target}</span>
-                <span className="text-xs font-medium leading-5 text-[#69708f]">
-                  {copy.targetHint}
-                </span>
-                <select
-                  value={assignmentId}
-                  onChange={(event) => {
-                    const nextAssignmentId = event.target.value;
-                    setAssignmentId(nextAssignmentId);
-                    const nextOption =
-                      options.find(
-                        (option) => option.assignmentId === nextAssignmentId,
-                      ) ?? null;
-                    setUnit(nextOption?.canonicalUnitCode ?? "");
-                  }}
-                  className="min-h-12 rounded-2xl border border-slate-200 bg-white px-4 font-bold outline-none focus:border-blue-400"
-                  required
-                >
-                  <option value="">—</option>
-                  {options.map((option) => (
-                    <option
-                      key={option.assignmentId}
-                      value={option.assignmentId}
-                    >
-                      {option.valueObjectTitle} · {option.parameterTitle}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="grid gap-4">
+                <label className="grid gap-2">
+                  <span className="text-sm font-black">{copy.searchLabel}</span>
+                  <input
+                    type="text"
+                    value={targetQuery}
+                    onChange={(event) => setTargetQuery(event.target.value)}
+                    placeholder={copy.searchPlaceholder}
+                    className="min-h-12 rounded-2xl border border-slate-200 px-4 font-bold outline-none focus:border-blue-400"
+                  />
+                </label>
+
+                <label className="grid gap-2">
+                  <span className="text-sm font-black">{copy.target}</span>
+                  <span className="text-xs font-medium leading-5 text-[#69708f]">
+                    {copy.targetHint}
+                  </span>
+                  <select
+                    value={assignmentId}
+                    onChange={(event) => {
+                      const nextAssignmentId = event.target.value;
+                      setAssignmentId(nextAssignmentId);
+                      const nextOption =
+                        options.find(
+                          (option) => option.assignmentId === nextAssignmentId,
+                        ) ?? null;
+                      setUnit(nextOption?.canonicalUnitCode ?? "");
+                    }}
+                    className="min-h-12 rounded-2xl border border-slate-200 bg-white px-4 font-bold outline-none focus:border-blue-400"
+                    required
+                  >
+                    <option value="">—</option>
+                    {optionsForSelect.map((option) => (
+                      <option
+                        key={option.assignmentId}
+                        value={option.assignmentId}
+                      >
+                        {formatSnapshotOptionLabel(option)}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs font-medium text-[#69708f]">
+                    {optionsForSelect.length} / {options.length}
+                  </p>
+                  {options.length > 0 && optionsForSelect.length === 0 ? (
+                    <p className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold text-amber-800">
+                      {copy.searchEmpty}
+                    </p>
+                  ) : null}
+                </label>
+              </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-2">
@@ -534,7 +615,7 @@ function SnapshotCapturePageContent() {
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-800">
                   <p>{copy.success}</p>
                   <Link
-                    href={`/activity-facts?factRoleCode=snapshot&locale=${locale}`}
+                    href={`/activity-facts?collection=snapshot&locale=${locale}`}
                     className="mt-2 inline-flex underline"
                   >
                     {copy.openFacts}
