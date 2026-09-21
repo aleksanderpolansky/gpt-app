@@ -898,23 +898,11 @@ function buildQuery(params: {
 }
 
 function getStatusTone(status: string | null) {
-  if (status === "confirmed") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  }
-
-  if (status === "proposed") {
-    return "border-blue-200 bg-blue-50 text-blue-700";
-  }
-
   if (status === "rejected") {
-    return "border-rose-200 bg-rose-50 text-rose-700";
+    return "border-red-200 bg-red-50 text-red-700";
   }
 
-  if (status === "pending_review") {
-    return "border-amber-200 bg-amber-50 text-amber-700";
-  }
-
-  return "border-slate-200 bg-slate-50 text-slate-600";
+  return "border-[rgba(0,0,0,0.08)] bg-[#f5f6fb] text-[#5a5f7a]";
 }
 
 function getStatusLabel(status: string | null, copy: ActivityFactsCopy) {
@@ -938,18 +926,16 @@ function groupFacts(facts: ActivityFact[]) {
 function SummaryCard({
   label,
   value,
-  tone,
 }: {
   readonly label: string;
   readonly value: number;
-  readonly tone: string;
 }) {
   return (
-    <div className="rounded-2xl border border-black/[0.06] bg-white p-4 shadow-sm">
-      <div className="text-[10px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+    <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4 shadow-sm">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#7c8099]">
         {label}
       </div>
-      <div className={`mt-2 text-3xl font-black ${tone}`}>{value}</div>
+      <div className="mt-2 text-3xl font-bold text-[#1a1d2e]">{value}</div>
     </div>
   );
 }
@@ -970,16 +956,16 @@ function FactRow({
   return (
     <article
       className={[
-        "grid gap-4 rounded-2xl border p-3.5 transition sm:grid-cols-[1.2fr_1fr_0.8fr_0.75fr_auto]",
-        selected ? "border-blue-300 bg-blue-50/70" : "border-black/[0.07] bg-white hover:bg-slate-50",
+        "grid gap-4 rounded-xl border p-3.5 transition sm:grid-cols-[1.2fr_1fr_0.8fr_0.75fr_auto]",
+        selected ? "border-[#3b6ef8]/25 bg-[#eef2ff]" : "border-[rgba(0,0,0,0.08)] bg-white hover:bg-[#f5f6fb]",
       ].join(" ")}
     >
       <div className="min-w-0">
-        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
           {copy.factActivity}
         </div>
         <div className="mt-2 flex flex-wrap gap-2 text-xs font-bold">
-          <span className="font-mono text-slate-800" title={fact.factId ?? undefined}>
+          <span className="font-mono text-[#2d3047]" title={fact.factId ?? undefined}>
             F: {truncateMiddle(fact.factId, 6, 6)}
           </span>
           {fact.activityEventId ? (
@@ -987,22 +973,22 @@ function FactRow({
               href={`/activity-today?locale=${locale}&activityEventId=${encodeURIComponent(
                 fact.activityEventId
               )}`}
-              className="text-blue-700 no-underline hover:underline"
+              className="text-[#3b6ef8] no-underline hover:underline"
               title={fact.activityEventId}
             >
               {fact.activityTitle ?? `A: ${truncateMiddle(fact.activityEventId, 6, 6)}`}
             </Link>
           ) : (
-            <span className="font-mono text-slate-400">A: —</span>
+            <span className="font-mono text-[#9ca3b8]">A: —</span>
           )}
         </div>
-        <div className="mt-2 text-xs font-semibold text-slate-500">
+        <div className="mt-2 text-xs font-semibold text-[#7c8099]">
           {formatDate(fact.createdAt, locale)}
         </div>
       </div>
 
       <div className="min-w-0">
-        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
           {copy.semantic}
         </div>
         <div className="mt-2 flex flex-wrap gap-2">
@@ -1011,7 +997,7 @@ function FactRow({
               <Link
                 key={valueObject.id}
                 href={`/value-objects/${encodeURIComponent(valueObject.id)}?locale=${locale}`}
-                className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-black text-blue-700 no-underline"
+                className="rounded-lg border border-[rgba(0,0,0,0.08)] bg-[#f5f6fb] px-2.5 py-1 text-xs font-semibold text-[#4a4f6a] no-underline transition hover:text-[#3b6ef8]"
                 title={valueObject.canonicalKey ?? valueObject.id}
               >
                 {valueObject.title}
@@ -1019,38 +1005,38 @@ function FactRow({
             ))
           ) : (
             <span
-              className="font-mono text-sm font-black text-slate-500"
+              className="font-mono text-sm font-black text-[#7c8099]"
               title={copy.unlinkedValueObject}
             >
               {fact.semanticObjectKey ?? "—"}
-              <span className="ml-2 font-sans text-[11px] font-bold text-amber-700">
+              <span className="ml-2 font-sans text-[11px] font-bold text-[#7c8099]">
                 · {copy.unlinkedValueObject}
               </span>
             </span>
           )}
         </div>
         {typeof fact.projectionCount === "number" && fact.projectionCount > 1 ? (
-          <div className="mt-2 text-xs font-semibold text-slate-500">
+          <div className="mt-2 text-xs font-semibold text-[#7c8099]">
             {fact.projectionCount} projections share measure {truncateMiddle(fact.measureId, 6, 6)}
           </div>
         ) : null}
       </div>
 
       <div>
-        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
           {copy.measure}
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="inline-flex min-w-12 items-center justify-center rounded-xl bg-indigo-50 px-3 py-1.5 text-lg font-black text-blue-700">
+          <span className="inline-flex min-w-12 items-center justify-center text-lg font-bold text-[#1a1d2e]">
             {formatMetricValue(fact.metricValue)}
           </span>
-          <span className="text-sm font-black text-slate-900">{fact.unit ?? "—"}</span>
+          <span className="text-sm font-black text-[#1a1d2e]">{fact.unit ?? "—"}</span>
         </div>
-        <div className="mt-2 text-xs font-bold text-slate-500">{fact.measureType ?? "—"}</div>
+        <div className="mt-2 text-xs font-bold text-[#7c8099]">{fact.measureType ?? "—"}</div>
       </div>
 
       <div>
-        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
           {copy.status}
         </div>
         <span
@@ -1061,17 +1047,17 @@ function FactRow({
         >
           {getStatusLabel(fact.factStatus, copy)}
         </span>
-        <div className="mt-2 text-xs font-black text-indigo-700">
+        <div className="mt-2 text-xs font-black text-[#5a5f7a]">
           {getFactRoleLabel(locale, fact.factRoleCode)}
         </div>
-        <div className="mt-1 text-xs font-semibold text-slate-500">{fact.sourceType ?? "—"}</div>
+        <div className="mt-1 text-xs font-semibold text-[#7c8099]">{fact.sourceType ?? "—"}</div>
       </div>
 
       <div className="flex items-center sm:justify-end">
         <button
           type="button"
           onClick={onSelect}
-          className="min-h-9 rounded-xl border border-slate-200 bg-white px-3 text-sm font-black text-slate-900 shadow-sm transition hover:border-blue-300 hover:text-blue-700"
+          className="min-h-9 rounded-lg border border-[rgba(0,0,0,0.08)] bg-white px-3 text-sm font-medium text-[#1a1d2e] shadow-sm transition hover:border-[#3b6ef8]/30 hover:text-[#3b6ef8]"
         >
           {copy.details}
         </button>
@@ -1098,24 +1084,24 @@ function FactGroup({
   readonly onSelect: (factId: string | null) => void;
 }) {
   return (
-    <section className="rounded-2xl border border-black/[0.06] bg-white p-4 shadow-sm">
+    <section className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4 shadow-sm">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-black text-[#101632]">{title}</h2>
-          <p className="mt-1 text-sm font-medium text-[#69708f]">{subtitle}</p>
+          <h2 className="text-lg font-black text-[#1a1d2e]">{title}</h2>
+          <p className="mt-1 text-sm font-medium text-[#7c8099]">{subtitle}</p>
         </div>
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-black text-slate-700">
+        <span className="rounded-full bg-[#f5f6fb] px-3 py-1 text-sm font-black text-[#5a5f7a]">
           {facts.length}
         </span>
       </div>
 
       {facts.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center text-sm font-bold text-slate-500">
+        <div className="rounded-xl border border-dashed border-[rgba(0,0,0,0.10)] bg-[#f5f6fb] p-5 text-center text-sm font-bold text-[#7c8099]">
           {copy.noFactsInGroup}
         </div>
       ) : (
         <div className="grid gap-3">
-          <div className="hidden grid-cols-[1.2fr_1fr_0.8fr_0.75fr_auto] gap-4 px-4 text-[10px] font-black uppercase tracking-[0.16em] text-[#747da0] sm:grid">
+          <div className="hidden grid-cols-[1.2fr_1fr_0.8fr_0.75fr_auto] gap-4 px-4 text-[10px] font-black uppercase tracking-[0.16em] text-[#7c8099] sm:grid">
             <span>{copy.ids}</span>
             <span>{copy.semantic}</span>
             <span>{copy.measure}</span>
@@ -1398,18 +1384,18 @@ function ActivityFactsPageContent() {
   }, [loadFacts]);
 
   return (
-    <main className="min-h-[calc(100vh-5rem)] bg-[#f4f6fb] px-3 py-4 text-[#101632] sm:px-5 lg:px-6">
+    <main className="min-h-[calc(100vh-5rem)] bg-[#f0f2f7] px-3 py-4 text-[#1a1d2e] sm:px-5 lg:px-6">
       <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-4">
         <section className="py-1">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-3xl">
-              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#747da0]">
+              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#7c8099]">
                 {FACTS_PAGE_EYEBROW[locale]}
               </p>
-              <h1 className="mt-1 text-2xl font-black tracking-[-0.02em] text-[#101632]">
+              <h1 className="mt-1 text-2xl font-black tracking-[-0.02em] text-[#1a1d2e]">
                 {copy.pageTitle}
               </h1>
-              <p className="mt-1 text-sm font-medium leading-6 text-[#69708f]">
+              <p className="mt-1 text-sm font-medium leading-6 text-[#7c8099]">
                 {copy.pageSubtitle}
               </p>
             </div>
@@ -1417,7 +1403,7 @@ function ActivityFactsPageContent() {
             <div className="flex flex-wrap items-center gap-3">
               <Link
                 href={`/activity-facts/snapshot?locale=${locale}`}
-                className="inline-flex min-h-10 items-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-black text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-100"
+                className="inline-flex min-h-10 items-center rounded-lg border border-[#3b6ef8]/30 bg-white px-4 text-sm font-medium text-[#3b6ef8] transition hover:bg-[#eef2ff]"
               >
                 {SNAPSHOT_CAPTURE_ACTION_LABELS[locale]}
               </Link>
@@ -1425,7 +1411,7 @@ function ActivityFactsPageContent() {
               <button
                 type="button"
                 onClick={loadFacts}
-                className="min-h-10 rounded-xl border border-blue-200 bg-white px-4 text-sm font-black text-blue-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-50"
+                className="min-h-10 rounded-lg border border-[rgba(0,0,0,0.08)] bg-white px-4 text-sm font-medium text-[#5a5f7a] transition hover:bg-[#f5f6fb]"
               >
                 {copy.refresh}
               </button>
@@ -1434,23 +1420,20 @@ function ActivityFactsPageContent() {
         </section>
 
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <SummaryCard label={copy.summaryAll} value={facts.length} tone="text-slate-900" />
+          <SummaryCard label={copy.summaryAll} value={facts.length} />
           <SummaryCard
             label={collectionCopy.completed.label}
             value={factCollections.completed.length}
-            tone="text-emerald-600"
           />
           <SummaryCard
             label={copy.summaryProposed}
             value={groupedFacts.proposed.length}
-            tone="text-blue-600"
           />
           <SummaryCard
             label={collectionCopy.snapshot.label}
             value={factCollections.snapshot.length}
-            tone="text-violet-600"
           />
-          <SummaryCard label={copy.summaryOther} value={factCollections.other.length} tone="text-amber-600" />
+          <SummaryCard label={copy.summaryOther} value={factCollections.other.length} />
         </section>
 
         <section className="flex flex-col gap-2">
@@ -1464,15 +1447,15 @@ function ActivityFactsPageContent() {
                   className={[
                     "inline-flex min-h-9 items-center rounded-lg border px-3 text-sm font-black no-underline transition",
                     isActive
-                      ? "border-blue-600 bg-blue-600 text-white shadow-sm"
-                      : "border-slate-200 bg-white text-[#556080] hover:bg-slate-50",
+                      ? "border-[#3b6ef8] bg-[#3b6ef8] text-white shadow-sm"
+                      : "border-[rgba(0,0,0,0.08)] bg-white text-[#5a5f7a] hover:bg-[#f5f6fb]",
                   ].join(" ")}
                 >
                   {collectionCopy[collection].label}
                   <span
                     className={[
                       "ml-2 inline-flex min-w-6 justify-center rounded-full px-2 py-0.5 text-xs font-black",
-                      isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600",
+                      isActive ? "bg-white/20 text-white" : "bg-[#f5f6fb] text-[#7c8099]",
                     ].join(" ")}
                   >
                     {factCollections[collection].length}
@@ -1482,21 +1465,21 @@ function ActivityFactsPageContent() {
             })}
           </div>
 
-          <p className="text-sm font-medium leading-6 text-[#69708f]">
+          <p className="text-sm font-medium leading-6 text-[#7c8099]">
             {collectionCopy[activeCollection].subtitle}
           </p>
         </section>
 
         <div className="flex justify-end">
-          <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+          <div className="inline-flex rounded-lg border border-[rgba(0,0,0,0.08)] bg-white p-1 shadow-sm">
             <button
               type="button"
               onClick={() => setViewMode("cards")}
               className={[
                 "inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-xs font-black transition",
                 viewMode === "cards"
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-[#747da0] hover:text-[#101632]",
+                  ? "bg-white text-[#3b6ef8] shadow-sm"
+                  : "text-[#7c8099] hover:text-[#1a1d2e]",
               ].join(" ")}
             >
               <LayoutGrid size={15} />
@@ -1508,8 +1491,8 @@ function ActivityFactsPageContent() {
               className={[
                 "inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-xs font-black transition",
                 viewMode === "table"
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-[#747da0] hover:text-[#101632]",
+                  ? "bg-white text-[#3b6ef8] shadow-sm"
+                  : "text-[#7c8099] hover:text-[#1a1d2e]",
               ].join(" ")}
             >
               <Table2 size={15} />
@@ -1518,21 +1501,21 @@ function ActivityFactsPageContent() {
           </div>
         </div>
 
-        <section className="rounded-2xl border border-black/[0.06] bg-white p-4 shadow-sm">
+        <section className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h2 className="text-xl font-black text-[#101632]">{copy.filters}</h2>
-              <p className="mt-1 text-sm font-medium text-[#69708f]">{copy.filtersSubtitle}</p>
+              <h2 className="text-xl font-black text-[#1a1d2e]">{copy.filters}</h2>
+              <p className="mt-1 text-sm font-medium text-[#7c8099]">{copy.filtersSubtitle}</p>
             </div>
 
             <span
               className={[
                 "rounded-full border px-3 py-2 text-xs font-black",
                 state.status === "error"
-                  ? "border-rose-200 bg-rose-50 text-rose-700"
+                  ? "border-red-200 bg-red-50 text-red-700"
                   : state.status === "loading"
-                    ? "border-blue-200 bg-blue-50 text-blue-700"
-                    : "border-emerald-200 bg-emerald-50 text-emerald-700",
+                    ? "border-[#3b6ef8]/20 bg-[#eef2ff] text-[#3b6ef8]"
+                    : "border-[rgba(0,0,0,0.08)] bg-[#f5f6fb] text-[#5a5f7a]",
               ].join(" ")}
             >
               {state.message}
@@ -1541,13 +1524,13 @@ function ActivityFactsPageContent() {
 
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             <label className="grid gap-2">
-              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                 {copy.limit}
               </span>
               <select
                 value={limit}
                 onChange={(event) => setLimit(event.target.value)}
-                className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
+                className="min-h-11 rounded-xl border border-[rgba(0,0,0,0.08)] bg-white px-3 text-sm font-bold outline-none transition focus:border-[#3b6ef8]"
               >
                 <option value="10">10</option>
                 <option value="25">25</option>
@@ -1557,13 +1540,13 @@ function ActivityFactsPageContent() {
             </label>
 
             <label className="grid gap-2">
-              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                 {copy.status}
               </span>
               <select
                 value={factStatus}
                 onChange={(event) => setFactStatus(event.target.value)}
-                className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
+                className="min-h-11 rounded-xl border border-[rgba(0,0,0,0.08)] bg-white px-3 text-sm font-bold outline-none transition focus:border-[#3b6ef8]"
               >
                 <option value="">{copy.allStatuses}</option>
                 <option value="confirmed">{getStatusLabel("confirmed", copy)}</option>
@@ -1575,44 +1558,44 @@ function ActivityFactsPageContent() {
             </label>
           </div>
 
-          <details className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3">
-            <summary className="cursor-pointer text-sm font-black text-slate-700">
+          <details className="mt-4 rounded-2xl border border-[rgba(0,0,0,0.08)] bg-[#f5f6fb] px-4 py-3">
+            <summary className="cursor-pointer text-sm font-black text-[#5a5f7a]">
               {copy.advancedFilters}
             </summary>
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               <label className="grid gap-2">
-                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                   {copy.semanticKey}
                 </span>
                 <input
                   value={semanticObjectKey}
                   onChange={(event) => setSemanticObjectKey(event.target.value)}
                   placeholder="walk"
-                  className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
+                  className="min-h-11 rounded-xl border border-[rgba(0,0,0,0.08)] bg-white px-3 text-sm font-bold outline-none transition focus:border-[#3b6ef8]"
                 />
               </label>
 
               <label className="grid gap-2">
-                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                   {copy.valueObjectId}
                 </span>
                 <input
                   value={valueObjectId}
                   onChange={(event) => setValueObjectId(event.target.value)}
                   placeholder="uuid"
-                  className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
+                  className="min-h-11 rounded-xl border border-[rgba(0,0,0,0.08)] bg-white px-3 text-sm font-bold outline-none transition focus:border-[#3b6ef8]"
                 />
               </label>
 
               <label className="grid gap-2">
-                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                   {copy.activityId}
                 </span>
                 <input
                   value={activityEventId}
                   onChange={(event) => setActivityEventId(event.target.value)}
                   placeholder="uuid"
-                  className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none transition focus:border-blue-300"
+                  className="min-h-11 rounded-xl border border-[rgba(0,0,0,0.08)] bg-white px-3 text-sm font-bold outline-none transition focus:border-[#3b6ef8]"
                 />
               </label>
             </div>
@@ -1622,7 +1605,7 @@ function ActivityFactsPageContent() {
             <button
               type="button"
               onClick={loadFacts}
-              className="min-h-11 rounded-xl bg-[#101632] px-5 text-sm font-black text-white shadow-sm transition hover:bg-[#1b2345]"
+              className="min-h-10 rounded-lg bg-[#3b6ef8] px-4 text-sm font-medium text-white shadow-sm transition hover:bg-[#2c5df0]"
             >
               {copy.apply}
             </button>
@@ -1630,7 +1613,7 @@ function ActivityFactsPageContent() {
             <button
               type="button"
               onClick={resetFilters}
-              className="min-h-11 rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-900 shadow-sm transition hover:border-blue-300 hover:text-blue-700"
+              className="min-h-10 rounded-lg border border-[rgba(0,0,0,0.08)] bg-white px-4 text-sm font-medium text-[#5a5f7a] transition hover:bg-[#f5f6fb]"
             >
               {copy.reset}
             </button>
@@ -1638,7 +1621,7 @@ function ActivityFactsPageContent() {
         </section>
 
         {viewMode === "table" ? (
-          <section className="rounded-2xl border border-black/[0.06] bg-white p-3 shadow-sm">
+          <section className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-3 shadow-sm">
             <ArctorTabulator<FactTableRow>
               data={factTableRows}
               columns={factTableColumns}
@@ -1660,46 +1643,46 @@ function ActivityFactsPageContent() {
           />
         )}
 
-        <section className="rounded-2xl border border-black/[0.06] bg-white p-4 shadow-sm">
-          <p className="text-[12px] font-black uppercase tracking-[0.18em] text-blue-600">
+        <section className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7c8099]">
             {copy.details}
           </p>
-          <h2 className="mt-2 text-2xl font-black text-[#101632]">{copy.selectedFact}</h2>
+          <h2 className="mt-2 text-2xl font-black text-[#1a1d2e]">{copy.selectedFact}</h2>
 
           {selectedFact ? (
             <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
-                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+              <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                   {FACT_CARD_LABELS[locale].role}
                 </div>
-                <strong className="mt-2 block text-indigo-800">
+                <strong className="mt-2 block text-[#1a1d2e]">
                   {getFactRoleLabel(locale, selectedFact.factRoleCode)}
                 </strong>
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-4">
-                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+              <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                   {copy.type}
                 </div>
                 <strong className="mt-2 block">{selectedFact.measureType ?? "—"}</strong>
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-4">
-                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+              <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                   {copy.value}
                 </div>
                 <strong className="mt-2 block">{formatMetricValue(selectedFact.metricValue)}</strong>
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-4">
-                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+              <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                   {copy.unit}
                 </div>
                 <strong className="mt-2 block">{selectedFact.unit ?? "—"}</strong>
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-4">
-                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+              <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                   {copy.status}
                 </div>
                 <span
@@ -1712,8 +1695,8 @@ function ActivityFactsPageContent() {
                 </span>
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-4 md:col-span-2">
-                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+              <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4 md:col-span-2">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                   {copy.semantic}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -1722,7 +1705,7 @@ function ActivityFactsPageContent() {
                       <Link
                         key={valueObject.id}
                         href={`/value-objects/${encodeURIComponent(valueObject.id)}?locale=${locale}`}
-                        className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-black text-blue-700 no-underline"
+                        className="rounded-lg border border-[rgba(0,0,0,0.08)] bg-[#f5f6fb] px-2.5 py-1 text-xs font-semibold text-[#4a4f6a] no-underline transition hover:text-[#3b6ef8]"
                       >
                         {valueObject.title}
                       </Link>
@@ -1735,22 +1718,22 @@ function ActivityFactsPageContent() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-4">
-                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+              <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                   {copy.createdAt}
                 </div>
                 <strong className="mt-2 block">{formatDate(selectedFact.createdAt, locale)}</strong>
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-4">
-                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+              <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                   {copy.source}
                 </div>
                 <strong className="mt-2 block">{factSourceLabel(selectedFact, locale)}</strong>
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-4">
-                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+              <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                   {copy.confidence}
                 </div>
                 <strong className="mt-2 block">
@@ -1760,8 +1743,8 @@ function ActivityFactsPageContent() {
                 </strong>
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-4 md:col-span-2">
-                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+              <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4 md:col-span-2">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                   {copy.factActivity}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-3 text-sm font-bold">
@@ -1769,7 +1752,7 @@ function ActivityFactsPageContent() {
                   {selectedFact.activityEventId ? (
                     <Link
                       href={`/activity-today?locale=${locale}&activityEventId=${encodeURIComponent(selectedFact.activityEventId)}`}
-                      className="font-bold text-blue-700 no-underline hover:underline"
+                      className="font-bold text-[#3b6ef8] no-underline hover:underline"
                     >
                       {selectedFact.activityTitle ?? `A: ${truncateMiddle(selectedFact.activityEventId, 10, 8)}`}
                     </Link>
@@ -1779,8 +1762,8 @@ function ActivityFactsPageContent() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-4">
-                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+              <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                   {FACT_CARD_LABELS[locale].effectiveAt}
                 </div>
                 <strong className="mt-2 block">
@@ -1788,8 +1771,8 @@ function ActivityFactsPageContent() {
                 </strong>
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-4">
-                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+              <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                   {FACT_CARD_LABELS[locale].validity}
                 </div>
                 <strong className="mt-2 block">
@@ -1797,8 +1780,8 @@ function ActivityFactsPageContent() {
                 </strong>
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-4">
-                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+              <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                   {FACT_CARD_LABELS[locale].snapshotWindow}
                 </div>
                 <strong className="mt-2 block">
@@ -1808,8 +1791,8 @@ function ActivityFactsPageContent() {
                 </strong>
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-4">
-                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+              <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                   {FACT_CARD_LABELS[locale].previousSnapshot}
                 </div>
                 <strong className="mt-2 block font-mono">
@@ -1819,8 +1802,8 @@ function ActivityFactsPageContent() {
                 </strong>
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-4 md:col-span-2">
-                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+              <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4 md:col-span-2">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                   {FACT_CARD_LABELS[locale].calculationRule}
                 </div>
                 <strong className="mt-2 block break-words font-mono">
@@ -1833,15 +1816,15 @@ function ActivityFactsPageContent() {
                 selectedFact.calculationRuleVersion ? (
                   <Link
                     href={`/formula-rationale?ruleCode=${encodeURIComponent(selectedFact.calculationRuleCode)}&version=${encodeURIComponent(selectedFact.calculationRuleVersion)}&locale=${encodeURIComponent(locale)}`}
-                    className="mt-3 inline-flex rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 no-underline transition hover:bg-blue-100"
+                    className="mt-3 inline-flex rounded-lg border border-[#3b6ef8]/30 bg-white px-3 py-2 text-xs font-medium text-[#3b6ef8] no-underline transition hover:bg-[#eef2ff]"
                   >
                     {FORMULA_RATIONALE_LINK_LABEL[locale]}
                   </Link>
                 ) : null}
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-4 md:col-span-2">
-                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#747da0]">
+              <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4 md:col-span-2">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                   {FACT_CARD_LABELS[locale].calculationInputs}
                 </div>
                 {(selectedFact.derivationInputs ?? []).length > 0 ? (
@@ -1849,7 +1832,7 @@ function ActivityFactsPageContent() {
                     {(selectedFact.derivationInputs ?? []).map((input) => (
                       <span
                         key={`${input.inputFactId}-${input.inputRoleCode}`}
-                        className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-xs font-bold text-slate-700"
+                        className="rounded-lg border border-[rgba(0,0,0,0.08)] bg-[#f5f6fb] px-2.5 py-1 font-mono text-xs font-medium text-[#5a5f7a]"
                         title={input.inputFactId}
                       >
                         {input.inputRoleCode}: F:{truncateMiddle(input.inputFactId, 7, 6)}
@@ -1868,7 +1851,7 @@ function ActivityFactsPageContent() {
               />
             </div>
           ) : (
-            <p className="mt-4 text-sm font-bold text-slate-500">{copy.selectedHint}</p>
+            <p className="mt-4 text-sm font-bold text-[#7c8099]">{copy.selectedHint}</p>
           )}
         </section>
       </div>
