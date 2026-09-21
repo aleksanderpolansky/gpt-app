@@ -367,22 +367,30 @@ async function loadLocalizationTemplate() {
   };
 }
 
-function buildMetadata(spec, template) {
-  const replacements = new Map();
-  if (template.titleEn) replacements.set(template.titleEn, spec.titleEn);
-  if (template.descriptionEn) {
-    replacements.set(template.descriptionEn, spec.descriptionEn);
-  }
-  if (template.titleRu) replacements.set(template.titleRu, spec.titleRu);
-  if (template.descriptionRu) {
-    replacements.set(template.descriptionRu, spec.descriptionRu);
-  }
+function localizedContentForSpec(spec, template) {
+  const localizedContent = deepClone(template.metadata.localizedContent);
+  const variants = asRecord(localizedContent.variants);
 
+  localizedContent.variants = {
+    ...variants,
+    en: {
+      ...asRecord(variants.en),
+      title: spec.titleEn,
+      description: spec.descriptionEn,
+    },
+    ru: {
+      ...asRecord(variants.ru),
+      title: spec.titleRu,
+      description: spec.descriptionRu,
+    },
+  };
+
+  return localizedContent;
+}
+
+function buildMetadata(spec, template) {
   const now = new Date().toISOString();
-  const localizedContent = deepReplace(
-    deepClone(template.metadata.localizedContent),
-    replacements,
-  );
+  const localizedContent = localizedContentForSpec(spec, template);
 
   return {
     localizedContent,
@@ -480,6 +488,10 @@ function validateNode(row, spec) {
   const localizations = asRecord(draft.localizations);
   const en = asRecord(localizations.en);
   const ru = asRecord(localizations.ru);
+  const localizedContent = asRecord(metadata.localizedContent);
+  const runtimeVariants = asRecord(localizedContent.variants);
+  const runtimeEn = asRecord(runtimeVariants.en);
+  const runtimeRu = asRecord(runtimeVariants.ru);
 
   const checks = {
     id: row.id === spec.id,
@@ -504,6 +516,12 @@ function validateNode(row, spec) {
     ru_description: normalizeText(ru.description) === spec.descriptionRu,
     en_title: normalizeText(en.title) === spec.titleEn,
     en_description: normalizeText(en.description) === spec.descriptionEn,
+    runtime_ru_title: normalizeText(runtimeRu.title) === spec.titleRu,
+    runtime_ru_description:
+      normalizeText(runtimeRu.description) === spec.descriptionRu,
+    runtime_en_title: normalizeText(runtimeEn.title) === spec.titleEn,
+    runtime_en_description:
+      normalizeText(runtimeEn.description) === spec.descriptionEn,
     comment_ru: normalizeText(manual.creationCommentRu) === spec.commentRu,
     comment_en: normalizeText(manual.creationCommentEn) === spec.commentEn,
   };
@@ -515,6 +533,99 @@ function validateNode(row, spec) {
   if (failed.length) {
     throw new Error(`NODE_CONTRACT_CONFLICT:${spec.code}:${failed.join(",")}`);
   }
+}
+
+
+function runtimeLocalizationMatches(row, spec) {
+  const metadata = asRecord(row.metadata_json);
+  const localizedContent = asRecord(metadata.localizedContent);
+  const variants = asRecord(localizedContent.variants);
+  const en = asRecord(variants.en);
+  const ru = asRecord(variants.ru);
+
+  return (
+    normalizeText(en.title) === spec.titleEn &&
+    normalizeText(en.description) === spec.descriptionEn &&
+    normalizeText(ru.title) === spec.titleRu &&
+    normalizeText(ru.description) === spec.descriptionRu
+  );
+}
+
+async function repairRuntimeLocalizationIfNeeded(row, spec, template) {
+  if (runtimeLocalizationMatches(row, spec)) {
+    return {
+      row,
+      localizationStatus: "already_correct",
+    };
+  }
+
+  if (!APPLY) {
+    return {
+      row,
+      localizationStatus: "would_repair",
+    };
+  }
+
+  const metadata = deepClone(asRecord(row.metadata_json));
+  metadata.localizedContent = localizedContentForSpec(spec, template);
+
+  const draft = asRecord(metadata.curator_system_draft_v1);
+  metadata.curator_system_draft_v1 = {
+    ...draft,
+    localizationState: "pending",
+    localizationLocales: ["en", "ru"],
+    localizationMissingLocales: ["pl", "uk", "de", "es", "cs"],
+    localizationQueuedAt: new Date().toISOString(),
+    localizations: {
+      ...asRecord(draft.localizations),
+      en: {
+        title: spec.titleEn,
+        description: spec.descriptionEn,
+      },
+      ru: {
+        title: spec.titleRu,
+        description: spec.descriptionRu,
+      },
+    },
+  };
+
+  const { error: updateError } = await supabase
+    .from("value_objects")
+    .update({
+      metadata_json: metadata,
+    })
+    .eq("id", spec.id);
+
+  if (updateError) {
+    throw new Error(
+      `NODE_RUNTIME_LOCALIZATION_REPAIR_FAILED:${spec.code}:${updateError.message}`,
+    );
+  }
+
+  const { data: repaired, error: readError } = await supabase
+    .from("value_objects")
+    .select(
+      "id,title,description,canonical_key,parent_value_object_id,root_value_object_id,node_role_code,branch_type_code,ontology_node_role_code,facet_code,object_kind_code,hierarchy_relation_code,scope_code,origin_type_code,owner_user_id,owner_actor_id,created_by_actor_id,status,metadata_json",
+    )
+    .eq("id", spec.id)
+    .maybeSingle();
+
+  if (readError || !repaired) {
+    throw new Error(
+      `NODE_RUNTIME_LOCALIZATION_REPAIR_POSTCHECK_FAILED:${spec.code}:${readError?.message || "missing"}`,
+    );
+  }
+
+  if (!runtimeLocalizationMatches(repaired, spec)) {
+    throw new Error(
+      `NODE_RUNTIME_LOCALIZATION_REPAIR_NOT_EFFECTIVE:${spec.code}`,
+    );
+  }
+
+  return {
+    row: repaired,
+    localizationStatus: "repaired",
+  };
 }
 
 async function ensureNode(spec, template) {
@@ -535,8 +646,18 @@ async function ensureNode(spec, template) {
   }
 
   if (byKey?.[0]) {
-    validateNode(byKey[0], spec);
-    return { code: spec.code, id: spec.id, status: "reused" };
+    const repaired = await repairRuntimeLocalizationIfNeeded(
+      byKey[0],
+      spec,
+      template,
+    );
+    validateNode(repaired.row, spec);
+    return {
+      code: spec.code,
+      id: spec.id,
+      status: "reused",
+      localizationStatus: repaired.localizationStatus,
+    };
   }
 
   const { data: byId, error: byIdError } = await supabase
@@ -637,7 +758,12 @@ async function ensureNode(spec, template) {
     throw new Error(`NODE_DEFINITION_VERSION_INVALID:${spec.code}`);
   }
 
-  return { code: spec.code, id: spec.id, status: "created" };
+  return {
+    code: spec.code,
+    id: spec.id,
+    status: "created",
+    localizationStatus: "created_correctly",
+  };
 }
 
 async function ensureMassAssignments() {
@@ -850,7 +976,7 @@ async function verifyFinalState() {
   const { data: objects, error: objectError } = await supabase
     .from("value_objects")
     .select(
-      "id,canonical_key,title,parent_value_object_id,root_value_object_id,ontology_node_role_code,facet_code,object_kind_code,hierarchy_relation_code,scope_code,origin_type_code,status",
+      "id,canonical_key,title,parent_value_object_id,root_value_object_id,ontology_node_role_code,facet_code,object_kind_code,hierarchy_relation_code,scope_code,origin_type_code,status,metadata_json",
     )
     .in("id", NODES.map((node) => node.id));
 
@@ -897,10 +1023,36 @@ async function verifyFinalState() {
     throw new Error(`FINAL_RELATION_READ_FAILED:${relationError.message}`);
   }
 
+  const localizationChecks = NODES.map((spec) => {
+    const row = (objects || []).find((item) => item.id === spec.id);
+    const metadata = asRecord(row?.metadata_json);
+    const localizedContent = asRecord(metadata.localizedContent);
+    const variants = asRecord(localizedContent.variants);
+    const en = asRecord(variants.en);
+    const ru = asRecord(variants.ru);
+
+    return {
+      id: spec.id,
+      code: spec.code,
+      expectedRuTitle: spec.titleRu,
+      actualRuTitle: normalizeText(ru.title),
+      expectedEnTitle: spec.titleEn,
+      actualEnTitle: normalizeText(en.title),
+      ok:
+        normalizeText(ru.title) === spec.titleRu &&
+        normalizeText(ru.description) === spec.descriptionRu &&
+        normalizeText(en.title) === spec.titleEn &&
+        normalizeText(en.description) === spec.descriptionEn,
+    };
+  });
+
+  const localizationReady = localizationChecks.every((item) => item.ok);
+
   const ready =
     (objects || []).length === NODES.length &&
     (assignments || []).length === 2 &&
-    (relationRows || []).length === 1;
+    (relationRows || []).length === 1 &&
+    localizationReady;
 
   if (APPLY && !ready) {
     throw new Error(
@@ -916,6 +1068,8 @@ async function verifyFinalState() {
     expectedMassAssignmentCount: 2,
     sameSubjectRelationCount: (relationRows || []).length,
     expectedSameSubjectRelationCount: 1,
+    localizationReady,
+    localizationChecks,
     objects: objects || [],
   };
 }
