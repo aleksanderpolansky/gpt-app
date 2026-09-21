@@ -26,6 +26,11 @@ type Copy = {
   eyebrow: string;
   title: string;
   subtitle: string;
+  explanationTitle: string;
+  explanationBody: string;
+  explanationExamples: string;
+  explanationNotSnapshot: string;
+  targetHint: string;
   back: string;
   target: string;
   value: string;
@@ -48,6 +53,15 @@ const COPY: Record<Locale, Copy> = {
     title: "Add a state snapshot",
     subtitle:
       "A snapshot stores a user-reported state value at a specific moment using the existing system parameter assignment.",
+    explanationTitle: "What is a state snapshot?",
+    explanationBody:
+      "A snapshot records the value of an observation object's property at a specific moment. It exists independently of a particular activity and can later be used in analytics and calculations.",
+    explanationExamples:
+      "Examples: body mass 96 kg, body temperature 36.6 °C, blood pressure 125 mmHg.",
+    explanationNotSnapshot:
+      "Not a snapshot: walk duration, exercise repetitions or floors climbed. Those values belong to a particular activity and are recorded as source facts.",
+    targetHint:
+      "Choose a property that describes the object's state at the selected moment, not the result of a particular action.",
     back: "Back to facts",
     target: "Observation object and parameter",
     value: "Value",
@@ -68,6 +82,15 @@ const COPY: Record<Locale, Copy> = {
     title: "Dodaj przekrój stanu",
     subtitle:
       "Przekrój zapisuje zgłoszoną przez użytkownika wartość stanu na określony moment przez istniejące systemowe przypisanie parametru.",
+    explanationTitle: "Czym jest przekrój stanu?",
+    explanationBody:
+      "Przekrój zapisuje wartość właściwości obiektu obserwacji w określonym momencie. Istnieje niezależnie od konkretnej aktywności i może być później użyty w analizach oraz obliczeniach.",
+    explanationExamples:
+      "Przykłady: masa ciała 96 kg, temperatura ciała 36,6 °C, ciśnienie tętnicze 125 mmHg.",
+    explanationNotSnapshot:
+      "Nie jest przekrojem: czas spaceru, liczba powtórzeń ćwiczenia ani liczba pokonanych pięter. Takie wartości należą do konkretnej aktywności i są zapisywane jako fakty źródłowe.",
+    targetHint:
+      "Wybierz właściwość opisującą stan obiektu w wybranym momencie, a nie wynik konkretnego działania.",
     back: "Wróć do faktów",
     target: "Obiekt obserwacji i parametr",
     value: "Wartość",
@@ -88,6 +111,15 @@ const COPY: Record<Locale, Copy> = {
     title: "Добавить факт-срез состояния",
     subtitle:
       "Срез сохраняет сообщённое пользователем значение состояния на конкретный момент через существующее системное назначение параметра.",
+    explanationTitle: "Что такое факт-срез состояния?",
+    explanationBody:
+      "Факт-срез фиксирует значение свойства объекта наблюдения на конкретный момент времени. Он существует независимо от отдельной активности и позднее может использоваться в аналитике и расчётах.",
+    explanationExamples:
+      "Примеры: масса тела — 96 кг, температура тела — 36,6 °C, артериальное давление — 125 мм рт. ст.",
+    explanationNotSnapshot:
+      "Не является фактом-срезом: продолжительность прогулки, количество повторений упражнения или число пройденных этажей. Такие значения относятся к конкретной активности и записываются как исходные факты.",
+    targetHint:
+      "Выберите свойство, значение которого характеризует состояние объекта на указанный момент, а не результат отдельного действия.",
     back: "Вернуться к фактам",
     target: "Объект наблюдения и параметр",
     value: "Значение",
@@ -108,6 +140,15 @@ const COPY: Record<Locale, Copy> = {
     title: "Додати факт-зріз стану",
     subtitle:
       "Зріз зберігає повідомлене користувачем значення стану на конкретний момент через чинне системне призначення параметра.",
+    explanationTitle: "Що таке факт-зріз стану?",
+    explanationBody:
+      "Факт-зріз фіксує значення властивості об’єкта спостереження на конкретний момент часу. Він існує незалежно від окремої активності й надалі може використовуватися в аналітиці та розрахунках.",
+    explanationExamples:
+      "Приклади: маса тіла — 96 кг, температура тіла — 36,6 °C, артеріальний тиск — 125 мм рт. ст.",
+    explanationNotSnapshot:
+      "Не є фактом-зрізом: тривалість прогулянки, кількість повторень вправи або кількість пройдених поверхів. Такі значення належать до конкретної активності та записуються як вихідні факти.",
+    targetHint:
+      "Оберіть властивість, значення якої характеризує стан об’єкта у вказаний момент, а не результат окремої дії.",
     back: "Повернутися до фактів",
     target: "Об’єкт спостереження і параметр",
     value: "Значення",
@@ -128,6 +169,15 @@ const COPY: Record<Locale, Copy> = {
     title: "Zustandsschnitt hinzufügen",
     subtitle:
       "Ein Schnitt speichert einen vom Benutzer gemeldeten Zustandswert zu einem bestimmten Zeitpunkt über eine vorhandene Systemzuordnung.",
+    explanationTitle: "Was ist ein Zustandsschnitt?",
+    explanationBody:
+      "Ein Zustandsschnitt erfasst den Wert einer Eigenschaft eines Beobachtungsobjekts zu einem bestimmten Zeitpunkt. Er besteht unabhängig von einer einzelnen Aktivität und kann später für Analysen und Berechnungen verwendet werden.",
+    explanationExamples:
+      "Beispiele: Körpermasse 96 kg, Körpertemperatur 36,6 °C, Blutdruck 125 mmHg.",
+    explanationNotSnapshot:
+      "Kein Zustandsschnitt sind Gehzeit, Wiederholungen einer Übung oder gestiegene Stockwerke. Solche Werte gehören zu einer konkreten Aktivität und werden als Quellfakten gespeichert.",
+    targetHint:
+      "Wählen Sie eine Eigenschaft, die den Zustand des Objekts zum angegebenen Zeitpunkt beschreibt, nicht das Ergebnis einer einzelnen Handlung.",
     back: "Zurück zu Fakten",
     target: "Beobachtungsobjekt und Parameter",
     value: "Wert",
@@ -148,6 +198,15 @@ const COPY: Record<Locale, Copy> = {
     title: "Añadir corte de estado",
     subtitle:
       "Un corte guarda un valor de estado informado por el usuario en un momento concreto mediante una asignación de sistema existente.",
+    explanationTitle: "¿Qué es un corte de estado?",
+    explanationBody:
+      "Un corte registra el valor de una propiedad de un objeto de observación en un momento concreto. Existe independientemente de una actividad específica y después puede utilizarse en análisis y cálculos.",
+    explanationExamples:
+      "Ejemplos: masa corporal 96 kg, temperatura corporal 36,6 °C, presión arterial 125 mmHg.",
+    explanationNotSnapshot:
+      "No es un corte: duración de una caminata, repeticiones de un ejercicio o pisos subidos. Esos valores pertenecen a una actividad concreta y se guardan como hechos fuente.",
+    targetHint:
+      "Elija una propiedad que describa el estado del objeto en el momento indicado, no el resultado de una acción concreta.",
     back: "Volver a hechos",
     target: "Objeto de observación y parámetro",
     value: "Valor",
@@ -168,6 +227,15 @@ const COPY: Record<Locale, Copy> = {
     title: "Přidat snímek stavu",
     subtitle:
       "Snímek uloží uživatelem oznámenou hodnotu stavu k určitému okamžiku pomocí existujícího systémového přiřazení.",
+    explanationTitle: "Co je snímek stavu?",
+    explanationBody:
+      "Snímek stavu zaznamenává hodnotu vlastnosti objektu pozorování v konkrétním okamžiku. Existuje nezávisle na jednotlivé aktivitě a později může být použit v analýzách a výpočtech.",
+    explanationExamples:
+      "Příklady: tělesná hmotnost 96 kg, tělesná teplota 36,6 °C, krevní tlak 125 mmHg.",
+    explanationNotSnapshot:
+      "Snímkem není délka chůze, počet opakování cviku ani počet vystoupaných pater. Tyto hodnoty patří ke konkrétní aktivitě a ukládají se jako zdrojová fakta.",
+    targetHint:
+      "Vyberte vlastnost, která popisuje stav objektu v uvedeném okamžiku, nikoli výsledek jednotlivé činnosti.",
     back: "Zpět k faktům",
     target: "Objekt pozorování a parametr",
     value: "Hodnota",
@@ -223,7 +291,7 @@ function SnapshotCapturePageContent() {
 
       try {
         const response = await fetch(
-          `/api/activity/facts/snapshots?parameterCode=mass&locale=${encodeURIComponent(locale)}`,
+          `/api/activity/facts/snapshots?locale=${encodeURIComponent(locale)}`,
           { cache: "no-store" },
         );
         const payload = (await response.json()) as {
@@ -244,10 +312,8 @@ function SnapshotCapturePageContent() {
 
         setOptions(nextOptions);
 
-        if (nextOptions.length === 1) {
-          setAssignmentId(nextOptions[0].assignmentId);
-          setUnit(nextOptions[0].canonicalUnitCode);
-        }
+        setAssignmentId("");
+        setUnit("");
       } catch (error) {
         if (!cancelled) {
           setErrorMessage(
@@ -339,6 +405,21 @@ function SnapshotCapturePageContent() {
             {copy.subtitle}
           </p>
 
+          <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <p className="text-sm font-black text-emerald-900">
+              {copy.explanationTitle}
+            </p>
+            <p className="mt-2 text-sm font-medium leading-6 text-emerald-950/80">
+              {copy.explanationBody}
+            </p>
+            <p className="mt-2 text-sm font-bold leading-6 text-emerald-900">
+              {copy.explanationExamples}
+            </p>
+            <p className="mt-2 text-sm font-medium leading-6 text-emerald-950/80">
+              {copy.explanationNotSnapshot}
+            </p>
+          </div>
+
           <Link
             href={`/activity-facts?locale=${locale}`}
             className="mt-5 inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 shadow-sm hover:bg-slate-50"
@@ -360,6 +441,9 @@ function SnapshotCapturePageContent() {
             <form className="grid gap-5" onSubmit={submit}>
               <label className="grid gap-2">
                 <span className="text-sm font-black">{copy.target}</span>
+                <span className="text-xs font-medium leading-5 text-[#69708f]">
+                  {copy.targetHint}
+                </span>
                 <select
                   value={assignmentId}
                   onChange={(event) => {
