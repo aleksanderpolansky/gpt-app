@@ -594,13 +594,32 @@ function mergeMeasurements(
   fallback: NormalizedMeasurement[],
 ) {
   const output: NormalizedMeasurement[] = [];
-  const seen = new Set<string>();
+  const indexByKey = new Map<string, number>();
+
   for (const item of [...primary, ...fallback]) {
     const key = `${item.parameterCode}|${item.measureType}|${item.unit}|${item.valueNumeric ?? item.valueText ?? ""}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    output.push(item);
+    const existingIndex = indexByKey.get(key);
+
+    if (existingIndex === undefined) {
+      indexByKey.set(key, output.length);
+      output.push(item);
+      continue;
+    }
+
+    const existing = output[existingIndex];
+    const incomingAddsApproximation =
+      existing.approximate !== true && item.approximate === true;
+
+    output[existingIndex] = {
+      ...existing,
+      confidence: Math.max(existing.confidence, item.confidence),
+      approximate: existing.approximate === true || item.approximate === true,
+      rawFragment: incomingAddsApproximation
+        ? item.rawFragment
+        : existing.rawFragment,
+    };
   }
+
   return output.slice(0, MAX_MEASUREMENTS);
 }
 
