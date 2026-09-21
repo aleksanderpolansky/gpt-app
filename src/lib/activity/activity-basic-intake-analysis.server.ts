@@ -551,7 +551,7 @@ function extractDeterministicMeasurements(
 
   if (hasStairContext(sourceText)) {
     const floorCountMatch = sourceText.match(
-      /\b(?:(примерно|около|приблизительно|приблизно|близько|about|around|approximately|approx\.?|około|mniej\s+więcej|ungefähr|etwa|aproximadamente|aprox\.?|přibližně|asi)\s+)?(\d{1,6})\s*(этаж(?:а|ей)?|поверх(?:и|ів)?|floors?|storeys?|stories|piętro|piętra|pięter|stockwerke?|etagen?|pisos?|plantas?|patro|patra|pater)(?=$|[^\p{L}\p{N}_])/iu,
+      /(?:(примерно|около|приблизительно|приблизно|близько|about|around|approximately|approx\.?|około|mniej\s+więcej|ungefähr|etwa|aproximadamente|aprox\.?|přibližně|asi)\s+)?(\d{1,6})\s*(этаж(?:а|ей)?|поверх(?:и|ів)?|floors?|storeys?|stories|piętro|piętra|pięter|stockwerke?|etagen?|pisos?|plantas?|patro|patra|pater)(?=$|[^\p{L}\p{N}_])/iu,
     );
     if (floorCountMatch) {
       add({
