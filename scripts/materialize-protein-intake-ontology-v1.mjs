@@ -579,7 +579,7 @@ async function ensureNode(spec, template) {
     branch_type_code: "ontology_v1",
     root_value_object_id: spec.rootId,
     instance_of_value_object_id: null,
-    privacy_level: "public_ontology",
+    privacy_level: "public",
     sensitivity_level: "standard",
     status: "active",
     canonical_key: spec.canonicalKey,
