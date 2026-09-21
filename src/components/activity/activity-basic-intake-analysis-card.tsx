@@ -52,6 +52,14 @@ type IntakeAnalysis = {
   typicalActivitySearchStatus?: string;
   fullAiAnalysisCompleted?: boolean;
   retryable?: boolean;
+  factsWritten?: number;
+  sourceFactMaterializationV1?: {
+    contract?: string;
+    status?: string;
+    factsWritten?: number;
+    factIds?: string[];
+    measureIds?: string[];
+  };
 };
 
 type IntakeAnalysisResponse = {
@@ -82,6 +90,11 @@ const COPY: Record<Locale, {
   rejectingMatch: string;
   rejectedMatch: string;
   rejectFailed: string;
+  materializeFacts: string;
+  materializingFacts: string;
+  factsMaterialized: string;
+  materializeFactsFailed: string;
+  openFacts: string;
 }> = {
   ru: {
     completed: "Завершенная активность",
@@ -106,6 +119,11 @@ const COPY: Record<Locale, {
     rejectingMatch: "Отклоняем соответствие…",
     rejectedMatch: "Соответствие отклонено. Активность передана Куратору модели.",
     rejectFailed: "Не удалось отклонить соответствие.",
+    materializeFacts: "Подтвердить и записать исходные факты",
+    materializingFacts: "Записываем исходные факты…",
+    factsMaterialized: "Исходные факты записаны",
+    materializeFactsFailed: "Не удалось записать исходные факты.",
+    openFacts: "Открыть факты",
   },
   en: {
     completed: "Completed activity",
@@ -130,6 +148,11 @@ const COPY: Record<Locale, {
     rejectingMatch: "Rejecting match…",
     rejectedMatch: "The match was rejected. The activity was sent to the Reality Curator.",
     rejectFailed: "Could not reject the match.",
+    materializeFacts: "Confirm and write source facts",
+    materializingFacts: "Writing source facts…",
+    factsMaterialized: "Source facts were written",
+    materializeFactsFailed: "Could not write source facts.",
+    openFacts: "Open facts",
   },
   pl: {
     completed: "Zakończona aktywność",
@@ -154,6 +177,11 @@ const COPY: Record<Locale, {
     rejectingMatch: "Odrzucanie dopasowania…",
     rejectedMatch: "Dopasowanie odrzucono. Aktywność przekazano do Kuratora modelu.",
     rejectFailed: "Nie udało się odrzucić dopasowania.",
+    materializeFacts: "Potwierdź i zapisz fakty źródłowe",
+    materializingFacts: "Zapisywanie faktów źródłowych…",
+    factsMaterialized: "Fakty źródłowe zostały zapisane",
+    materializeFactsFailed: "Nie udało się zapisać faktów źródłowych.",
+    openFacts: "Otwórz fakty",
   },
   uk: {
     completed: "Завершена активність",
@@ -178,6 +206,11 @@ const COPY: Record<Locale, {
     rejectingMatch: "Відхиляємо відповідність…",
     rejectedMatch: "Відповідність відхилено. Активність передано Куратору моделі.",
     rejectFailed: "Не вдалося відхилити відповідність.",
+    materializeFacts: "Підтвердити й записати вихідні факти",
+    materializingFacts: "Записуємо вихідні факти…",
+    factsMaterialized: "Вихідні факти записано",
+    materializeFactsFailed: "Не вдалося записати вихідні факти.",
+    openFacts: "Відкрити факти",
   },
   de: {
     completed: "Abgeschlossene Aktivität",
@@ -202,6 +235,11 @@ const COPY: Record<Locale, {
     rejectingMatch: "Zuordnung wird abgelehnt…",
     rejectedMatch: "Die Zuordnung wurde abgelehnt. Die Aktivität wurde an den Reality Curator gesendet.",
     rejectFailed: "Die Zuordnung konnte nicht abgelehnt werden.",
+    materializeFacts: "Bestätigen und Quelldaten schreiben",
+    materializingFacts: "Quelldaten werden geschrieben…",
+    factsMaterialized: "Quelldaten wurden geschrieben",
+    materializeFactsFailed: "Quelldaten konnten nicht geschrieben werden.",
+    openFacts: "Fakten öffnen",
   },
   es: {
     completed: "Actividad completada",
@@ -226,6 +264,11 @@ const COPY: Record<Locale, {
     rejectingMatch: "Rechazando coincidencia…",
     rejectedMatch: "Se rechazó la coincidencia. La actividad se envió al Curador del modelo.",
     rejectFailed: "No se pudo rechazar la coincidencia.",
+    materializeFacts: "Confirmar y guardar hechos de origen",
+    materializingFacts: "Guardando hechos de origen…",
+    factsMaterialized: "Los hechos de origen se guardaron",
+    materializeFactsFailed: "No se pudieron guardar los hechos de origen.",
+    openFacts: "Abrir hechos",
   },
   cs: {
     completed: "Dokončená aktivita",
@@ -250,6 +293,11 @@ const COPY: Record<Locale, {
     rejectingMatch: "Odmítání shody…",
     rejectedMatch: "Shoda byla odmítnuta. Aktivita byla odeslána Kurátorovi modelu.",
     rejectFailed: "Shodu se nepodařilo odmítnout.",
+    materializeFacts: "Potvrdit a zapsat zdrojová fakta",
+    materializingFacts: "Zapisují se zdrojová fakta…",
+    factsMaterialized: "Zdrojová fakta byla zapsána",
+    materializeFactsFailed: "Zdrojová fakta se nepodařilo zapsat.",
+    openFacts: "Otevřít fakta",
   },
 };
 
@@ -449,6 +497,9 @@ export function ActivityBasicIntakeAnalysisCard({
   const [rejectingTemplateId, setRejectingTemplateId] = useState<string | null>(null);
   const [rejectError, setRejectError] = useState(false);
   const [rejectedMatch, setRejectedMatch] = useState(false);
+  const [materializingFacts, setMaterializingFacts] = useState(false);
+  const [materializeFactsError, setMaterializeFactsError] = useState<string | null>(null);
+  const [materializedFactsCount, setMaterializedFactsCount] = useState<number | null>(null);
   const displayedAnalysis =
     analysis &&
     retryResult?.activityEventId === analysis?.activityEventId
@@ -512,6 +563,26 @@ export function ActivityBasicIntakeAnalysisCard({
     displayedAnalysis.retryable === true &&
     typeof displayedAnalysis.activityEventId === "string" &&
     Boolean(displayedAnalysis.activityEventId.trim());
+  const persistedMaterialization = displayedAnalysis.sourceFactMaterializationV1;
+  const persistedFactsCount =
+    typeof persistedMaterialization?.factsWritten === "number"
+      ? persistedMaterialization.factsWritten
+      : typeof displayedAnalysis.factsWritten === "number"
+        ? displayedAnalysis.factsWritten
+        : 0;
+  const factsCount = materializedFactsCount ?? persistedFactsCount;
+  const factsCommitted =
+    factsCount > 0 &&
+    (materializedFactsCount !== null ||
+      persistedMaterialization?.status === "materialized" ||
+      persistedMaterialization?.status === "idempotent_replay");
+  const canMaterializeFacts =
+    searchCompleted &&
+    candidates.length === 1 &&
+    measurements.length > 0 &&
+    typeof displayedAnalysis.activityEventId === "string" &&
+    Boolean(displayedAnalysis.activityEventId.trim()) &&
+    !factsCommitted;
 
   const handleRetry = async () => {
     const activityEventId = displayedAnalysis.activityEventId?.trim();
@@ -550,6 +621,60 @@ export function ActivityBasicIntakeAnalysisCard({
     }
   };
 
+
+  const handleMaterializeFacts = async () => {
+    const activityEventId = displayedAnalysis.activityEventId?.trim();
+    if (!activityEventId || materializingFacts || !canMaterializeFacts) return;
+
+    setMaterializingFacts(true);
+    setMaterializeFactsError(null);
+
+    try {
+      const response = await fetch(
+        "/api/activity/intake-analysis/materialize-source-facts",
+        {
+          method: "POST",
+          credentials: "include",
+          cache: "no-store",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ activityEventId }),
+        },
+      );
+
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            result?: {
+              factsWritten?: number;
+            };
+            error?: string;
+          }
+        | null;
+
+      const written = payload?.result?.factsWritten;
+      if (
+        !response.ok ||
+        payload?.ok !== true ||
+        typeof written !== "number" ||
+        written < 1
+      ) {
+        throw new Error(
+          payload?.error || `Source fact materialization failed: ${response.status}`,
+        );
+      }
+
+      setMaterializedFactsCount(written);
+    } catch (error) {
+      setMaterializeFactsError(
+        error instanceof Error ? error.message : "E03_MATERIALIZATION_FAILED",
+      );
+    } finally {
+      setMaterializingFacts(false);
+    }
+  };
 
   const handleRejectMatch = async (candidate: TemplateCandidate) => {
     const activityEventId = displayedAnalysis.activityEventId?.trim();
@@ -681,7 +806,7 @@ export function ActivityBasicIntakeAnalysisCard({
               >
                 <span className="h-2 w-2 flex-shrink-0 rounded-full bg-[#3b6ef8]" />
                 <span className="min-w-0 flex-1 truncate">{candidate.title}</span>
-                {searchCompleted && candidate.templateId ? (
+                {searchCompleted && candidate.templateId && !factsCommitted ? (
                   <button
                     type="button"
                     disabled={Boolean(rejectingTemplateId)}
@@ -709,6 +834,47 @@ export function ActivityBasicIntakeAnalysisCard({
             </Link>
           </div>
         )}
+
+        {searchCompleted && candidates.length === 1 && measurements.length > 0 ? (
+          <div className="mt-3 border-t border-[#edf0f7] pt-3">
+            {factsCommitted ? (
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">
+                <span>
+                  {ui.factsMaterialized}: {factsCount}
+                </span>
+                <Link
+                  href={buildLocaleHref(
+                    `/activity-facts?activityEventId=${encodeURIComponent(
+                      displayedAnalysis.activityEventId ?? "",
+                    )}`,
+                    locale,
+                  )}
+                  className="font-black underline-offset-4 hover:underline"
+                >
+                  {ui.openFacts}
+                </Link>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={materializingFacts}
+                  onClick={() => void handleMaterializeFacts()}
+                  className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-800 hover:bg-emerald-100 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {materializingFacts
+                    ? ui.materializingFacts
+                    : ui.materializeFacts}
+                </button>
+                {materializeFactsError ? (
+                  <span className="text-xs font-semibold text-rose-700">
+                    {ui.materializeFactsFailed} {materializeFactsError}
+                  </span>
+                ) : null}
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
     </div>
   );
