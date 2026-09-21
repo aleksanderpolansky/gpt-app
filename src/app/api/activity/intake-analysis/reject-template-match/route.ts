@@ -32,6 +32,35 @@ function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function normalizeLocale(value: unknown) {
+  return value === "en" ||
+    value === "pl" ||
+    value === "ru" ||
+    value === "uk" ||
+    value === "de" ||
+    value === "es" ||
+    value === "cs"
+    ? value
+    : "en";
+}
+
+async function localizedTemplateTitle(templateId: string, locale: string) {
+  const { data, error } = await supabase
+    .from("activity_templates")
+    .select("id,title,default_metadata_json")
+    .eq("id", templateId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const metadata = asRecord(data.default_metadata_json);
+  const curator = asRecord(metadata.curatorSystemMaterializationV1);
+  const localizations = asRecord(curator.localizations);
+  const requested = asRecord(localizations[locale]);
+  const english = asRecord(localizations.en);
+  return text(requested.title) || text(english.title) || text(data.title) || null;
+}
+
 function finiteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
@@ -78,6 +107,7 @@ export async function POST(request: Request) {
 
   const activityEventId = text(body.activityEventId);
   const templateId = text(body.templateId);
+  const locale = normalizeLocale(body.locale);
 
   if (!UUID_RE.test(activityEventId) || !UUID_RE.test(templateId)) {
     return NextResponse.json(
@@ -149,6 +179,9 @@ export async function POST(request: Request) {
     );
   }
 
+  const rejectedTitle =
+    (await localizedTemplateTitle(rejectedCandidate.templateId, locale)) ||
+    rejectedCandidate.title;
   const rejectedAt = new Date().toISOString();
   const nextAnalysis = {
     ...analysis,
@@ -162,7 +195,7 @@ export async function POST(request: Request) {
       contract: REJECTION_CONTRACT,
       rejectedAt,
       rejectedTemplateId: rejectedCandidate.templateId,
-      rejectedTemplateTitle: rejectedCandidate.title,
+      rejectedTemplateTitle: rejectedTitle,
       candidatesSnapshot: candidateSnapshot,
       activityEventId,
       rawSignalId: signalData.id,

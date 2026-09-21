@@ -173,7 +173,7 @@ function Workspace() {
     () => (activityEventId ? [activityEventId] : []),
     [activityEventId],
   );
-  const analyses = useActivityBasicIntakeAnalyses(analysisIds);
+  const analyses = useActivityBasicIntakeAnalyses(analysisIds, locale);
   const analysis = activityEventId ? analyses[activityEventId] ?? null : null;
 
   useEffect(() => {

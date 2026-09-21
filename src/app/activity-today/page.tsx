@@ -823,6 +823,7 @@ export default function ActivityTodayPage() {
   );
   const basicIntakeAnalysesByActivityId = useActivityBasicIntakeAnalyses(
     basicIntakeActivityEventIds,
+    locale,
   );
 
   // ARCTOR_ACTIVITY_TODAY_LINT_SAFE_LOCALE_SYNC_V1

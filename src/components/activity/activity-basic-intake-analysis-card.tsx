@@ -14,6 +14,7 @@ type Measurement = {
   valueText?: string | null;
   rawFragment?: string;
   confidence?: number;
+  approximate?: boolean;
 };
 
 type TemplateCandidate = {
@@ -269,6 +270,49 @@ function formatDateTime(value: string | null | undefined, locale: Locale) {
   }).format(date);
 }
 
+const PARAMETER_LABELS: Record<Locale, Record<string, string>> = {
+  ru: { duration: "Длительность", count: "Количество", repetition_count: "Повторения", distance: "Расстояние", mass: "Масса" },
+  en: { duration: "Duration", count: "Count", repetition_count: "Repetitions", distance: "Distance", mass: "Mass" },
+  pl: { duration: "Czas trwania", count: "Liczba", repetition_count: "Powtórzenia", distance: "Dystans", mass: "Masa" },
+  uk: { duration: "Тривалість", count: "Кількість", repetition_count: "Повторення", distance: "Відстань", mass: "Маса" },
+  de: { duration: "Dauer", count: "Anzahl", repetition_count: "Wiederholungen", distance: "Distanz", mass: "Masse" },
+  es: { duration: "Duración", count: "Cantidad", repetition_count: "Repeticiones", distance: "Distancia", mass: "Masa" },
+  cs: { duration: "Doba trvání", count: "Počet", repetition_count: "Opakování", distance: "Vzdálenost", mass: "Hmotnost" },
+};
+
+function canonicalDisplayParameterCode(measurement: Measurement) {
+  const code = measurement.parameterCode?.trim().toLowerCase() || "";
+  const rawFragment = measurement.rawFragment?.trim() || "";
+  const measureType = measurement.measureType?.trim().toLowerCase() || "";
+
+  if (
+    measureType === "duration" ||
+    ["duration", "duration_minutes", "time_spent"].includes(code)
+  ) {
+    return "duration";
+  }
+
+  if (
+    measureType === "count" ||
+    ["floors", "floors_climbed", "floor_count", "storeys", "stories"].includes(code) ||
+    /(?:этаж(?:а|ей)?|поверх(?:и|ів)?|floors?|storeys?|stories|piętro|piętra|pięter|stockwerke?|etagen?|pisos?|plantas?|patro|patra|pater)/iu.test(rawFragment)
+  ) {
+    return "count";
+  }
+
+  return code;
+}
+
+function displayMeasurementLabel(measurement: Measurement, locale: Locale) {
+  const code = canonicalDisplayParameterCode(measurement);
+  return (
+    PARAMETER_LABELS[locale][code] ??
+    measurement.label?.trim() ??
+    measurement.parameterCode?.trim() ??
+    "—"
+  );
+}
+
 const UNIT_LABELS: Record<Locale, Record<string, string>> = {
   ru: { second: "сек", minute: "мин", hour: "ч", meter: "м", kilometer: "км", kilogram: "кг", gram: "г", repetition: "повт.", count: "шт.", set: "подх.", liter: "л", milliliter: "мл", bpm: "уд/мин", celsius: "°C", pln: "PLN", eur: "EUR", usd: "USD", km_per_hour: "км/ч", meter_per_second: "м/с", date: "", time: "", text: "" },
   en: { second: "s", minute: "min", hour: "h", meter: "m", kilometer: "km", kilogram: "kg", gram: "g", repetition: "reps", count: "count", set: "sets", liter: "L", milliliter: "mL", bpm: "bpm", celsius: "°C", pln: "PLN", eur: "EUR", usd: "USD", km_per_hour: "km/h", meter_per_second: "m/s", date: "", time: "", text: "" },
@@ -288,14 +332,33 @@ function formatMeasurement(measurement: Measurement, locale: Locale) {
         )
       : measurement.valueText?.trim() || "—";
   const unitCode = measurement.unit?.trim().toLowerCase() || "";
+  const parameterCode = canonicalDisplayParameterCode(measurement);
   const canonicalUnitCode = ["repetition", "repetitions", "rep", "reps"].includes(unitCode)
     ? "repetition"
-    : unitCode;
+    : ["minute", "minutes", "min", "mins"].includes(unitCode)
+      ? "minute"
+      : ["hour", "hours", "hr", "hrs", "h"].includes(unitCode)
+        ? "hour"
+        : ["floor", "floors", "storey", "storeys", "story", "stories", "count", "counts"].includes(unitCode)
+          ? "count"
+          : unitCode;
   const unit = UNIT_LABELS[locale][canonicalUnitCode] ?? canonicalUnitCode;
-  return unit ? `${value} ${unit}` : value;
+  const approximate =
+    measurement.approximate === true ||
+    /(?:^|[^\p{L}\p{N}_])(?:~|≈|примерно|около|приблизительно|приблизно|близько|about|around|approximately|approx\.?|około|mniej\s+więcej|ungefähr|etwa|aproximadamente|aprox\.?|přibližně|asi)(?=$|[^\p{L}\p{N}_])/iu.test(
+      measurement.rawFragment?.trim() || "",
+    );
+  const renderedValue = approximate ? `≈ ${value}` : value;
+  if (parameterCode === "count" && canonicalUnitCode === "count") {
+    return renderedValue;
+  }
+  return unit ? `${renderedValue} ${unit}` : renderedValue;
 }
 
-export function useActivityBasicIntakeAnalyses(activityEventIds: string[]) {
+export function useActivityBasicIntakeAnalyses(
+  activityEventIds: string[],
+  locale: Locale = "en",
+) {
   const [analyses, setAnalyses] = useState<Record<string, IntakeAnalysis>>({});
 
   const requestKey = useMemo(
@@ -313,7 +376,10 @@ export function useActivityBasicIntakeAnalyses(activityEventIds: string[]) {
     }
 
     let cancelled = false;
-    const params = new URLSearchParams({ activityEventIds: requestKey });
+    const params = new URLSearchParams({
+      activityEventIds: requestKey,
+      locale,
+    });
 
     void fetch(`/api/activity/intake-analysis?${params.toString()}`, {
       credentials: "include",
@@ -344,7 +410,7 @@ export function useActivityBasicIntakeAnalyses(activityEventIds: string[]) {
     return () => {
       cancelled = true;
     };
-  }, [requestKey]);
+  }, [locale, requestKey]);
 
   return analyses;
 }
@@ -415,6 +481,9 @@ export function ActivityBasicIntakeAnalysisCard({
   const measurements = Array.isArray(displayedAnalysis.measurements)
     ? displayedAnalysis.measurements
     : [];
+  const hasDurationMeasurement = measurements.some(
+    (measurement) => canonicalDisplayParameterCode(measurement) === "duration",
+  );
   const candidates = Array.isArray(displayedAnalysis.templateCandidates)
     ? displayedAnalysis.templateCandidates.filter(
         (candidate) => typeof candidate.title === "string" && candidate.title.trim(),
@@ -459,7 +528,7 @@ export function ActivityBasicIntakeAnalysisCard({
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ activityEventId }),
+        body: JSON.stringify({ activityEventId, locale }),
       });
       const payload = (await response.json().catch(() => null)) as
         | {
@@ -500,7 +569,7 @@ export function ActivityBasicIntakeAnalysisCard({
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ activityEventId, templateId }),
+        body: JSON.stringify({ activityEventId, templateId, locale }),
       });
 
       const payload = (await response.json().catch(() => null)) as
@@ -563,7 +632,7 @@ export function ActivityBasicIntakeAnalysisCard({
             {ui.end}: {endLabel}
           </span>
         ) : null}
-        {duration ? (
+        {duration && !hasDurationMeasurement ? (
           <span className="rounded-lg border border-[#e1e6f2] bg-[#f8faff] px-2.5 py-1.5 text-xs font-semibold text-[#4a5270]">
             {ui.duration}: {duration}
           </span>
@@ -573,7 +642,7 @@ export function ActivityBasicIntakeAnalysisCard({
             key={`${measurement.parameterCode ?? "measure"}:${index}`}
             className="rounded-lg border border-[#dce5ff] bg-[#f5f8ff] px-2.5 py-1.5 text-xs font-semibold text-[#3658a8]"
           >
-            {measurement.label?.trim() || measurement.parameterCode || "—"}: {formatMeasurement(measurement, locale)}
+            {displayMeasurementLabel(measurement, locale)}: {formatMeasurement(measurement, locale)}
           </span>
         ))}
       </div>

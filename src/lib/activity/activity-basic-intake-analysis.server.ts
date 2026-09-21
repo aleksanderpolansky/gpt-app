@@ -127,6 +127,7 @@ type NormalizedMeasurement = {
   valueText: string | null;
   rawFragment: string;
   confidence: number;
+  approximate?: boolean;
 };
 
 type BudgetReservation = {
@@ -409,15 +410,76 @@ function modelSchema() {
 
 function localeMeasurementLabel(locale: string, code: string) {
   const labels: Record<string, Record<string, string>> = {
-    ru: { repetition_count: "Повторения", distance: "Расстояние", duration: "Длительность", mass: "Масса" },
-    uk: { repetition_count: "Повторення", distance: "Відстань", duration: "Тривалість", mass: "Маса" },
-    pl: { repetition_count: "Powtórzenia", distance: "Dystans", duration: "Czas trwania", mass: "Masa" },
-    en: { repetition_count: "Repetitions", distance: "Distance", duration: "Duration", mass: "Mass" },
-    de: { repetition_count: "Wiederholungen", distance: "Distanz", duration: "Dauer", mass: "Masse" },
-    es: { repetition_count: "Repeticiones", distance: "Distancia", duration: "Duración", mass: "Masa" },
-    cs: { repetition_count: "Opakování", distance: "Vzdálenost", duration: "Doba trvání", mass: "Hmotnost" },
+    ru: { repetition_count: "Повторения", distance: "Расстояние", duration: "Длительность", mass: "Масса", count: "Количество" },
+    uk: { repetition_count: "Повторення", distance: "Відстань", duration: "Тривалість", mass: "Маса", count: "Кількість" },
+    pl: { repetition_count: "Powtórzenia", distance: "Dystans", duration: "Czas trwania", mass: "Masa", count: "Liczba" },
+    en: { repetition_count: "Repetitions", distance: "Distance", duration: "Duration", mass: "Mass", count: "Count" },
+    de: { repetition_count: "Wiederholungen", distance: "Distanz", duration: "Dauer", mass: "Masse", count: "Anzahl" },
+    es: { repetition_count: "Repeticiones", distance: "Distancia", duration: "Duración", mass: "Masa", count: "Cantidad" },
+    cs: { repetition_count: "Opakování", distance: "Vzdálenost", duration: "Doba trvání", mass: "Hmotnost", count: "Počet" },
   };
   return labels[locale]?.[code] ?? labels.en[code] ?? code;
+}
+
+function isApproximateMeasurementFragment(value: string) {
+  return /(?:^|[^\p{L}\p{N}_])(?:~|≈|примерно|около|приблизительно|приблизно|близько|about|around|approximately|approx\.?|około|mniej\s+więcej|ungefähr|etwa|aproximadamente|aprox\.?|přibližně|asi)(?=$|[^\p{L}\p{N}_])/iu.test(
+    value,
+  );
+}
+
+function isFloorCountFragment(value: string) {
+  return /(?:этаж(?:а|ей)?|поверх(?:и|ів)?|floors?|storeys?|stories|piętro|piętra|pięter|stockwerke?|etagen?|pisos?|plantas?|patro|patra|pater)/iu.test(
+    value,
+  );
+}
+
+function hasStairContext(value: string) {
+  return /(?:лестниц|сход|stairs?|staircase|schod|trepp|escaler|schodi)/iu.test(value);
+}
+
+function canonicalMeasurementType(
+  measureType: MeasureType,
+  parameterCode: string,
+  rawFragment: string,
+): MeasureType {
+  if (
+    measureType === "duration" ||
+    ["duration", "duration_minutes", "time_spent"].includes(parameterCode)
+  ) {
+    return "duration";
+  }
+
+  if (
+    isFloorCountFragment(rawFragment) ||
+    ["floors", "floors_climbed", "floor_count", "storeys", "stories"].includes(parameterCode)
+  ) {
+    return "count";
+  }
+
+  return measureType;
+}
+
+function canonicalMeasurementParameterCode(
+  parameterCode: string,
+  measureType: MeasureType,
+  rawFragment: string,
+) {
+  if (
+    measureType === "duration" ||
+    ["duration", "duration_minutes", "time_spent"].includes(parameterCode)
+  ) {
+    return "duration";
+  }
+
+  if (
+    measureType === "count" ||
+    isFloorCountFragment(rawFragment) ||
+    ["floors", "floors_climbed", "floor_count", "storeys", "stories"].includes(parameterCode)
+  ) {
+    return "count";
+  }
+
+  return parameterCode;
 }
 
 function extractDeterministicMeasurements(
@@ -487,6 +549,25 @@ function extractDeterministicMeasurements(
     });
   }
 
+  if (hasStairContext(sourceText)) {
+    const floorCountMatch = sourceText.match(
+      /\b(?:(примерно|около|приблизительно|приблизно|близько|about|around|approximately|approx\.?|około|mniej\s+więcej|ungefähr|etwa|aproximadamente|aprox\.?|přibližně|asi)\s+)?(\d{1,6})\s*(этаж(?:а|ей)?|поверх(?:и|ів)?|floors?|storeys?|stories|piętro|piętra|pięter|stockwerke?|etagen?|pisos?|plantas?|patro|patra|pater)(?=$|[^\p{L}\p{N}_])/iu,
+    );
+    if (floorCountMatch) {
+      add({
+        parameterCode: "count",
+        label: localeMeasurementLabel(locale, "count"),
+        measureType: "count",
+        unit: "count",
+        valueNumeric: Number(floorCountMatch[2]),
+        valueText: null,
+        rawFragment: floorCountMatch[0],
+        confidence: 1,
+        approximate: isApproximateMeasurementFragment(floorCountMatch[0]),
+      });
+    }
+  }
+
   const durationMatch = sourceText.match(/\b(\d+(?:[.,]\d+)?)\s*(мин(?:ут(?:а|ы)?)?|minutes?|mins?|min\.?|час(?:а|ов)?|hours?|hrs?|h)(?=$|[^\p{L}\p{N}_])/iu);
   if (durationMatch) {
     const rawValue = Number(durationMatch[1].replace(",", "."));
@@ -501,6 +582,7 @@ function extractDeterministicMeasurements(
       valueText: null,
       rawFragment: durationMatch[0],
       confidence: 1,
+      approximate: isApproximateMeasurementFragment(durationMatch[0]),
     });
   }
 
@@ -534,12 +616,36 @@ function normalizeMeasurementUnit(
   ) {
     return "repetition";
   }
+  if (measureType === "duration" || parameterCode === "duration") {
+    if (["minute", "minutes", "min", "mins"].includes(raw)) return "minute";
+    if (["hour", "hours", "hr", "hrs", "h"].includes(raw)) return "hour";
+    if (["second", "seconds", "sec", "secs", "s"].includes(raw)) return "second";
+  }
+  if (measureType === "count" || parameterCode === "count") {
+    if (
+      [
+        "count",
+        "counts",
+        "unit",
+        "units",
+        "floor",
+        "floors",
+        "storey",
+        "storeys",
+        "story",
+        "stories",
+      ].includes(raw)
+    ) {
+      return "count";
+    }
+  }
   return raw;
 }
 
 function validateMeasurements(
   raw: unknown,
   sourceText: string,
+  locale: string,
 ): NormalizedMeasurement[] {
   if (!Array.isArray(raw)) return [];
 
@@ -548,9 +654,25 @@ function validateMeasurements(
   const output: NormalizedMeasurement[] = [];
 
   for (const item of raw.slice(0, MAX_MEASUREMENTS) as ModelMeasurement[]) {
-    const parameterCode = text(item.parameterCode).toLowerCase();
-    const label = text(item.label);
-    const measureType = text(item.measureType) as MeasureType;
+    const rawParameterCode = text(item.parameterCode).toLowerCase();
+    const rawLabel = text(item.label);
+    const rawMeasureType = text(item.measureType) as MeasureType;
+    const rawFragment = text(item.rawFragment);
+    const measureType = canonicalMeasurementType(
+      rawMeasureType,
+      rawParameterCode,
+      rawFragment,
+    );
+    const parameterCode = canonicalMeasurementParameterCode(
+      rawParameterCode,
+      measureType,
+      rawFragment,
+    );
+    const label = ["duration", "count", "repetition_count", "distance", "mass"].includes(
+      parameterCode,
+    )
+      ? localeMeasurementLabel(locale, parameterCode)
+      : rawLabel;
     const unit = normalizeMeasurementUnit(
       item.unit,
       measureType,
@@ -558,7 +680,6 @@ function validateMeasurements(
     );
     const valueNumeric = finiteNumber(item.valueNumeric);
     const valueText = item.valueText === null ? null : text(item.valueText) || null;
-    const rawFragment = text(item.rawFragment);
     const confidence = finiteNumber(item.confidence);
 
     const exactlyOneValue =
@@ -598,6 +719,7 @@ function validateMeasurements(
       valueText,
       rawFragment: rawFragment.slice(0, 240),
       confidence,
+      approximate: isApproximateMeasurementFragment(rawFragment),
     });
   }
 
@@ -1574,7 +1696,7 @@ Hard rules:
     });
 
     const measurements = mergeMeasurements(
-      validateMeasurements(response.parsed.measurements, sourceText),
+      validateMeasurements(response.parsed.measurements, sourceText, input.locale),
       deterministicMeasurements,
     );
     const templateCandidates = await localizeTemplateCandidateTitles(

@@ -79,6 +79,59 @@ function normalizeTimeZone(value: unknown) {
   }
 }
 
+async function localizeStoredAnalyses(analyses: JsonRecord[], locale: string) {
+  const templateIds = Array.from(
+    new Set(
+      analyses.flatMap((analysis) =>
+        Array.isArray(analysis.templateCandidates)
+          ? analysis.templateCandidates
+              .map((candidate) => text(asRecord(candidate).templateId))
+              .filter((id) => UUID_RE.test(id))
+          : [],
+      ),
+    ),
+  );
+
+  if (templateIds.length === 0) return analyses;
+
+  const { data, error } = await supabase
+    .from("activity_templates")
+    .select("id,title,default_metadata_json")
+    .in("id", templateIds);
+
+  if (error) {
+    console.error("BASIC_INTAKE_READ_LOCALIZATION_FAILED", error.message);
+    return analyses;
+  }
+
+  const titleById = new Map<string, string>();
+  for (const row of data ?? []) {
+    const metadata = asRecord(row.default_metadata_json);
+    const curator = asRecord(metadata.curatorSystemMaterializationV1);
+    const localizations = asRecord(curator.localizations);
+    const requested = asRecord(localizations[locale]);
+    const english = asRecord(localizations.en);
+    const localizedTitle =
+      text(requested.title) || text(english.title) || text(row.title);
+    if (localizedTitle) titleById.set(String(row.id), localizedTitle);
+  }
+
+  return analyses.map((analysis) => {
+    if (!Array.isArray(analysis.templateCandidates)) return analysis;
+    return {
+      ...analysis,
+      templateCandidates: analysis.templateCandidates.map((candidate) => {
+        const row = asRecord(candidate);
+        const templateId = text(row.templateId);
+        return {
+          ...row,
+          title: titleById.get(templateId) || text(row.title),
+        };
+      }),
+    };
+  });
+}
+
 function isRetryableAnalysis(value: JsonRecord, activityEventId: string) {
   if (
     value.contract !== CONTRACT ||
@@ -183,7 +236,7 @@ export async function POST(request: Request) {
   }
 
   const metadata = asRecord(signal.metadata_json);
-  const locale = normalizeLocale(metadata.locale);
+  const locale = normalizeLocale(body.locale || metadata.locale);
   const timeZone = normalizeTimeZone(metadata.timeZone);
 
   try {
@@ -223,6 +276,10 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
+
+  const responseLocale = normalizeLocale(
+    new URL(request.url).searchParams.get("locale"),
+  );
 
   const activityEventIds = readEventIds(request);
   if (!activityEventIds) {
@@ -283,9 +340,11 @@ export async function GET(request: Request) {
     });
   }
 
+  const localizedAnalyses = await localizeStoredAnalyses(analyses, responseLocale);
+
   return NextResponse.json({
     ok: true,
-    analyses,
+    analyses: localizedAnalyses,
     requested: activityEventIds.length,
   });
 }
