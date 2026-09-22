@@ -16,6 +16,10 @@ import {
   ActivityTemplateScopeTabs,
 } from "./activity-template-scope-tabs";
 
+import {
+  SystemActivityTemplateCreate,
+} from "./system-activity-template-create";
+
 type LocaleCode =
   | "en"
   | "pl"
@@ -154,10 +158,10 @@ const EN: Copy = {
     "Loading…",
 
   readOnlyTitle:
-    "System catalog — read only",
+    "System catalog",
 
   readOnlyBody:
-    "System typical activities are maintained through the Reality Curator. This screen does not change their definitions or profiles.",
+    "Existing system typical activities remain read-only here. Use the creation form below to publish a new system activity through the same canonical curator materialization path.",
 
   choose:
     "Select a system typical activity.",
@@ -225,10 +229,10 @@ const RU: Copy = {
     "Загрузка…",
 
   readOnlyTitle:
-    "Системный каталог — только просмотр",
+    "Системный каталог",
 
   readOnlyBody:
-    "Системные типовые активности изменяются через Куратора модели. На этой странице нельзя случайно изменить их определение или профиль.",
+    "Существующие системные типовые активности здесь остаются только для просмотра. Новую системную типовую активность можно опубликовать формой ниже через тот же канонический контур Куратора модели.",
 
   choose:
     "Выберите системную типовую активность.",
@@ -298,7 +302,7 @@ const COPY:
       loading:
         "Завантаження…",
       readOnlyTitle:
-        "Системний каталог — лише перегляд",
+        "Системний каталог",
       readOnlyBody:
         "Системні типові активності змінюються через Куратора моделі.",
       choose:
@@ -336,7 +340,7 @@ const COPY:
       loading:
         "Ładowanie…",
       readOnlyTitle:
-        "Katalog systemowy — tylko do odczytu",
+        "Katalog systemowy",
       readOnlyBody:
         "Systemowe aktywności typowe są zmieniane przez Kuratora modelu.",
       choose:
@@ -374,7 +378,7 @@ const COPY:
       loading:
         "Laden…",
       readOnlyTitle:
-        "Systemkatalog — nur Lesen",
+        "Systemkatalog",
       readOnlyBody:
         "Systemische typische Aktivitäten werden über den Modellkurator gepflegt.",
       choose:
@@ -412,7 +416,7 @@ const COPY:
       loading:
         "Cargando…",
       readOnlyTitle:
-        "Catálogo del sistema — solo lectura",
+        "Catálogo del sistema",
       readOnlyBody:
         "Las actividades típicas del sistema se mantienen mediante el Curador del modelo.",
       choose:
@@ -450,7 +454,7 @@ const COPY:
       loading:
         "Načítání…",
       readOnlyTitle:
-        "Systémový katalog — pouze pro čtení",
+        "Systémový katalog",
       readOnlyBody:
         "Systémové typické aktivity se mění prostřednictvím Kurátora modelu.",
       choose:
@@ -596,6 +600,22 @@ export function SystemActivityTemplateCatalog({
       },
       [
         locale,
+      ],
+    );
+
+  const handleCreated =
+    useCallback(
+      async (
+        templateId: string,
+      ) => {
+        await loadTemplates();
+
+        setSelectedId(
+          templateId,
+        );
+      },
+      [
+        loadTemplates,
       ],
     );
 
@@ -968,15 +988,20 @@ export function SystemActivityTemplateCatalog({
             </p>
           </header>
 
-          <div className="mb-4 rounded-[18px] border border-blue-200 bg-blue-50 px-4 py-3">
-            <div className="text-[13px] font-bold text-blue-900">
+          <div className="mb-4 rounded-[18px] border border-black/[0.07] bg-white px-4 py-3 shadow-sm">
+            <div className="text-[13px] font-bold text-[#1a1d2e]">
               {copy.readOnlyTitle}
             </div>
 
-            <div className="mt-1 text-xs leading-5 text-blue-800">
+            <div className="mt-1 text-xs leading-5 text-slate-500">
               {copy.readOnlyBody}
             </div>
           </div>
+
+          <SystemActivityTemplateCreate
+            locale={locale}
+            onCreated={handleCreated}
+          />
 
           {message ? (
             <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
