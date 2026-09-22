@@ -43,6 +43,12 @@ type Props = {
       templateId: string,
     ) => void |
       Promise<void>;
+
+  open?: boolean;
+  onOpenChange?: (
+    open: boolean,
+  ) => void;
+  hideTrigger?: boolean;
 };
 
 type Copy = {
@@ -259,18 +265,44 @@ export function
 SystemActivityTemplateCreate({
   locale,
   onCreated,
+  open:
+    controlledOpen,
+  onOpenChange,
+  hideTrigger =
+    false,
 }: Props) {
   const copy =
     COPY[locale] ??
     EN;
 
   const [
-    open,
-    setOpen,
+    internalOpen,
+    setInternalOpen,
   ] =
     useState(
       false,
     );
+
+  const open =
+    controlledOpen ??
+    internalOpen;
+
+  function setOpen(
+    nextOpen: boolean,
+  ) {
+    if (
+      controlledOpen ===
+      undefined
+    ) {
+      setInternalOpen(
+        nextOpen,
+      );
+    }
+
+    onOpenChange?.(
+      nextOpen,
+    );
+  }
 
   const [
     busy,
@@ -904,6 +936,10 @@ SystemActivityTemplateCreate({
   }
 
   if (!open) {
+    if (hideTrigger) {
+      return null;
+    }
+
     return (
       <div className="mb-4">
         <button

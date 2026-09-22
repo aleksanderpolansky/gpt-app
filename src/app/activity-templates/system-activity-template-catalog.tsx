@@ -480,6 +480,27 @@ const COPY:
     },
   };
 
+const CREATE_BUTTON_LABEL:
+  Record<
+    LocaleCode,
+    string
+  > = {
+    en:
+      "+ Add system typical activity",
+    ru:
+      "+ Добавить системную типовую активность",
+    uk:
+      "+ Додати системну типову активність",
+    pl:
+      "+ Dodaj systemową aktywność typową",
+    de:
+      "+ Systemische typische Aktivität hinzufügen",
+    es:
+      "+ Añadir actividad típica del sistema",
+    cs:
+      "+ Přidat systémovou typickou aktivitu",
+  };
+
 export function SystemActivityTemplateCatalog({
   locale,
 }: {
@@ -496,6 +517,14 @@ export function SystemActivityTemplateCatalog({
     useState<
       TemplateListItem[]
     >([]);
+
+  const [
+    createOpen,
+    setCreateOpen,
+  ] =
+    useState(
+      false,
+    );
 
   const [
     selectedId,
@@ -609,6 +638,10 @@ export function SystemActivityTemplateCatalog({
         templateId: string,
       ) => {
         await loadTemplates();
+
+        setCreateOpen(
+          false,
+        );
 
         setSelectedId(
           templateId,
@@ -906,7 +939,23 @@ export function SystemActivityTemplateCatalog({
             {copy.listTitle}
           </h2>
 
-          <div className="mt-2 text-[11px] text-slate-400">
+          <button
+            type="button"
+            onClick={() =>
+              setCreateOpen(
+                true,
+              )
+            }
+            className="mt-3 w-full rounded-xl bg-[#3b6ef8] px-3 py-2.5 text-[13px] font-bold text-white"
+          >
+            {
+              CREATE_BUTTON_LABEL[
+                locale
+              ]
+            }
+          </button>
+
+          <div className="mt-3 text-[11px] text-slate-400">
             {loading
               ? copy.loading
               : `${templates.length}`}
@@ -1001,6 +1050,9 @@ export function SystemActivityTemplateCatalog({
           <SystemActivityTemplateCreate
             locale={locale}
             onCreated={handleCreated}
+            open={createOpen}
+            onOpenChange={setCreateOpen}
+            hideTrigger
           />
 
           {message ? (
