@@ -214,6 +214,7 @@ export function buildAiLabQuickCaptureTiming(input: {
   reportedAt?: string | null;
   timeZone?: string;
   temporalDirectionOverride?: QuickCaptureTemporalMode | null;
+  anchorUnspecifiedPastToReportedAt?: boolean;
 }): AiLabQuickCaptureTiming {
   const reportedAtInstant = parseDate(input.reportedAt) ?? new Date();
   const timeZone = input.timeZone?.trim() || "";
@@ -269,6 +270,27 @@ export function buildAiLabQuickCaptureTiming(input: {
     endedAt = new Date(
       new Date(startedAt).getTime() + durationMinutes * 60_000,
     ).toISOString();
+  }
+
+  const shouldAnchorUnspecifiedPast =
+    temporalDirection === "past" &&
+    input.anchorUnspecifiedPastToReportedAt !== false &&
+    !explicitTemporalEvidence &&
+    !startedAt &&
+    !endedAt;
+
+  if (shouldAnchorUnspecifiedPast) {
+    const messageAnchor = reportedAtInstant.toISOString();
+
+    if (durationMinutes && durationMinutes > 0) {
+      endedAt = messageAnchor;
+      startedAt = new Date(
+        reportedAtInstant.getTime() - durationMinutes * 60_000,
+      ).toISOString();
+    } else {
+      startedAt = messageAnchor;
+      endedAt = messageAnchor;
+    }
   }
 
   const focusDate = getTimingFocusDatePp1(draft, temporalDirection);
@@ -332,6 +354,7 @@ export function buildAiLabQuickCaptureSequentialTimings(input: {
       reportedAt: reportedAt.toISOString(),
       timeZone: input.timeZone,
       temporalDirectionOverride: input.temporalDirectionOverride,
+      anchorUnspecifiedPastToReportedAt: false,
     }),
   );
 
@@ -346,7 +369,9 @@ export function buildAiLabQuickCaptureSequentialTimings(input: {
     }
 
     const explicitTemporalEvidence = Boolean(
-      row.temporal?.occurredAtIso || row.temporal?.occurredAtRaw?.trim(),
+      row.temporal?.occurredAtIso ||
+        row.temporal?.occurredAtRaw?.trim() ||
+        hasExplicitQuickCaptureTemporalEvidence(input.sourceTexts[index]),
     );
     const explicitStart = parseDate(timing.startedAt);
     const explicitEnd = parseDate(timing.endedAt);
@@ -384,11 +409,16 @@ export function buildAiLabQuickCaptureSequentialTimings(input: {
       continue;
     }
 
+    const pointInTime = new Date(cursor.getTime());
+    const observedDate = input.timeZone
+      ? dateKeyInTimeZone(pointInTime, input.timeZone)
+      : localDateKey(pointInTime);
+
     timings[index] = {
       ...timing,
-      observedDate:
-        timing.observedDate ??
-        (input.timeZone ? dateKeyInTimeZone(cursor, input.timeZone) : localDateKey(cursor)),
+      observedDate: timing.observedDate ?? observedDate,
+      startedAt: pointInTime.toISOString(),
+      endedAt: pointInTime.toISOString(),
     };
   }
 

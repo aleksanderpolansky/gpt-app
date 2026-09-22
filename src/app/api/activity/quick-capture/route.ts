@@ -535,6 +535,7 @@ export async function POST(request: Request) {
 
   const sourceText = inputText || imageOnlySourceText(locale, temporalDirection);
   const idempotencyKey = `activity_ai_lab_quick_capture:${clientRequestId}`;
+  const requestReportedAt = new Date().toISOString();
 
   let signal = await findDurableQuickCaptureSignalByKey({
     userId: appUser.id,
@@ -581,7 +582,7 @@ export async function POST(request: Request) {
       locale,
       timeZone,
       temporalDirection,
-      reportedAt: new Date().toISOString(),
+      reportedAt: requestReportedAt,
     });
 
     if (!created.signal) {
@@ -645,7 +646,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const reportedAt = new Date().toISOString();
+    const reportedAt =
+      text(asRecord(signal.raw_payload).reportedAt) || requestReportedAt;
     const syntheticRow: AiLabQuickCaptureRow = {
       segmentId: "capture_1",
       sourceFragment: sourceText,
