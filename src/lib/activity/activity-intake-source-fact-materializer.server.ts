@@ -1,3 +1,5 @@
+import { parseSourceResolution, type SourceBinding } from "./source-snapshot-resolution";
+import { resolveSnapshotValue, validateSnapshotBindings } from "./source-snapshot-resolution.server";
 import crypto from "node:crypto";
 
 import { supabase } from "../../../lib/supabase";
@@ -33,6 +35,7 @@ type ProfileRow = {
   template_id: string;
   version_no: number;
   routing_contract_code: string | null;
+  metadata_json: unknown;
 };
 
 type ProfileParameterRow = {
@@ -75,12 +78,12 @@ type WriterRow = {
   rawFragment: string;
   normalizedFragment: string;
   semanticMatchMethodCode: "user_confirmed";
-  sourceType: "ai_extraction";
+  sourceType: "ai_extraction" | "derived_calculation";
   confidence: number;
   factStatus: "confirmed" | "proposed";
   isUserConfirmed: boolean;
-  valueOriginCode: "user_explicit";
-  sourceReliabilityCode: "user_reported";
+  valueOriginCode: "user_explicit" | "deterministic_calculation";
+  sourceReliabilityCode: "user_reported" | "deterministic";
   sourceSnapshotJson: JsonRecord;
 };
 
@@ -249,9 +252,6 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
   }
 
   const measurements = readMeasurements(analysis.measurements);
-  if (measurements.length === 0) {
-    throw new Error("E03_NO_EXPLICIT_MEASUREMENTS");
-  }
 
   const { data: activityData, error: activityError } = await supabase
     .from("activity_events")
@@ -281,7 +281,7 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
 
   const { data: profileData, error: profileError } = await supabase
     .from("activity_template_impact_profiles_v1")
-    .select("id,template_id,version_no,routing_contract_code")
+    .select("id,template_id,version_no,routing_contract_code,metadata_json")
     .eq("template_id", candidate.templateId)
     .eq("status", "active")
     .order("version_no", { ascending: false })
@@ -389,7 +389,53 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
   const temporalDirection = text(analysis.temporalDirection) ||
     (activityData.activity_role_code === "planned" ? "future" : "past");
 
-  for (const measurement of measurements) {
+  const bindingValue = asRecord(profile.metadata_json).sourceValueBindingsV1;
+  const bindings: SourceBinding[] | null = Array.isArray(bindingValue) ? bindingValue.map((value) => {
+    const row = asRecord(value);
+    const binding: SourceBinding = { parameterDefinitionId: text(row.parameterDefinitionId), valueObjectId: text(row.valueObjectId),
+      sourceResolution: parseSourceResolution(row.sourceResolution) };
+    if (!definitions.some((item) => item.id === binding.parameterDefinitionId) ||
+        !assignments.some((item) => item.parameter_definition_id === binding.parameterDefinitionId && item.value_object_id === binding.valueObjectId)) {
+      throw new Error("SOURCE_BINDING_PROFILE_MISMATCH");
+    }
+    return binding;
+  }) : null;
+  if (bindings && (!bindings.length || new Set(bindings.map((row) => `${row.parameterDefinitionId}|${row.valueObjectId}`)).size !== bindings.length)) {
+    throw new Error("SOURCE_BINDING_PROFILE_INVALID");
+  }
+  const inputFingerprint = sha256({ measurements, profileId: profile.id, bindings, sourceText, actorId,
+    startedAt: activityData.started_at, temporalDirection });
+  const previous = asRecord(analysis.sourceFactMaterializationV1);
+  const cachedRows = previous.inputFingerprint === inputFingerprint && Array.isArray(previous.sourceWriterRows)
+    ? previous.sourceWriterRows as WriterRow[] : null;
+  if (cachedRows) {
+    // Replay the originally used snapshot even if a newer/backdated state was added later.
+    writerRows.push(...cachedRows);
+  } else {
+  const plans: { measurement: Measurement; targetId?: string; provenance?: JsonRecord }[] = [];
+  if (!bindings) {
+    plans.push(...measurements.map((measurement) => ({ measurement })));
+  } else {
+    await validateSnapshotBindings(bindings);
+    for (const binding of bindings) {
+      const definition = definitions.find((row) => row.id === binding.parameterDefinitionId)!;
+      const explicit = measurements.filter((row) => row.parameterCode === definition.parameter_code);
+      const resolution = binding.sourceResolution;
+      if (resolution?.mode !== "snapshot_only" && explicit.length > 1) throw new Error(`SOURCE_EXPLICIT_VALUE_AMBIGUOUS:${definition.parameter_code}`);
+      if (resolution?.mode !== "snapshot_only" && explicit.length === 1) {
+        plans.push({ measurement: explicit[0], targetId: binding.valueObjectId });
+      } else if (resolution) {
+        const resolved = await resolveSnapshotValue({ appUserId: input.appUserId, actorId,
+          effectiveAt: text(activityData.started_at), parameterDefinitionId: binding.parameterDefinitionId, resolution });
+        plans.push({ targetId: binding.valueObjectId, provenance: resolved.provenance,
+          measurement: { parameterCode: definition.parameter_code, unit: resolved.unit, valueNumeric: resolved.value,
+            valueText: null, rawFragment: sourceText, confidence: Math.min(resolved.confidence, candidate.confidence), approximate: false } });
+      }
+    }
+    ignoredParameterCodes.push(...measurements.filter((row) => !definitionByCode.has(row.parameterCode)).map((row) => row.parameterCode));
+  }
+  for (const plan of plans) {
+    const { measurement } = plan;
     const matchingDefinitions = definitionByCode.get(measurement.parameterCode) ?? [];
 
     if (matchingDefinitions.length === 0) {
@@ -402,7 +448,7 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
 
     const definition = matchingDefinitions[0];
     const matchingAssignments = assignments.filter(
-      (assignment) => assignment.parameter_definition_id === definition.id,
+      (assignment) => assignment.parameter_definition_id === definition.id && (!plan.targetId || assignment.value_object_id === plan.targetId),
     );
 
     if (matchingAssignments.length === 0) {
@@ -425,13 +471,14 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
       rawFragment: measurement.rawFragment,
       normalizedFragment: normalizeFragment(measurement.rawFragment),
       semanticMatchMethodCode: "user_confirmed",
-      sourceType: "ai_extraction",
+      sourceType: plan.provenance ? "derived_calculation" : "ai_extraction",
       confidence: Math.min(measurement.confidence, candidate.confidence),
       factStatus: temporalDirection === "future" ? "proposed" : "confirmed",
       isUserConfirmed: temporalDirection !== "future",
-      valueOriginCode: "user_explicit",
-      sourceReliabilityCode: "user_reported",
+      valueOriginCode: plan.provenance ? "deterministic_calculation" : "user_explicit",
+      sourceReliabilityCode: plan.provenance ? "deterministic" : "user_reported",
       sourceSnapshotJson: {
+        ...(plan.provenance ? { sourceFromSnapshotV1: plan.provenance } : {}),
         contract: ARCTOR_E03_SOURCE_FACT_MATERIALIZATION_V1,
         basicAnalysisContract: BASIC_ANALYSIS_CONTRACT,
         rawSignalId: String(signalData.id),
@@ -456,6 +503,8 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
     }
 
     writerRows.push(row);
+  }
+
   }
 
   if (writerRows.length === 0) {
@@ -500,6 +549,8 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
       contract: ARCTOR_E03_SOURCE_FACT_MATERIALIZATION_V1,
       status: writer.status === "idempotent_replay" ? "idempotent_replay" : "materialized",
       materializedAt,
+      inputFingerprint,
+      sourceWriterRows: writerRows,
       rawSignalId: String(signalData.id),
       activityEventId: input.activityEventId,
       templateId: candidate.templateId,

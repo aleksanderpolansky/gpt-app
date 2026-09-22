@@ -1,4 +1,6 @@
 "use client";
+import { SourceSnapshotSettings } from "./source-snapshot-settings";
+import { parseSourceResolution, type SourceResolution } from "@/lib/activity/source-snapshot-resolution";
 
 import {
   useCallback,
@@ -387,6 +389,7 @@ SystemActivityTemplateCreate({
   hideTrigger =
     false,
 }: Props) {
+  const [sourceSettings, setSourceSettings] = useState<Record<string, SourceResolution>>({});
   const copy =
     COPY[locale] ??
     EN;
@@ -1155,6 +1158,7 @@ SystemActivityTemplateCreate({
   }
 
   function resetForm() {
+    setSourceSettings({});
     setRequestId(
       newRequestId(),
     );
@@ -1227,6 +1231,16 @@ SystemActivityTemplateCreate({
       return;
     }
 
+    try {
+      for (const parameterId of selectedParameterIds) {
+        for (const objectId of selectedObjectIdsByParameter[parameterId] ?? []) {
+          parseSourceResolution(sourceSettings[`${parameterId}|${objectId}`]);
+        }
+      }
+    } catch {
+      setMessage(locale === "ru" ? "Выберите состояние и укажите конечное число-множитель для каждой расчётной связи." : "Select a state and a finite multiplier for each calculated mapping.");
+      return;
+    }
     const mappings =
       selectedParameterIds
         .flatMap(
@@ -1245,6 +1259,7 @@ SystemActivityTemplateCreate({
                 ) => ({
                   parameterDefinitionId,
                   valueObjectId,
+                  sourceResolution: sourceSettings[`${parameterDefinitionId}|${valueObjectId}`],
                 }),
               ),
         );
@@ -2081,14 +2096,15 @@ SystemActivityTemplateCreate({
                     }
                   </p>
 
-                  <div className="mt-2 rounded-xl border border-black/[0.07] bg-white px-3 py-2 text-[11px] leading-4 text-slate-500">
-                    {
-                      locale ===
-                      "ru"
-                        ? "Способ получения исходного значения (прямое / расчётное) будет задаваться для каждой связи «параметр → ОН» на следующем этапе. В этом релизе создаётся только каноническая связь измерения."
-                        : "The source-value resolution strategy (direct / calculated) will be attached to each parameter → observation-object mapping in the next stage. This release creates only the canonical measurement mapping."
-                    }
-                  </div>
+                  {[...selected].map((objectId) => {
+                    const key = `${parameter.id}|${objectId}`;
+                    return <div key={key} className="mt-3">
+                      <p className="text-xs font-bold">{parameter.title} → {all.find((item) => item.id === objectId)?.title ?? objectId}</p>
+                      <SourceSnapshotSettings locale={locale} parameterId={parameter.id} parameterCode={parameter.parameterCode}
+                        value={sourceSettings[key]} disabled={busy}
+                        onChange={(value) => setSourceSettings((current) => ({ ...current, [key]: value }))} />
+                    </div>;
+                  })}
 
                   <input
                     value={

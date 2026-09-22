@@ -1,3 +1,5 @@
+import { parseSourceResolution, type SourceResolution } from "../activity/source-snapshot-resolution";
+import { validateSnapshotBindings } from "../activity/source-snapshot-resolution.server";
 import crypto from "node:crypto";
 
 import {
@@ -16,6 +18,7 @@ export const
 type MappingPair = {
   parameterDefinitionId: string;
   valueObjectId: string;
+  sourceResolution?: SourceResolution;
 };
 
 type CuratorIdentity = {
@@ -110,7 +113,7 @@ function normalizedMappings(
   ) {
     byPair.set(
       `${mapping.parameterDefinitionId}|${mapping.valueObjectId}`,
-      mapping,
+      { ...mapping, ...(parseSourceResolution(mapping.sourceResolution) ? { sourceResolution: parseSourceResolution(mapping.sourceResolution) } : {}) },
     );
   }
 
@@ -742,6 +745,7 @@ markDirectAuthoring(
     requestId: string;
     directFingerprint:
       string;
+    mappings: MappingPair[];
     source:
       CuratorSystemTypicalActivityMaterializationResult;
     curator:
@@ -821,6 +825,44 @@ markDirectAuthoring(
       now,
   };
 
+  const profile =
+    await readActiveProfile(
+      input.source
+        .templateId,
+    );
+
+  const profileMetadata =
+    record(
+      profile
+        .metadata_json,
+    );
+
+  const {
+    error:
+      profileUpdateError,
+  } =
+    await supabase
+      .from(
+        "activity_template_impact_profiles_v1",
+      )
+      .update({
+        metadata_json: {
+          ...profileMetadata,
+          sourceValueBindingsV1: input.mappings,
+          directSystemAuthoringV1:
+            directMarker,
+        },
+      })
+      .eq(
+        "id",
+        profile.id,
+      );
+
+  if (profileUpdateError) {
+    throw new Error(
+      `DIRECT_SYSTEM_TEMPLATE_PROFILE_METADATA_WRITE_FAILED:${profileUpdateError.message}`,
+    );
+  }
   const {
     error:
       templateUpdateError,
@@ -848,43 +890,7 @@ markDirectAuthoring(
     );
   }
 
-  const profile =
-    await readActiveProfile(
-      input.source
-        .templateId,
-    );
 
-  const profileMetadata =
-    record(
-      profile
-        .metadata_json,
-    );
-
-  const {
-    error:
-      profileUpdateError,
-  } =
-    await supabase
-      .from(
-        "activity_template_impact_profiles_v1",
-      )
-      .update({
-        metadata_json: {
-          ...profileMetadata,
-          directSystemAuthoringV1:
-            directMarker,
-        },
-      })
-      .eq(
-        "id",
-        profile.id,
-      );
-
-  if (profileUpdateError) {
-    throw new Error(
-      `DIRECT_SYSTEM_TEMPLATE_PROFILE_METADATA_WRITE_FAILED:${profileUpdateError.message}`,
-    );
-  }
 }
 
 async function
@@ -1060,6 +1066,8 @@ authorDirectSystemTypicalActivityV1(
     }
   }
 
+  await validateSnapshotBindings(mappings);
+
   await assertRequestIdIsNotRawSignal(
     input.requestId,
   );
@@ -1186,6 +1194,7 @@ authorDirectSystemTypicalActivityV1(
     });
 
   await markDirectAuthoring({
+    mappings,
     requestId:
       input.requestId,
     directFingerprint:

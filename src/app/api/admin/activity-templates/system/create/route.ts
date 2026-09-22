@@ -1,3 +1,4 @@
+import { parseSourceResolution, type SourceResolution } from "@/lib/activity/source-snapshot-resolution";
 import { NextResponse } from "next/server";
 
 import {
@@ -55,6 +56,7 @@ type WorkBody = {
 type MappingPair = {
   parameterDefinitionId: string;
   valueObjectId: string;
+  sourceResolution?: SourceResolution;
 };
 
 type ValueObjectRow = {
@@ -143,6 +145,7 @@ function mappingArray(
             {
               parameterDefinitionId,
               valueObjectId,
+              ...(row.sourceResolution === undefined ? {} : { sourceResolution: parseSourceResolution(row.sourceResolution) }),
             },
           ]
         : [];
@@ -511,10 +514,17 @@ export async function POST(
       ),
     ];
 
-  const mappings =
-    mappingArray(
-      body.mappings,
-    );
+  let mappings: MappingPair[];
+  try {
+    mappings = mappingArray(body.mappings);
+    if (!Array.isArray(body.mappings) || mappings.length !== body.mappings.length ||
+        mappings.some((mapping) => !parameterDefinitionIds.includes(mapping.parameterDefinitionId)) ||
+        new Set(mappings.map((mapping) => `${mapping.parameterDefinitionId}|${mapping.valueObjectId}`)).size !== mappings.length) {
+      throw new Error("SOURCE_BINDINGS_INVALID");
+    }
+  } catch (error) {
+    return errorResponse("SOURCE_BINDINGS_INVALID", error instanceof Error ? error.message : "Invalid bindings", 400);
+  }
 
   if (
     !UUID_RE.test(
