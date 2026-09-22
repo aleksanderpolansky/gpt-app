@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  useCallback,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -20,6 +22,7 @@ type LocaleCode =
 
 type ParameterItem = {
   id: string;
+  scopeCode?: string;
   parameterCode: string;
   title: string;
   description: string | null;
@@ -65,6 +68,18 @@ type Copy = {
   parameterHelp: string;
   parameterSearch: string;
   noParameters: string;
+  chooseExisting: string;
+  createNew: string;
+  createAndAdd: string;
+  newParameterTitle: string;
+  newParameterDescription: string;
+  technicalCode: string;
+  dimension: string;
+  valueType: string;
+  canonicalUnit: string;
+  aggregation: string;
+  defaultWindow: string;
+  allowNegative: string;
   mappings: string;
   mappingsHelp: string;
   objectSearch: string;
@@ -105,14 +120,38 @@ const EN: Copy = {
     "Search parameter…",
   noParameters:
     "No matching active system parameters.",
+  chooseExisting:
+    "Choose existing",
+  createNew:
+    "Create new",
+  createAndAdd:
+    "Create system parameter and add it",
+  newParameterTitle:
+    "Name",
+  newParameterDescription:
+    "Description",
+  technicalCode:
+    "Technical code",
+  dimension:
+    "Dimension",
+  valueType:
+    "Value type",
+  canonicalUnit:
+    "Canonical unit",
+  aggregation:
+    "Aggregation",
+  defaultWindow:
+    "Default window",
+  allowNegative:
+    "Allow negative values",
   mappings:
     "Observation objects for the parameter",
   mappingsHelp:
-    "Choose one or more active system leaf objects to which this parameter is already assigned.",
+    "Choose one or more active System leaf observation objects measured by this parameter. Missing System assignments are created during publication.",
   objectSearch:
     "Search observation object…",
   noObjects:
-    "No active system leaf assignments for this parameter.",
+    "No active System leaf observation objects found.",
   selected:
     "Selected",
   publish:
@@ -157,14 +196,38 @@ const RU: Copy = {
     "Поиск параметра…",
   noParameters:
     "Подходящих активных системных параметров нет.",
+  chooseExisting:
+    "Выбрать существующий",
+  createNew:
+    "Создать новый",
+  createAndAdd:
+    "Создать системный параметр и добавить",
+  newParameterTitle:
+    "Название",
+  newParameterDescription:
+    "Описание",
+  technicalCode:
+    "Технический код",
+  dimension:
+    "Измерение",
+  valueType:
+    "Тип значения",
+  canonicalUnit:
+    "Каноническая единица",
+  aggregation:
+    "Агрегация",
+  defaultWindow:
+    "Окно по умолчанию",
+  allowNegative:
+    "Разрешить отрицательные значения",
   mappings:
     "Объекты наблюдения для параметра",
   mappingsHelp:
-    "Выберите один или несколько активных системных листовых ОН, к которым этот параметр уже назначен.",
+    "Выберите один или несколько системных листовых ОН, значение которых измеряет этот параметр. Если назначения ещё нет, оно будет создано при публикации.",
   objectSearch:
     "Поиск объекта наблюдения…",
   noObjects:
-    "У этого параметра нет активных назначений на системные листовые ОН.",
+    "Системные листовые ОН не найдены.",
   selected:
     "Выбрано",
   publish:
@@ -256,6 +319,59 @@ const COPY:
         "Zrušit",
     },
   };
+
+const DIMENSIONS = [
+  "time",
+  "distance",
+  "count",
+  "volume",
+  "mass",
+  "force",
+  "energy",
+  "money",
+  "rate",
+  "score",
+  "temperature",
+  "text",
+  "boolean",
+  "timestamp",
+  "pressure",
+  "ratio",
+  "sound_level",
+  "illuminance",
+] as const;
+
+const VALUE_TYPES = [
+  "numeric",
+  "text",
+  "boolean",
+  "timestamp",
+] as const;
+
+const AGGREGATIONS = [
+  "sum",
+  "average",
+  "minimum",
+  "maximum",
+  "latest",
+  "count",
+  "duration",
+  "rate",
+  "none",
+] as const;
+
+const WINDOWS = [
+  "event",
+  "hour",
+  "day",
+  "week",
+  "month",
+  "rolling_7_days",
+  "rolling_30_days",
+] as const;
+
+const TECHNICAL_CODE_RE =
+  /^[a-z][a-z0-9_]{1,79}$/;
 
 function newRequestId() {
   return crypto.randomUUID();
@@ -379,6 +495,83 @@ SystemActivityTemplateCreate({
     setParameterSearch,
   ] =
     useState("");
+
+  const [
+    parameterMode,
+    setParameterMode,
+  ] =
+    useState<
+      "existing" |
+      "new"
+    >(
+      "existing",
+    );
+
+  const [
+    newParameterTitle,
+    setNewParameterTitle,
+  ] =
+    useState("");
+
+  const [
+    newParameterDescription,
+    setNewParameterDescription,
+  ] =
+    useState("");
+
+  const [
+    newParameterCode,
+    setNewParameterCode,
+  ] =
+    useState("");
+
+  const [
+    newDimension,
+    setNewDimension,
+  ] =
+    useState(
+      "mass",
+    );
+
+  const [
+    newValueType,
+    setNewValueType,
+  ] =
+    useState(
+      "numeric",
+    );
+
+  const [
+    newUnit,
+    setNewUnit,
+  ] =
+    useState(
+      "kilogram",
+    );
+
+  const [
+    newAggregation,
+    setNewAggregation,
+  ] =
+    useState(
+      "sum",
+    );
+
+  const [
+    newWindow,
+    setNewWindow,
+  ] =
+    useState(
+      "event",
+    );
+
+  const [
+    newAllowNegative,
+    setNewAllowNegative,
+  ] =
+    useState(
+      false,
+    );
 
   const [
     valueObjectsByParameter,
@@ -505,25 +698,190 @@ SystemActivityTemplateCreate({
       ],
     );
 
-  async function loadParameters() {
-    setLoading(
-      true,
+  const loadParameters =
+    useCallback(
+      async () => {
+        setLoading(
+          true,
+        );
+
+        setMessage("");
+
+        try {
+          const response =
+            await fetch(
+              "/api/activity-template-impact-profiles/catalog",
+              {
+                cache:
+                  "no-store",
+              },
+            );
+
+          const payload =
+            await response
+              .json();
+
+          if (
+            !response.ok ||
+            payload?.ok !== true
+          ) {
+            throw new Error(
+              payload?.error ||
+                copy.loadError,
+            );
+          }
+
+          const systemParameters =
+            (
+              payload.parameters ??
+              []
+            )
+              .filter(
+                (
+                  item:
+                    ParameterItem,
+                ) =>
+                  item.scopeCode ===
+                    "system" &&
+                  item.parameterCode !==
+                    "process_count",
+              );
+
+          setParameters(
+            systemParameters,
+          );
+        } catch (
+          error
+        ) {
+          setMessage(
+            error instanceof Error
+              ? error.message
+              : copy.loadError,
+          );
+        } finally {
+          setLoading(
+            false,
+          );
+        }
+      },
+      [
+        copy.loadError,
+      ],
     );
 
+  function openForm() {
+    setOpen(
+      true,
+    );
+  }
+
+  useEffect(
+    () => {
+      if (!open) {
+        return;
+      }
+
+      const initialLoadTimer =
+        window.setTimeout(
+          () => {
+            void loadParameters();
+          },
+          0,
+        );
+
+      const reload = () => {
+        void loadParameters();
+      };
+
+      window.addEventListener(
+        "arctor:activity-parameter-catalog-changed",
+        reload,
+      );
+
+      return () => {
+        window.clearTimeout(
+          initialLoadTimer,
+        );
+
+        window.removeEventListener(
+          "arctor:activity-parameter-catalog-changed",
+          reload,
+        );
+      };
+    },
+    [
+      loadParameters,
+      open,
+    ],
+  );
+
+  async function
+  createAndAddParameter() {
+    const normalizedCode =
+      newParameterCode
+        .trim()
+        .toLowerCase();
+
+    if (
+      !newParameterTitle
+        .trim() ||
+      !TECHNICAL_CODE_RE.test(
+        normalizedCode,
+      ) ||
+      !newUnit.trim()
+    ) {
+      setMessage(
+        copy.loadError,
+      );
+      return;
+    }
+
+    setBusy(
+      true,
+    );
     setMessage("");
 
     try {
-      const params =
-        new URLSearchParams({
-          locale,
-        });
-
       const response =
         await fetch(
-          `/api/admin/activity-templates/system/create?${params.toString()}`,
+          "/api/admin/activity-parameter-definitions",
           {
-            cache:
-              "no-store",
+            method:
+              "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body:
+              JSON.stringify({
+                title:
+                  newParameterTitle
+                    .trim(),
+                description:
+                  newParameterDescription
+                    .trim(),
+                parameterCode:
+                  normalizedCode,
+                dimensionCode:
+                  newDimension,
+                valueTypeCode:
+                  newValueType,
+                canonicalUnitCode:
+                  newUnit
+                    .trim()
+                    .toLowerCase(),
+                allowedUnitCodes: [
+                  newUnit
+                    .trim()
+                    .toLowerCase(),
+                ],
+                aggregationMethodCode:
+                  newAggregation,
+                defaultWindowCode:
+                  newWindow,
+                allowNegative:
+                  newAllowNegative,
+              }),
           },
         );
 
@@ -533,7 +891,10 @@ SystemActivityTemplateCreate({
 
       if (
         !response.ok ||
-        payload?.ok !== true
+        payload?.ok !== true ||
+        !payload
+          ?.definition
+          ?.id
       ) {
         throw new Error(
           payload?.error ||
@@ -541,11 +902,71 @@ SystemActivityTemplateCreate({
         );
       }
 
+      const created =
+        payload.definition as
+          ParameterItem;
+
+      const normalizedCreated:
+        ParameterItem = {
+          ...created,
+          scopeCode:
+            "system",
+        };
+
       setParameters(
         (
-          payload.parameters ??
-          []
-        ) as ParameterItem[],
+          current,
+        ) => [
+          normalizedCreated,
+          ...current.filter(
+            (
+              item,
+            ) =>
+              item.id !==
+              normalizedCreated.id,
+          ),
+        ],
+      );
+
+      await addParameter(
+        normalizedCreated,
+      );
+
+      setParameterMode(
+        "existing",
+      );
+      setNewParameterTitle(
+        "",
+      );
+      setNewParameterDescription(
+        "",
+      );
+      setNewParameterCode(
+        "",
+      );
+      setNewDimension(
+        "mass",
+      );
+      setNewValueType(
+        "numeric",
+      );
+      setNewUnit(
+        "kilogram",
+      );
+      setNewAggregation(
+        "sum",
+      );
+      setNewWindow(
+        "event",
+      );
+      setNewAllowNegative(
+        false,
+      );
+
+      window.dispatchEvent(
+        new Event(
+          "arctor:activity-parameter-catalog-changed",
+        ),
       );
     } catch (
       error
@@ -556,24 +977,12 @@ SystemActivityTemplateCreate({
           : copy.loadError,
       );
     } finally {
-      setLoading(
+      setBusy(
         false,
       );
     }
   }
 
-  async function openForm() {
-    setOpen(
-      true,
-    );
-
-    if (
-      parameters.length ===
-      0
-    ) {
-      await loadParameters();
-    }
-  }
 
   async function
   loadTargets(
@@ -765,6 +1174,18 @@ SystemActivityTemplateCreate({
       [],
     );
     setParameterSearch(
+      "",
+    );
+    setParameterMode(
+      "existing",
+    );
+    setNewParameterTitle(
+      "",
+    );
+    setNewParameterDescription(
+      "",
+    );
+    setNewParameterCode(
       "",
     );
     setObjectSearchByParameter(
@@ -1117,82 +1538,437 @@ SystemActivityTemplateCreate({
           }
         </div>
 
-        <input
-          value={
-            parameterSearch
-          }
-          onChange={
-            (
-              event,
-            ) =>
-              setParameterSearch(
-                event
-                  .target
-                  .value,
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              setParameterMode(
+                "existing",
               )
-          }
-          placeholder={
-            copy.parameterSearch
-          }
-          className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#3b6ef8]"
-        />
+            }
+            className={[
+              "rounded-xl border px-3 py-2 text-xs font-bold",
+              parameterMode ===
+              "existing"
+                ? "border-[#3b6ef8] bg-[#eef2ff] text-[#3b6ef8]"
+                : "border-black/[0.08] bg-white text-slate-600",
+            ].join(
+              " ",
+            )}
+          >
+            {copy.chooseExisting}
+          </button>
 
-        <div className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-black/[0.07] p-1">
-          {loading ? (
-            <p className="px-3 py-3 text-xs text-slate-500">
-              {copy.loading}
-            </p>
-          ) : filteredParameters
-              .length === 0 ? (
-            <p className="px-3 py-3 text-xs text-slate-500">
-              {copy.noParameters}
-            </p>
-          ) : (
-            filteredParameters.map(
-              (
-                parameter,
-              ) => (
-                <button
-                  key={
-                    parameter.id
+          <button
+            type="button"
+            onClick={() =>
+              setParameterMode(
+                "new",
+              )
+            }
+            className={[
+              "rounded-xl border px-3 py-2 text-xs font-bold",
+              parameterMode ===
+              "new"
+                ? "border-[#3b6ef8] bg-[#eef2ff] text-[#3b6ef8]"
+                : "border-black/[0.08] bg-white text-slate-600",
+            ].join(
+              " ",
+            )}
+          >
+            {copy.createNew}
+          </button>
+        </div>
+
+        {parameterMode ===
+        "existing" ? (
+          <>
+            <input
+              value={
+                parameterSearch
+              }
+              onChange={
+                (
+                  event,
+                ) =>
+                  setParameterSearch(
+                    event
+                      .target
+                      .value,
+                  )
+              }
+              placeholder={
+                copy.parameterSearch
+              }
+              className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#3b6ef8]"
+            />
+
+            <div className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-black/[0.07] p-1">
+              {loading ? (
+                <p className="px-3 py-3 text-xs text-slate-500">
+                  {copy.loading}
+                </p>
+              ) : filteredParameters
+                  .length === 0 ? (
+                <p className="px-3 py-3 text-xs text-slate-500">
+                  {copy.noParameters}
+                </p>
+              ) : (
+                filteredParameters.map(
+                  (
+                    parameter,
+                  ) => (
+                    <button
+                      key={
+                        parameter.id
+                      }
+                      type="button"
+                      onClick={() =>
+                        void addParameter(
+                          parameter,
+                        )
+                      }
+                      className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-[#f5f6fb]"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-bold">
+                          {
+                            parameter.title
+                          }
+                        </span>
+
+                        <span className="mt-0.5 block truncate text-[11px] text-slate-400">
+                          {
+                            parameter
+                              .parameterCode
+                          }
+                        </span>
+                      </span>
+
+                      <span className="shrink-0 text-[11px] text-slate-400">
+                        {
+                          getActivityUnitLabel(
+                            parameter
+                              .canonicalUnitCode,
+                            locale,
+                          )
+                        }
+                      </span>
+                    </button>
+                  ),
+                )
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="mt-3 rounded-[18px] border border-black/[0.07] bg-[#f5f6fb] p-4">
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="grid gap-1.5 md:col-span-2">
+                <span className="text-xs font-bold text-slate-600">
+                  {copy.newParameterTitle}
+                </span>
+                <input
+                  value={
+                    newParameterTitle
                   }
-                  type="button"
-                  onClick={() =>
-                    void addParameter(
-                      parameter,
+                  onChange={
+                    (
+                      event,
+                    ) =>
+                      setNewParameterTitle(
+                        event
+                          .target
+                          .value,
+                      )
+                  }
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                />
+              </label>
+
+              <label className="grid gap-1.5 md:col-span-2">
+                <span className="text-xs font-bold text-slate-600">
+                  {copy.newParameterDescription}
+                </span>
+                <textarea
+                  rows={2}
+                  value={
+                    newParameterDescription
+                  }
+                  onChange={
+                    (
+                      event,
+                    ) =>
+                      setNewParameterDescription(
+                        event
+                          .target
+                          .value,
+                      )
+                  }
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                />
+              </label>
+
+              <label className="grid gap-1.5 md:col-span-2">
+                <span className="text-xs font-bold text-slate-600">
+                  {copy.technicalCode}
+                </span>
+                <input
+                  value={
+                    newParameterCode
+                  }
+                  onChange={
+                    (
+                      event,
+                    ) =>
+                      setNewParameterCode(
+                        event
+                          .target
+                          .value
+                          .toLowerCase()
+                          .replace(
+                            /\s+/gu,
+                            "_",
+                          ),
+                      )
+                  }
+                  placeholder="mass"
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm"
+                />
+              </label>
+
+              <label className="grid gap-1.5">
+                <span className="text-xs font-bold text-slate-600">
+                  {copy.dimension}
+                </span>
+                <select
+                  value={
+                    newDimension
+                  }
+                  onChange={
+                    (
+                      event,
+                    ) =>
+                      setNewDimension(
+                        event
+                          .target
+                          .value,
+                      )
+                  }
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                >
+                  {
+                    DIMENSIONS.map(
+                      (
+                        code,
+                      ) => (
+                        <option
+                          key={
+                            code
+                          }
+                          value={
+                            code
+                          }
+                        >
+                          {code}
+                        </option>
+                      ),
                     )
                   }
-                  className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-[#f5f6fb]"
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-bold">
-                      {
-                        parameter.title
-                      }
-                    </span>
+                </select>
+              </label>
 
-                    <span className="mt-0.5 block truncate text-[11px] text-slate-400">
-                      {
-                        parameter
-                          .parameterCode
-                      }
-                    </span>
-                  </span>
-
-                  <span className="shrink-0 text-[11px] text-slate-400">
-                    {
-                      getActivityUnitLabel(
-                        parameter
-                          .canonicalUnitCode,
-                        locale,
+              <label className="grid gap-1.5">
+                <span className="text-xs font-bold text-slate-600">
+                  {copy.valueType}
+                </span>
+                <select
+                  value={
+                    newValueType
+                  }
+                  onChange={
+                    (
+                      event,
+                    ) =>
+                      setNewValueType(
+                        event
+                          .target
+                          .value,
                       )
-                    }
-                  </span>
-                </button>
-              ),
-            )
-          )}
-        </div>
+                  }
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                >
+                  {
+                    VALUE_TYPES.map(
+                      (
+                        code,
+                      ) => (
+                        <option
+                          key={
+                            code
+                          }
+                          value={
+                            code
+                          }
+                        >
+                          {code}
+                        </option>
+                      ),
+                    )
+                  }
+                </select>
+              </label>
+
+              <label className="grid gap-1.5">
+                <span className="text-xs font-bold text-slate-600">
+                  {copy.canonicalUnit}
+                </span>
+                <input
+                  value={
+                    newUnit
+                  }
+                  onChange={
+                    (
+                      event,
+                    ) =>
+                      setNewUnit(
+                        event
+                          .target
+                          .value
+                          .toLowerCase(),
+                      )
+                  }
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm"
+                />
+              </label>
+
+              <label className="grid gap-1.5">
+                <span className="text-xs font-bold text-slate-600">
+                  {copy.aggregation}
+                </span>
+                <select
+                  value={
+                    newAggregation
+                  }
+                  onChange={
+                    (
+                      event,
+                    ) =>
+                      setNewAggregation(
+                        event
+                          .target
+                          .value,
+                      )
+                  }
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                >
+                  {
+                    AGGREGATIONS.map(
+                      (
+                        code,
+                      ) => (
+                        <option
+                          key={
+                            code
+                          }
+                          value={
+                            code
+                          }
+                        >
+                          {code}
+                        </option>
+                      ),
+                    )
+                  }
+                </select>
+              </label>
+
+              <label className="grid gap-1.5">
+                <span className="text-xs font-bold text-slate-600">
+                  {copy.defaultWindow}
+                </span>
+                <select
+                  value={
+                    newWindow
+                  }
+                  onChange={
+                    (
+                      event,
+                    ) =>
+                      setNewWindow(
+                        event
+                          .target
+                          .value,
+                      )
+                  }
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                >
+                  {
+                    WINDOWS.map(
+                      (
+                        code,
+                      ) => (
+                        <option
+                          key={
+                            code
+                          }
+                          value={
+                            code
+                          }
+                        >
+                          {code}
+                        </option>
+                      ),
+                    )
+                  }
+                </select>
+              </label>
+
+              <label className="flex items-center gap-2 md:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={
+                    newAllowNegative
+                  }
+                  onChange={
+                    (
+                      event,
+                    ) =>
+                      setNewAllowNegative(
+                        event
+                          .target
+                          .checked,
+                      )
+                  }
+                />
+                <span className="text-xs font-bold text-slate-600">
+                  {copy.allowNegative}
+                </span>
+              </label>
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                void createAndAddParameter()
+              }
+              disabled={
+                busy ||
+                !newParameterTitle
+                  .trim() ||
+                !TECHNICAL_CODE_RE.test(
+                  newParameterCode
+                    .trim()
+                    .toLowerCase(),
+                ) ||
+                !newUnit
+                  .trim()
+              }
+              className="mt-4 rounded-xl bg-[#3b6ef8] px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+            >
+              {copy.createAndAdd}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="mt-5 space-y-4">
@@ -1304,6 +2080,15 @@ SystemActivityTemplateCreate({
                       copy.mappingsHelp
                     }
                   </p>
+
+                  <div className="mt-2 rounded-xl border border-black/[0.07] bg-white px-3 py-2 text-[11px] leading-4 text-slate-500">
+                    {
+                      locale ===
+                      "ru"
+                        ? "Способ получения исходного значения (прямое / расчётное) будет задаваться для каждой связи «параметр → ОН» на следующем этапе. В этом релизе создаётся только каноническая связь измерения."
+                        : "The source-value resolution strategy (direct / calculated) will be attached to each parameter → observation-object mapping in the next stage. This release creates only the canonical measurement mapping."
+                    }
+                  </div>
 
                   <input
                     value={

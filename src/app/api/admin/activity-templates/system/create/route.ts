@@ -301,77 +301,6 @@ export async function GET(
 
     const {
       data:
-        assignmentRows,
-      error:
-        assignmentError,
-    } =
-      await supabase
-        .from(
-          "value_object_parameter_assignments",
-        )
-        .select(
-          "value_object_id",
-        )
-        .eq(
-          "parameter_definition_id",
-          parameterDefinitionId,
-        )
-        .eq(
-          "scope_code",
-          "system",
-        )
-        .eq(
-          "assignment_scope_code",
-          "system",
-        )
-        .eq(
-          "status",
-          "active",
-        )
-        .limit(
-          3000,
-        );
-
-    if (assignmentError) {
-      throw new Error(
-        `DIRECT_SYSTEM_TEMPLATE_ASSIGNMENTS_READ_FAILED:${assignmentError.message}`,
-      );
-    }
-
-    const valueObjectIds =
-      [
-        ...new Set(
-          (
-            assignmentRows ??
-            []
-          )
-            .map(
-              (row) =>
-                text(
-                  row
-                    .value_object_id,
-                ),
-            )
-            .filter(Boolean),
-        ),
-      ];
-
-    if (
-      valueObjectIds.length ===
-      0
-    ) {
-      return NextResponse.json({
-        ok:
-          true,
-        routeMarker:
-          ROUTE_MARKER,
-        valueObjects:
-          [],
-      });
-    }
-
-    const {
-      data:
         valueObjectRows,
       error:
         valueObjectError,
@@ -382,10 +311,6 @@ export async function GET(
         )
         .select(
           "id,canonical_key,title,description,metadata_json,scope_code,origin_type_code,ontology_node_role_code,status",
-        )
-        .in(
-          "id",
-          valueObjectIds,
         )
         .eq(
           "scope_code",
@@ -402,6 +327,13 @@ export async function GET(
         .eq(
           "status",
           "active",
+        )
+        .order(
+          "title",
+          {
+            ascending:
+              true,
+          },
         )
         .limit(
           3000,

@@ -430,6 +430,313 @@ function replayResult(
 }
 
 async function
+ensureSystemParameterAssignments(
+  mappings:
+    readonly MappingPair[],
+) {
+  const normalized =
+    normalizedMappings(
+      mappings,
+    );
+
+  const parameterIds =
+    unique(
+      normalized.map(
+        (
+          mapping,
+        ) =>
+          mapping
+            .parameterDefinitionId,
+      ),
+    );
+
+  const valueObjectIds =
+    unique(
+      normalized.map(
+        (
+          mapping,
+        ) =>
+          mapping
+            .valueObjectId,
+      ),
+    );
+
+  const [
+    parameterResult,
+    valueObjectResult,
+  ] =
+    await Promise.all([
+      supabase
+        .from(
+          "value_object_parameter_definitions",
+        )
+        .select(
+          "id,scope_code,status",
+        )
+        .in(
+          "id",
+          parameterIds,
+        )
+        .eq(
+          "scope_code",
+          "system",
+        )
+        .eq(
+          "status",
+          "active",
+        ),
+
+      supabase
+        .from(
+          "value_objects",
+        )
+        .select(
+          "id,scope_code,origin_type_code,ontology_node_role_code,status",
+        )
+        .in(
+          "id",
+          valueObjectIds,
+        ),
+    ]);
+
+  if (
+    parameterResult.error
+  ) {
+    throw new Error(
+      `DIRECT_SYSTEM_TEMPLATE_PARAMETER_VALIDATION_FAILED:${parameterResult.error.message}`,
+    );
+  }
+
+  if (
+    valueObjectResult.error
+  ) {
+    throw new Error(
+      `DIRECT_SYSTEM_TEMPLATE_OBJECT_VALIDATION_FAILED:${valueObjectResult.error.message}`,
+    );
+  }
+
+  if (
+    (
+      parameterResult.data ??
+      []
+    ).length !==
+    parameterIds.length
+  ) {
+    throw new Error(
+      "DIRECT_SYSTEM_TEMPLATE_SYSTEM_PARAMETER_SET_CHANGED",
+    );
+  }
+
+  const validObjectIds =
+    new Set(
+      (
+        valueObjectResult.data ??
+        []
+      )
+        .filter(
+          (
+            row,
+          ) =>
+            row.scope_code ===
+              "global" &&
+            row.origin_type_code ===
+              "system_model" &&
+            row.ontology_node_role_code ===
+              "leaf" &&
+            row.status ===
+              "active",
+        )
+        .map(
+          (
+            row,
+          ) =>
+            String(
+              row.id,
+            ),
+        ),
+    );
+
+  if (
+    validObjectIds.size !==
+    valueObjectIds.length
+  ) {
+    throw new Error(
+      "DIRECT_SYSTEM_TEMPLATE_TARGET_NOT_ACTIVE_SYSTEM_LEAF",
+    );
+  }
+
+  for (
+    const mapping
+    of normalized
+  ) {
+    const {
+      data:
+        existingRows,
+      error:
+        existingError,
+    } =
+      await supabase
+        .from(
+          "value_object_parameter_assignments",
+        )
+        .select(
+          "id,scope_code,assignment_scope_code,owner_user_id,owner_actor_id,created_by_actor_id,status",
+        )
+        .eq(
+          "value_object_id",
+          mapping.valueObjectId,
+        )
+        .eq(
+          "parameter_definition_id",
+          mapping
+            .parameterDefinitionId,
+        )
+        .limit(
+          2,
+        );
+
+    if (existingError) {
+      throw new Error(
+        `DIRECT_SYSTEM_TEMPLATE_ASSIGNMENT_READ_FAILED:${existingError.message}`,
+      );
+    }
+
+    if (
+      (
+        existingRows ??
+        []
+      ).length > 1
+    ) {
+      throw new Error(
+        `DIRECT_SYSTEM_TEMPLATE_ASSIGNMENT_NOT_UNIQUE:${mapping.parameterDefinitionId}:${mapping.valueObjectId}`,
+      );
+    }
+
+    const existing =
+      existingRows?.[0];
+
+    if (existing) {
+      if (
+        existing
+          .scope_code !==
+          "system" ||
+        existing
+          .assignment_scope_code !==
+          "system" ||
+        existing
+          .owner_user_id !==
+          null ||
+        existing
+          .owner_actor_id !==
+          null ||
+        existing
+          .created_by_actor_id !==
+          null
+      ) {
+        throw new Error(
+          `DIRECT_SYSTEM_TEMPLATE_ASSIGNMENT_SCOPE_CONFLICT:${mapping.parameterDefinitionId}:${mapping.valueObjectId}`,
+        );
+      }
+
+      if (
+        existing.status !==
+        "active"
+      ) {
+        const {
+          error:
+            reactivateError,
+        } =
+          await supabase
+            .from(
+              "value_object_parameter_assignments",
+            )
+            .update({
+              status:
+                "active",
+              valid_to:
+                null,
+            })
+            .eq(
+              "id",
+              existing.id,
+            );
+
+        if (
+          reactivateError
+        ) {
+          throw new Error(
+            `DIRECT_SYSTEM_TEMPLATE_ASSIGNMENT_REACTIVATE_FAILED:${reactivateError.message}`,
+          );
+        }
+      }
+
+      continue;
+    }
+
+    const idempotencyKey =
+      `direct_system_typical_activity:${mapping.parameterDefinitionId}:${mapping.valueObjectId}`;
+
+    const assignmentId =
+      stableUuid(
+        `ARCTOR_DIRECT_SYSTEM_PARAMETER_ASSIGNMENT_V1|${mapping.parameterDefinitionId}|${mapping.valueObjectId}`,
+      );
+
+    const {
+      error:
+        insertError,
+    } =
+      await supabase
+        .from(
+          "value_object_parameter_assignments",
+        )
+        .insert({
+          id:
+            assignmentId,
+          value_object_id:
+            mapping
+              .valueObjectId,
+          parameter_definition_id:
+            mapping
+              .parameterDefinitionId,
+          owner_user_id:
+            null,
+          owner_actor_id:
+            null,
+          created_by_actor_id:
+            null,
+          status:
+            "active",
+          display_order:
+            1000,
+          valid_to:
+            null,
+          idempotency_key:
+            idempotencyKey,
+          metadata_json: {
+            source:
+              "direct_system_typical_activity_authoring",
+            semanticUse:
+              "activity_source_measurement",
+          },
+          scope_code:
+            "system",
+          assignment_scope_code:
+            "system",
+        });
+
+    if (
+      insertError &&
+      insertError.code !==
+        "23505"
+    ) {
+      throw new Error(
+        `DIRECT_SYSTEM_TEMPLATE_ASSIGNMENT_CREATE_FAILED:${insertError.message}`,
+      );
+    }
+  }
+}
+
+async function
 markDirectAuthoring(
   input: {
     requestId: string;
@@ -853,6 +1160,10 @@ authorDirectSystemTypicalActivityV1(
 
     return replay;
   }
+
+  await ensureSystemParameterAssignments(
+    mappings,
+  );
 
   const curatorResult =
     await materializeCuratorSystemTypicalActivityV1({
