@@ -67,6 +67,28 @@ type IntakeAnalysisResponse = {
   analyses?: IntakeAnalysis[];
 };
 
+type SourceFactPreflight = {
+  contract?: string;
+  status?: "eligible" | "blocked" | string;
+  eligible?: boolean;
+  activityEventId?: string;
+  factsPlanned?: number;
+  reasonCode?: string;
+  error?: string;
+};
+
+type SourceFactPreflightResponse = {
+  ok?: boolean;
+  preflight?: SourceFactPreflight;
+  error?: string;
+};
+
+type SourceFactPreflightState = {
+  key: string;
+  preflight: SourceFactPreflight | null;
+  failed: boolean;
+};
+
 const COPY: Record<Locale, {
   completed: string;
   planned: string;
@@ -301,6 +323,187 @@ const COPY: Record<Locale, {
   },
 };
 
+const PREFLIGHT_COPY: Record<Locale, {
+  checking: string;
+  failed: string;
+  defaultBlocked: string;
+  byReason: Record<string, string>;
+}> = {
+  ru: {
+    checking: "Проверяем готовность исходных фактов…",
+    failed: "Не удалось проверить готовность записи исходных фактов.",
+    defaultBlocked: "Запись исходных фактов сейчас недоступна.",
+    byReason: {
+      E03_COMPLETED_BASIC_ANALYSIS_REQUIRED: "Базовый анализ ещё не готов к записи исходных фактов.",
+      E03_REJECTED_TEMPLATE_MATCH_NOT_ELIGIBLE: "Соответствие типовой активности отклонено.",
+      E03_EXACTLY_ONE_HIGH_CONFIDENCE_TEMPLATE_REQUIRED: "Не определена одна подтверждаемая типовая активность.",
+      E03_ACTIVE_PROFILE_NOT_FOUND: "У типовой активности нет активного профиля.",
+      E03_PROFILE_ROUTING_CONTRACT_NOT_V2: "Профиль типовой активности не готов к записи фактов.",
+      E03_PROFILE_MAPPING_FOUNDATION_EMPTY: "В профиле не настроены параметры и объекты наблюдения.",
+      E03_NO_PROFILE_MAPPED_MEASUREMENTS: "Не найдено значение для записи исходного факта.",
+      E03_PROFILE_ROUTE_MISSING: "Для параметра не настроен объект наблюдения.",
+      E03_PROFILE_ROUTE_AMBIGUOUS_FOR_CURRENT_WRITER: "Для параметра найдено несколько маршрутов записи.",
+      E03_PROFILE_PARAMETER_CODE_AMBIGUOUS: "Параметр профиля определён неоднозначно.",
+      SOURCE_EXPLICIT_VALUE_AMBIGUOUS: "Найдено несколько значений одного параметра.",
+      SOURCE_SNAPSHOT_NOT_FOUND: "Не найден подходящий подтверждённый срез.",
+      SOURCE_SNAPSHOT_EXPIRED: "Подходящий срез недействителен на момент активности.",
+      SOURCE_SNAPSHOT_ACTIVE_STATE_ASSIGNMENT_REQUIRED: "Источник среза не готов к использованию.",
+      SOURCE_SNAPSHOT_SELECTION_REQUIRED: "Для рассчитываемого значения не выбран источник-срез.",
+      SOURCE_BINDING_PROFILE_MISMATCH: "Настройка источника не соответствует профилю типовой активности.",
+      SOURCE_BINDING_PROFILE_INVALID: "Настройка источников профиля некорректна.",
+    },
+  },
+  en: {
+    checking: "Checking source-fact readiness…",
+    failed: "Could not check whether source facts are ready to write.",
+    defaultBlocked: "Source facts cannot be written yet.",
+    byReason: {
+      E03_COMPLETED_BASIC_ANALYSIS_REQUIRED: "The basic analysis is not ready for source-fact writing yet.",
+      E03_REJECTED_TEMPLATE_MATCH_NOT_ELIGIBLE: "The typical-activity match was rejected.",
+      E03_EXACTLY_ONE_HIGH_CONFIDENCE_TEMPLATE_REQUIRED: "Exactly one confirmable typical activity was not determined.",
+      E03_ACTIVE_PROFILE_NOT_FOUND: "The typical activity has no active profile.",
+      E03_PROFILE_ROUTING_CONTRACT_NOT_V2: "The typical-activity profile is not ready to write facts.",
+      E03_PROFILE_MAPPING_FOUNDATION_EMPTY: "The profile has no configured parameters and observation objects.",
+      E03_NO_PROFILE_MAPPED_MEASUREMENTS: "No value is available for a source fact.",
+      E03_PROFILE_ROUTE_MISSING: "No observation object is configured for the parameter.",
+      E03_PROFILE_ROUTE_AMBIGUOUS_FOR_CURRENT_WRITER: "The parameter has multiple write routes.",
+      E03_PROFILE_PARAMETER_CODE_AMBIGUOUS: "The profile parameter is ambiguous.",
+      SOURCE_EXPLICIT_VALUE_AMBIGUOUS: "Multiple values were found for the same parameter.",
+      SOURCE_SNAPSHOT_NOT_FOUND: "No suitable confirmed snapshot was found.",
+      SOURCE_SNAPSHOT_EXPIRED: "The snapshot is not valid at the activity time.",
+      SOURCE_SNAPSHOT_ACTIVE_STATE_ASSIGNMENT_REQUIRED: "The snapshot source is not ready for use.",
+      SOURCE_SNAPSHOT_SELECTION_REQUIRED: "No snapshot source is selected for the calculated value.",
+      SOURCE_BINDING_PROFILE_MISMATCH: "The source binding does not match the typical-activity profile.",
+      SOURCE_BINDING_PROFILE_INVALID: "The profile source bindings are invalid.",
+    },
+  },
+  pl: {
+    checking: "Sprawdzanie gotowości faktów źródłowych…",
+    failed: "Nie udało się sprawdzić gotowości zapisu faktów źródłowych.",
+    defaultBlocked: "Zapisu faktów źródłowych nie można jeszcze wykonać.",
+    byReason: {
+      E03_COMPLETED_BASIC_ANALYSIS_REQUIRED: "Analiza podstawowa nie jest jeszcze gotowa do zapisu faktów źródłowych.",
+      E03_REJECTED_TEMPLATE_MATCH_NOT_ELIGIBLE: "Odrzucono dopasowanie typowej aktywności.",
+      E03_EXACTLY_ONE_HIGH_CONFIDENCE_TEMPLATE_REQUIRED: "Nie określono jednej typowej aktywności gotowej do potwierdzenia.",
+      E03_ACTIVE_PROFILE_NOT_FOUND: "Typowa aktywność nie ma aktywnego profilu.",
+      E03_PROFILE_ROUTING_CONTRACT_NOT_V2: "Profil typowej aktywności nie jest gotowy do zapisu faktów.",
+      E03_PROFILE_MAPPING_FOUNDATION_EMPTY: "W profilu nie skonfigurowano parametrów i obiektów obserwacji.",
+      E03_NO_PROFILE_MAPPED_MEASUREMENTS: "Brak wartości, którą można zapisać jako fakt źródłowy.",
+      E03_PROFILE_ROUTE_MISSING: "Dla parametru nie skonfigurowano obiektu obserwacji.",
+      E03_PROFILE_ROUTE_AMBIGUOUS_FOR_CURRENT_WRITER: "Dla parametru znaleziono kilka tras zapisu.",
+      E03_PROFILE_PARAMETER_CODE_AMBIGUOUS: "Parametr profilu jest niejednoznaczny.",
+      SOURCE_EXPLICIT_VALUE_AMBIGUOUS: "Znaleziono kilka wartości tego samego parametru.",
+      SOURCE_SNAPSHOT_NOT_FOUND: "Nie znaleziono odpowiedniego potwierdzonego przekroju.",
+      SOURCE_SNAPSHOT_EXPIRED: "Przekrój nie jest ważny w chwili aktywności.",
+      SOURCE_SNAPSHOT_ACTIVE_STATE_ASSIGNMENT_REQUIRED: "Źródło przekroju nie jest gotowe do użycia.",
+      SOURCE_SNAPSHOT_SELECTION_REQUIRED: "Nie wybrano źródła-przekroju dla wartości obliczanej.",
+      SOURCE_BINDING_PROFILE_MISMATCH: "Powiązanie źródła nie pasuje do profilu typowej aktywności.",
+      SOURCE_BINDING_PROFILE_INVALID: "Konfiguracja źródeł profilu jest nieprawidłowa.",
+    },
+  },
+  uk: {
+    checking: "Перевіряємо готовність вихідних фактів…",
+    failed: "Не вдалося перевірити готовність запису вихідних фактів.",
+    defaultBlocked: "Запис вихідних фактів зараз недоступний.",
+    byReason: {
+      E03_COMPLETED_BASIC_ANALYSIS_REQUIRED: "Базовий аналіз ще не готовий до запису вихідних фактів.",
+      E03_REJECTED_TEMPLATE_MATCH_NOT_ELIGIBLE: "Відповідність типової активності відхилено.",
+      E03_EXACTLY_ONE_HIGH_CONFIDENCE_TEMPLATE_REQUIRED: "Не визначено одну типову активність для підтвердження.",
+      E03_ACTIVE_PROFILE_NOT_FOUND: "Типова активність не має активного профілю.",
+      E03_PROFILE_ROUTING_CONTRACT_NOT_V2: "Профіль типової активності не готовий до запису фактів.",
+      E03_PROFILE_MAPPING_FOUNDATION_EMPTY: "У профілі не налаштовано параметри та об'єкти спостереження.",
+      E03_NO_PROFILE_MAPPED_MEASUREMENTS: "Немає значення для запису вихідного факту.",
+      E03_PROFILE_ROUTE_MISSING: "Для параметра не налаштовано об'єкт спостереження.",
+      E03_PROFILE_ROUTE_AMBIGUOUS_FOR_CURRENT_WRITER: "Для параметра знайдено кілька маршрутів запису.",
+      E03_PROFILE_PARAMETER_CODE_AMBIGUOUS: "Параметр профілю визначено неоднозначно.",
+      SOURCE_EXPLICIT_VALUE_AMBIGUOUS: "Знайдено кілька значень одного параметра.",
+      SOURCE_SNAPSHOT_NOT_FOUND: "Не знайдено відповідного підтвердженого зрізу.",
+      SOURCE_SNAPSHOT_EXPIRED: "Зріз недійсний на момент активності.",
+      SOURCE_SNAPSHOT_ACTIVE_STATE_ASSIGNMENT_REQUIRED: "Джерело зрізу не готове до використання.",
+      SOURCE_SNAPSHOT_SELECTION_REQUIRED: "Для розрахункового значення не вибрано джерело-зріз.",
+      SOURCE_BINDING_PROFILE_MISMATCH: "Налаштування джерела не відповідає профілю типової активності.",
+      SOURCE_BINDING_PROFILE_INVALID: "Налаштування джерел профілю некоректне.",
+    },
+  },
+  de: {
+    checking: "Bereitschaft der Quelldaten wird geprüft…",
+    failed: "Die Bereitschaft zum Schreiben der Quelldaten konnte nicht geprüft werden.",
+    defaultBlocked: "Quelldaten können derzeit nicht geschrieben werden.",
+    byReason: {
+      E03_COMPLETED_BASIC_ANALYSIS_REQUIRED: "Die Basisanalyse ist noch nicht zum Schreiben der Quelldaten bereit.",
+      E03_REJECTED_TEMPLATE_MATCH_NOT_ELIGIBLE: "Die Zuordnung zur typischen Aktivität wurde abgelehnt.",
+      E03_EXACTLY_ONE_HIGH_CONFIDENCE_TEMPLATE_REQUIRED: "Es wurde nicht genau eine bestätigbare typische Aktivität bestimmt.",
+      E03_ACTIVE_PROFILE_NOT_FOUND: "Die typische Aktivität hat kein aktives Profil.",
+      E03_PROFILE_ROUTING_CONTRACT_NOT_V2: "Das Profil ist noch nicht zum Schreiben von Fakten bereit.",
+      E03_PROFILE_MAPPING_FOUNDATION_EMPTY: "Im Profil sind keine Parameter und Beobachtungsobjekte eingerichtet.",
+      E03_NO_PROFILE_MAPPED_MEASUREMENTS: "Es ist kein Wert für einen Quellfakt verfügbar.",
+      E03_PROFILE_ROUTE_MISSING: "Für den Parameter ist kein Beobachtungsobjekt eingerichtet.",
+      E03_PROFILE_ROUTE_AMBIGUOUS_FOR_CURRENT_WRITER: "Für den Parameter wurden mehrere Schreibwege gefunden.",
+      E03_PROFILE_PARAMETER_CODE_AMBIGUOUS: "Der Profilparameter ist mehrdeutig.",
+      SOURCE_EXPLICIT_VALUE_AMBIGUOUS: "Für denselben Parameter wurden mehrere Werte gefunden.",
+      SOURCE_SNAPSHOT_NOT_FOUND: "Kein passender bestätigter Snapshot gefunden.",
+      SOURCE_SNAPSHOT_EXPIRED: "Der Snapshot ist zum Zeitpunkt der Aktivität nicht gültig.",
+      SOURCE_SNAPSHOT_ACTIVE_STATE_ASSIGNMENT_REQUIRED: "Die Snapshot-Quelle ist nicht einsatzbereit.",
+      SOURCE_SNAPSHOT_SELECTION_REQUIRED: "Für den berechneten Wert wurde keine Snapshot-Quelle ausgewählt.",
+      SOURCE_BINDING_PROFILE_MISMATCH: "Die Quellenbindung passt nicht zum Profil der typischen Aktivität.",
+      SOURCE_BINDING_PROFILE_INVALID: "Die Quellenbindungen des Profils sind ungültig.",
+    },
+  },
+  es: {
+    checking: "Comprobando la disponibilidad de los hechos de origen…",
+    failed: "No se pudo comprobar si los hechos de origen están listos para guardarse.",
+    defaultBlocked: "Los hechos de origen aún no se pueden guardar.",
+    byReason: {
+      E03_COMPLETED_BASIC_ANALYSIS_REQUIRED: "El análisis básico aún no está listo para guardar hechos de origen.",
+      E03_REJECTED_TEMPLATE_MATCH_NOT_ELIGIBLE: "Se rechazó la coincidencia con la actividad típica.",
+      E03_EXACTLY_ONE_HIGH_CONFIDENCE_TEMPLATE_REQUIRED: "No se determinó una única actividad típica confirmable.",
+      E03_ACTIVE_PROFILE_NOT_FOUND: "La actividad típica no tiene un perfil activo.",
+      E03_PROFILE_ROUTING_CONTRACT_NOT_V2: "El perfil de la actividad típica no está listo para guardar hechos.",
+      E03_PROFILE_MAPPING_FOUNDATION_EMPTY: "El perfil no tiene parámetros y objetos de observación configurados.",
+      E03_NO_PROFILE_MAPPED_MEASUREMENTS: "No hay un valor disponible para el hecho de origen.",
+      E03_PROFILE_ROUTE_MISSING: "No hay un objeto de observación configurado para el parámetro.",
+      E03_PROFILE_ROUTE_AMBIGUOUS_FOR_CURRENT_WRITER: "Hay varias rutas de escritura para el parámetro.",
+      E03_PROFILE_PARAMETER_CODE_AMBIGUOUS: "El parámetro del perfil es ambiguo.",
+      SOURCE_EXPLICIT_VALUE_AMBIGUOUS: "Se encontraron varios valores para el mismo parámetro.",
+      SOURCE_SNAPSHOT_NOT_FOUND: "No se encontró un corte confirmado adecuado.",
+      SOURCE_SNAPSHOT_EXPIRED: "El corte no es válido en el momento de la actividad.",
+      SOURCE_SNAPSHOT_ACTIVE_STATE_ASSIGNMENT_REQUIRED: "La fuente del corte no está lista para usarse.",
+      SOURCE_SNAPSHOT_SELECTION_REQUIRED: "No se seleccionó una fuente de corte para el valor calculado.",
+      SOURCE_BINDING_PROFILE_MISMATCH: "La configuración de la fuente no coincide con el perfil de la actividad típica.",
+      SOURCE_BINDING_PROFILE_INVALID: "La configuración de fuentes del perfil no es válida.",
+    },
+  },
+  cs: {
+    checking: "Kontroluje se připravenost zdrojových faktů…",
+    failed: "Nepodařilo se ověřit připravenost zápisu zdrojových faktů.",
+    defaultBlocked: "Zdrojová fakta nyní nelze zapsat.",
+    byReason: {
+      E03_COMPLETED_BASIC_ANALYSIS_REQUIRED: "Základní analýza ještě není připravena k zápisu zdrojových faktů.",
+      E03_REJECTED_TEMPLATE_MATCH_NOT_ELIGIBLE: "Shoda s typickou aktivitou byla odmítnuta.",
+      E03_EXACTLY_ONE_HIGH_CONFIDENCE_TEMPLATE_REQUIRED: "Nebyla určena právě jedna potvrditelná typická aktivita.",
+      E03_ACTIVE_PROFILE_NOT_FOUND: "Typická aktivita nemá aktivní profil.",
+      E03_PROFILE_ROUTING_CONTRACT_NOT_V2: "Profil typické aktivity není připraven k zápisu faktů.",
+      E03_PROFILE_MAPPING_FOUNDATION_EMPTY: "V profilu nejsou nastaveny parametry a objekty pozorování.",
+      E03_NO_PROFILE_MAPPED_MEASUREMENTS: "Není k dispozici hodnota pro zdrojový fakt.",
+      E03_PROFILE_ROUTE_MISSING: "Pro parametr není nastaven objekt pozorování.",
+      E03_PROFILE_ROUTE_AMBIGUOUS_FOR_CURRENT_WRITER: "Pro parametr bylo nalezeno více cest zápisu.",
+      E03_PROFILE_PARAMETER_CODE_AMBIGUOUS: "Parametr profilu je nejednoznačný.",
+      SOURCE_EXPLICIT_VALUE_AMBIGUOUS: "Pro stejný parametr bylo nalezeno více hodnot.",
+      SOURCE_SNAPSHOT_NOT_FOUND: "Nebyl nalezen vhodný potvrzený snímek.",
+      SOURCE_SNAPSHOT_EXPIRED: "Snímek není platný v čase aktivity.",
+      SOURCE_SNAPSHOT_ACTIVE_STATE_ASSIGNMENT_REQUIRED: "Zdroj snímku není připraven k použití.",
+      SOURCE_SNAPSHOT_SELECTION_REQUIRED: "Pro vypočítanou hodnotu nebyl vybrán zdroj snímku.",
+      SOURCE_BINDING_PROFILE_MISMATCH: "Nastavení zdroje neodpovídá profilu typické aktivity.",
+      SOURCE_BINDING_PROFILE_INVALID: "Nastavení zdrojů profilu je neplatné.",
+    },
+  },
+};
+
+function preflightBlockedReason(locale: Locale, reasonCode: string | undefined) {
+  if (!reasonCode) return PREFLIGHT_COPY[locale].defaultBlocked;
+  return PREFLIGHT_COPY[locale].byReason[reasonCode] ?? PREFLIGHT_COPY[locale].defaultBlocked;
+}
+
 function buildLocaleHref(pathname: string, locale: Locale) {
   const separator = pathname.includes("?") ? "&" : "?";
   return locale === "en"
@@ -500,11 +703,89 @@ export function ActivityBasicIntakeAnalysisCard({
   const [materializingFacts, setMaterializingFacts] = useState(false);
   const [materializeFactsError, setMaterializeFactsError] = useState<string | null>(null);
   const [materializedFactsCount, setMaterializedFactsCount] = useState<number | null>(null);
+  const [sourceFactPreflightState, setSourceFactPreflightState] =
+    useState<SourceFactPreflightState | null>(null);
   const displayedAnalysis =
     analysis &&
     retryResult?.activityEventId === analysis?.activityEventId
       ? retryResult
       : analysis;
+  const preflightActivityEventId = displayedAnalysis?.activityEventId?.trim() ?? "";
+  const preflightStatus = displayedAnalysis?.status ?? "";
+  const preflightAnalyzedAt = displayedAnalysis?.analyzedAt ?? "";
+  const preflightPersistedMaterialization = displayedAnalysis?.sourceFactMaterializationV1;
+  const preflightPersistedFactsCount =
+    typeof preflightPersistedMaterialization?.factsWritten === "number"
+      ? preflightPersistedMaterialization.factsWritten
+      : typeof displayedAnalysis?.factsWritten === "number"
+        ? displayedAnalysis.factsWritten
+        : 0;
+  const preflightFactsCount = materializedFactsCount ?? preflightPersistedFactsCount;
+  const preflightFactsCommitted =
+    preflightFactsCount > 0 &&
+    (materializedFactsCount !== null ||
+      preflightPersistedMaterialization?.status === "materialized" ||
+      preflightPersistedMaterialization?.status === "idempotent_replay");
+  const preflightKey = `${preflightActivityEventId}|${preflightAnalyzedAt}`;
+
+  useEffect(() => {
+    if (
+      preflightStatus !== "completed" ||
+      !preflightActivityEventId ||
+      preflightFactsCommitted
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    const params = new URLSearchParams({
+      activityEventId: preflightActivityEventId,
+    });
+
+    void fetch(
+      `/api/activity/intake-analysis/materialize-source-facts?${params.toString()}`,
+      {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      },
+    )
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as
+          | SourceFactPreflightResponse
+          | null;
+        if (!response.ok || payload?.ok !== true || !payload.preflight) {
+          throw new Error(payload?.error || `Preflight failed: ${response.status}`);
+        }
+        return payload.preflight;
+      })
+      .then((preflight) => {
+        if (cancelled) return;
+        setSourceFactPreflightState({
+          key: preflightKey,
+          preflight,
+          failed: false,
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSourceFactPreflightState({
+          key: preflightKey,
+          preflight: null,
+          failed: true,
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    preflightActivityEventId,
+    preflightFactsCommitted,
+    preflightKey,
+    preflightStatus,
+  ]);
 
   if (!displayedAnalysis) return null;
 
@@ -563,26 +844,30 @@ export function ActivityBasicIntakeAnalysisCard({
     displayedAnalysis.retryable === true &&
     typeof displayedAnalysis.activityEventId === "string" &&
     Boolean(displayedAnalysis.activityEventId.trim());
-  const persistedMaterialization = displayedAnalysis.sourceFactMaterializationV1;
-  const persistedFactsCount =
-    typeof persistedMaterialization?.factsWritten === "number"
-      ? persistedMaterialization.factsWritten
-      : typeof displayedAnalysis.factsWritten === "number"
-        ? displayedAnalysis.factsWritten
-        : 0;
-  const factsCount = materializedFactsCount ?? persistedFactsCount;
-  const factsCommitted =
-    factsCount > 0 &&
-    (materializedFactsCount !== null ||
-      persistedMaterialization?.status === "materialized" ||
-      persistedMaterialization?.status === "idempotent_replay");
+  const factsCount = preflightFactsCount;
+  const factsCommitted = preflightFactsCommitted;
+  const effectivePreflightState =
+    sourceFactPreflightState?.key === preflightKey
+      ? sourceFactPreflightState
+      : null;
   const canMaterializeFacts =
-    searchCompleted &&
-    candidates.length === 1 &&
-    measurements.length > 0 &&
-    typeof displayedAnalysis.activityEventId === "string" &&
-    Boolean(displayedAnalysis.activityEventId.trim()) &&
-    !factsCommitted;
+    !factsCommitted &&
+    effectivePreflightState?.failed === false &&
+    effectivePreflightState.preflight?.eligible === true;
+  const preflightInactiveReason = factsCommitted
+    ? null
+    : !preflightActivityEventId
+      ? PREFLIGHT_COPY[locale].defaultBlocked
+      : !effectivePreflightState
+        ? PREFLIGHT_COPY[locale].checking
+        : effectivePreflightState.failed
+          ? PREFLIGHT_COPY[locale].failed
+          : effectivePreflightState.preflight?.eligible === true
+            ? null
+            : preflightBlockedReason(
+                locale,
+                effectivePreflightState.preflight?.reasonCode,
+              );
 
   const handleRetry = async () => {
     const activityEventId = displayedAnalysis.activityEventId?.trim();
@@ -835,46 +1120,49 @@ export function ActivityBasicIntakeAnalysisCard({
           </div>
         )}
 
-        {searchCompleted && candidates.length === 1 && measurements.length > 0 ? (
-          <div className="mt-3 border-t border-[#edf0f7] pt-3">
-            {factsCommitted ? (
-              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">
-                <span>
-                  {ui.factsMaterialized}: {factsCount}
-                </span>
-                <Link
-                  href={buildLocaleHref(
-                    `/activity-facts?activityEventId=${encodeURIComponent(
-                      displayedAnalysis.activityEventId ?? "",
-                    )}`,
-                    locale,
-                  )}
-                  className="font-black underline-offset-4 hover:underline"
-                >
-                  {ui.openFacts}
-                </Link>
-              </div>
-            ) : (
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  disabled={materializingFacts}
-                  onClick={() => void handleMaterializeFacts()}
-                  className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-800 hover:bg-emerald-100 disabled:cursor-wait disabled:opacity-60"
-                >
-                  {materializingFacts
-                    ? ui.materializingFacts
-                    : ui.materializeFacts}
-                </button>
-                {materializeFactsError ? (
-                  <span className="text-xs font-semibold text-rose-700">
-                    {ui.materializeFactsFailed} {materializeFactsError}
-                  </span>
-                ) : null}
-              </div>
-            )}
-          </div>
-        ) : null}
+        <div className="mt-3 border-t border-[#edf0f7] pt-3">
+          {factsCommitted ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">
+              <span>
+                {ui.factsMaterialized}: {factsCount}
+              </span>
+              <Link
+                href={buildLocaleHref(
+                  `/activity-facts?activityEventId=${encodeURIComponent(
+                    displayedAnalysis.activityEventId ?? "",
+                  )}`,
+                  locale,
+                )}
+                className="font-black underline-offset-4 hover:underline"
+              >
+                {ui.openFacts}
+              </Link>
+            </div>
+          ) : (
+            <div>
+              <button
+                type="button"
+                disabled={materializingFacts || !canMaterializeFacts}
+                onClick={() => void handleMaterializeFacts()}
+                className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-800 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500 disabled:opacity-100"
+              >
+                {materializingFacts
+                  ? ui.materializingFacts
+                  : ui.materializeFacts}
+              </button>
+              {!materializingFacts && preflightInactiveReason ? (
+                <div className="mt-1.5 text-[11px] font-semibold leading-relaxed text-[#7c8099]">
+                  {preflightInactiveReason}
+                </div>
+              ) : null}
+              {materializeFactsError ? (
+                <div className="mt-1.5 text-xs font-semibold text-rose-700">
+                  {ui.materializeFactsFailed} {materializeFactsError}
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

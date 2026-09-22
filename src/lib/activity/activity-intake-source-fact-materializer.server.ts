@@ -6,6 +6,8 @@ import { supabase } from "../../../lib/supabase";
 
 export const ARCTOR_E03_SOURCE_FACT_MATERIALIZATION_V1 =
   "ARCTOR_E03_SOURCE_FACT_MATERIALIZATION_V1" as const;
+export const ARCTOR_E03_SOURCE_FACT_PREFLIGHT_V1 =
+  "ARCTOR_E03_SOURCE_FACT_PREFLIGHT_V1" as const;
 
 const BASIC_ANALYSIS_CONTRACT = "ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1";
 const REJECTION_CONTRACT = "ARCTOR_USER_TYPICAL_ACTIVITY_REJECTION_V1";
@@ -100,6 +102,19 @@ export type E03SourceFactMaterializationResult = {
   measureIds: string[];
   ignoredParameterCodes: string[];
   writerResult: unknown;
+};
+
+export type E03SourceFactPreflightResult = {
+  contract: typeof ARCTOR_E03_SOURCE_FACT_PREFLIGHT_V1;
+  status: "eligible";
+  eligible: true;
+  activityEventId: string;
+  rawSignalId: string;
+  templateId: string;
+  profileId: string;
+  profileVersionNo: number;
+  factsPlanned: number;
+  ignoredParameterCodes: string[];
 };
 
 function asRecord(value: unknown): JsonRecord {
@@ -211,7 +226,18 @@ function writerRowsFromResult(value: unknown) {
 export async function materializeBasicIntakeSourceFactsE03V1(input: {
   appUserId: string;
   activityEventId: string;
-}) : Promise<E03SourceFactMaterializationResult> {
+  preflightOnly: true;
+}): Promise<E03SourceFactPreflightResult>;
+export async function materializeBasicIntakeSourceFactsE03V1(input: {
+  appUserId: string;
+  activityEventId: string;
+  preflightOnly?: false;
+}): Promise<E03SourceFactMaterializationResult>;
+export async function materializeBasicIntakeSourceFactsE03V1(input: {
+  appUserId: string;
+  activityEventId: string;
+  preflightOnly?: boolean;
+}): Promise<E03SourceFactMaterializationResult | E03SourceFactPreflightResult> {
   const { data: signalData, error: signalError } = await supabase
     .from("raw_activity_signals")
     .select("id,output_event_id,normalized_preview_json")
@@ -512,6 +538,21 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
   }
   if (writerRows.length > MAX_FACTS) {
     throw new Error("E03_TOO_MANY_FACTS");
+  }
+
+  if (input.preflightOnly) {
+    return {
+      contract: ARCTOR_E03_SOURCE_FACT_PREFLIGHT_V1,
+      status: "eligible",
+      eligible: true,
+      activityEventId: input.activityEventId,
+      rawSignalId: String(signalData.id),
+      templateId: candidate.templateId,
+      profileId: profile.id,
+      profileVersionNo: profile.version_no,
+      factsPlanned: writerRows.length,
+      ignoredParameterCodes: Array.from(new Set(ignoredParameterCodes)),
+    };
   }
 
   const requestHash = sha256({
