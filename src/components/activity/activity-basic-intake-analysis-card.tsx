@@ -59,12 +59,21 @@ type IntakeAnalysis = {
     factsWritten?: number;
     factIds?: string[];
     measureIds?: string[];
+    missingValues?: MissingBundleValue[];
+    completeness?: string;
   };
 };
 
 type IntakeAnalysisResponse = {
   ok?: boolean;
   analyses?: IntakeAnalysis[];
+};
+
+type MissingBundleValue = {
+  parameterDefinitionId?: string;
+  parameterCode?: string;
+  valueObjectId?: string;
+  reasonCode?: string;
 };
 
 type SourceFactPreflight = {
@@ -75,6 +84,8 @@ type SourceFactPreflight = {
   factsPlanned?: number;
   reasonCode?: string;
   error?: string;
+  missingValues?: MissingBundleValue[];
+  completeness?: string;
 };
 
 type SourceFactPreflightResponse = {
@@ -564,6 +575,16 @@ function displayMeasurementLabel(measurement: Measurement, locale: Locale) {
   );
 }
 
+const MISSING_VALUE_COPY: Record<Locale, { title: string; partial: string }> = {
+  ru: { title: "Не хватает информации о", partial: "Часть исходных фактов уже может быть записана; бандл заполнен не полностью." },
+  en: { title: "Missing information about", partial: "Some source facts may already be written; the bundle is not complete." },
+  pl: { title: "Brakuje informacji o", partial: "Część faktów źródłowych może być już zapisana; pakiet nie jest kompletny." },
+  uk: { title: "Бракує інформації про", partial: "Частину вихідних фактів уже можна записати; пакет заповнено не повністю." },
+  de: { title: "Es fehlen Informationen zu", partial: "Ein Teil der Quelldaten kann bereits geschrieben sein; das Bündel ist unvollständig." },
+  es: { title: "Falta información sobre", partial: "Algunos hechos de origen ya pueden estar guardados; el paquete está incompleto." },
+  cs: { title: "Chybí informace o", partial: "Část zdrojových faktů již může být zapsána; balíček není úplný." },
+};
+
 const UNIT_LABELS: Record<Locale, Record<string, string>> = {
   ru: { second: "сек", minute: "мин", hour: "ч", meter: "м", kilometer: "км", kilogram: "кг", gram: "г", repetition: "повт.", count: "шт.", set: "подх.", liter: "л", milliliter: "мл", bpm: "уд/мин", celsius: "°C", pln: "PLN", eur: "EUR", usd: "USD", km_per_hour: "км/ч", meter_per_second: "м/с", date: "", time: "", text: "" },
   en: { second: "s", minute: "min", hour: "h", meter: "m", kilometer: "km", kilogram: "kg", gram: "g", repetition: "reps", count: "count", set: "sets", liter: "L", milliliter: "mL", bpm: "bpm", celsius: "°C", pln: "PLN", eur: "EUR", usd: "USD", km_per_hour: "km/h", meter_per_second: "m/s", date: "", time: "", text: "" },
@@ -573,6 +594,11 @@ const UNIT_LABELS: Record<Locale, Record<string, string>> = {
   es: { second: "s", minute: "min", hour: "h", meter: "m", kilometer: "km", kilogram: "kg", gram: "g", repetition: "rep.", count: "ud.", set: "series", liter: "l", milliliter: "ml", bpm: "lpm", celsius: "°C", pln: "PLN", eur: "EUR", usd: "USD", km_per_hour: "km/h", meter_per_second: "m/s", date: "", time: "", text: "" },
   cs: { second: "s", minute: "min", hour: "h", meter: "m", kilometer: "km", kilogram: "kg", gram: "g", repetition: "opak.", count: "ks", set: "série", liter: "l", milliliter: "ml", bpm: "tep/min", celsius: "°C", pln: "PLN", eur: "EUR", usd: "USD", km_per_hour: "km/h", meter_per_second: "m/s", date: "", time: "", text: "" },
 };
+
+function displayMissingParameterLabel(value: MissingBundleValue, locale: Locale) {
+  const code = value.parameterCode?.trim().toLowerCase() || "";
+  return (PARAMETER_LABELS[locale][code] ?? code.replaceAll("_", " ")) || "—";
+}
 
 function formatMeasurement(measurement: Measurement, locale: Locale) {
   const value =
@@ -850,6 +876,12 @@ export function ActivityBasicIntakeAnalysisCard({
     sourceFactPreflightState?.key === preflightKey
       ? sourceFactPreflightState
       : null;
+  const missingValues = factsCommitted
+    ? (displayedAnalysis.sourceFactMaterializationV1?.missingValues ?? [])
+    : (effectivePreflightState?.preflight?.missingValues ?? []);
+  const uniqueMissingValues = Array.from(
+    new Map(missingValues.map((value) => [`${value.parameterDefinitionId ?? ""}|${value.valueObjectId ?? ""}|${value.parameterCode ?? ""}`, value])).values(),
+  );
   const canMaterializeFacts =
     !factsCommitted &&
     effectivePreflightState?.failed === false &&
@@ -1162,6 +1194,19 @@ export function ActivityBasicIntakeAnalysisCard({
               ) : null}
             </div>
           )}
+          {uniqueMissingValues.length > 0 ? (
+            <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              <div className="font-black">{MISSING_VALUE_COPY[locale].title}:</div>
+              <ul className="mt-1 list-disc space-y-0.5 pl-5 font-semibold">
+                {uniqueMissingValues.map((value, index) => (
+                  <li key={`missing:${value.parameterDefinitionId ?? index}:${value.valueObjectId ?? ""}`}>{displayMissingParameterLabel(value, locale)}</li>
+                ))}
+              </ul>
+              {factsCommitted || effectivePreflightState?.preflight?.completeness === "partial" ? (
+                <div className="mt-1.5 font-semibold">{MISSING_VALUE_COPY[locale].partial}</div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

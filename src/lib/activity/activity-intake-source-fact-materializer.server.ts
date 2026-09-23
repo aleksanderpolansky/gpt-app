@@ -71,6 +71,13 @@ type ValueObjectRow = {
   status: string;
 };
 
+export type E03MissingBundleValue = {
+  parameterDefinitionId: string;
+  parameterCode: string;
+  valueObjectId: string;
+  reasonCode: "EXPLICIT_VALUE_MISSING" | "SNAPSHOT_VALUE_MISSING";
+};
+
 type WriterRow = {
   canonicalKey: string;
   parameterCode: string;
@@ -101,13 +108,15 @@ export type E03SourceFactMaterializationResult = {
   factIds: string[];
   measureIds: string[];
   ignoredParameterCodes: string[];
+  missingValues: E03MissingBundleValue[];
+  completeness: "complete" | "partial";
   writerResult: unknown;
 };
 
 export type E03SourceFactPreflightResult = {
   contract: typeof ARCTOR_E03_SOURCE_FACT_PREFLIGHT_V1;
-  status: "eligible";
-  eligible: true;
+  status: "eligible" | "blocked";
+  eligible: boolean;
   activityEventId: string;
   rawSignalId: string;
   templateId: string;
@@ -115,6 +124,9 @@ export type E03SourceFactPreflightResult = {
   profileVersionNo: number;
   factsPlanned: number;
   ignoredParameterCodes: string[];
+  missingValues: E03MissingBundleValue[];
+  completeness: "complete" | "partial" | "missing_all";
+  reasonCode?: "E03_REQUIRED_BUNDLE_VALUES_MISSING";
 };
 
 function asRecord(value: unknown): JsonRecord {
@@ -412,6 +424,7 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
   const objectById = new Map(valueObjects.map((row) => [String(row.id), row]));
   const writerRows: WriterRow[] = [];
   const ignoredParameterCodes: string[] = [];
+  const missingValues: E03MissingBundleValue[] = [];
   const temporalDirection = text(analysis.temporalDirection) ||
     (activityData.activity_role_code === "planned" ? "future" : "past");
 
@@ -429,112 +442,179 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
   if (bindings && (!bindings.length || new Set(bindings.map((row) => `${row.parameterDefinitionId}|${row.valueObjectId}`)).size !== bindings.length)) {
     throw new Error("SOURCE_BINDING_PROFILE_INVALID");
   }
+
+  const declaredPairs = bindings
+    ? bindings.map((binding) => ({
+        parameterDefinitionId: binding.parameterDefinitionId,
+        valueObjectId: binding.valueObjectId,
+        sourceResolution: binding.sourceResolution,
+      }))
+    : definitions.map((definition) => {
+        const matchingAssignments = assignments.filter((assignment) => assignment.parameter_definition_id === definition.id);
+        if (matchingAssignments.length === 0) throw new Error(`E03_PROFILE_ROUTE_MISSING:${definition.parameter_code}`);
+        if (matchingAssignments.length !== 1) throw new Error(`E03_PROFILE_ROUTE_AMBIGUOUS_FOR_CURRENT_WRITER:${definition.parameter_code}`);
+        return { parameterDefinitionId: definition.id, valueObjectId: matchingAssignments[0].value_object_id, sourceResolution: null };
+      });
+
   const inputFingerprint = sha256({ measurements, profileId: profile.id, bindings, sourceText, actorId,
     startedAt: activityData.started_at, temporalDirection });
   const previous = asRecord(analysis.sourceFactMaterializationV1);
   const cachedRows = previous.inputFingerprint === inputFingerprint && Array.isArray(previous.sourceWriterRows)
     ? previous.sourceWriterRows as WriterRow[] : null;
+
   if (cachedRows) {
-    // Replay the originally used snapshot even if a newer/backdated state was added later.
     writerRows.push(...cachedRows);
+    const fulfilledPairs = new Set(cachedRows.map((row) => {
+      const snapshot = asRecord(row.sourceSnapshotJson);
+      return `${text(snapshot.parameterDefinitionId)}|${text(snapshot.targetValueObjectId)}`;
+    }));
+    for (const pair of declaredPairs) {
+      const key = `${pair.parameterDefinitionId}|${pair.valueObjectId}`;
+      if (fulfilledPairs.has(key)) continue;
+      const definition = definitions.find((row) => row.id === pair.parameterDefinitionId);
+      if (!definition) throw new Error("SOURCE_BINDING_PROFILE_MISMATCH");
+      missingValues.push({
+        parameterDefinitionId: definition.id,
+        parameterCode: definition.parameter_code,
+        valueObjectId: pair.valueObjectId,
+        reasonCode: pair.sourceResolution ? "SNAPSHOT_VALUE_MISSING" : "EXPLICIT_VALUE_MISSING",
+      });
+    }
   } else {
-  const plans: { measurement: Measurement; targetId?: string; provenance?: JsonRecord }[] = [];
-  if (!bindings) {
-    plans.push(...measurements.map((measurement) => ({ measurement })));
-  } else {
-    await validateSnapshotBindings(bindings);
-    for (const binding of bindings) {
-      const definition = definitions.find((row) => row.id === binding.parameterDefinitionId)!;
+    const plans: { measurement: Measurement; targetId: string; provenance?: JsonRecord }[] = [];
+    if (bindings) await validateSnapshotBindings(bindings);
+
+    for (const pair of declaredPairs) {
+      const definition = definitions.find((row) => row.id === pair.parameterDefinitionId);
+      if (!definition) throw new Error("SOURCE_BINDING_PROFILE_MISMATCH");
       const explicit = measurements.filter((row) => row.parameterCode === definition.parameter_code);
-      const resolution = binding.sourceResolution;
+      const resolution = pair.sourceResolution;
+
       if (resolution?.mode !== "snapshot_only" && explicit.length > 1) throw new Error(`SOURCE_EXPLICIT_VALUE_AMBIGUOUS:${definition.parameter_code}`);
       if (resolution?.mode !== "snapshot_only" && explicit.length === 1) {
-        plans.push({ measurement: explicit[0], targetId: binding.valueObjectId });
-      } else if (resolution) {
+        plans.push({ measurement: explicit[0], targetId: pair.valueObjectId });
+        continue;
+      }
+      if (!resolution) {
+        missingValues.push({ parameterDefinitionId: definition.id, parameterCode: definition.parameter_code, valueObjectId: pair.valueObjectId, reasonCode: "EXPLICIT_VALUE_MISSING" });
+        continue;
+      }
+
+      try {
         const resolved = await resolveSnapshotValue({ appUserId: input.appUserId, actorId,
-          effectiveAt: text(activityData.started_at), parameterDefinitionId: binding.parameterDefinitionId, resolution });
-        plans.push({ targetId: binding.valueObjectId, provenance: resolved.provenance,
+          effectiveAt: text(activityData.started_at), parameterDefinitionId: pair.parameterDefinitionId, resolution });
+        plans.push({ targetId: pair.valueObjectId, provenance: resolved.provenance,
           measurement: { parameterCode: definition.parameter_code, unit: resolved.unit, valueNumeric: resolved.value,
             valueText: null, rawFragment: sourceText, confidence: Math.min(resolved.confidence, candidate.confidence), approximate: false } });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.startsWith("SOURCE_SNAPSHOT_NOT_FOUND") || message.startsWith("SOURCE_SNAPSHOT_EXPIRED")) {
+          missingValues.push({ parameterDefinitionId: definition.id, parameterCode: definition.parameter_code, valueObjectId: pair.valueObjectId, reasonCode: "SNAPSHOT_VALUE_MISSING" });
+          continue;
+        }
+        throw error;
       }
     }
+
     ignoredParameterCodes.push(...measurements.filter((row) => !definitionByCode.has(row.parameterCode)).map((row) => row.parameterCode));
+
+    for (const plan of plans) {
+      const { measurement } = plan;
+      const matchingDefinitions = definitionByCode.get(measurement.parameterCode) ?? [];
+      if (matchingDefinitions.length === 0) { ignoredParameterCodes.push(measurement.parameterCode); continue; }
+      if (matchingDefinitions.length !== 1) throw new Error(`E03_PROFILE_PARAMETER_CODE_AMBIGUOUS:${measurement.parameterCode}`);
+      const definition = matchingDefinitions[0];
+      const matchingAssignments = assignments.filter((assignment) => assignment.parameter_definition_id === definition.id && assignment.value_object_id === plan.targetId);
+      if (matchingAssignments.length === 0) throw new Error(`E03_PROFILE_ROUTE_MISSING:${measurement.parameterCode}`);
+      if (matchingAssignments.length !== 1) throw new Error(`E03_PROFILE_ROUTE_AMBIGUOUS_FOR_CURRENT_WRITER:${measurement.parameterCode}`);
+      const assignment = matchingAssignments[0];
+      const target = objectById.get(assignment.value_object_id);
+      if (!target || !text(target.canonical_key)) throw new Error(`E03_TARGET_OBJECT_INVALID:${measurement.parameterCode}`);
+
+      const row: WriterRow = {
+        canonicalKey: target.canonical_key,
+        parameterCode: definition.parameter_code,
+        unit: measurement.unit,
+        rawFragment: measurement.rawFragment,
+        normalizedFragment: normalizeFragment(measurement.rawFragment),
+        semanticMatchMethodCode: "user_confirmed",
+        sourceType: plan.provenance ? "derived_calculation" : "ai_extraction",
+        confidence: Math.min(measurement.confidence, candidate.confidence),
+        factStatus: temporalDirection === "future" ? "proposed" : "confirmed",
+        isUserConfirmed: temporalDirection !== "future",
+        valueOriginCode: plan.provenance ? "deterministic_calculation" : "user_explicit",
+        sourceReliabilityCode: plan.provenance ? "deterministic" : "user_reported",
+        sourceSnapshotJson: {
+          ...(plan.provenance ? { sourceFromSnapshotV1: plan.provenance } : {}),
+          contract: ARCTOR_E03_SOURCE_FACT_MATERIALIZATION_V1,
+          basicAnalysisContract: BASIC_ANALYSIS_CONTRACT,
+          rawSignalId: String(signalData.id),
+          activityEventId: input.activityEventId,
+          templateId: candidate.templateId,
+          profileId: profile.id,
+          profileVersionNo: profile.version_no,
+          parameterDefinitionId: definition.id,
+          parameterAssignmentId: assignment.id,
+          targetValueObjectId: target.id,
+          approximate: measurement.approximate,
+          routingResolution: "unique_system_assignment_within_active_profile_v1",
+        },
+      };
+      if (measurement.valueNumeric !== null) row.valueNumeric = measurement.valueNumeric;
+      else if (measurement.valueText !== null) row.valueText = measurement.valueText;
+      else throw new Error(`E03_MEASUREMENT_VALUE_MISSING:${measurement.parameterCode}`);
+      writerRows.push(row);
+    }
   }
-  for (const plan of plans) {
-    const { measurement } = plan;
-    const matchingDefinitions = definitionByCode.get(measurement.parameterCode) ?? [];
 
-    if (matchingDefinitions.length === 0) {
-      ignoredParameterCodes.push(measurement.parameterCode);
-      continue;
-    }
-    if (matchingDefinitions.length !== 1) {
-      throw new Error(`E03_PROFILE_PARAMETER_CODE_AMBIGUOUS:${measurement.parameterCode}`);
-    }
+  const uniqueIgnoredParameterCodes = Array.from(new Set(ignoredParameterCodes));
+  const completeness = missingValues.length === 0 ? "complete" : writerRows.length === 0 ? "missing_all" : "partial";
 
-    const definition = matchingDefinitions[0];
-    const matchingAssignments = assignments.filter(
-      (assignment) => assignment.parameter_definition_id === definition.id && (!plan.targetId || assignment.value_object_id === plan.targetId),
-    );
+  if (input.preflightOnly && writerRows.length === 0) {
+    return {
+      contract: ARCTOR_E03_SOURCE_FACT_PREFLIGHT_V1,
+      status: "blocked",
+      eligible: false,
+      activityEventId: input.activityEventId,
+      rawSignalId: String(signalData.id),
+      templateId: candidate.templateId,
+      profileId: profile.id,
+      profileVersionNo: profile.version_no,
+      factsPlanned: 0,
+      ignoredParameterCodes: uniqueIgnoredParameterCodes,
+      missingValues,
+      completeness: "missing_all",
+      reasonCode: "E03_REQUIRED_BUNDLE_VALUES_MISSING",
+    };
+  }
 
-    if (matchingAssignments.length === 0) {
-      throw new Error(`E03_PROFILE_ROUTE_MISSING:${measurement.parameterCode}`);
-    }
-    if (matchingAssignments.length !== 1) {
-      throw new Error(`E03_PROFILE_ROUTE_AMBIGUOUS_FOR_CURRENT_WRITER:${measurement.parameterCode}`);
-    }
-
-    const assignment = matchingAssignments[0];
-    const target = objectById.get(assignment.value_object_id);
-    if (!target || !text(target.canonical_key)) {
-      throw new Error(`E03_TARGET_OBJECT_INVALID:${measurement.parameterCode}`);
-    }
-
-    const row: WriterRow = {
-      canonicalKey: target.canonical_key,
-      parameterCode: definition.parameter_code,
-      unit: measurement.unit,
-      rawFragment: measurement.rawFragment,
-      normalizedFragment: normalizeFragment(measurement.rawFragment),
-      semanticMatchMethodCode: "user_confirmed",
-      sourceType: plan.provenance ? "derived_calculation" : "ai_extraction",
-      confidence: Math.min(measurement.confidence, candidate.confidence),
-      factStatus: temporalDirection === "future" ? "proposed" : "confirmed",
-      isUserConfirmed: temporalDirection !== "future",
-      valueOriginCode: plan.provenance ? "deterministic_calculation" : "user_explicit",
-      sourceReliabilityCode: plan.provenance ? "deterministic" : "user_reported",
-      sourceSnapshotJson: {
-        ...(plan.provenance ? { sourceFromSnapshotV1: plan.provenance } : {}),
+  if (writerRows.length === 0) {
+    const diagnosedAt = new Date().toISOString();
+    const nextAnalysis = {
+      ...analysis,
+      sourceFactMaterializationV1: {
         contract: ARCTOR_E03_SOURCE_FACT_MATERIALIZATION_V1,
-        basicAnalysisContract: BASIC_ANALYSIS_CONTRACT,
+        status: "blocked_missing_values",
+        diagnosedAt,
+        inputFingerprint,
         rawSignalId: String(signalData.id),
         activityEventId: input.activityEventId,
         templateId: candidate.templateId,
         profileId: profile.id,
         profileVersionNo: profile.version_no,
-        parameterDefinitionId: definition.id,
-        parameterAssignmentId: assignment.id,
-        targetValueObjectId: target.id,
-        approximate: measurement.approximate,
-        routingResolution: "unique_system_assignment_within_active_profile_v1",
+        factsWritten: 0,
+        ignoredParameterCodes: uniqueIgnoredParameterCodes,
+        missingValues,
+        completeness: "missing_all",
       },
     };
-
-    if (measurement.valueNumeric !== null) {
-      row.valueNumeric = measurement.valueNumeric;
-    } else if (measurement.valueText !== null) {
-      row.valueText = measurement.valueText;
-    } else {
-      throw new Error(`E03_MEASUREMENT_VALUE_MISSING:${measurement.parameterCode}`);
-    }
-
-    writerRows.push(row);
-  }
-
-  }
-
-  if (writerRows.length === 0) {
-    throw new Error("E03_NO_PROFILE_MAPPED_MEASUREMENTS");
+    const { error: signalUpdateError } = await supabase
+      .from("raw_activity_signals")
+      .update({ normalized_preview_json: { ...normalizedPreview, basicIntakeAnalysisV1: nextAnalysis }, updated_at: diagnosedAt })
+      .eq("id", signalData.id)
+      .eq("user_id", input.appUserId);
+    if (signalUpdateError) throw new Error(`E03_SIGNAL_RESULT_UPDATE_FAILED:${signalUpdateError.message}`);
+    throw new Error("E03_REQUIRED_BUNDLE_VALUES_MISSING");
   }
   if (writerRows.length > MAX_FACTS) {
     throw new Error("E03_TOO_MANY_FACTS");
@@ -551,7 +631,9 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
       profileId: profile.id,
       profileVersionNo: profile.version_no,
       factsPlanned: writerRows.length,
-      ignoredParameterCodes: Array.from(new Set(ignoredParameterCodes)),
+      ignoredParameterCodes: uniqueIgnoredParameterCodes,
+      missingValues,
+      completeness: completeness === "missing_all" ? "partial" : completeness,
     };
   }
 
@@ -600,7 +682,9 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
       factsWritten,
       factIds: writer.factIds,
       measureIds: writer.measureIds,
-      ignoredParameterCodes: Array.from(new Set(ignoredParameterCodes)),
+      ignoredParameterCodes: uniqueIgnoredParameterCodes,
+      missingValues,
+      completeness: completeness === "complete" ? "complete" : "partial",
       precisionEvidenceStoredInProvenance: writerRows.some(
         (row) => asRecord(row.sourceSnapshotJson).approximate === true,
       ),
@@ -636,7 +720,9 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
     factsWritten,
     factIds: writer.factIds,
     measureIds: writer.measureIds,
-    ignoredParameterCodes: Array.from(new Set(ignoredParameterCodes)),
+    ignoredParameterCodes: uniqueIgnoredParameterCodes,
+    missingValues,
+    completeness: completeness === "complete" ? "complete" : "partial",
     writerResult,
   };
 }
