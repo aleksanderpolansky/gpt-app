@@ -1,0 +1,31 @@
+# ARCTor A02c - manual missing-value supplement - local patch checkpoint
+
+- Date: 2026-09-24 13:07:36
+- Baseline: $ExpectedBaseline
+- Package: $PackageName
+- Scope:
+  - add user-entered value for a currently missing bundle pair only after at least one source fact was materialized;
+  - append exactly one source fact through ttach_global_observation_facts_gsr1_v1;
+  - pair-scoped idempotency key;
+  - preserve existing facts and remove only the supplemented pair from missingValues;
+  - switch bundle completeness from partial to complete when the last missing value is supplied;
+  - enrich new missing diagnostics with value type / canonical unit / target title;
+  - corporate ARCTor UI with seven localized copies.
+- Safety:
+  - no arbitrary parameter/ON selection in the UI;
+  - server revalidates profile membership, explicit source binding or unique fallback route, system assignment and active leaf target;
+  - no zero substitution;
+  - no commit, push or deploy.
+- Verification:
+  - custom validator PASS;
+  - ESLint PASS;
+  - TypeScript PASS;
+  - git diff --check PASS;
+  - production build PASS.
+- Browser acceptance pending:
+  - existing walking event with a known duration: enter a known step count;
+  - fact count must become 2;
+  - Duration 30 min must remain unchanged;
+  - Step Count must equal the entered value;
+  - missing warning must disappear when no missing pairs remain;
+  - repeated submission of the same pair must not create a duplicate.

@@ -76,6 +76,9 @@ export type E03MissingBundleValue = {
   parameterCode: string;
   valueObjectId: string;
   reasonCode: "EXPLICIT_VALUE_MISSING" | "SNAPSHOT_VALUE_MISSING";
+  valueTypeCode?: string;
+  canonicalUnitCode?: string | null;
+  targetTitle?: string;
 };
 
 type WriterRow = {
@@ -422,6 +425,25 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
   }
 
   const objectById = new Map(valueObjects.map((row) => [String(row.id), row]));
+  const makeMissingBundleValue = (
+    definition: ParameterDefinitionRow,
+    valueObjectId: string,
+    reasonCode: E03MissingBundleValue["reasonCode"],
+  ): E03MissingBundleValue => {
+    const target = objectById.get(valueObjectId);
+    if (!target) {
+      throw new Error(`E03_TARGET_OBJECT_INVALID:${definition.parameter_code}`);
+    }
+    return {
+      parameterDefinitionId: definition.id,
+      parameterCode: definition.parameter_code,
+      valueObjectId,
+      reasonCode,
+      valueTypeCode: definition.value_type_code,
+      canonicalUnitCode: definition.canonical_unit_code,
+      targetTitle: target.title,
+    };
+  };
   const writerRows: WriterRow[] = [];
   const ignoredParameterCodes: string[] = [];
   const missingValues: E03MissingBundleValue[] = [];
@@ -473,12 +495,15 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
       if (fulfilledPairs.has(key)) continue;
       const definition = definitions.find((row) => row.id === pair.parameterDefinitionId);
       if (!definition) throw new Error("SOURCE_BINDING_PROFILE_MISMATCH");
-      missingValues.push({
-        parameterDefinitionId: definition.id,
-        parameterCode: definition.parameter_code,
-        valueObjectId: pair.valueObjectId,
-        reasonCode: pair.sourceResolution ? "SNAPSHOT_VALUE_MISSING" : "EXPLICIT_VALUE_MISSING",
-      });
+      missingValues.push(
+        makeMissingBundleValue(
+          definition,
+          pair.valueObjectId,
+          pair.sourceResolution
+            ? "SNAPSHOT_VALUE_MISSING"
+            : "EXPLICIT_VALUE_MISSING",
+        ),
+      );
     }
   } else {
     const plans: { measurement: Measurement; targetId: string; provenance?: JsonRecord }[] = [];
@@ -496,7 +521,13 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
         continue;
       }
       if (!resolution) {
-        missingValues.push({ parameterDefinitionId: definition.id, parameterCode: definition.parameter_code, valueObjectId: pair.valueObjectId, reasonCode: "EXPLICIT_VALUE_MISSING" });
+        missingValues.push(
+          makeMissingBundleValue(
+            definition,
+            pair.valueObjectId,
+            "EXPLICIT_VALUE_MISSING",
+          ),
+        );
         continue;
       }
 
@@ -509,7 +540,13 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         if (message.startsWith("SOURCE_SNAPSHOT_NOT_FOUND") || message.startsWith("SOURCE_SNAPSHOT_EXPIRED")) {
-          missingValues.push({ parameterDefinitionId: definition.id, parameterCode: definition.parameter_code, valueObjectId: pair.valueObjectId, reasonCode: "SNAPSHOT_VALUE_MISSING" });
+          missingValues.push(
+            makeMissingBundleValue(
+              definition,
+              pair.valueObjectId,
+              "SNAPSHOT_VALUE_MISSING",
+            ),
+          );
           continue;
         }
         throw error;

@@ -74,6 +74,9 @@ type MissingBundleValue = {
   parameterCode?: string;
   valueObjectId?: string;
   reasonCode?: string;
+  valueTypeCode?: string;
+  canonicalUnitCode?: string | null;
+  targetTitle?: string;
 };
 
 type SourceFactPreflight = {
@@ -585,6 +588,72 @@ const MISSING_VALUE_COPY: Record<Locale, { title: string; partial: string }> = {
   cs: { title: "Chybí informace o", partial: "Část zdrojových faktů již může být zapsána; balíček není úplný." },
 };
 
+const SUPPLEMENT_COPY: Record<Locale, {
+  add: string;
+  adding: string;
+  placeholder: string;
+  helper: string;
+  required: string;
+  failed: string;
+}> = {
+  ru: {
+    add: "Добавить значение",
+    adding: "Сохраняем…",
+    placeholder: "Введите значение",
+    helper: "Значение будет добавлено к этой активности как отдельный исходный факт. Уже записанные факты не изменяются.",
+    required: "Введите значение.",
+    failed: "Не удалось добавить значение.",
+  },
+  en: {
+    add: "Add value",
+    adding: "Saving…",
+    placeholder: "Enter value",
+    helper: "The value will be added to this activity as a separate source fact. Existing facts are not changed.",
+    required: "Enter a value.",
+    failed: "Could not add the value.",
+  },
+  pl: {
+    add: "Dodaj wartość",
+    adding: "Zapisywanie…",
+    placeholder: "Wpisz wartość",
+    helper: "Wartość zostanie dodana do tej aktywności jako osobny fakt źródłowy. Już zapisane fakty nie zostaną zmienione.",
+    required: "Wpisz wartość.",
+    failed: "Nie udało się dodać wartości.",
+  },
+  uk: {
+    add: "Додати значення",
+    adding: "Збереження…",
+    placeholder: "Введіть значення",
+    helper: "Значення буде додано до цієї активності як окремий вихідний факт. Уже записані факти не змінюються.",
+    required: "Введіть значення.",
+    failed: "Не вдалося додати значення.",
+  },
+  de: {
+    add: "Wert hinzufügen",
+    adding: "Speichern…",
+    placeholder: "Wert eingeben",
+    helper: "Der Wert wird dieser Aktivität als eigener Quelldatensatz hinzugefügt. Bereits gespeicherte Fakten werden nicht verändert.",
+    required: "Bitte einen Wert eingeben.",
+    failed: "Der Wert konnte nicht hinzugefügt werden.",
+  },
+  es: {
+    add: "Añadir valor",
+    adding: "Guardando…",
+    placeholder: "Introducir valor",
+    helper: "El valor se añadirá a esta actividad como un hecho de origen independiente. Los hechos ya guardados no se modificarán.",
+    required: "Introduce un valor.",
+    failed: "No se pudo añadir el valor.",
+  },
+  cs: {
+    add: "Přidat hodnotu",
+    adding: "Ukládání…",
+    placeholder: "Zadejte hodnotu",
+    helper: "Hodnota bude k této aktivitě přidána jako samostatný zdrojový fakt. Již uložená fakta se nezmění.",
+    required: "Zadejte hodnotu.",
+    failed: "Hodnotu se nepodařilo přidat.",
+  },
+};
+
 const UNIT_LABELS: Record<Locale, Record<string, string>> = {
   ru: { second: "сек", minute: "мин", hour: "ч", meter: "м", kilometer: "км", kilogram: "кг", gram: "г", repetition: "повт.", count: "шт.", set: "подх.", liter: "л", milliliter: "мл", bpm: "уд/мин", celsius: "°C", pln: "PLN", eur: "EUR", usd: "USD", km_per_hour: "км/ч", meter_per_second: "м/с", date: "", time: "", text: "" },
   en: { second: "s", minute: "min", hour: "h", meter: "m", kilometer: "km", kilogram: "kg", gram: "g", repetition: "reps", count: "count", set: "sets", liter: "L", milliliter: "mL", bpm: "bpm", celsius: "°C", pln: "PLN", eur: "EUR", usd: "USD", km_per_hour: "km/h", meter_per_second: "m/s", date: "", time: "", text: "" },
@@ -598,6 +667,37 @@ const UNIT_LABELS: Record<Locale, Record<string, string>> = {
 function displayMissingParameterLabel(value: MissingBundleValue, locale: Locale) {
   const code = value.parameterCode?.trim().toLowerCase() || "";
   return (PARAMETER_LABELS[locale][code] ?? code.replaceAll("_", " ")) || "—";
+}
+
+const MISSING_UNIT_FALLBACK_BY_PARAMETER: Record<string, string> = {
+  duration: "minute",
+  count: "count",
+  distance: "meter",
+  mass: "kilogram",
+  repetition_count: "repetition",
+};
+
+function missingValueKey(value: MissingBundleValue) {
+  return `${value.parameterDefinitionId ?? ""}|${value.valueObjectId ?? ""}`;
+}
+
+function displayMissingUnit(value: MissingBundleValue, locale: Locale) {
+  const parameterCode = value.parameterCode?.trim().toLowerCase() || "";
+  const unitCode =
+    value.canonicalUnitCode?.trim().toLowerCase() ||
+    MISSING_UNIT_FALLBACK_BY_PARAMETER[parameterCode] ||
+    "";
+  return unitCode ? (UNIT_LABELS[locale][unitCode] ?? unitCode) : "";
+}
+
+function missingValueUsesNumericKeyboard(value: MissingBundleValue) {
+  const parameterCode = value.parameterCode?.trim().toLowerCase() || "";
+  return (
+    value.valueTypeCode === "numeric" ||
+    ["duration", "count", "distance", "mass", "repetition_count"].includes(
+      parameterCode,
+    )
+  );
 }
 
 function formatMeasurement(measurement: Measurement, locale: Locale) {
@@ -729,6 +829,12 @@ export function ActivityBasicIntakeAnalysisCard({
   const [materializingFacts, setMaterializingFacts] = useState(false);
   const [materializeFactsError, setMaterializeFactsError] = useState<string | null>(null);
   const [materializedFactsCount, setMaterializedFactsCount] = useState<number | null>(null);
+  const [supplementDrafts, setSupplementDrafts] = useState<Record<string, string>>({});
+  const [supplementingKey, setSupplementingKey] = useState<string | null>(null);
+  const [supplementError, setSupplementError] = useState<{
+    key: string;
+    message: string;
+  } | null>(null);
   const [sourceFactPreflightState, setSourceFactPreflightState] =
     useState<SourceFactPreflightState | null>(null);
   const displayedAnalysis =
@@ -993,6 +1099,100 @@ export function ActivityBasicIntakeAnalysisCard({
     }
   };
 
+  const handleSupplementMissingValue = async (missing: MissingBundleValue) => {
+    const activityEventId = displayedAnalysis.activityEventId?.trim();
+    const parameterDefinitionId = missing.parameterDefinitionId?.trim();
+    const valueObjectId = missing.valueObjectId?.trim();
+    const key = missingValueKey(missing);
+    const rawValue = supplementDrafts[key]?.trim() ?? "";
+
+    if (
+      !factsCommitted ||
+      !activityEventId ||
+      !parameterDefinitionId ||
+      !valueObjectId ||
+      supplementingKey
+    ) {
+      return;
+    }
+
+    if (!rawValue) {
+      setSupplementError({
+        key,
+        message: SUPPLEMENT_COPY[locale].required,
+      });
+      return;
+    }
+
+    setSupplementingKey(key);
+    setSupplementError(null);
+
+    try {
+      const response = await fetch(
+        "/api/activity/intake-analysis/supplement-source-fact",
+        {
+          method: "POST",
+          credentials: "include",
+          cache: "no-store",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            activityEventId,
+            parameterDefinitionId,
+            valueObjectId,
+            value: rawValue,
+          }),
+        },
+      );
+
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            analysis?: IntakeAnalysis;
+            result?: {
+              factsWritten?: number;
+            };
+            error?: string;
+          }
+        | null;
+
+      if (!response.ok || payload?.ok !== true || !payload.analysis) {
+        throw new Error(
+          payload?.error || `Source fact supplement failed: ${response.status}`,
+        );
+      }
+
+      setRetryResult(payload.analysis);
+      const nextFactsWritten =
+        typeof payload.result?.factsWritten === "number"
+          ? payload.result.factsWritten
+          : typeof payload.analysis.sourceFactMaterializationV1?.factsWritten ===
+              "number"
+            ? payload.analysis.sourceFactMaterializationV1.factsWritten
+            : null;
+      if (nextFactsWritten !== null) {
+        setMaterializedFactsCount(nextFactsWritten);
+      }
+      setSupplementDrafts((current) => {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      });
+    } catch (error) {
+      setSupplementError({
+        key,
+        message:
+          error instanceof Error
+            ? `${SUPPLEMENT_COPY[locale].failed} ${error.message}`
+            : SUPPLEMENT_COPY[locale].failed,
+      });
+    } finally {
+      setSupplementingKey(null);
+    }
+  };
+
   const handleRejectMatch = async (candidate: TemplateCandidate) => {
     const activityEventId = displayedAnalysis.activityEventId?.trim();
     const templateId = candidate.templateId?.trim();
@@ -1197,11 +1397,78 @@ export function ActivityBasicIntakeAnalysisCard({
           {uniqueMissingValues.length > 0 ? (
             <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
               <div className="font-black">{MISSING_VALUE_COPY[locale].title}:</div>
-              <ul className="mt-1 list-disc space-y-0.5 pl-5 font-semibold">
-                {uniqueMissingValues.map((value, index) => (
-                  <li key={`missing:${value.parameterDefinitionId ?? index}:${value.valueObjectId ?? ""}`}>{displayMissingParameterLabel(value, locale)}</li>
-                ))}
-              </ul>
+              <div className="mt-2 grid gap-2">
+                {uniqueMissingValues.map((value, index) => {
+                  const key = missingValueKey(value) || `missing:${index}`;
+                  const unit = displayMissingUnit(value, locale);
+                  const busy = supplementingKey === key;
+                  const rawValue = supplementDrafts[key] ?? "";
+
+                  return (
+                    <div
+                      key={key}
+                      className="rounded-lg border border-amber-200/80 bg-white/70 px-2.5 py-2"
+                    >
+                      <div className="flex flex-wrap items-center gap-2 font-semibold">
+                        <span>{displayMissingParameterLabel(value, locale)}</span>
+                        {unit ? (
+                          <span className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-black text-amber-800">
+                            {unit}
+                          </span>
+                        ) : null}
+                      </div>
+
+                      {factsCommitted ? (
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <input
+                            type="text"
+                            inputMode={
+                              missingValueUsesNumericKeyboard(value)
+                                ? "decimal"
+                                : "text"
+                            }
+                            value={rawValue}
+                            disabled={Boolean(supplementingKey)}
+                            onChange={(event) => {
+                              const nextValue = event.target.value;
+                              setSupplementDrafts((current) => ({
+                                ...current,
+                                [key]: nextValue,
+                              }));
+                              if (supplementError?.key === key) {
+                                setSupplementError(null);
+                              }
+                            }}
+                            placeholder={SUPPLEMENT_COPY[locale].placeholder}
+                            className="min-w-[180px] flex-1 rounded-lg border border-[#d9e1f5] bg-white px-3 py-2 text-xs font-semibold text-[#1f2942] outline-none transition focus:border-[#3b6ef8] focus:ring-2 focus:ring-[#3b6ef8]/10 disabled:bg-slate-50"
+                          />
+                          <button
+                            type="button"
+                            disabled={Boolean(supplementingKey) || !rawValue.trim()}
+                            onClick={() => void handleSupplementMissingValue(value)}
+                            className="rounded-lg border border-[#b9c9ff] bg-[#eef3ff] px-3 py-2 text-xs font-black text-[#3158c8] transition hover:bg-[#e3ebff] disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                          >
+                            {busy
+                              ? SUPPLEMENT_COPY[locale].adding
+                              : SUPPLEMENT_COPY[locale].add}
+                          </button>
+                        </div>
+                      ) : null}
+
+                      {supplementError?.key === key ? (
+                        <div className="mt-1.5 text-[11px] font-semibold text-rose-700">
+                          {supplementError.message}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+              {factsCommitted ? (
+                <div className="mt-1.5 text-[11px] font-semibold leading-relaxed text-amber-800">
+                  {SUPPLEMENT_COPY[locale].helper}
+                </div>
+              ) : null}
               {factsCommitted || effectivePreflightState?.preflight?.completeness === "partial" ? (
                 <div className="mt-1.5 font-semibold">{MISSING_VALUE_COPY[locale].partial}</div>
               ) : null}
