@@ -3,17 +3,39 @@ import { NextResponse } from "next/server";
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
 import { supabase } from "../../../../../lib/supabase";
 import { listPublicGiftCertificates } from "@/app/certificates/gift-certificate-data";
-import { isDashboardAnalyticsV2Supported } from "@/lib/dashboard/analytics-contract";
+import { isDashboardAnalyticsV3Supported } from "@/lib/dashboard/analytics-contract";
 import { resolveLocalizedContentField } from "@/lib/localization/contentLocalization";
 import {
   localizeGlobalSystemValueObject,
   normalizeGlobalSystemValueObjectLocale,
 } from "@/lib/reality-core/global-system-value-object-localization";
 import { aggregateRootTime } from "@/lib/dashboard/root-time-aggregation";
+import {
+  resolveMeasurementRollupV1,
+  type MeasurementRollupFactV1,
+} from "@/lib/reality-core/measurement-rollup-contract-v1";
+import {
+  readMeasurementRollupTargetMetadataV1,
+  toMeasurementRollupDefinitionV1,
+} from "@/lib/reality-core/measurement-rollup-target-metadata-v1";
 
 export const dynamic = "force-dynamic";
 
 type Row = Record<string, unknown>;
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const PARAMETER_CODE_RE = /^[a-z][a-z0-9_]{0,79}$/;
+const UNIT_CODE_RE = /^[a-z][a-z0-9_]{0,79}$/;
+
+type ObservationFactConfig = {
+  valueObjectId: string;
+  parameterDefinitionId: string;
+  parameterCode: string;
+  canonicalUnitCode: string;
+  valueObjectTitle: string | null;
+  parameterTitle: string | null;
+};
 
 function asString(value: unknown): string | null {
   return typeof value === "string" ? value : null;
@@ -27,6 +49,47 @@ function asNumber(value: unknown): number | null {
 function asRecord(value: unknown): Row {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Row;
+}
+
+function readObservationFactConfig(value: unknown): ObservationFactConfig | null {
+  const row = asRecord(value);
+  const valueObjectId = asString(row.valueObjectId)?.trim() ?? "";
+  const parameterDefinitionId =
+    asString(row.parameterDefinitionId)?.trim() ?? "";
+  const parameterCode = asString(row.parameterCode)?.trim().toLowerCase() ?? "";
+  const canonicalUnitCode =
+    asString(row.canonicalUnitCode)?.trim().toLowerCase() ?? "";
+
+  if (
+    !UUID_RE.test(valueObjectId) ||
+    !UUID_RE.test(parameterDefinitionId) ||
+    !PARAMETER_CODE_RE.test(parameterCode) ||
+    !UNIT_CODE_RE.test(canonicalUnitCode)
+  ) {
+    return null;
+  }
+
+  return {
+    valueObjectId,
+    parameterDefinitionId,
+    parameterCode,
+    canonicalUnitCode,
+    valueObjectTitle: asString(row.valueObjectTitle),
+    parameterTitle: asString(row.parameterTitle),
+  };
+}
+
+function rowDateKey(row: Row, timeZone: string): string | null {
+  for (const key of ["occurred_at", "period_start", "effective_at", "created_at"]) {
+    const raw = asString(row[key]);
+    if (!raw) continue;
+    const date = new Date(raw);
+    if (!Number.isNaN(date.getTime())) {
+      return dateKeyInTimeZone(date, timeZone);
+    }
+  }
+
+  return null;
 }
 
 function normalizeTimeZone(value: string | null): string {
@@ -360,6 +423,483 @@ async function buildFactDurationByRootResponse(input: {
   });
 }
 
+async function buildObservationFactSeriesResponse(input: {
+  readonly blockId: string;
+  readonly appUserId: string;
+  readonly actorId: string;
+  readonly periodDays: number;
+  readonly timeZone: string;
+  readonly locale: ReturnType<typeof normalizeGlobalSystemValueObjectLocale>;
+  readonly config: ObservationFactConfig;
+}) {
+  const { data: valueObjectData, error: valueObjectError } = await supabase
+    .from("value_objects")
+    .select(
+      "id,title,canonical_key,status,scope_code,origin_type_code,ontology_node_role_code,node_role_code,owner_user_id,owner_actor_id,metadata_json",
+    )
+    .eq("id", input.config.valueObjectId)
+    .maybeSingle();
+
+  if (valueObjectError) {
+    return NextResponse.json(
+      { ok: false, error: valueObjectError.message },
+      { status: 500 },
+    );
+  }
+
+  const valueObject = (valueObjectData as Row | null) ?? null;
+  if (!valueObject) {
+    return NextResponse.json(
+      { ok: false, error: "Observation object not found" },
+      { status: 404 },
+    );
+  }
+
+  const isGlobalLeaf =
+    asString(valueObject.scope_code) === "global" &&
+    asString(valueObject.status) === "active" &&
+    asString(valueObject.ontology_node_role_code) === "leaf";
+
+  const isOwnedLeaf =
+    asString(valueObject.owner_user_id) === input.appUserId &&
+    asString(valueObject.owner_actor_id) === input.actorId &&
+    ["active", "draft"].includes(asString(valueObject.status) ?? "") &&
+    (asString(valueObject.ontology_node_role_code) === "leaf" ||
+      asString(valueObject.node_role_code) === "activity_leaf");
+
+  if (!isGlobalLeaf && !isOwnedLeaf) {
+    return NextResponse.json(
+      { ok: false, error: "Observation object is not an accessible leaf" },
+      { status: 403 },
+    );
+  }
+
+  const { data: assignmentData, error: assignmentError } = await supabase
+    .from("value_object_parameter_assignments")
+    .select(
+      "id,parameter_definition_id,status,assignment_scope_code,owner_user_id,owner_actor_id",
+    )
+    .eq("value_object_id", input.config.valueObjectId)
+    .eq("parameter_definition_id", input.config.parameterDefinitionId)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (assignmentError) {
+    return NextResponse.json(
+      { ok: false, error: assignmentError.message },
+      { status: 500 },
+    );
+  }
+
+  const assignment = (assignmentData as Row | null) ?? null;
+  const assignmentScope = asString(assignment?.assignment_scope_code);
+  const assignmentAccessible = assignment
+    ? isGlobalLeaf
+      ? assignmentScope === "system"
+      : assignmentScope === "actor" &&
+        asString(assignment.owner_user_id) === input.appUserId &&
+        asString(assignment.owner_actor_id) === input.actorId
+    : false;
+
+  if (!assignment || !assignmentAccessible) {
+    return NextResponse.json(
+      { ok: false, error: "Selected parameter is no longer assigned to this observation object" },
+      { status: 409 },
+    );
+  }
+
+  const { data: definitionData, error: definitionError } = await supabase
+    .from("value_object_parameter_definitions")
+    .select(
+      "id,parameter_code,title,value_type_code,canonical_unit_code,status",
+    )
+    .eq("id", input.config.parameterDefinitionId)
+    .eq("status", "active")
+    .eq("value_type_code", "numeric")
+    .maybeSingle();
+
+  if (definitionError) {
+    return NextResponse.json(
+      { ok: false, error: definitionError.message },
+      { status: 500 },
+    );
+  }
+
+  const definitionRow = (definitionData as Row | null) ?? null;
+  if (!definitionRow) {
+    return NextResponse.json(
+      { ok: false, error: "Selected numeric parameter is not available" },
+      { status: 409 },
+    );
+  }
+
+  const parameterCode =
+    asString(definitionRow.parameter_code)?.toLowerCase() ?? "";
+  const canonicalUnitCode =
+    asString(definitionRow.canonical_unit_code)?.toLowerCase() ?? "";
+
+  if (
+    parameterCode !== input.config.parameterCode ||
+    canonicalUnitCode !== input.config.canonicalUnitCode
+  ) {
+    return NextResponse.json(
+      { ok: false, error: "Selected parameter contract has changed" },
+      { status: 409 },
+    );
+  }
+
+  const fallbackTitle = asString(valueObject.title) ?? input.config.valueObjectId;
+  const valueObjectTitle = isGlobalLeaf
+    ? asString(
+        localizeGlobalSystemValueObject(
+          {
+            canonical_key: asString(valueObject.canonical_key),
+            title: fallbackTitle,
+          },
+          input.locale,
+        ).title,
+      ) ?? fallbackTitle
+    : resolveLocalizedContentField({
+        metadata: valueObject.metadata_json,
+        locale: input.locale,
+        fieldCode: "title",
+        fallback: fallbackTitle,
+      }) ?? fallbackTitle;
+
+  const parameterTitle =
+    asString(definitionRow.title) ??
+    input.config.parameterTitle ??
+    parameterCode;
+
+  let rollupMetadata: ReturnType<
+    typeof readMeasurementRollupTargetMetadataV1
+  > = null;
+  try {
+    rollupMetadata = readMeasurementRollupTargetMetadataV1(
+      valueObject.metadata_json,
+    );
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          error instanceof Error
+            ? `Measurement rollup metadata is invalid: ${error.message}`
+            : "Measurement rollup metadata is invalid",
+      },
+      { status: 409 },
+    );
+  }
+
+  const rollupDefinition =
+    rollupMetadata &&
+    rollupMetadata.parameterDefinitionId === input.config.parameterDefinitionId &&
+    rollupMetadata.parameterCode === parameterCode &&
+    rollupMetadata.canonicalUnitCode === canonicalUnitCode
+      ? toMeasurementRollupDefinitionV1(
+          input.config.valueObjectId,
+          rollupMetadata,
+        )
+      : null;
+
+  const relevantValueObjectIds = new Set<string>([
+    input.config.valueObjectId,
+    ...(rollupDefinition?.componentValueObjectIds ?? []),
+  ]);
+
+  const todayKey = dateKeyInTimeZone(new Date(), input.timeZone);
+  const firstKey = shiftDateKey(todayKey, -(input.periodDays - 1));
+  const queryFromKey = shiftDateKey(firstKey, -1);
+  const queryFromIso = `${queryFromKey}T00:00:00.000Z`;
+
+  const baseFacts: Row[] = [];
+  const pageSize = 1000;
+  const hardLimit = 50000;
+
+  for (let offset = 0; offset < hardLimit; offset += pageSize) {
+    const { data, error } = await supabase
+      .from("activity_object_facts")
+      .select(
+        "id,activity_event_id,period_start,effective_at,created_at,fact_status,parameter_definition_id",
+      )
+      .eq("user_id", input.appUserId)
+      .eq("acting_as_actor_id", input.actorId)
+      .eq("fact_status", "confirmed")
+      .eq("parameter_definition_id", input.config.parameterDefinitionId)
+      .or(
+        `period_start.gte.${queryFromIso},effective_at.gte.${queryFromIso},created_at.gte.${queryFromIso}`,
+      )
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(offset, offset + pageSize - 1);
+
+    if (error) {
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: 500 },
+      );
+    }
+
+    const page = Array.isArray(data) ? (data as Row[]) : [];
+    baseFacts.push(...page);
+    if (page.length < pageSize) break;
+
+    if (baseFacts.length >= hardLimit) {
+      return NextResponse.json(
+        { ok: false, error: "DASHBOARD_OBSERVATION_FACT_HARD_LIMIT_REACHED" },
+        { status: 409 },
+      );
+    }
+  }
+
+  const eligibleBaseFacts = baseFacts.filter((row) => {
+    const date = rowDateKey(row, input.timeZone);
+    return Boolean(date && date >= firstKey && date <= todayKey);
+  });
+
+  const baseDateByFactId = new Map<string, string>();
+  const factIds = eligibleBaseFacts.flatMap((row) => {
+    const factId = asString(row.id);
+    const date = rowDateKey(row, input.timeZone);
+    if (!factId || !date) return [];
+    baseDateByFactId.set(factId, date);
+    return [factId];
+  });
+
+  const analyticsRows: Row[] = [];
+  for (const ids of chunkStrings(factIds)) {
+    const { data, error } = await supabase
+      .from("activity_fact_analytics_inputs_v1")
+      .select(
+        "fact_id,activity_event_id,value_object_id,metric_value_numeric,unit,occurred_at,created_at,measure_type",
+      )
+      .in("fact_id", ids);
+
+    if (error) {
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: 500 },
+      );
+    }
+
+    analyticsRows.push(...(Array.isArray(data) ? (data as Row[]) : []));
+  }
+
+  const relevantRows = analyticsRows.filter((row) => {
+    const valueObjectId = asString(row.value_object_id);
+    const value = asNumber(row.metric_value_numeric);
+    return Boolean(
+      valueObjectId &&
+        relevantValueObjectIds.has(valueObjectId) &&
+        value !== null,
+    );
+  });
+
+  const buckets = new Map<
+    string,
+    { valueNumber: number | null; observationCount: number }
+  >();
+
+  for (let offset = 0; offset < input.periodDays; offset += 1) {
+    buckets.set(shiftDateKey(firstKey, offset), {
+      valueNumber: null,
+      observationCount: 0,
+    });
+  }
+
+  const addResolvedValue = (date: string | null, value: number) => {
+    if (!date || !buckets.has(date) || !Number.isFinite(value)) return;
+    const bucket = buckets.get(date);
+    if (!bucket) return;
+
+    bucket.valueNumber =
+      bucket.valueNumber === null ? value : bucket.valueNumber + value;
+    bucket.observationCount += 1;
+  };
+
+  let resolvedObservationCount = 0;
+  let unknownObservationCount = 0;
+  let unitMismatchCount = 0;
+  let discrepancyCount = 0;
+  let directCount = 0;
+  let derivedCount = 0;
+  let directVerifiedCount = 0;
+
+  if (rollupDefinition) {
+    const rowsByEventId = new Map<string, Row[]>();
+
+    for (const row of relevantRows) {
+      const activityEventId = asString(row.activity_event_id);
+      if (!activityEventId) {
+        unknownObservationCount += 1;
+        continue;
+      }
+
+      const current = rowsByEventId.get(activityEventId) ?? [];
+      current.push(row);
+      rowsByEventId.set(activityEventId, current);
+    }
+
+    for (const [activityEventId, eventRows] of rowsByEventId.entries()) {
+      const rollupFacts: MeasurementRollupFactV1[] = [];
+      const seenProjectionKeys = new Set<string>();
+
+      for (const row of eventRows) {
+        const factId = asString(row.fact_id);
+        const valueObjectId = asString(row.value_object_id);
+        const valueNumber = asNumber(row.metric_value_numeric);
+        const unitCode = asString(row.unit)?.toLowerCase() ?? "";
+
+        if (!factId || !valueObjectId || valueNumber === null || !unitCode) {
+          continue;
+        }
+
+        const projectionKey = `${factId}|${valueObjectId}`;
+        if (seenProjectionKeys.has(projectionKey)) continue;
+        seenProjectionKeys.add(projectionKey);
+
+        rollupFacts.push({
+          factId: projectionKey,
+          activityEventId,
+          measurementBundleId: null,
+          parameterCode,
+          valueObjectId,
+          valueNumber,
+          unitCode,
+        });
+      }
+
+      if (rollupFacts.length === 0) {
+        unknownObservationCount += 1;
+        continue;
+      }
+
+      const resolution = resolveMeasurementRollupV1({
+        definition: rollupDefinition,
+        facts: rollupFacts,
+        activityEventId,
+      });
+
+      if (resolution.status === "unit_mismatch") {
+        unitMismatchCount += 1;
+      }
+      if (resolution.status === "discrepancy") {
+        discrepancyCount += 1;
+      }
+      if (resolution.status === "direct") {
+        directCount += 1;
+      }
+      if (resolution.status === "derived") {
+        derivedCount += 1;
+      }
+      if (resolution.status === "direct_verified") {
+        directVerifiedCount += 1;
+      }
+
+      if (
+        resolution.effectiveValueNumber === null ||
+        resolution.effectiveUnitCode !== canonicalUnitCode
+      ) {
+        unknownObservationCount += 1;
+        continue;
+      }
+
+      const firstFactId = asString(eventRows[0]?.fact_id);
+      const date =
+        (firstFactId ? baseDateByFactId.get(firstFactId) : null) ??
+        rowDateKey(eventRows[0] ?? {}, input.timeZone);
+
+      addResolvedValue(date, resolution.effectiveValueNumber);
+      resolvedObservationCount += 1;
+    }
+  } else {
+    const seenFactIds = new Set<string>();
+
+    for (const row of relevantRows) {
+      if (asString(row.value_object_id) !== input.config.valueObjectId) {
+        continue;
+      }
+
+      const factId = asString(row.fact_id);
+      const valueNumber = asNumber(row.metric_value_numeric);
+      const unitCode = asString(row.unit)?.toLowerCase() ?? "";
+      if (!factId || valueNumber === null) continue;
+      if (seenFactIds.has(factId)) continue;
+      seenFactIds.add(factId);
+
+      if (unitCode !== canonicalUnitCode) {
+        unitMismatchCount += 1;
+        unknownObservationCount += 1;
+        continue;
+      }
+
+      const date =
+        baseDateByFactId.get(factId) ??
+        rowDateKey(row, input.timeZone);
+
+      addResolvedValue(date, valueNumber);
+      resolvedObservationCount += 1;
+    }
+  }
+
+  const series = Array.from(buckets.entries()).map(([date, bucket]) => ({
+    date,
+    valueNumber:
+      bucket.valueNumber === null
+        ? null
+        : Math.round(bucket.valueNumber * 10000) / 10000,
+    observationCount: bucket.observationCount,
+  }));
+
+  const totalValue =
+    Math.round(
+      series.reduce(
+        (sum, row) => sum + (row.valueNumber === null ? 0 : row.valueNumber),
+        0,
+      ) * 10000,
+    ) / 10000;
+
+  return NextResponse.json({
+    ok: true,
+    kind: "observation-fact-series",
+    blockId: input.blockId,
+    timeZone: input.timeZone,
+    locale: input.locale,
+    sourceType: "facts",
+    metricKey: "numeric_value",
+    aggregationKey: "sum",
+    groupByKey: "day",
+    periodDays: input.periodDays,
+    valueObjectId: input.config.valueObjectId,
+    valueObjectTitle,
+    parameterDefinitionId: input.config.parameterDefinitionId,
+    parameterCode,
+    parameterTitle,
+    unit: canonicalUnitCode,
+    totalValue,
+    resolvedObservationCount,
+    unknownObservationCount,
+    unitMismatchCount,
+    sourceFactCount: eligibleBaseFacts.length,
+    sourceProjectionCount: relevantRows.length,
+    rollupApplied: Boolean(rollupDefinition),
+    rollup: rollupDefinition
+      ? {
+          sourceValueObjectIds: rollupDefinition.componentValueObjectIds,
+          directCount,
+          derivedCount,
+          directVerifiedCount,
+          discrepancyCount,
+          missingValuePolicy: rollupDefinition.missingValuePolicy,
+          directValuePolicy: rollupDefinition.directValuePolicy,
+          discrepancyToleranceAbsolute:
+            rollupDefinition.discrepancyToleranceAbsolute,
+        }
+      : null,
+    series,
+  });
+}
+
 async function buildCertificateMapResponse(blockId: string) {
   try {
     const certificates = await listPublicGiftCertificates();
@@ -475,11 +1015,39 @@ export async function GET(request: Request) {
     periodDays: Number(block.period_days),
   };
 
-  if (!isDashboardAnalyticsV2Supported(input)) {
+  if (!isDashboardAnalyticsV3Supported(input)) {
     return NextResponse.json(
-      { ok: false, error: "Analytics block configuration is not executable in v2" },
+      { ok: false, error: "Analytics block configuration is not executable in v3" },
       { status: 422 },
     );
+  }
+
+  if (
+    (input.visualizationType === "line" ||
+      input.visualizationType === "bar" ||
+      input.visualizationType === "metric") &&
+    input.sourceType === "facts" &&
+    input.metricKey === "numeric_value" &&
+    input.aggregationKey === "sum" &&
+    input.groupByKey === "day"
+  ) {
+    const config = readObservationFactConfig(block.config_json);
+    if (!config) {
+      return NextResponse.json(
+        { ok: false, error: "Observation fact analytics configuration is incomplete" },
+        { status: 422 },
+      );
+    }
+
+    return buildObservationFactSeriesResponse({
+      blockId,
+      appUserId: appUser.id,
+      actorId: personActor.id,
+      periodDays: input.periodDays,
+      timeZone,
+      locale,
+      config,
+    });
   }
 
   if (

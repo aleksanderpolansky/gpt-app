@@ -80,6 +80,7 @@ export type DashboardAnalyticsCreateInput = {
   readonly aggregationKey: DashboardAnalyticsAggregation;
   readonly groupByKey: DashboardAnalyticsGrouping;
   readonly periodDays: number;
+  readonly config?: Record<string, unknown>;
 };
 
 export const DASHBOARD_ANALYTICS_V1_SUPPORTED_VISUALIZATIONS =
@@ -155,6 +156,33 @@ export function isDashboardAnalyticsV2Supported(
   }
 
   return isDashboardAnalyticsV1Supported(input);
+}
+
+export function isDashboardAnalyticsV3Supported(
+  input: Pick<
+    DashboardAnalyticsCreateInput,
+    | "visualizationType"
+    | "sourceType"
+    | "metricKey"
+    | "aggregationKey"
+    | "groupByKey"
+    | "periodDays"
+  >,
+): boolean {
+  if (
+    DASHBOARD_ANALYTICS_V1_SUPPORTED_VISUALIZATIONS.has(
+      input.visualizationType,
+    ) &&
+    input.sourceType === "facts" &&
+    input.metricKey === "numeric_value" &&
+    input.aggregationKey === "sum" &&
+    input.groupByKey === "day" &&
+    DASHBOARD_ANALYTICS_V1_SUPPORTED_PERIODS.has(input.periodDays)
+  ) {
+    return true;
+  }
+
+  return isDashboardAnalyticsV2Supported(input);
 }
 
 export function isDashboardAnalyticsVisualizationType(

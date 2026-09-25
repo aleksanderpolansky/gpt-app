@@ -430,9 +430,11 @@ type BlocksResponse = {
 
 type DataPoint = {
   readonly date: string;
-  readonly valueMinutes: number;
-  readonly valueHours: number;
-  readonly activityCount: number;
+  readonly valueMinutes?: number;
+  readonly valueHours?: number;
+  readonly activityCount?: number;
+  readonly valueNumber?: number | null;
+  readonly observationCount?: number;
 };
 
 type RootDurationRow = {
@@ -451,8 +453,16 @@ type BlockDataResponse = {
     | "activity-duration"
     | "activity-count"
     | "certificate-map"
-    | "fact-duration-by-root";
+    | "fact-duration-by-root"
+    | "observation-fact-series";
   readonly totalMinutes?: number;
+  readonly totalValue?: number;
+  readonly unit?: string;
+  readonly valueObjectTitle?: string;
+  readonly parameterTitle?: string;
+  readonly resolvedObservationCount?: number;
+  readonly unknownObservationCount?: number;
+  readonly rollupApplied?: boolean;
   readonly totalSemanticMinutes?: number;
   readonly uniqueActivityMinutes?: number;
   readonly overlapDetected?: boolean;
@@ -461,6 +471,41 @@ type BlockDataResponse = {
   readonly rootBreakdown?: RootDurationRow[];
   readonly availableCertificateCount?: number;
   readonly markers?: CertificateMapMarker[];
+  readonly error?: string;
+};
+
+type ObservationObjectOption = {
+  readonly id: string;
+  readonly title: string;
+  readonly pathText: string;
+  readonly status: string;
+  readonly canonicalKey: string | null;
+  readonly scopeCode: string | null;
+};
+
+type ObservationParameterOption = {
+  readonly id: string;
+  readonly parameterCode: string;
+  readonly title: string;
+  readonly canonicalUnitCode: string;
+  readonly aggregationMethodCode: string | null;
+  readonly defaultWindowCode: string | null;
+  readonly assignmentId: string | null;
+};
+
+type ObservationSelectorResponse = {
+  readonly ok?: boolean;
+  readonly valueObjects?: ObservationObjectOption[];
+  readonly error?: string;
+};
+
+type ObservationOptionsResponse = {
+  readonly ok?: boolean;
+  readonly valueObject?: {
+    readonly id: string;
+    readonly title: string;
+  };
+  readonly parameters?: ObservationParameterOption[];
   readonly error?: string;
 };
 
@@ -713,6 +758,139 @@ const ROOT_TIME_COPY: Record<
   },
 };
 
+const FACT_SERIES_COPY: Record<
+  LocaleCode,
+  {
+    source: string;
+    sourceDescription: string;
+    searchLabel: string;
+    searchPlaceholder: string;
+    searchHint: string;
+    searching: string;
+    noObjects: string;
+    parameterLabel: string;
+    loadingParameters: string;
+    noParameters: string;
+    selectParameter: string;
+    noData: string;
+    factsJournal: string;
+    summary: string;
+  }
+> = {
+  ru: {
+    source: "Факты по объектам наблюдения",
+    sourceDescription: "Числовые значения подтверждённых фактов выбранного объекта наблюдения.",
+    searchLabel: "Объект наблюдения",
+    searchPlaceholder: "Начните вводить название…",
+    searchHint: "Введите не менее 2 символов. Сохраняется ID объекта, а не текст названия.",
+    searching: "Поиск…",
+    noObjects: "Подходящих листовых объектов не найдено.",
+    parameterLabel: "Параметр",
+    loadingParameters: "Загрузка параметров…",
+    noParameters: "У выбранного объекта нет активных числовых параметров.",
+    selectParameter: "Выберите числовой параметр.",
+    noData: "За выбранный период нет подтверждённых числовых фактов.",
+    factsJournal: "Журнал фактов",
+    summary: "Подтверждённые факты",
+  },
+  pl: {
+    source: "Fakty według obiektów obserwacji",
+    sourceDescription: "Wartości liczbowe potwierdzonych faktów wybranego obiektu obserwacji.",
+    searchLabel: "Obiekt obserwacji",
+    searchPlaceholder: "Zacznij wpisywać nazwę…",
+    searchHint: "Wpisz co najmniej 2 znaki. Zapisywany jest identyfikator obiektu, nie tekst nazwy.",
+    searching: "Wyszukiwanie…",
+    noObjects: "Nie znaleziono pasujących obiektów liściowych.",
+    parameterLabel: "Parametr",
+    loadingParameters: "Ładowanie parametrów…",
+    noParameters: "Wybrany obiekt nie ma aktywnych parametrów liczbowych.",
+    selectParameter: "Wybierz parametr liczbowy.",
+    noData: "Brak potwierdzonych faktów liczbowych w wybranym okresie.",
+    factsJournal: "Dziennik faktów",
+    summary: "Potwierdzone fakty",
+  },
+  en: {
+    source: "Facts by observation object",
+    sourceDescription: "Numeric values of confirmed facts for the selected observation object.",
+    searchLabel: "Observation object",
+    searchPlaceholder: "Start typing a name…",
+    searchHint: "Enter at least 2 characters. The object ID is saved, not the display text.",
+    searching: "Searching…",
+    noObjects: "No matching leaf observation objects found.",
+    parameterLabel: "Parameter",
+    loadingParameters: "Loading parameters…",
+    noParameters: "The selected object has no active numeric parameters.",
+    selectParameter: "Select a numeric parameter.",
+    noData: "No confirmed numeric facts in the selected period.",
+    factsJournal: "Fact journal",
+    summary: "Confirmed facts",
+  },
+  uk: {
+    source: "Факти за об’єктами спостереження",
+    sourceDescription: "Числові значення підтверджених фактів вибраного об’єкта спостереження.",
+    searchLabel: "Об’єкт спостереження",
+    searchPlaceholder: "Почніть вводити назву…",
+    searchHint: "Введіть щонайменше 2 символи. Зберігається ID об’єкта, а не текст назви.",
+    searching: "Пошук…",
+    noObjects: "Відповідних листових об’єктів не знайдено.",
+    parameterLabel: "Параметр",
+    loadingParameters: "Завантаження параметрів…",
+    noParameters: "Вибраний об’єкт не має активних числових параметрів.",
+    selectParameter: "Виберіть числовий параметр.",
+    noData: "За вибраний період немає підтверджених числових фактів.",
+    factsJournal: "Журнал фактів",
+    summary: "Підтверджені факти",
+  },
+  de: {
+    source: "Fakten nach Beobachtungsobjekt",
+    sourceDescription: "Numerische Werte bestätigter Fakten für das ausgewählte Beobachtungsobjekt.",
+    searchLabel: "Beobachtungsobjekt",
+    searchPlaceholder: "Namen eingeben…",
+    searchHint: "Mindestens 2 Zeichen eingeben. Gespeichert wird die Objekt-ID, nicht der Anzeigetext.",
+    searching: "Suche…",
+    noObjects: "Keine passenden Blatt-Beobachtungsobjekte gefunden.",
+    parameterLabel: "Parameter",
+    loadingParameters: "Parameter werden geladen…",
+    noParameters: "Das ausgewählte Objekt hat keine aktiven numerischen Parameter.",
+    selectParameter: "Numerischen Parameter auswählen.",
+    noData: "Keine bestätigten numerischen Fakten im gewählten Zeitraum.",
+    factsJournal: "Faktenjournal",
+    summary: "Bestätigte Fakten",
+  },
+  es: {
+    source: "Hechos por objeto de observación",
+    sourceDescription: "Valores numéricos de hechos confirmados del objeto de observación seleccionado.",
+    searchLabel: "Objeto de observación",
+    searchPlaceholder: "Empieza a escribir un nombre…",
+    searchHint: "Introduce al menos 2 caracteres. Se guarda el ID del objeto, no el texto mostrado.",
+    searching: "Buscando…",
+    noObjects: "No se encontraron objetos hoja coincidentes.",
+    parameterLabel: "Parámetro",
+    loadingParameters: "Cargando parámetros…",
+    noParameters: "El objeto seleccionado no tiene parámetros numéricos activos.",
+    selectParameter: "Selecciona un parámetro numérico.",
+    noData: "No hay hechos numéricos confirmados en el período seleccionado.",
+    factsJournal: "Diario de hechos",
+    summary: "Hechos confirmados",
+  },
+  cs: {
+    source: "Fakta podle objektu pozorování",
+    sourceDescription: "Číselné hodnoty potvrzených faktů vybraného objektu pozorování.",
+    searchLabel: "Objekt pozorování",
+    searchPlaceholder: "Začněte psát název…",
+    searchHint: "Zadejte alespoň 2 znaky. Ukládá se ID objektu, ne zobrazený text.",
+    searching: "Hledání…",
+    noObjects: "Nebyly nalezeny odpovídající listové objekty.",
+    parameterLabel: "Parametr",
+    loadingParameters: "Načítání parametrů…",
+    noParameters: "Vybraný objekt nemá aktivní číselné parametry.",
+    selectParameter: "Vyberte číselný parametr.",
+    noData: "Ve zvoleném období nejsou potvrzená číselná fakta.",
+    factsJournal: "Deník faktů",
+    summary: "Potvrzená fakta",
+  },
+};
+
 const DONUT_COLORS = [
   "#3b6ef8",
   "#8b5cf6",
@@ -772,6 +950,47 @@ function formatAxisDuration(minutes: number, ui: AnalyticsUi): string {
   }
 
   return `${Math.round(minutes)} ${ui.minuteShort}`;
+}
+
+function formatFactNumber(
+  value: number,
+  unit: string | null | undefined,
+  ui: AnalyticsUi,
+  locale: LocaleCode,
+): string {
+  if (unit === "minute") {
+    return formatDuration(value, ui);
+  }
+
+  if (unit === "hour") {
+    const formatted = new Intl.NumberFormat(NUMBER_LOCALE_MAP[locale], {
+      maximumFractionDigits: 2,
+    }).format(value);
+    return `${formatted} ${ui.hourShort}`;
+  }
+
+  const formatted = new Intl.NumberFormat(NUMBER_LOCALE_MAP[locale], {
+    maximumFractionDigits: 2,
+  }).format(value);
+
+  return unit ? `${formatted} ${unit}` : formatted;
+}
+
+function formatFactAxis(
+  value: number,
+  unit: string | null | undefined,
+  ui: AnalyticsUi,
+  locale: LocaleCode,
+): string {
+  if (unit === "minute") {
+    return formatAxisDuration(value, ui);
+  }
+
+  const formatted = new Intl.NumberFormat(NUMBER_LOCALE_MAP[locale], {
+    maximumFractionDigits: 1,
+  }).format(value);
+
+  return unit ? `${formatted} ${unit}` : formatted;
 }
 
 function visualizationLabel(
@@ -907,22 +1126,45 @@ function AnalyticsBlockCard({
   const isActivityCount = block.metricKey === "activity_count";
   const countCopy = ACTIVITY_COUNT_COPY[locale];
   const rootTimeCopy = ROOT_TIME_COPY[locale];
+  const factCopy = FACT_SERIES_COPY[locale];
   const isRootTimeDonut =
     block.visualizationType === "donut" &&
     block.sourceType === "facts" &&
     block.metricKey === "duration_minutes" &&
     block.groupByKey === "observation_object";
+  const isObservationFactSeries =
+    block.sourceType === "facts" &&
+    block.metricKey === "numeric_value" &&
+    block.groupByKey === "day";
+  const factUnit =
+    data?.unit ??
+    (typeof block.config.canonicalUnitCode === "string"
+      ? block.config.canonicalUnitCode
+      : null);
+  const configuredParameterTitle =
+    typeof block.config.parameterTitle === "string"
+      ? block.config.parameterTitle
+      : null;
   const hasRecordedData = isRootTimeDonut
     ? (data?.rootBreakdown ?? []).length > 0
+    : isObservationFactSeries
+      ? (data?.resolvedObservationCount ?? 0) > 0
+      : isActivityCount
+        ? (data?.activityCount ?? 0) > 0
+        : (data?.totalMinutes ?? 0) > 0;
+  const chartDataKey = isObservationFactSeries
+    ? "valueNumber"
     : isActivityCount
-      ? (data?.activityCount ?? 0) > 0
-      : (data?.totalMinutes ?? 0) > 0;
-  const chartDataKey = isActivityCount ? "activityCount" : "valueMinutes";
-  const chartValueName = isActivityCount
-    ? countCopy.recorded
-    : ui.recordedActivities;
+      ? "activityCount"
+      : "valueMinutes";
+  const chartValueName = isObservationFactSeries
+    ? data?.parameterTitle ?? configuredParameterTitle ?? factCopy.summary
+    : isActivityCount
+      ? countCopy.recorded
+      : ui.recordedActivities;
   const title =
     block.title ||
+    data?.valueObjectTitle ||
     (block.visualizationType === "map"
       ? MAP_BUILDER_COPY[locale].title
       : isRootTimeDonut
@@ -964,7 +1206,7 @@ function AnalyticsBlockCard({
             href={
               block.visualizationType === "map"
                 ? `/certificates?view=participants&locale=${locale}`
-                : isRootTimeDonut
+                : isRootTimeDonut || isObservationFactSeries
                   ? `/activity-facts?locale=${locale}`
                   : `/activity-today?locale=${locale}`
             }
@@ -974,7 +1216,9 @@ function AnalyticsBlockCard({
               ? MAP_BUILDER_COPY[locale].openCatalog
               : isRootTimeDonut
                 ? rootTimeCopy.factsJournal
-                : ui.journal}
+                : isObservationFactSeries
+                  ? factCopy.factsJournal
+                  : ui.journal}
           </Link>
           <button
             type="button"
@@ -1094,11 +1338,13 @@ function AnalyticsBlockCard({
         <div className="flex h-[160px] items-center gap-5">
           <div className="min-w-[145px]">
             <div className="text-[28px] font-bold leading-none text-[#1a1d2e]">
-              {isActivityCount
-                ? new Intl.NumberFormat(NUMBER_LOCALE_MAP[locale]).format(
-                    data?.activityCount ?? 0,
-                  )
-                : formatDuration(data?.totalMinutes ?? 0, ui)}
+              {isObservationFactSeries
+                ? formatFactNumber(data?.totalValue ?? 0, factUnit, ui, locale)
+                : isActivityCount
+                  ? new Intl.NumberFormat(NUMBER_LOCALE_MAP[locale]).format(
+                      data?.activityCount ?? 0,
+                    )
+                  : formatDuration(data?.totalMinutes ?? 0, ui)}
             </div>
             <div className="mt-2 text-[11px] text-[#7c8099]">
               {chartValueName}
@@ -1123,7 +1369,11 @@ function AnalyticsBlockCard({
         </div>
       ) : !hasRecordedData ? (
         <div className="flex h-[160px] items-center justify-center rounded-lg border border-dashed border-[#dfe3f1] bg-[#fbfcff] px-4 text-center text-[12px] font-medium text-[#7c8099]">
-          {isActivityCount ? countCopy.noData : ui.noData}
+          {isObservationFactSeries
+            ? factCopy.noData
+            : isActivityCount
+              ? countCopy.noData
+              : ui.noData}
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={160}>
@@ -1142,9 +1392,11 @@ function AnalyticsBlockCard({
               />
               <YAxis
                 tickFormatter={(value) =>
-                  isActivityCount
-                    ? String(Math.round(Number(value)))
-                    : formatAxisDuration(Number(value), ui)
+                  isObservationFactSeries
+                    ? formatFactAxis(Number(value), factUnit, ui, locale)
+                    : isActivityCount
+                      ? String(Math.round(Number(value)))
+                      : formatAxisDuration(Number(value), ui)
                 }
                 tick={{ fontSize: 10, fill: "#9ca3b8" }}
                 axisLine={false}
@@ -1153,9 +1405,11 @@ function AnalyticsBlockCard({
               />
               <Tooltip
                 formatter={(value) => [
-                  isActivityCount
-                    ? String(Math.round(Number(value)))
-                    : formatDuration(Number(value), ui),
+                  isObservationFactSeries
+                    ? formatFactNumber(Number(value), factUnit, ui, locale)
+                    : isActivityCount
+                      ? String(Math.round(Number(value)))
+                      : formatDuration(Number(value), ui),
                   chartValueName,
                 ]}
                 contentStyle={{
@@ -1183,9 +1437,11 @@ function AnalyticsBlockCard({
               />
               <YAxis
                 tickFormatter={(value) =>
-                  isActivityCount
-                    ? String(Math.round(Number(value)))
-                    : formatAxisDuration(Number(value), ui)
+                  isObservationFactSeries
+                    ? formatFactAxis(Number(value), factUnit, ui, locale)
+                    : isActivityCount
+                      ? String(Math.round(Number(value)))
+                      : formatAxisDuration(Number(value), ui)
                 }
                 tick={{ fontSize: 10, fill: "#9ca3b8" }}
                 axisLine={false}
@@ -1194,9 +1450,11 @@ function AnalyticsBlockCard({
               />
               <Tooltip
                 formatter={(value) => [
-                  isActivityCount
-                    ? String(Math.round(Number(value)))
-                    : formatDuration(Number(value), ui),
+                  isObservationFactSeries
+                    ? formatFactNumber(Number(value), factUnit, ui, locale)
+                    : isActivityCount
+                      ? String(Math.round(Number(value)))
+                      : formatDuration(Number(value), ui),
                   chartValueName,
                 ]}
                 contentStyle={{
@@ -1241,6 +1499,23 @@ function AnalyticsBuilderModal({
   const [activityMetric, setActivityMetric] = useState<
     "duration_minutes" | "activity_count"
   >("duration_minutes");
+  const [dataSource, setDataSource] = useState<"activities" | "facts">(
+    "activities",
+  );
+  const [observationQuery, setObservationQuery] = useState("");
+  const [observationOptions, setObservationOptions] = useState<
+    ObservationObjectOption[]
+  >([]);
+  const [selectedObservation, setSelectedObservation] =
+    useState<ObservationObjectOption | null>(null);
+  const [observationSearchLoading, setObservationSearchLoading] =
+    useState(false);
+  const [observationParameters, setObservationParameters] = useState<
+    ObservationParameterOption[]
+  >([]);
+  const [selectedParameter, setSelectedParameter] =
+    useState<ObservationParameterOption | null>(null);
+  const [parameterLoading, setParameterLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -1250,6 +1525,17 @@ function AnalyticsBuilderModal({
 
     try {
       const isRootTimeDonut = visualizationType === "donut";
+      const isObservationFactSeries =
+        visualizationType !== "map" &&
+        !isRootTimeDonut &&
+        dataSource === "facts";
+
+      if (
+        isObservationFactSeries &&
+        (!selectedObservation || !selectedParameter)
+      ) {
+        throw new Error(FACT_SERIES_COPY[locale].selectParameter);
+      }
 
       const response = await fetch("/api/dashboard/analytics-blocks", {
         method: "POST",
@@ -1259,11 +1545,15 @@ function AnalyticsBuilderModal({
           Accept: "application/json",
         },
         body: JSON.stringify({
+          title:
+            isObservationFactSeries && selectedObservation
+              ? selectedObservation.title
+              : null,
           visualizationType,
           sourceType:
             visualizationType === "map"
               ? "certificates"
-              : isRootTimeDonut
+              : isRootTimeDonut || isObservationFactSeries
                 ? "facts"
                 : "activities",
           metricKey:
@@ -1271,9 +1561,12 @@ function AnalyticsBuilderModal({
               ? "available_certificates"
               : isRootTimeDonut
                 ? "duration_minutes"
-                : activityMetric,
+                : isObservationFactSeries
+                  ? "numeric_value"
+                  : activityMetric,
           aggregationKey:
-            visualizationType === "map" || activityMetric === "activity_count"
+            visualizationType === "map" ||
+            (!isObservationFactSeries && activityMetric === "activity_count")
               ? "count"
               : "sum",
           groupByKey:
@@ -1283,6 +1576,17 @@ function AnalyticsBuilderModal({
                 ? "observation_object"
                 : "day",
           periodDays: visualizationType === "map" ? 30 : periodDays,
+          config:
+            isObservationFactSeries && selectedObservation && selectedParameter
+              ? {
+                  valueObjectId: selectedObservation.id,
+                  parameterDefinitionId: selectedParameter.id,
+                  parameterCode: selectedParameter.parameterCode,
+                  canonicalUnitCode: selectedParameter.canonicalUnitCode,
+                  valueObjectTitle: selectedObservation.title,
+                  parameterTitle: selectedParameter.title,
+                }
+              : {},
         }),
       });
 
@@ -1310,6 +1614,148 @@ function AnalyticsBuilderModal({
     { value: 14, label: ui.fourteenDays },
     { value: 30, label: ui.thirtyDays },
   ];
+
+  const usesSelectableFactSeries =
+    visualizationType !== "map" &&
+    visualizationType !== "donut" &&
+    dataSource === "facts";
+
+  useEffect(() => {
+    if (!usesSelectableFactSeries || step !== 2) {
+      return;
+    }
+
+    const query = observationQuery.trim();
+    if (query.length < 2 || selectedObservation) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      setObservationSearchLoading(true);
+
+      const search = new URLSearchParams({
+        includeGlobal: "1",
+        level: "leaf",
+        limit: "20",
+        q: query,
+        locale,
+      });
+
+      void fetch(`/api/value-objects/selector?${search.toString()}`, {
+        credentials: "include",
+        cache: "no-store",
+        signal: controller.signal,
+        headers: { Accept: "application/json" },
+      })
+        .then(async (response) => {
+          const payload = (await response.json().catch(() => null)) as
+            | ObservationSelectorResponse
+            | null;
+
+          if (!response.ok || !payload?.ok) {
+            throw new Error(payload?.error ?? ui.loadError);
+          }
+
+          setObservationOptions(
+            (payload.valueObjects ?? []).filter(
+              (item) => item.status === "active",
+            ),
+          );
+        })
+        .catch((searchError) => {
+          if (searchError instanceof DOMException && searchError.name === "AbortError") {
+            return;
+          }
+          setObservationOptions([]);
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) {
+            setObservationSearchLoading(false);
+          }
+        });
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [
+    locale,
+    observationQuery,
+    selectedObservation,
+    step,
+    ui.loadError,
+    usesSelectableFactSeries,
+  ]);
+
+  useEffect(() => {
+    if (!usesSelectableFactSeries || !selectedObservation) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      setParameterLoading(true);
+      setObservationParameters([]);
+      setSelectedParameter(null);
+
+      const query = new URLSearchParams({
+        valueObjectId: selectedObservation.id,
+        locale,
+      });
+
+      void fetch(
+        `/api/dashboard/analytics-observation-options?${query.toString()}`,
+        {
+          credentials: "include",
+          cache: "no-store",
+          signal: controller.signal,
+          headers: { Accept: "application/json" },
+        },
+      )
+        .then(async (response) => {
+          const payload = (await response.json().catch(() => null)) as
+            | ObservationOptionsResponse
+            | null;
+
+          if (!response.ok || !payload?.ok) {
+            throw new Error(payload?.error ?? ui.loadError);
+          }
+
+          const parameters = payload.parameters ?? [];
+          setObservationParameters(parameters);
+          if (parameters.length === 1) {
+            setSelectedParameter(parameters[0]);
+          }
+        })
+        .catch((parameterError) => {
+          if (
+            parameterError instanceof DOMException &&
+            parameterError.name === "AbortError"
+          ) {
+            return;
+          }
+          setObservationParameters([]);
+          setSelectedParameter(null);
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) {
+            setParameterLoading(false);
+          }
+        });
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [locale, selectedObservation, ui.loadError, usesSelectableFactSeries]);
+
+  const canAdvance =
+    step !== 2 ||
+    !usesSelectableFactSeries ||
+    Boolean(selectedObservation && selectedParameter);
 
   if (typeof document === "undefined") {
     return null;
@@ -1460,65 +1906,213 @@ function AnalyticsBuilderModal({
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <div className="rounded-xl border border-[#3b6ef8] bg-[#eef2ff] p-4">
-                    <div className="flex items-center gap-2">
-                      <Activity size={16} className="text-[#3b6ef8]" />
-                      <div className="text-[13px] font-bold text-[#1a1d2e]">
-                        {ui.activities}
-                      </div>
-                      <Check size={15} className="ml-auto text-[#3b6ef8]" />
-                    </div>
-                    <div className="mt-2 text-[11px] leading-5 text-[#7c8099]">
-                      {ui.activitiesDescription}
-                    </div>
-                  </div>
-
+                <div className="space-y-4">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <button
                       type="button"
-                      onClick={() => setActivityMetric("duration_minutes")}
+                      onClick={() => setDataSource("activities")}
                       className={`rounded-xl border p-4 text-left transition ${
-                        activityMetric === "duration_minutes"
+                        dataSource === "activities"
                           ? "border-[#3b6ef8] bg-[#eef2ff]"
                           : "border-[#dfe3f1] bg-white hover:border-[#aebefc]"
                       }`}
                     >
                       <div className="flex items-center gap-2">
+                        <Activity size={16} className="text-[#3b6ef8]" />
                         <div className="text-[13px] font-bold text-[#1a1d2e]">
-                          {ui.totalDuration}
+                          {ui.activities}
                         </div>
-                        {activityMetric === "duration_minutes" ? (
+                        {dataSource === "activities" ? (
                           <Check size={15} className="ml-auto text-[#3b6ef8]" />
                         ) : null}
                       </div>
                       <div className="mt-2 text-[11px] leading-5 text-[#7c8099]">
-                        {ui.totalDurationDescription}
+                        {ui.activitiesDescription}
                       </div>
                     </button>
 
                     <button
                       type="button"
-                      onClick={() => setActivityMetric("activity_count")}
+                      onClick={() => setDataSource("facts")}
                       className={`rounded-xl border p-4 text-left transition ${
-                        activityMetric === "activity_count"
+                        dataSource === "facts"
                           ? "border-[#3b6ef8] bg-[#eef2ff]"
                           : "border-[#dfe3f1] bg-white hover:border-[#aebefc]"
                       }`}
                     >
                       <div className="flex items-center gap-2">
+                        <Hash size={16} className="text-[#3b6ef8]" />
                         <div className="text-[13px] font-bold text-[#1a1d2e]">
-                          {ACTIVITY_COUNT_COPY[locale].metric}
+                          {FACT_SERIES_COPY[locale].source}
                         </div>
-                        {activityMetric === "activity_count" ? (
+                        {dataSource === "facts" ? (
                           <Check size={15} className="ml-auto text-[#3b6ef8]" />
                         ) : null}
                       </div>
                       <div className="mt-2 text-[11px] leading-5 text-[#7c8099]">
-                        {ACTIVITY_COUNT_COPY[locale].description}
+                        {FACT_SERIES_COPY[locale].sourceDescription}
                       </div>
                     </button>
                   </div>
+
+                  {dataSource === "activities" ? (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => setActivityMetric("duration_minutes")}
+                        className={`rounded-xl border p-4 text-left transition ${
+                          activityMetric === "duration_minutes"
+                            ? "border-[#3b6ef8] bg-[#eef2ff]"
+                            : "border-[#dfe3f1] bg-white hover:border-[#aebefc]"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="text-[13px] font-bold text-[#1a1d2e]">
+                            {ui.totalDuration}
+                          </div>
+                          {activityMetric === "duration_minutes" ? (
+                            <Check size={15} className="ml-auto text-[#3b6ef8]" />
+                          ) : null}
+                        </div>
+                        <div className="mt-2 text-[11px] leading-5 text-[#7c8099]">
+                          {ui.totalDurationDescription}
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setActivityMetric("activity_count")}
+                        className={`rounded-xl border p-4 text-left transition ${
+                          activityMetric === "activity_count"
+                            ? "border-[#3b6ef8] bg-[#eef2ff]"
+                            : "border-[#dfe3f1] bg-white hover:border-[#aebefc]"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="text-[13px] font-bold text-[#1a1d2e]">
+                            {ACTIVITY_COUNT_COPY[locale].metric}
+                          </div>
+                          {activityMetric === "activity_count" ? (
+                            <Check size={15} className="ml-auto text-[#3b6ef8]" />
+                          ) : null}
+                        </div>
+                        <div className="mt-2 text-[11px] leading-5 text-[#7c8099]">
+                          {ACTIVITY_COUNT_COPY[locale].description}
+                        </div>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4 rounded-xl border border-[#e4e8f4] bg-[#fbfcff] p-4">
+                      <div>
+                        <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[#7c8099]">
+                          {FACT_SERIES_COPY[locale].searchLabel}
+                        </div>
+                        <input
+                          type="text"
+                          value={observationQuery}
+                          onChange={(event) => {
+                            setObservationQuery(event.target.value);
+                            setSelectedObservation(null);
+                            setObservationOptions([]);
+                            setObservationSearchLoading(false);
+                            setObservationParameters([]);
+                            setSelectedParameter(null);
+                            setParameterLoading(false);
+                          }}
+                          placeholder={FACT_SERIES_COPY[locale].searchPlaceholder}
+                          className="w-full rounded-lg border border-[#dfe3f1] bg-white px-3 py-2.5 text-[12px] text-[#1a1d2e] outline-none transition focus:border-[#3b6ef8]"
+                        />
+                        <div className="mt-1.5 text-[10px] leading-4 text-[#9ca3b8]">
+                          {FACT_SERIES_COPY[locale].searchHint}
+                        </div>
+
+                        {!selectedObservation &&
+                        observationQuery.trim().length >= 2 ? (
+                          <div className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-[#dfe3f1] bg-white">
+                            {observationSearchLoading ? (
+                              <div className="px-3 py-3 text-[11px] text-[#7c8099]">
+                                {FACT_SERIES_COPY[locale].searching}
+                              </div>
+                            ) : observationOptions.length === 0 ? (
+                              <div className="px-3 py-3 text-[11px] text-[#7c8099]">
+                                {FACT_SERIES_COPY[locale].noObjects}
+                              </div>
+                            ) : (
+                              observationOptions.map((item) => (
+                                <button
+                                  key={item.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedObservation(item);
+                                    setObservationQuery(item.title);
+                                    setObservationOptions([]);
+                                    setObservationSearchLoading(false);
+                                  }}
+                                  className="block w-full border-b border-[#eef0f6] px-3 py-2.5 text-left last:border-b-0 hover:bg-[#f5f7ff]"
+                                >
+                                  <div className="text-[12px] font-semibold text-[#1a1d2e]">
+                                    {item.title}
+                                  </div>
+                                  <div className="mt-0.5 truncate text-[10px] text-[#9ca3b8]">
+                                    {item.pathText}
+                                  </div>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      {selectedObservation ? (
+                        <div>
+                          <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[#7c8099]">
+                            {FACT_SERIES_COPY[locale].parameterLabel}
+                          </div>
+
+                          {parameterLoading ? (
+                            <div className="rounded-lg border border-[#dfe3f1] bg-white px-3 py-3 text-[11px] text-[#7c8099]">
+                              {FACT_SERIES_COPY[locale].loadingParameters}
+                            </div>
+                          ) : observationParameters.length === 0 ? (
+                            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-[11px] text-amber-800">
+                              {FACT_SERIES_COPY[locale].noParameters}
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                              {observationParameters.map((parameter) => (
+                                <button
+                                  key={parameter.id}
+                                  type="button"
+                                  onClick={() => setSelectedParameter(parameter)}
+                                  className={`rounded-lg border p-3 text-left transition ${
+                                    selectedParameter?.id === parameter.id
+                                      ? "border-[#3b6ef8] bg-[#eef2ff]"
+                                      : "border-[#dfe3f1] bg-white hover:border-[#aebefc]"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div className="text-[12px] font-semibold text-[#1a1d2e]">
+                                      {parameter.title}
+                                    </div>
+                                    {selectedParameter?.id === parameter.id ? (
+                                      <Check
+                                        size={14}
+                                        className="ml-auto text-[#3b6ef8]"
+                                      />
+                                    ) : null}
+                                  </div>
+                                  <div className="mt-1 text-[10px] text-[#9ca3b8]">
+                                    {parameter.parameterCode} ·{" "}
+                                    {parameter.canonicalUnitCode}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -1581,9 +2175,11 @@ function AnalyticsBuilderModal({
                     <div className="text-[11px] font-bold uppercase tracking-wide text-[#7c8099]">
                       {visualizationType === "donut"
                         ? ROOT_TIME_COPY[locale].title
-                        : activityMetric === "activity_count"
-                          ? ACTIVITY_COUNT_COPY[locale].title
-                          : ui.totalDurationByDay}
+                        : usesSelectableFactSeries && selectedObservation
+                          ? selectedObservation.title
+                          : activityMetric === "activity_count"
+                            ? ACTIVITY_COUNT_COPY[locale].title
+                            : ui.totalDurationByDay}
                     </div>
                     <div className="mt-2 text-[12px] leading-5 text-[#5a5f7a]">
                       {visualizationType === "donut" ? (
@@ -1591,6 +2187,15 @@ function AnalyticsBuilderModal({
                           {ROOT_TIME_COPY[locale].facts} ·{" "}
                           {ROOT_TIME_COPY[locale].duration} ·{" "}
                           {ROOT_TIME_COPY[locale].byRoot} ·{" "}
+                        </>
+                      ) : usesSelectableFactSeries &&
+                        selectedObservation &&
+                        selectedParameter ? (
+                        <>
+                          {FACT_SERIES_COPY[locale].source} ·{" "}
+                          {selectedParameter.title} ·{" "}
+                          {selectedParameter.parameterCode} ·{" "}
+                          {selectedParameter.canonicalUnitCode} · {ui.byDay} ·{" "}
                         </>
                       ) : (
                         <>
@@ -1635,17 +2240,26 @@ function AnalyticsBuilderModal({
           {step < 3 ? (
             <button
               type="button"
-              onClick={() => setStep((current) => Math.min(3, current + 1))}
-              className="rounded-lg bg-[#3b6ef8] px-4 py-2 text-[12px] font-bold text-white shadow-sm hover:bg-[#315fd8]"
+              disabled={!canAdvance}
+              onClick={() => {
+                if (canAdvance) {
+                  setStep((current) => Math.min(3, current + 1));
+                }
+              }}
+              className="rounded-lg bg-[#3b6ef8] px-4 py-2 text-[12px] font-bold text-white shadow-sm hover:bg-[#315fd8] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {ui.next}
             </button>
           ) : (
             <button
               type="button"
-              disabled={saving}
+              disabled={
+                saving ||
+                (usesSelectableFactSeries &&
+                  (!selectedObservation || !selectedParameter))
+              }
               onClick={() => void createBlock()}
-              className="flex items-center gap-1.5 rounded-lg bg-[#3b6ef8] px-4 py-2 text-[12px] font-bold text-white shadow-sm hover:bg-[#315fd8] disabled:cursor-wait disabled:opacity-60"
+              className="flex items-center gap-1.5 rounded-lg bg-[#3b6ef8] px-4 py-2 text-[12px] font-bold text-white shadow-sm hover:bg-[#315fd8] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Plus size={13} />
               {saving ? ui.loading : ui.create}

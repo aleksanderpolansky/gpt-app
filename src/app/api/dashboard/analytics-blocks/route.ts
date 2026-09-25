@@ -6,7 +6,7 @@ import {
   isDashboardAnalyticsAggregation,
   isDashboardAnalyticsGrouping,
   isDashboardAnalyticsSourceType,
-  isDashboardAnalyticsV2Supported,
+  isDashboardAnalyticsV3Supported,
   isDashboardAnalyticsVisualizationType,
   type DashboardAnalyticsBlock,
   type DashboardAnalyticsCreateInput,
@@ -15,6 +15,20 @@ import {
 export const dynamic = "force-dynamic";
 
 type Row = Record<string, unknown>;
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const PARAMETER_CODE_RE = /^[a-z][a-z0-9_]{0,79}$/;
+const UNIT_CODE_RE = /^[a-z][a-z0-9_]{0,79}$/;
+
+type ObservationFactConfig = {
+  valueObjectId: string;
+  parameterDefinitionId: string;
+  parameterCode: string;
+  canonicalUnitCode: string;
+  valueObjectTitle: string | null;
+  parameterTitle: string | null;
+};
 
 function asString(value: unknown): string | null {
   return typeof value === "string" ? value : null;
@@ -84,6 +98,166 @@ export async function GET() {
   });
 }
 
+function parseObservationFactConfig(value: unknown): ObservationFactConfig | null {
+  const row = asRecord(value);
+  const valueObjectId = asString(row.valueObjectId)?.trim() ?? "";
+  const parameterDefinitionId =
+    asString(row.parameterDefinitionId)?.trim() ?? "";
+  const parameterCode = asString(row.parameterCode)?.trim().toLowerCase() ?? "";
+  const canonicalUnitCode =
+    asString(row.canonicalUnitCode)?.trim().toLowerCase() ?? "";
+  const valueObjectTitle = asString(row.valueObjectTitle)?.trim().slice(0, 200) ?? null;
+  const parameterTitle = asString(row.parameterTitle)?.trim().slice(0, 200) ?? null;
+
+  if (
+    !UUID_RE.test(valueObjectId) ||
+    !UUID_RE.test(parameterDefinitionId) ||
+    !PARAMETER_CODE_RE.test(parameterCode) ||
+    !UNIT_CODE_RE.test(canonicalUnitCode)
+  ) {
+    return null;
+  }
+
+  return {
+    valueObjectId,
+    parameterDefinitionId,
+    parameterCode,
+    canonicalUnitCode,
+    valueObjectTitle,
+    parameterTitle,
+  };
+}
+
+function isObservationFactSeriesInput(
+  input: Pick<
+    DashboardAnalyticsCreateInput,
+    | "visualizationType"
+    | "sourceType"
+    | "metricKey"
+    | "aggregationKey"
+    | "groupByKey"
+  >,
+): boolean {
+  return (
+    (input.visualizationType === "line" ||
+      input.visualizationType === "bar" ||
+      input.visualizationType === "metric") &&
+    input.sourceType === "facts" &&
+    input.metricKey === "numeric_value" &&
+    input.aggregationKey === "sum" &&
+    input.groupByKey === "day"
+  );
+}
+
+async function validateObservationFactConfig(input: {
+  config: ObservationFactConfig;
+  appUserId: string;
+  actorId: string;
+}): Promise<ObservationFactConfig> {
+  const { data: valueObjectData, error: valueObjectError } = await supabase
+    .from("value_objects")
+    .select(
+      "id,title,status,scope_code,origin_type_code,ontology_node_role_code,node_role_code,owner_user_id,owner_actor_id",
+    )
+    .eq("id", input.config.valueObjectId)
+    .maybeSingle();
+
+  if (valueObjectError) {
+    throw new Error(`DASHBOARD_FACT_VALUE_OBJECT_READ_FAILED:${valueObjectError.message}`);
+  }
+
+  const valueObject = (valueObjectData as Row | null) ?? null;
+  if (!valueObject) {
+    throw new Error("DASHBOARD_FACT_VALUE_OBJECT_NOT_FOUND");
+  }
+
+  const isGlobalLeaf =
+    asString(valueObject.scope_code) === "global" &&
+    asString(valueObject.status) === "active" &&
+    asString(valueObject.ontology_node_role_code) === "leaf";
+
+  const isOwnedLeaf =
+    asString(valueObject.owner_user_id) === input.appUserId &&
+    asString(valueObject.owner_actor_id) === input.actorId &&
+    ["active", "draft"].includes(asString(valueObject.status) ?? "") &&
+    (asString(valueObject.ontology_node_role_code) === "leaf" ||
+      asString(valueObject.node_role_code) === "activity_leaf");
+
+  if (!isGlobalLeaf && !isOwnedLeaf) {
+    throw new Error("DASHBOARD_FACT_VALUE_OBJECT_NOT_ACCESSIBLE_LEAF");
+  }
+
+  const { data: assignmentData, error: assignmentError } = await supabase
+    .from("value_object_parameter_assignments")
+    .select(
+      "id,parameter_definition_id,status,assignment_scope_code,owner_user_id,owner_actor_id",
+    )
+    .eq("value_object_id", input.config.valueObjectId)
+    .eq("parameter_definition_id", input.config.parameterDefinitionId)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (assignmentError) {
+    throw new Error(`DASHBOARD_FACT_ASSIGNMENT_READ_FAILED:${assignmentError.message}`);
+  }
+
+  const assignment = (assignmentData as Row | null) ?? null;
+  if (!assignment) {
+    throw new Error("DASHBOARD_FACT_PARAMETER_NOT_ASSIGNED");
+  }
+
+  const assignmentScope = asString(assignment.assignment_scope_code);
+  const assignmentAccessible = isGlobalLeaf
+    ? assignmentScope === "system"
+    : assignmentScope === "actor" &&
+      asString(assignment.owner_user_id) === input.appUserId &&
+      asString(assignment.owner_actor_id) === input.actorId;
+
+  if (!assignmentAccessible) {
+    throw new Error("DASHBOARD_FACT_PARAMETER_ASSIGNMENT_NOT_ACCESSIBLE");
+  }
+
+  const { data: definitionData, error: definitionError } = await supabase
+    .from("value_object_parameter_definitions")
+    .select(
+      "id,parameter_code,title,value_type_code,canonical_unit_code,status",
+    )
+    .eq("id", input.config.parameterDefinitionId)
+    .eq("status", "active")
+    .eq("value_type_code", "numeric")
+    .maybeSingle();
+
+  if (definitionError) {
+    throw new Error(`DASHBOARD_FACT_PARAMETER_READ_FAILED:${definitionError.message}`);
+  }
+
+  const definition = (definitionData as Row | null) ?? null;
+  if (!definition) {
+    throw new Error("DASHBOARD_FACT_NUMERIC_PARAMETER_NOT_FOUND");
+  }
+
+  const parameterCode = asString(definition.parameter_code)?.toLowerCase() ?? "";
+  const canonicalUnitCode =
+    asString(definition.canonical_unit_code)?.toLowerCase() ?? "";
+
+  if (
+    parameterCode !== input.config.parameterCode ||
+    canonicalUnitCode !== input.config.canonicalUnitCode
+  ) {
+    throw new Error("DASHBOARD_FACT_PARAMETER_CONTRACT_CHANGED");
+  }
+
+  return {
+    ...input.config,
+    valueObjectTitle:
+      asString(valueObject.title)?.slice(0, 200) ??
+      input.config.valueObjectTitle,
+    parameterTitle:
+      asString(definition.title)?.slice(0, 200) ??
+      input.config.parameterTitle,
+  };
+}
+
 function parseCreateInput(value: unknown): DashboardAnalyticsCreateInput | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const body = value as Record<string, unknown>;
@@ -104,6 +278,8 @@ function parseCreateInput(value: unknown): DashboardAnalyticsCreateInput | null 
 
   if (!metricKey || !Number.isFinite(periodDays)) return null;
 
+  const config = asRecord(body.config);
+
   return {
     title,
     visualizationType: body.visualizationType,
@@ -112,6 +288,7 @@ function parseCreateInput(value: unknown): DashboardAnalyticsCreateInput | null 
     aggregationKey: body.aggregationKey,
     groupByKey: body.groupByKey,
     periodDays,
+    config,
   };
 }
 
@@ -129,11 +306,39 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!isDashboardAnalyticsV2Supported(input)) {
+  if (!isDashboardAnalyticsV3Supported(input)) {
     return NextResponse.json(
-      { ok: false, error: "This analytics combination is not enabled in dashboard analytics v2" },
+      { ok: false, error: "This analytics combination is not enabled in dashboard analytics v3" },
       { status: 422 },
     );
+  }
+
+  let observationFactConfig: ObservationFactConfig | null = null;
+
+  if (isObservationFactSeriesInput(input)) {
+    const parsedConfig = parseObservationFactConfig(input.config);
+    if (!parsedConfig) {
+      return NextResponse.json(
+        { ok: false, error: "Observation object and numeric parameter are required" },
+        { status: 400 },
+      );
+    }
+
+    try {
+      observationFactConfig = await validateObservationFactConfig({
+        config: parsedConfig,
+        appUserId: appUser.id,
+        actorId: personActor.id,
+      });
+    } catch (error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: error instanceof Error ? error.message : "Invalid observation fact configuration",
+        },
+        { status: 422 },
+      );
+    }
   }
 
   const { data: previousRows, error: previousError } = await supabase
@@ -167,8 +372,11 @@ export async function POST(request: Request) {
       period_days: input.periodDays,
       sort_order: previousSortOrder + 1,
       config_json: {
-        contract: "dashboard-analytics-v2",
+        contract: observationFactConfig
+          ? "dashboard-analytics-v3"
+          : "dashboard-analytics-v2",
         layoutWidth: input.visualizationType === "map" ? "full" : "half",
+        ...(observationFactConfig ?? {}),
       },
       is_visible: true,
     })
