@@ -22,6 +22,7 @@ import { ValueObjectRelationshipMap } from "@/components/workspace/value-objects
 import { ValueObjectFullCardPanel } from "@/components/workspace/value-objects/value-object-full-card-panel";
 import { ValueObjectDeleteAction } from "@/components/workspace/value-objects/value-object-delete-action";
 import { ValueObjectAnalyticsProfileManager } from "@/components/workspace/value-objects/value-object-analytics-profile-manager";
+import { ValueObjectMeasurementRollupManager } from "@/components/workspace/value-objects/value-object-measurement-rollup-manager";
 import { ActivityScheduleDisplay } from "./activity-schedule-display";
 import { ActivityMutualLinksPanel } from "@/components/activity/p5b/activity-mutual-links-panel";
 import { isValueObjectLeafKindV2 } from "@/types/reality-core/reality-core-contracts-v2";
@@ -1916,6 +1917,13 @@ export default async function ValueObjectDetailPage({
           canCreateLeaf={isIntermediate}
           canManageRelations={canManageRelations}
         />
+
+        {isGlobalSystemObject && isLeaf && canManageRelations ? (
+          <ValueObjectMeasurementRollupManager
+            valueObjectId={valueObject.id}
+            locale={locale}
+          />
+        ) : null}
 
         {isLeaf && !isProductOrService ? (
           <ValueObjectAnalyticsProfileManager
