@@ -437,6 +437,12 @@ function isFloorCountFragment(value: string) {
   );
 }
 
+function isOccurrenceCountFragment(value: string) {
+  return /\b\d{1,6}\s*(?:раз(?:а|ів|и)?|razy|times?|mal|veces?|krát)(?=$|[^\p{L}\p{N}_])/iu.test(
+    value,
+  );
+}
+
 function hasStairContext(value: string) {
   return /(?:лестниц|сход|stairs?|staircase|schod|trepp|escaler|schodi)/iu.test(value);
 }
@@ -451,6 +457,10 @@ function canonicalMeasurementType(
     ["duration", "duration_minutes", "time_spent"].includes(parameterCode)
   ) {
     return "duration";
+  }
+
+  if (isOccurrenceCountFragment(rawFragment)) {
+    return "count";
   }
 
   if (
@@ -475,6 +485,10 @@ function canonicalMeasurementParameterCode(
     return "duration";
   }
 
+  if (isOccurrenceCountFragment(rawFragment)) {
+    return "count";
+  }
+
   if (
     measureType === "count" ||
     isFloorCountFragment(rawFragment) ||
@@ -492,14 +506,20 @@ function extractDeterministicMeasurements(
 ): NormalizedMeasurement[] {
   const output: NormalizedMeasurement[] = [];
   const add = (item: NormalizedMeasurement) => {
-    const key = `${item.parameterCode}|${item.unit}|${item.valueNumeric ?? item.valueText ?? ""}`;
-    if (!output.some((candidate) => `${candidate.parameterCode}|${candidate.unit}|${candidate.valueNumeric ?? candidate.valueText ?? ""}` === key)) {
+    const key = `${item.parameterCode}|${item.unit}|${item.valueNumeric ?? item.valueText ?? ""}|${normalizeText(item.qualifier ?? "")}`;
+    if (
+      !output.some(
+        (candidate) =>
+          `${candidate.parameterCode}|${candidate.unit}|${candidate.valueNumeric ?? candidate.valueText ?? ""}|${normalizeText(candidate.qualifier ?? "")}` ===
+          key,
+      )
+    ) {
       output.push(item);
     }
   };
 
   const repetitionPatterns = [
-    /\b(\d{1,6})\s*(?:раз(?:а)?|повтор(?:а|ов)?|повторений|повторення|повторів|razy|powt(?:órzeń|orzen|\.)?|reps?|repetitions?|wiederholungen|wdh\.?|repeticiones|opakování|opak\.)(?=$|[^\p{L}\p{N}_])/iu,
+    /\b(\d{1,6})\s*(?:повтор(?:а|ов)?|повторений|повторення|повторів|powt(?:órzeń|orzen|\.)?|reps?|repetitions?|wiederholungen|wdh\.?|repeticiones|opakování|opak\.)(?=$|[^\p{L}\p{N}_])/iu,
     /\b(\d{1,6})\s*[xх×]\b/iu,
   ];
   for (const pattern of repetitionPatterns) {
@@ -517,6 +537,44 @@ function extractDeterministicMeasurements(
         confidence: 1,
       });
       break;
+    }
+  }
+
+  const occurrenceCountPatterns = [
+    {
+      pattern:
+        /\b(\d{1,6})\s*(?:раз(?:а|ів|и)?|razy|times?|mal|veces?|krát)(?=$|[^\p{L}\p{N}_])\s+([^,.;!?]{1,80})/giu,
+      valueIndex: 1,
+      qualifierIndex: 2,
+    },
+    {
+      pattern:
+        /(?:^|[,.;!?]\s*)([^,.;!?]{1,80}?)\s+(\d{1,6})\s*(?:раз(?:а|ів|и)?|razy|times?|mal|veces?|krát)(?=$|[^\p{L}\p{N}_])/giu,
+      valueIndex: 2,
+      qualifierIndex: 1,
+    },
+  ] as const;
+
+  for (const spec of occurrenceCountPatterns) {
+    for (const match of sourceText.matchAll(spec.pattern)) {
+      const qualifier = (match[spec.qualifierIndex] ?? "").trim();
+      const rawFragment = (match[0] ?? "")
+        .trim()
+        .replace(/^[,.;!?]\s*/u, "");
+
+      if (!qualifier || !rawFragment) continue;
+
+      add({
+        parameterCode: "count",
+        label: localeMeasurementLabel(locale, "count"),
+        measureType: "count",
+        unit: "count",
+        valueNumeric: Number(match[spec.valueIndex]),
+        valueText: null,
+        qualifier: qualifier.slice(0, 160),
+        rawFragment: rawFragment.slice(0, 240),
+        confidence: 1,
+      });
     }
   }
 
@@ -716,6 +774,11 @@ function normalizeMeasurementUnit(
         "storeys",
         "story",
         "stories",
+        "repetition",
+        "repetitions",
+        "times",
+        "occurrence",
+        "occurrences",
       ].includes(raw)
     ) {
       return "count";
@@ -1653,6 +1716,7 @@ Hard rules:
 6. Measurements must be explicitly supported by sourceText. rawFragment MUST be copied verbatim from sourceText and must contain the complete local evidence for that measurement, including the words that say WHAT the number refers to when such words are present.
 7. Extract EVERY explicitly stated primitive measurement even when several values use the same parameterCode. Example: "soup 400 g, potatoes 120 g, meat 80 g" is three mass measurements, not one.
 8. qualifier is the shortest verbatim noun phrase inside rawFragment that explicitly identifies what the measurement refers to, such as "deep sleep", "potatoes", "meat", "body fat", "water", or "muscle mass". Use null only when the value is genuinely unqualified.
+8a. Phrases meaning "N times <action>" are occurrence counts: use parameterCode=count, measureType=count, unit=count and keep the stated action phrase as qualifier. Example: "3 раза проснулся" is count=3 with qualifier="проснулся". Use repetitions only when the source explicitly says repetitions/reps or an equivalent repetition term; do not treat a generic "N times" occurrence as exercise repetitions.
 9. Do not convert an unstated consequence into a measurement. Extract only what the user actually reported: date/time, duration, repetitions, sets, distance, mass, count, volume, money, speed, heart rate, temperature, energy, rate, or another explicit primitive value.
 10. For relative dates/times such as "tomorrow", use reportedAt and timeZone only to normalize the stated timing; do not invent missing clock time.
 11. parameterCode and unit are stable English snake_case codes. label must be short and in the user's locale.

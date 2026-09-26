@@ -966,7 +966,7 @@ export function ActivityBasicIntakeAnalysisCard({
     (materializedFactsCount !== null ||
       preflightPersistedMaterialization?.status === "materialized" ||
       preflightPersistedMaterialization?.status === "idempotent_replay");
-  const preflightKey = `${preflightActivityEventId}|${preflightAnalyzedAt}`;
+  const preflightKey = `${preflightActivityEventId}|${preflightAnalyzedAt}|${locale}`;
 
   useEffect(() => {
     if (
@@ -980,6 +980,7 @@ export function ActivityBasicIntakeAnalysisCard({
     let cancelled = false;
     const params = new URLSearchParams({
       activityEventId: preflightActivityEventId,
+      locale,
     });
 
     void fetch(
@@ -1025,6 +1026,7 @@ export function ActivityBasicIntakeAnalysisCard({
     preflightFactsCommitted,
     preflightKey,
     preflightStatus,
+    locale,
   ]);
 
   if (!displayedAnalysis) return null;
@@ -1184,7 +1186,7 @@ export function ActivityBasicIntakeAnalysisCard({
             Accept: "application/json",
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ activityEventId }),
+          body: JSON.stringify({ activityEventId, locale }),
         },
       );
 

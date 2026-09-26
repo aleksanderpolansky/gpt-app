@@ -73,10 +73,30 @@ type ValueObjectRow = {
   id: string;
   canonical_key: string;
   title: string;
+  metadata_json?: unknown;
   scope_code: string;
   ontology_node_role_code: string | null;
   status: string;
 };
+
+async function localizeValueObjectRowsForDisplay(
+  rows: ValueObjectRow[],
+  locale: string | undefined,
+): Promise<ValueObjectRow[]> {
+  const requestedLocale = text(locale);
+  if (!requestedLocale) return rows;
+
+  const { localizeGlobalSystemValueObject } = await import(
+    "@/lib/reality-core/global-system-value-object-localization"
+  );
+
+  return rows.map((row) =>
+    localizeGlobalSystemValueObject(
+      row,
+      requestedLocale,
+    ),
+  );
+}
 
 export type E03MissingBundleValue = {
   parameterDefinitionId: string;
@@ -449,16 +469,19 @@ function writerRowsFromResult(value: unknown) {
 export async function materializeBasicIntakeSourceFactsE03V1(input: {
   appUserId: string;
   activityEventId: string;
+  locale?: string;
   preflightOnly: true;
 }): Promise<E03SourceFactPreflightResult>;
 export async function materializeBasicIntakeSourceFactsE03V1(input: {
   appUserId: string;
   activityEventId: string;
+  locale?: string;
   preflightOnly?: false;
 }): Promise<E03SourceFactMaterializationResult>;
 export async function materializeBasicIntakeSourceFactsE03V1(input: {
   appUserId: string;
   activityEventId: string;
+  locale?: string;
   preflightOnly?: boolean;
 }): Promise<E03SourceFactMaterializationResult | E03SourceFactPreflightResult> {
   const { data: signalData, error: signalError } = await supabase
@@ -603,7 +626,7 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
       .eq("status", "active"),
     supabase
       .from("value_objects")
-      .select("id,canonical_key,title,scope_code,ontology_node_role_code,status")
+      .select("id,canonical_key,title,metadata_json,scope_code,ontology_node_role_code,status")
       .in("id", targetObjectIds)
       .eq("scope_code", "global")
       .eq("ontology_node_role_code", "leaf")
@@ -622,7 +645,10 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
 
   const definitions = (definitionResult.data ?? []) as ParameterDefinitionRow[];
   const assignments = (assignmentResult.data ?? []) as AssignmentRow[];
-  const valueObjects = (objectResult.data ?? []) as ValueObjectRow[];
+  const valueObjects = await localizeValueObjectRowsForDisplay(
+    (objectResult.data ?? []) as ValueObjectRow[],
+    input.locale,
+  );
 
   const definitionByCode = new Map<string, ParameterDefinitionRow[]>();
   for (const definition of definitions) {
@@ -769,6 +795,9 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
       targetId: string;
       provenance?: JsonRecord;
       targetQualification?: SourceTargetQualification;
+      qualificationMatchMethod?:
+        | "alias_match"
+        | "single_explicit_count_target";
     }[] = [];
 
     if (bindings) {
@@ -988,8 +1017,38 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
                 left.score,
             );
 
+        let qualificationMatchMethod:
+          | "alias_match"
+          | "single_explicit_count_target" =
+          "alias_match";
+
         if (ranked.length === 0) {
-          continue;
+          const singleExplicitCountTarget =
+            definition.parameter_code ===
+              "count" &&
+            measurement.parameterCode ===
+              "count" &&
+            Boolean(
+              measurement.qualifier,
+            ) &&
+            directEligiblePairs.length ===
+              1 &&
+            directEligiblePairs[0]
+              .targetQualification
+              ?.mode ===
+              "explicit_qualifier";
+
+          if (!singleExplicitCountTarget) {
+            continue;
+          }
+
+          ranked.push({
+            pair:
+              directEligiblePairs[0],
+            score: 0.58,
+          });
+          qualificationMatchMethod =
+            "single_explicit_count_target";
         }
 
         if (
@@ -1034,6 +1093,7 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
             pair.valueObjectId,
           targetQualification:
             pair.targetQualification,
+          qualificationMatchMethod,
         });
       }
 
@@ -1179,6 +1239,9 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
             measurement.qualifier,
           targetQualification:
             plan.targetQualification ??
+            null,
+          qualificationMatchMethod:
+            plan.qualificationMatchMethod ??
             null,
           approximate: measurement.approximate,
           routingResolution: plan.targetQualification

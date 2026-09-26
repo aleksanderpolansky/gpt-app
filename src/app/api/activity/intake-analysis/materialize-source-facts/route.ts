@@ -25,6 +25,18 @@ function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function normalizeLocale(value: unknown) {
+  return value === "en" ||
+    value === "pl" ||
+    value === "ru" ||
+    value === "uk" ||
+    value === "de" ||
+    value === "es" ||
+    value === "cs"
+    ? value
+    : "en";
+}
+
 function isInfrastructureFailure(message: string) {
   return (
     message.startsWith("E03_GLOBAL_FACT_WRITER_FAILED") ||
@@ -62,8 +74,12 @@ export async function GET(request: Request) {
     );
   }
 
+  const requestUrl = new URL(request.url);
   const activityEventId = text(
-    new URL(request.url).searchParams.get("activityEventId"),
+    requestUrl.searchParams.get("activityEventId"),
+  );
+  const locale = normalizeLocale(
+    requestUrl.searchParams.get("locale"),
   );
   if (!UUID_RE.test(activityEventId)) {
     return NextResponse.json(
@@ -76,6 +92,7 @@ export async function GET(request: Request) {
     const preflight = await materializeBasicIntakeSourceFactsE03V1({
       appUserId: appUser.id,
       activityEventId,
+      locale,
       preflightOnly: true,
     });
 
@@ -132,6 +149,7 @@ export async function POST(request: Request) {
   }
 
   const activityEventId = text(body.activityEventId);
+  const locale = normalizeLocale(body.locale);
   if (!UUID_RE.test(activityEventId)) {
     return NextResponse.json(
       { ok: false, error: "activityEventId is invalid" },
@@ -143,6 +161,7 @@ export async function POST(request: Request) {
     const result = await materializeBasicIntakeSourceFactsE03V1({
       appUserId: appUser.id,
       activityEventId,
+      locale,
     });
 
     return NextResponse.json({
