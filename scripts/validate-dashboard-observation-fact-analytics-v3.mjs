@@ -49,7 +49,7 @@ check("V3 day grouping enabled", contains(contract, 'input.groupByKey === "day"'
 check("V3 remains additive over V2", contains(contract, "return isDashboardAnalyticsV2Supported(input)"));
 
 check("create input carries config", contains(contract, "readonly config?: Record<string, unknown>"));
-check("blocks route uses V3 support guard", contains(blocks, "isDashboardAnalyticsV3Supported"));
+check("blocks route keeps V3 through additive V4 support guard", contains(blocks, "isDashboardAnalyticsV4Supported"));
 check("blocks route validates observation config", contains(blocks, "validateObservationFactConfig"));
 check("blocks route verifies assigned parameter", contains(blocks, 'from("value_object_parameter_assignments")'));
 check("blocks route stores dashboard-analytics-v3", contains(blocks, '"dashboard-analytics-v3"'));
@@ -63,7 +63,7 @@ check("options endpoint separates actor assignments", contains(options, 'scope =
 check("options endpoint reports no writes", contains(options, "dbWriteExecuted: false"));
 check("options endpoint has no mutation call", !/\.(insert|update|upsert|delete|rpc)\s*\(/.test(options));
 
-check("analytics data uses V3 support guard", contains(data, "isDashboardAnalyticsV3Supported"));
+check("analytics data keeps V3 through additive V4 support guard", contains(data, "isDashboardAnalyticsV4Supported"));
 check("analytics data has observation series resolver", contains(data, "buildObservationFactSeriesResponse"));
 const observationStart = data.indexOf("async function buildObservationFactSeriesResponse");
 const observationEnd = data.indexOf("async function buildCertificateMapResponse");

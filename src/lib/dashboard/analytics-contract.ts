@@ -185,6 +185,31 @@ export function isDashboardAnalyticsV3Supported(
   return isDashboardAnalyticsV2Supported(input);
 }
 
+export function isDashboardAnalyticsV4Supported(
+  input: Pick<
+    DashboardAnalyticsCreateInput,
+    | "visualizationType"
+    | "sourceType"
+    | "metricKey"
+    | "aggregationKey"
+    | "groupByKey"
+    | "periodDays"
+  >,
+): boolean {
+  if (
+    input.visualizationType === "line" &&
+    input.sourceType === "facts" &&
+    input.metricKey === "multi_series" &&
+    input.aggregationKey === "sum" &&
+    input.groupByKey === "day" &&
+    DASHBOARD_ANALYTICS_V1_SUPPORTED_PERIODS.has(input.periodDays)
+  ) {
+    return true;
+  }
+
+  return isDashboardAnalyticsV3Supported(input);
+}
+
 export function isDashboardAnalyticsVisualizationType(
   value: unknown,
 ): value is DashboardAnalyticsVisualizationType {

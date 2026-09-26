@@ -6,7 +6,7 @@ import {
   isDashboardAnalyticsAggregation,
   isDashboardAnalyticsGrouping,
   isDashboardAnalyticsSourceType,
-  isDashboardAnalyticsV3Supported,
+  isDashboardAnalyticsV4Supported,
   isDashboardAnalyticsVisualizationType,
   type DashboardAnalyticsBlock,
   type DashboardAnalyticsCreateInput,
@@ -28,6 +28,23 @@ type ObservationFactConfig = {
   canonicalUnitCode: string;
   valueObjectTitle: string | null;
   parameterTitle: string | null;
+};
+
+type ObservationFactPresenceConfig = {
+  id: string;
+  kind: "presence";
+  valueObjectId: string;
+  valueObjectTitle: string | null;
+};
+
+type ObservationFactNumericSeriesConfig = ObservationFactConfig & {
+  id: string;
+  kind: "numeric";
+};
+
+type ObservationFactMultiSeriesConfig = {
+  scaleMode: "independent";
+  series: Array<ObservationFactNumericSeriesConfig | ObservationFactPresenceConfig>;
 };
 
 function asString(value: unknown): string | null {
@@ -126,6 +143,92 @@ function parseObservationFactConfig(value: unknown): ObservationFactConfig | nul
     valueObjectTitle,
     parameterTitle,
   };
+}
+
+function parseObservationFactMultiSeriesConfig(
+  value: unknown,
+): ObservationFactMultiSeriesConfig | null {
+  const row = asRecord(value);
+  const scaleMode = asString(row.scaleMode)?.trim().toLowerCase();
+  const rawSeries = Array.isArray(row.series) ? row.series : [];
+
+  if (scaleMode !== "independent" || rawSeries.length < 2 || rawSeries.length > 6) {
+    return null;
+  }
+
+  const parsedSeries: Array<
+    ObservationFactNumericSeriesConfig | ObservationFactPresenceConfig
+  > = [];
+  const seenIds = new Set<string>();
+  const seenSemanticKeys = new Set<string>();
+
+  for (const raw of rawSeries) {
+    const item = asRecord(raw);
+    const id = asString(item.id)?.trim() ?? "";
+    const kind = asString(item.kind)?.trim().toLowerCase() ?? "";
+    const valueObjectId = asString(item.valueObjectId)?.trim() ?? "";
+    const valueObjectTitle =
+      asString(item.valueObjectTitle)?.trim().slice(0, 200) ?? null;
+
+    if (!UUID_RE.test(id) || !UUID_RE.test(valueObjectId) || seenIds.has(id)) {
+      return null;
+    }
+
+    seenIds.add(id);
+
+    if (kind === "presence") {
+      const semanticKey = `presence:${valueObjectId}`;
+      if (seenSemanticKeys.has(semanticKey)) return null;
+      seenSemanticKeys.add(semanticKey);
+      parsedSeries.push({
+        id,
+        kind: "presence",
+        valueObjectId,
+        valueObjectTitle,
+      });
+      continue;
+    }
+
+    if (kind !== "numeric") return null;
+
+    const numericConfig = parseObservationFactConfig(item);
+    if (!numericConfig) return null;
+
+    const semanticKey =
+      `numeric:${numericConfig.valueObjectId}:${numericConfig.parameterDefinitionId}`;
+    if (seenSemanticKeys.has(semanticKey)) return null;
+    seenSemanticKeys.add(semanticKey);
+
+    parsedSeries.push({
+      id,
+      kind: "numeric",
+      ...numericConfig,
+    });
+  }
+
+  return {
+    scaleMode: "independent",
+    series: parsedSeries,
+  };
+}
+
+function isObservationFactMultiSeriesInput(
+  input: Pick<
+    DashboardAnalyticsCreateInput,
+    | "visualizationType"
+    | "sourceType"
+    | "metricKey"
+    | "aggregationKey"
+    | "groupByKey"
+  >,
+): boolean {
+  return (
+    input.visualizationType === "line" &&
+    input.sourceType === "facts" &&
+    input.metricKey === "multi_series" &&
+    input.aggregationKey === "sum" &&
+    input.groupByKey === "day"
+  );
 }
 
 function isObservationFactSeriesInput(
@@ -258,6 +361,94 @@ async function validateObservationFactConfig(input: {
   };
 }
 
+async function validateObservationPresenceConfig(input: {
+  config: ObservationFactPresenceConfig;
+  appUserId: string;
+  actorId: string;
+}): Promise<ObservationFactPresenceConfig> {
+  const { data: valueObjectData, error: valueObjectError } = await supabase
+    .from("value_objects")
+    .select(
+      "id,title,status,scope_code,ontology_node_role_code,node_role_code,owner_user_id,owner_actor_id",
+    )
+    .eq("id", input.config.valueObjectId)
+    .maybeSingle();
+
+  if (valueObjectError) {
+    throw new Error(
+      `DASHBOARD_FACT_VALUE_OBJECT_READ_FAILED:${valueObjectError.message}`,
+    );
+  }
+
+  const valueObject = (valueObjectData as Row | null) ?? null;
+  if (!valueObject) {
+    throw new Error("DASHBOARD_FACT_VALUE_OBJECT_NOT_FOUND");
+  }
+
+  const isGlobalLeaf =
+    asString(valueObject.scope_code) === "global" &&
+    asString(valueObject.status) === "active" &&
+    asString(valueObject.ontology_node_role_code) === "leaf";
+
+  const isOwnedLeaf =
+    asString(valueObject.owner_user_id) === input.appUserId &&
+    asString(valueObject.owner_actor_id) === input.actorId &&
+    ["active", "draft"].includes(asString(valueObject.status) ?? "") &&
+    (asString(valueObject.ontology_node_role_code) === "leaf" ||
+      asString(valueObject.node_role_code) === "activity_leaf");
+
+  if (!isGlobalLeaf && !isOwnedLeaf) {
+    throw new Error("DASHBOARD_FACT_VALUE_OBJECT_NOT_ACCESSIBLE_LEAF");
+  }
+
+  return {
+    ...input.config,
+    valueObjectTitle:
+      asString(valueObject.title)?.slice(0, 200) ??
+      input.config.valueObjectTitle,
+  };
+}
+
+async function validateObservationFactMultiSeriesConfig(input: {
+  config: ObservationFactMultiSeriesConfig;
+  appUserId: string;
+  actorId: string;
+}): Promise<ObservationFactMultiSeriesConfig> {
+  const validated: Array<
+    ObservationFactNumericSeriesConfig | ObservationFactPresenceConfig
+  > = [];
+
+  for (const series of input.config.series) {
+    if (series.kind === "presence") {
+      validated.push(
+        await validateObservationPresenceConfig({
+          config: series,
+          appUserId: input.appUserId,
+          actorId: input.actorId,
+        }),
+      );
+      continue;
+    }
+
+    const numeric = await validateObservationFactConfig({
+      config: series,
+      appUserId: input.appUserId,
+      actorId: input.actorId,
+    });
+
+    validated.push({
+      id: series.id,
+      kind: "numeric",
+      ...numeric,
+    });
+  }
+
+  return {
+    scaleMode: "independent",
+    series: validated,
+  };
+}
+
 function parseCreateInput(value: unknown): DashboardAnalyticsCreateInput | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const body = value as Record<string, unknown>;
@@ -306,16 +497,50 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!isDashboardAnalyticsV3Supported(input)) {
+  if (!isDashboardAnalyticsV4Supported(input)) {
     return NextResponse.json(
-      { ok: false, error: "This analytics combination is not enabled in dashboard analytics v3" },
+      { ok: false, error: "This analytics combination is not enabled in dashboard analytics v4" },
       { status: 422 },
     );
   }
 
   let observationFactConfig: ObservationFactConfig | null = null;
+  let observationFactMultiSeriesConfig: ObservationFactMultiSeriesConfig | null =
+    null;
 
-  if (isObservationFactSeriesInput(input)) {
+  if (isObservationFactMultiSeriesInput(input)) {
+    const parsedConfig = parseObservationFactMultiSeriesConfig(input.config);
+    if (!parsedConfig) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "At least two valid observation fact series are required (maximum six)",
+        },
+        { status: 400 },
+      );
+    }
+
+    try {
+      observationFactMultiSeriesConfig =
+        await validateObservationFactMultiSeriesConfig({
+          config: parsedConfig,
+          appUserId: appUser.id,
+          actorId: personActor.id,
+        });
+    } catch (error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Invalid multi-series observation fact configuration",
+        },
+        { status: 422 },
+      );
+    }
+  } else if (isObservationFactSeriesInput(input)) {
     const parsedConfig = parseObservationFactConfig(input.config);
     if (!parsedConfig) {
       return NextResponse.json(
@@ -372,11 +597,13 @@ export async function POST(request: Request) {
       period_days: input.periodDays,
       sort_order: previousSortOrder + 1,
       config_json: {
-        contract: observationFactConfig
-          ? "dashboard-analytics-v3"
-          : "dashboard-analytics-v2",
+        contract: observationFactMultiSeriesConfig
+          ? "dashboard-analytics-v4"
+          : observationFactConfig
+            ? "dashboard-analytics-v3"
+            : "dashboard-analytics-v2",
         layoutWidth: input.visualizationType === "map" ? "full" : "half",
-        ...(observationFactConfig ?? {}),
+        ...(observationFactMultiSeriesConfig ?? observationFactConfig ?? {}),
       },
       is_visible: true,
     })

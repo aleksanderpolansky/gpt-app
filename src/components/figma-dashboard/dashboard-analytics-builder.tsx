@@ -22,6 +22,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  Legend,
   Line,
   LineChart,
   Pie,
@@ -454,7 +455,8 @@ type BlockDataResponse = {
     | "activity-count"
     | "certificate-map"
     | "fact-duration-by-root"
-    | "observation-fact-series";
+    | "observation-fact-series"
+    | "observation-fact-multi-series";
   readonly totalMinutes?: number;
   readonly totalValue?: number;
   readonly unit?: string;
@@ -468,6 +470,8 @@ type BlockDataResponse = {
   readonly overlapDetected?: boolean;
   readonly activityCount?: number;
   readonly series?: DataPoint[];
+  readonly factSeries?: MultiFactSeries[];
+  readonly scaleMode?: "independent";
   readonly rootBreakdown?: RootDurationRow[];
   readonly availableCertificateCount?: number;
   readonly markers?: CertificateMapMarker[];
@@ -507,6 +511,32 @@ type ObservationOptionsResponse = {
   };
   readonly parameters?: ObservationParameterOption[];
   readonly error?: string;
+};
+
+type FactSeriesDraft = {
+  readonly id: string;
+  readonly kind: "numeric" | "presence";
+  readonly valueObjectId: string;
+  readonly valueObjectTitle: string;
+  readonly parameterDefinitionId: string | null;
+  readonly parameterCode: string | null;
+  readonly parameterTitle: string | null;
+  readonly canonicalUnitCode: string | null;
+};
+
+type MultiFactSeries = {
+  readonly id: string;
+  readonly kind: "numeric" | "presence";
+  readonly valueObjectId: string;
+  readonly valueObjectTitle: string;
+  readonly parameterDefinitionId: string | null;
+  readonly parameterCode: string | null;
+  readonly parameterTitle: string | null;
+  readonly unit: string;
+  readonly resolvedObservationCount: number;
+  readonly unknownObservationCount: number;
+  readonly rollupApplied: boolean;
+  readonly points: DataPoint[];
 };
 
 const NUMBER_LOCALE_MAP: Record<LocaleCode, string> = {
@@ -891,6 +921,140 @@ const FACT_SERIES_COPY: Record<
   },
 };
 
+const MULTI_SERIES_COPY: Record<
+  LocaleCode,
+  {
+    title: string;
+    selectedSeries: string;
+    addNumericSeries: string;
+    addPresenceSeries: string;
+    presence: string;
+    presenceDescription: string;
+    removeSeries: string;
+    maxSeries: string;
+    independentScale: string;
+    independentScaleDescription: string;
+    needTwoSeries: string;
+    noMultiData: string;
+    present: string;
+  }
+> = {
+  ru: {
+    title: "Сравнение показателей",
+    selectedSeries: "Выбранные ряды",
+    addNumericSeries: "Добавить числовой ряд",
+    addPresenceSeries: "Добавить факт наличия",
+    presence: "Факт наличия",
+    presenceDescription: "Точка появляется в день, когда по объекту есть подтверждённый факт. Отсутствие факта остаётся неизвестностью, а не нулём.",
+    removeSeries: "Удалить ряд",
+    maxSeries: "Можно добавить до 6 рядов.",
+    independentScale: "Независимые шкалы",
+    independentScaleDescription: "Каждый ряд сохраняет свои реальные единицы и масштабируется отдельно. Реальные значения видны во всплывающей подсказке.",
+    needTwoSeries: "Для совместного графика добавьте минимум два ряда.",
+    noMultiData: "За выбранный период нет подтверждённых данных для выбранных рядов.",
+    present: "есть факт",
+  },
+  pl: {
+    title: "Porównanie wskaźników",
+    selectedSeries: "Wybrane serie",
+    addNumericSeries: "Dodaj serię liczbową",
+    addPresenceSeries: "Dodaj obecność faktu",
+    presence: "Obecność faktu",
+    presenceDescription: "Punkt pojawia się w dniu, w którym istnieje potwierdzony fakt dla obiektu. Brak faktu pozostaje niewiadomą, a nie zerem.",
+    removeSeries: "Usuń serię",
+    maxSeries: "Można dodać do 6 serii.",
+    independentScale: "Niezależne skale",
+    independentScaleDescription: "Każda seria zachowuje własne jednostki i jest skalowana osobno. Rzeczywiste wartości są widoczne w podpowiedzi.",
+    needTwoSeries: "Aby utworzyć wspólny wykres, dodaj co najmniej dwie serie.",
+    noMultiData: "Brak potwierdzonych danych dla wybranych serii w tym okresie.",
+    present: "jest fakt",
+  },
+  en: {
+    title: "Indicator comparison",
+    selectedSeries: "Selected series",
+    addNumericSeries: "Add numeric series",
+    addPresenceSeries: "Add fact presence",
+    presence: "Fact presence",
+    presenceDescription: "A point appears on a day when a confirmed fact exists for the object. Missing facts stay unknown rather than becoming zero.",
+    removeSeries: "Remove series",
+    maxSeries: "You can add up to 6 series.",
+    independentScale: "Independent scales",
+    independentScaleDescription: "Each series keeps its real unit and is scaled independently. Actual values are shown in the tooltip.",
+    needTwoSeries: "Add at least two series for a combined chart.",
+    noMultiData: "No confirmed data for the selected series in this period.",
+    present: "fact present",
+  },
+  uk: {
+    title: "Порівняння показників",
+    selectedSeries: "Вибрані ряди",
+    addNumericSeries: "Додати числовий ряд",
+    addPresenceSeries: "Додати факт наявності",
+    presence: "Факт наявності",
+    presenceDescription: "Точка з’являється в день, коли для об’єкта є підтверджений факт. Відсутність факту залишається невідомістю, а не нулем.",
+    removeSeries: "Видалити ряд",
+    maxSeries: "Можна додати до 6 рядів.",
+    independentScale: "Незалежні шкали",
+    independentScaleDescription: "Кожен ряд зберігає свої реальні одиниці та масштабується окремо. Реальні значення видно у підказці.",
+    needTwoSeries: "Для спільного графіка додайте щонайменше два ряди.",
+    noMultiData: "За вибраний період немає підтверджених даних для вибраних рядів.",
+    present: "є факт",
+  },
+  de: {
+    title: "Kennzahlenvergleich",
+    selectedSeries: "Ausgewählte Reihen",
+    addNumericSeries: "Numerische Reihe hinzufügen",
+    addPresenceSeries: "Fakt-Vorhandensein hinzufügen",
+    presence: "Fakt vorhanden",
+    presenceDescription: "Ein Punkt erscheint an einem Tag, an dem ein bestätigter Fakt für das Objekt vorliegt. Fehlende Fakten bleiben unbekannt und werden nicht zu null.",
+    removeSeries: "Reihe entfernen",
+    maxSeries: "Bis zu 6 Reihen können hinzugefügt werden.",
+    independentScale: "Unabhängige Skalen",
+    independentScaleDescription: "Jede Reihe behält ihre reale Einheit und wird separat skaliert. Reale Werte stehen im Tooltip.",
+    needTwoSeries: "Für ein gemeinsames Diagramm mindestens zwei Reihen hinzufügen.",
+    noMultiData: "Keine bestätigten Daten für die ausgewählten Reihen im Zeitraum.",
+    present: "Fakt vorhanden",
+  },
+  es: {
+    title: "Comparación de indicadores",
+    selectedSeries: "Series seleccionadas",
+    addNumericSeries: "Añadir serie numérica",
+    addPresenceSeries: "Añadir presencia del hecho",
+    presence: "Presencia del hecho",
+    presenceDescription: "Aparece un punto el día en que existe un hecho confirmado para el objeto. La ausencia de un hecho permanece desconocida y no se convierte en cero.",
+    removeSeries: "Eliminar serie",
+    maxSeries: "Se pueden añadir hasta 6 series.",
+    independentScale: "Escalas independientes",
+    independentScaleDescription: "Cada serie conserva su unidad real y se escala por separado. Los valores reales aparecen en la información emergente.",
+    needTwoSeries: "Añade al menos dos series para un gráfico combinado.",
+    noMultiData: "No hay datos confirmados para las series seleccionadas en este período.",
+    present: "hay hecho",
+  },
+  cs: {
+    title: "Porovnání ukazatelů",
+    selectedSeries: "Vybrané řady",
+    addNumericSeries: "Přidat číselnou řadu",
+    addPresenceSeries: "Přidat přítomnost faktu",
+    presence: "Přítomnost faktu",
+    presenceDescription: "Bod se zobrazí v den, kdy pro objekt existuje potvrzený fakt. Chybějící fakt zůstává neznámý a nemění se na nulu.",
+    removeSeries: "Odstranit řadu",
+    maxSeries: "Lze přidat až 6 řad.",
+    independentScale: "Nezávislé škály",
+    independentScaleDescription: "Každá řada si ponechává skutečnou jednotku a škáluje se samostatně. Skutečné hodnoty jsou v nápovědě.",
+    needTwoSeries: "Pro společný graf přidejte alespoň dvě řady.",
+    noMultiData: "Ve zvoleném období nejsou potvrzená data pro vybrané řady.",
+    present: "fakt existuje",
+  },
+};
+
+const MULTI_SERIES_COLORS = [
+  "#3b6ef8",
+  "#8b5cf6",
+  "#10b981",
+  "#f59e0b",
+  "#ef4444",
+  "#06b6d4",
+];
+
 const DONUT_COLORS = [
   "#3b6ef8",
   "#8b5cf6",
@@ -991,6 +1155,19 @@ function formatFactAxis(
   }).format(value);
 
   return unit ? `${formatted} ${unit}` : formatted;
+}
+
+function multiSeriesDisplayName(
+  series: MultiFactSeries,
+  locale: LocaleCode,
+): string {
+  if (series.kind === "presence") {
+    return `${series.valueObjectTitle} · ${MULTI_SERIES_COPY[locale].presence}`;
+  }
+
+  return `${series.valueObjectTitle} · ${
+    series.parameterTitle ?? series.parameterCode ?? FACT_SERIES_COPY[locale].summary
+  }`;
 }
 
 function visualizationLabel(
@@ -1123,6 +1300,25 @@ function AnalyticsBlockCard({
     [data?.series, locale],
   );
 
+  const multiSeriesRows = useMemo(() => {
+    const factSeries = data?.factSeries ?? [];
+    const dateKeys = factSeries[0]?.points.map((point) => point.date) ?? [];
+
+    return dateKeys.map((date, index) => {
+      const row: Record<string, string | number | null> = {
+        date,
+        label: formatDateLabel(date, locale),
+      };
+
+      factSeries.forEach((series, seriesIndex) => {
+        row[`series_${seriesIndex}`] =
+          series.points[index]?.valueNumber ?? null;
+      });
+
+      return row;
+    });
+  }, [data?.factSeries, locale]);
+
   const isActivityCount = block.metricKey === "activity_count";
   const countCopy = ACTIVITY_COUNT_COPY[locale];
   const rootTimeCopy = ROOT_TIME_COPY[locale];
@@ -1136,6 +1332,11 @@ function AnalyticsBlockCard({
     block.sourceType === "facts" &&
     block.metricKey === "numeric_value" &&
     block.groupByKey === "day";
+  const isObservationFactMultiSeries =
+    block.visualizationType === "line" &&
+    block.sourceType === "facts" &&
+    block.metricKey === "multi_series" &&
+    block.groupByKey === "day";
   const factUnit =
     data?.unit ??
     (typeof block.config.canonicalUnitCode === "string"
@@ -1147,11 +1348,15 @@ function AnalyticsBlockCard({
       : null;
   const hasRecordedData = isRootTimeDonut
     ? (data?.rootBreakdown ?? []).length > 0
-    : isObservationFactSeries
-      ? (data?.resolvedObservationCount ?? 0) > 0
-      : isActivityCount
-        ? (data?.activityCount ?? 0) > 0
-        : (data?.totalMinutes ?? 0) > 0;
+    : isObservationFactMultiSeries
+      ? (data?.factSeries ?? []).some(
+          (series) => series.resolvedObservationCount > 0,
+        )
+      : isObservationFactSeries
+        ? (data?.resolvedObservationCount ?? 0) > 0
+        : isActivityCount
+          ? (data?.activityCount ?? 0) > 0
+          : (data?.totalMinutes ?? 0) > 0;
   const chartDataKey = isObservationFactSeries
     ? "valueNumber"
     : isActivityCount
@@ -1169,9 +1374,11 @@ function AnalyticsBlockCard({
       ? MAP_BUILDER_COPY[locale].title
       : isRootTimeDonut
         ? rootTimeCopy.title
-        : isActivityCount
-          ? countCopy.title
-          : ui.totalDurationByDay);
+        : isObservationFactMultiSeries
+          ? MULTI_SERIES_COPY[locale].title
+          : isActivityCount
+            ? countCopy.title
+            : ui.totalDurationByDay);
   const periodLabel =
     block.periodDays === 7
       ? ui.sevenDays
@@ -1206,7 +1413,9 @@ function AnalyticsBlockCard({
             href={
               block.visualizationType === "map"
                 ? `/certificates?view=participants&locale=${locale}`
-                : isRootTimeDonut || isObservationFactSeries
+                : isRootTimeDonut ||
+                    isObservationFactSeries ||
+                    isObservationFactMultiSeries
                   ? `/activity-facts?locale=${locale}`
                   : `/activity-today?locale=${locale}`
             }
@@ -1216,7 +1425,7 @@ function AnalyticsBlockCard({
               ? MAP_BUILDER_COPY[locale].openCatalog
               : isRootTimeDonut
                 ? rootTimeCopy.factsJournal
-                : isObservationFactSeries
+                : isObservationFactSeries || isObservationFactMultiSeries
                   ? factCopy.factsJournal
                   : ui.journal}
           </Link>
@@ -1332,6 +1541,95 @@ function AnalyticsBlockCard({
                 {rootTimeCopy.overlapNote}
               </div>
             ) : null}
+          </div>
+        )
+      ) : isObservationFactMultiSeries ? (
+        !hasRecordedData ? (
+          <div className="flex h-[180px] items-center justify-center rounded-lg border border-dashed border-[#dfe3f1] bg-[#fbfcff] px-4 text-center text-[12px] font-medium text-[#7c8099]">
+            {MULTI_SERIES_COPY[locale].noMultiData}
+          </div>
+        ) : (
+          <div>
+            <div className="mb-2 text-[10px] leading-4 text-[#7c8099]">
+              {MULTI_SERIES_COPY[locale].independentScaleDescription}
+            </div>
+            <ResponsiveContainer width="100%" height={190}>
+              <LineChart data={multiSeriesRows}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f2f7" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 10, fill: "#9ca3b8" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                {(data?.factSeries ?? []).map((series, index) => (
+                  <YAxis
+                    key={series.id}
+                    yAxisId={`series-${index}`}
+                    hide
+                    domain={["auto", "auto"]}
+                  />
+                ))}
+                <Tooltip
+                  formatter={(value, name) => {
+                    const matchedSeries = (data?.factSeries ?? []).find(
+                      (series) =>
+                        multiSeriesDisplayName(series, locale) === String(name),
+                    );
+
+                    if (matchedSeries?.kind === "presence") {
+                      return [
+                        MULTI_SERIES_COPY[locale].present,
+                        String(name),
+                      ];
+                    }
+
+                    return [
+                      formatFactNumber(
+                        Number(value),
+                        matchedSeries?.unit,
+                        ui,
+                        locale,
+                      ),
+                      String(name),
+                    ];
+                  }}
+                  contentStyle={{
+                    fontSize: 11,
+                    borderRadius: 8,
+                    border: "1px solid #f0f2f7",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                  }}
+                />
+                <Legend
+                  wrapperStyle={{ fontSize: 10, paddingTop: 8 }}
+                />
+                {(data?.factSeries ?? []).map((series, index) => {
+                  const color =
+                    MULTI_SERIES_COLORS[index % MULTI_SERIES_COLORS.length];
+                  const seriesName = multiSeriesDisplayName(series, locale);
+
+                  return (
+                    <Line
+                      key={series.id}
+                      yAxisId={`series-${index}`}
+                      type="monotone"
+                      dataKey={`series_${index}`}
+                      name={seriesName}
+                      stroke={color}
+                      strokeWidth={series.kind === "presence" ? 0 : 2.5}
+                      dot={{
+                        r: series.kind === "presence" ? 4 : 3,
+                        fill: color,
+                        stroke: color,
+                      }}
+                      activeDot={{ r: series.kind === "presence" ? 5 : 4 }}
+                      connectNulls={false}
+                    />
+                  );
+                })}
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         )
       ) : block.visualizationType === "metric" ? (
@@ -1515,9 +1813,94 @@ function AnalyticsBuilderModal({
   >([]);
   const [selectedParameter, setSelectedParameter] =
     useState<ObservationParameterOption | null>(null);
+  const [factSeriesDrafts, setFactSeriesDrafts] = useState<FactSeriesDraft[]>([]);
   const [parameterLoading, setParameterLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  function resetCurrentFactSelection() {
+    setObservationQuery("");
+    setObservationOptions([]);
+    setSelectedObservation(null);
+    setObservationSearchLoading(false);
+    setObservationParameters([]);
+    setSelectedParameter(null);
+    setParameterLoading(false);
+  }
+
+  function addNumericFactSeries() {
+    if (!selectedObservation || !selectedParameter) {
+      setError(FACT_SERIES_COPY[locale].selectParameter);
+      return;
+    }
+
+    if (factSeriesDrafts.length >= 6) {
+      setError(MULTI_SERIES_COPY[locale].maxSeries);
+      return;
+    }
+
+    const duplicate = factSeriesDrafts.some(
+      (series) =>
+        series.kind === "numeric" &&
+        series.valueObjectId === selectedObservation.id &&
+        series.parameterDefinitionId === selectedParameter.id,
+    );
+    if (duplicate) {
+      resetCurrentFactSelection();
+      return;
+    }
+
+    setFactSeriesDrafts((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        kind: "numeric",
+        valueObjectId: selectedObservation.id,
+        valueObjectTitle: selectedObservation.title,
+        parameterDefinitionId: selectedParameter.id,
+        parameterCode: selectedParameter.parameterCode,
+        parameterTitle: selectedParameter.title,
+        canonicalUnitCode: selectedParameter.canonicalUnitCode,
+      },
+    ]);
+    setError("");
+    resetCurrentFactSelection();
+  }
+
+  function addPresenceFactSeries() {
+    if (!selectedObservation) return;
+
+    if (factSeriesDrafts.length >= 6) {
+      setError(MULTI_SERIES_COPY[locale].maxSeries);
+      return;
+    }
+
+    const duplicate = factSeriesDrafts.some(
+      (series) =>
+        series.kind === "presence" &&
+        series.valueObjectId === selectedObservation.id,
+    );
+    if (duplicate) {
+      resetCurrentFactSelection();
+      return;
+    }
+
+    setFactSeriesDrafts((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        kind: "presence",
+        valueObjectId: selectedObservation.id,
+        valueObjectTitle: selectedObservation.title,
+        parameterDefinitionId: null,
+        parameterCode: null,
+        parameterTitle: null,
+        canonicalUnitCode: null,
+      },
+    ]);
+    setError("");
+    resetCurrentFactSelection();
+  }
 
   async function createBlock() {
     setSaving(true);
@@ -1529,9 +1912,14 @@ function AnalyticsBuilderModal({
         visualizationType !== "map" &&
         !isRootTimeDonut &&
         dataSource === "facts";
+      const isObservationFactMultiSeries =
+        visualizationType === "line" &&
+        isObservationFactSeries &&
+        factSeriesDrafts.length >= 2;
 
       if (
         isObservationFactSeries &&
+        !isObservationFactMultiSeries &&
         (!selectedObservation || !selectedParameter)
       ) {
         throw new Error(FACT_SERIES_COPY[locale].selectParameter);
@@ -1545,8 +1933,9 @@ function AnalyticsBuilderModal({
           Accept: "application/json",
         },
         body: JSON.stringify({
-          title:
-            isObservationFactSeries && selectedObservation
+          title: isObservationFactMultiSeries
+            ? MULTI_SERIES_COPY[locale].title
+            : isObservationFactSeries && selectedObservation
               ? selectedObservation.title
               : null,
           visualizationType,
@@ -1561,9 +1950,11 @@ function AnalyticsBuilderModal({
               ? "available_certificates"
               : isRootTimeDonut
                 ? "duration_minutes"
-                : isObservationFactSeries
-                  ? "numeric_value"
-                  : activityMetric,
+                : isObservationFactMultiSeries
+                  ? "multi_series"
+                  : isObservationFactSeries
+                    ? "numeric_value"
+                    : activityMetric,
           aggregationKey:
             visualizationType === "map" ||
             (!isObservationFactSeries && activityMetric === "activity_count")
@@ -1576,8 +1967,27 @@ function AnalyticsBuilderModal({
                 ? "observation_object"
                 : "day",
           periodDays: visualizationType === "map" ? 30 : periodDays,
-          config:
-            isObservationFactSeries && selectedObservation && selectedParameter
+          config: isObservationFactMultiSeries
+            ? {
+                scaleMode: "independent",
+                series: factSeriesDrafts.map((series) => ({
+                  id: series.id,
+                  kind: series.kind,
+                  valueObjectId: series.valueObjectId,
+                  valueObjectTitle: series.valueObjectTitle,
+                  ...(series.kind === "numeric"
+                    ? {
+                        parameterDefinitionId: series.parameterDefinitionId,
+                        parameterCode: series.parameterCode,
+                        parameterTitle: series.parameterTitle,
+                        canonicalUnitCode: series.canonicalUnitCode,
+                      }
+                    : {}),
+                })),
+              }
+            : isObservationFactSeries &&
+                selectedObservation &&
+                selectedParameter
               ? {
                   valueObjectId: selectedObservation.id,
                   parameterDefinitionId: selectedParameter.id,
@@ -1752,10 +2162,15 @@ function AnalyticsBuilderModal({
     };
   }, [locale, selectedObservation, ui.loadError, usesSelectableFactSeries]);
 
+  const hasValidFactStepSelection =
+    visualizationType === "line" && factSeriesDrafts.length > 0
+      ? factSeriesDrafts.length >= 2
+      : Boolean(selectedObservation && selectedParameter);
+
   const canAdvance =
     step !== 2 ||
     !usesSelectableFactSeries ||
-    Boolean(selectedObservation && selectedParameter);
+    hasValidFactStepSelection;
 
   if (typeof document === "undefined") {
     return null;
@@ -2003,6 +2418,67 @@ function AnalyticsBuilderModal({
                     </div>
                   ) : (
                     <div className="space-y-4 rounded-xl border border-[#e4e8f4] bg-[#fbfcff] p-4">
+                      {visualizationType === "line" && factSeriesDrafts.length > 0 ? (
+                        <div>
+                          <div className="mb-2 flex items-center justify-between gap-3">
+                            <div className="text-[11px] font-bold uppercase tracking-wide text-[#7c8099]">
+                              {MULTI_SERIES_COPY[locale].selectedSeries}
+                            </div>
+                            <div className="text-[10px] text-[#9ca3b8]">
+                              {factSeriesDrafts.length}/6
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            {factSeriesDrafts.map((series, index) => (
+                              <div
+                                key={series.id}
+                                className="flex items-center gap-3 rounded-lg border border-[#dfe3f1] bg-white px-3 py-2.5"
+                              >
+                                <span
+                                  className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                                  style={{
+                                    backgroundColor:
+                                      MULTI_SERIES_COLORS[
+                                        index % MULTI_SERIES_COLORS.length
+                                      ],
+                                  }}
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <div className="truncate text-[11px] font-semibold text-[#1a1d2e]">
+                                    {series.valueObjectTitle}
+                                  </div>
+                                  <div className="mt-0.5 truncate text-[10px] text-[#9ca3b8]">
+                                    {series.kind === "presence"
+                                      ? MULTI_SERIES_COPY[locale].presence
+                                      : `${series.parameterTitle ?? series.parameterCode} · ${
+                                          series.canonicalUnitCode ?? ""
+                                        }`}
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setFactSeriesDrafts((current) =>
+                                      current.filter((item) => item.id !== series.id),
+                                    )
+                                  }
+                                  title={MULTI_SERIES_COPY[locale].removeSeries}
+                                  aria-label={MULTI_SERIES_COPY[locale].removeSeries}
+                                  className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-[#9ca3b8] hover:bg-rose-50 hover:text-rose-600"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                          {factSeriesDrafts.length === 1 ? (
+                            <div className="mt-2 text-[10px] text-amber-700">
+                              {MULTI_SERIES_COPY[locale].needTwoSeries}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+
                       <div>
                         <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[#7c8099]">
                           {FACT_SERIES_COPY[locale].searchLabel}
@@ -2109,6 +2585,39 @@ function AnalyticsBuilderModal({
                               ))}
                             </div>
                           )}
+
+                          {visualizationType === "line" ? (
+                            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                              <button
+                                type="button"
+                                disabled={
+                                  !selectedParameter ||
+                                  factSeriesDrafts.length >= 6
+                                }
+                                onClick={addNumericFactSeries}
+                                className="flex items-center justify-center gap-1.5 rounded-lg border border-[#3b6ef8] bg-white px-3 py-2.5 text-[11px] font-semibold text-[#3b6ef8] hover:bg-[#eef2ff] disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                <Plus size={13} />
+                                {MULTI_SERIES_COPY[locale].addNumericSeries}
+                              </button>
+
+                              <button
+                                type="button"
+                                disabled={factSeriesDrafts.length >= 6}
+                                onClick={addPresenceFactSeries}
+                                className="flex items-center justify-center gap-1.5 rounded-lg border border-[#8b5cf6] bg-white px-3 py-2.5 text-[11px] font-semibold text-[#7c3aed] hover:bg-[#f5f3ff] disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                <Plus size={13} />
+                                {MULTI_SERIES_COPY[locale].addPresenceSeries}
+                              </button>
+                            </div>
+                          ) : null}
+
+                          {visualizationType === "line" ? (
+                            <div className="mt-2 rounded-lg border border-[#e4e8f4] bg-white px-3 py-2 text-[10px] leading-4 text-[#7c8099]">
+                              {MULTI_SERIES_COPY[locale].presenceDescription}
+                            </div>
+                          ) : null}
                         </div>
                       ) : null}
                     </div>
@@ -2175,11 +2684,13 @@ function AnalyticsBuilderModal({
                     <div className="text-[11px] font-bold uppercase tracking-wide text-[#7c8099]">
                       {visualizationType === "donut"
                         ? ROOT_TIME_COPY[locale].title
-                        : usesSelectableFactSeries && selectedObservation
-                          ? selectedObservation.title
-                          : activityMetric === "activity_count"
-                            ? ACTIVITY_COUNT_COPY[locale].title
-                            : ui.totalDurationByDay}
+                        : usesSelectableFactSeries && factSeriesDrafts.length >= 2
+                          ? MULTI_SERIES_COPY[locale].title
+                          : usesSelectableFactSeries && selectedObservation
+                            ? selectedObservation.title
+                            : activityMetric === "activity_count"
+                              ? ACTIVITY_COUNT_COPY[locale].title
+                              : ui.totalDurationByDay}
                     </div>
                     <div className="mt-2 text-[12px] leading-5 text-[#5a5f7a]">
                       {visualizationType === "donut" ? (
@@ -2187,6 +2698,14 @@ function AnalyticsBuilderModal({
                           {ROOT_TIME_COPY[locale].facts} ·{" "}
                           {ROOT_TIME_COPY[locale].duration} ·{" "}
                           {ROOT_TIME_COPY[locale].byRoot} ·{" "}
+                        </>
+                      ) : usesSelectableFactSeries &&
+                        factSeriesDrafts.length >= 2 ? (
+                        <>
+                          {FACT_SERIES_COPY[locale].source} ·{" "}
+                          {factSeriesDrafts.length} ·{" "}
+                          {MULTI_SERIES_COPY[locale].independentScale} ·{" "}
+                          {ui.byDay} ·{" "}
                         </>
                       ) : usesSelectableFactSeries &&
                         selectedObservation &&
@@ -2208,6 +2727,11 @@ function AnalyticsBuilderModal({
                       )}
                       {periodOptions.find((item) => item.value === periodDays)?.label}
                     </div>
+                    {usesSelectableFactSeries && factSeriesDrafts.length >= 2 ? (
+                      <div className="mt-2 text-[10px] leading-4 text-[#7c8099]">
+                        {MULTI_SERIES_COPY[locale].independentScaleDescription}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               )}
@@ -2255,8 +2779,7 @@ function AnalyticsBuilderModal({
               type="button"
               disabled={
                 saving ||
-                (usesSelectableFactSeries &&
-                  (!selectedObservation || !selectedParameter))
+                (usesSelectableFactSeries && !hasValidFactStepSelection)
               }
               onClick={() => void createBlock()}
               className="flex items-center gap-1.5 rounded-lg bg-[#3b6ef8] px-4 py-2 text-[12px] font-bold text-white shadow-sm hover:bg-[#315fd8] disabled:cursor-not-allowed disabled:opacity-60"

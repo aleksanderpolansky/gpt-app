@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
 import { supabase } from "../../../../../lib/supabase";
 import { listPublicGiftCertificates } from "@/app/certificates/gift-certificate-data";
-import { isDashboardAnalyticsV3Supported } from "@/lib/dashboard/analytics-contract";
+import { isDashboardAnalyticsV4Supported } from "@/lib/dashboard/analytics-contract";
 import { resolveLocalizedContentField } from "@/lib/localization/contentLocalization";
 import {
   localizeGlobalSystemValueObject,
@@ -35,6 +35,49 @@ type ObservationFactConfig = {
   canonicalUnitCode: string;
   valueObjectTitle: string | null;
   parameterTitle: string | null;
+};
+
+type ObservationFactPresenceConfig = {
+  id: string;
+  kind: "presence";
+  valueObjectId: string;
+  valueObjectTitle: string | null;
+};
+
+type ObservationFactNumericSeriesConfig = ObservationFactConfig & {
+  id: string;
+  kind: "numeric";
+};
+
+type ObservationFactMultiSeriesConfig = {
+  scaleMode: "independent";
+  series: Array<ObservationFactNumericSeriesConfig | ObservationFactPresenceConfig>;
+};
+
+type ObservationSeriesPoint = {
+  date: string;
+  valueNumber: number | null;
+  observationCount: number;
+};
+
+type ObservationFactSeriesPayload = {
+  ok?: boolean;
+  kind?: string;
+  valueObjectId?: string;
+  valueObjectTitle?: string;
+  parameterDefinitionId?: string;
+  parameterCode?: string;
+  parameterTitle?: string;
+  unit?: string;
+  totalValue?: number;
+  resolvedObservationCount?: number;
+  unknownObservationCount?: number;
+  unitMismatchCount?: number;
+  sourceFactCount?: number;
+  sourceProjectionCount?: number;
+  rollupApplied?: boolean;
+  series?: ObservationSeriesPoint[];
+  error?: string;
 };
 
 function asString(value: unknown): string | null {
@@ -76,6 +119,70 @@ function readObservationFactConfig(value: unknown): ObservationFactConfig | null
     canonicalUnitCode,
     valueObjectTitle: asString(row.valueObjectTitle),
     parameterTitle: asString(row.parameterTitle),
+  };
+}
+
+function readObservationFactMultiSeriesConfig(
+  value: unknown,
+): ObservationFactMultiSeriesConfig | null {
+  const row = asRecord(value);
+  const scaleMode = asString(row.scaleMode)?.trim().toLowerCase();
+  const rawSeries = Array.isArray(row.series) ? row.series : [];
+
+  if (scaleMode !== "independent" || rawSeries.length < 2 || rawSeries.length > 6) {
+    return null;
+  }
+
+  const parsed: Array<
+    ObservationFactNumericSeriesConfig | ObservationFactPresenceConfig
+  > = [];
+  const seenIds = new Set<string>();
+  const seenSemanticKeys = new Set<string>();
+
+  for (const raw of rawSeries) {
+    const item = asRecord(raw);
+    const id = asString(item.id)?.trim() ?? "";
+    const kind = asString(item.kind)?.trim().toLowerCase() ?? "";
+    const valueObjectId = asString(item.valueObjectId)?.trim() ?? "";
+    const valueObjectTitle = asString(item.valueObjectTitle);
+
+    if (!UUID_RE.test(id) || !UUID_RE.test(valueObjectId) || seenIds.has(id)) {
+      return null;
+    }
+    seenIds.add(id);
+
+    if (kind === "presence") {
+      const semanticKey = `presence:${valueObjectId}`;
+      if (seenSemanticKeys.has(semanticKey)) return null;
+      seenSemanticKeys.add(semanticKey);
+      parsed.push({
+        id,
+        kind: "presence",
+        valueObjectId,
+        valueObjectTitle,
+      });
+      continue;
+    }
+
+    if (kind !== "numeric") return null;
+
+    const numeric = readObservationFactConfig(item);
+    if (!numeric) return null;
+    const semanticKey =
+      `numeric:${numeric.valueObjectId}:${numeric.parameterDefinitionId}`;
+    if (seenSemanticKeys.has(semanticKey)) return null;
+    seenSemanticKeys.add(semanticKey);
+
+    parsed.push({
+      id,
+      kind: "numeric",
+      ...numeric,
+    });
+  }
+
+  return {
+    scaleMode: "independent",
+    series: parsed,
   };
 }
 
@@ -947,6 +1054,310 @@ async function buildObservationFactSeriesResponse(input: {
   });
 }
 
+async function buildObservationPresenceSeriesResponse(input: {
+  readonly blockId: string;
+  readonly appUserId: string;
+  readonly actorId: string;
+  readonly periodDays: number;
+  readonly timeZone: string;
+  readonly locale: ReturnType<typeof normalizeGlobalSystemValueObjectLocale>;
+  readonly config: ObservationFactPresenceConfig;
+}) {
+  const { data: valueObjectData, error: valueObjectError } = await supabase
+    .from("value_objects")
+    .select(
+      "id,title,canonical_key,status,scope_code,ontology_node_role_code,node_role_code,owner_user_id,owner_actor_id,metadata_json",
+    )
+    .eq("id", input.config.valueObjectId)
+    .maybeSingle();
+
+  if (valueObjectError) {
+    return NextResponse.json(
+      { ok: false, error: valueObjectError.message },
+      { status: 500 },
+    );
+  }
+
+  const valueObject = (valueObjectData as Row | null) ?? null;
+  if (!valueObject) {
+    return NextResponse.json(
+      { ok: false, error: "Observation object not found" },
+      { status: 404 },
+    );
+  }
+
+  const isGlobalLeaf =
+    asString(valueObject.scope_code) === "global" &&
+    asString(valueObject.status) === "active" &&
+    asString(valueObject.ontology_node_role_code) === "leaf";
+
+  const isOwnedLeaf =
+    asString(valueObject.owner_user_id) === input.appUserId &&
+    asString(valueObject.owner_actor_id) === input.actorId &&
+    ["active", "draft"].includes(asString(valueObject.status) ?? "") &&
+    (asString(valueObject.ontology_node_role_code) === "leaf" ||
+      asString(valueObject.node_role_code) === "activity_leaf");
+
+  if (!isGlobalLeaf && !isOwnedLeaf) {
+    return NextResponse.json(
+      { ok: false, error: "Observation object is not an accessible leaf" },
+      { status: 403 },
+    );
+  }
+
+  const fallbackTitle = asString(valueObject.title) ?? input.config.valueObjectId;
+  const valueObjectTitle = isGlobalLeaf
+    ? asString(
+        localizeGlobalSystemValueObject(
+          {
+            canonical_key: asString(valueObject.canonical_key),
+            title: fallbackTitle,
+          },
+          input.locale,
+        ).title,
+      ) ?? fallbackTitle
+    : resolveLocalizedContentField({
+        metadata: valueObject.metadata_json,
+        locale: input.locale,
+        fieldCode: "title",
+        fallback: fallbackTitle,
+      }) ?? fallbackTitle;
+
+  const todayKey = dateKeyInTimeZone(new Date(), input.timeZone);
+  const firstKey = shiftDateKey(todayKey, -(input.periodDays - 1));
+  const queryFromKey = shiftDateKey(firstKey, -1);
+  const queryFromIso = `${queryFromKey}T00:00:00.000Z`;
+
+  const baseFacts: Row[] = [];
+  const pageSize = 1000;
+  const hardLimit = 50000;
+
+  for (let offset = 0; offset < hardLimit; offset += pageSize) {
+    const { data, error } = await supabase
+      .from("activity_object_facts")
+      .select(
+        "id,value_object_id,period_start,effective_at,created_at,fact_status",
+      )
+      .eq("user_id", input.appUserId)
+      .eq("acting_as_actor_id", input.actorId)
+      .eq("fact_status", "confirmed")
+      .or(
+        `period_start.gte.${queryFromIso},effective_at.gte.${queryFromIso},created_at.gte.${queryFromIso}`,
+      )
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(offset, offset + pageSize - 1);
+
+    if (error) {
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: 500 },
+      );
+    }
+
+    const page = Array.isArray(data) ? (data as Row[]) : [];
+    baseFacts.push(...page);
+    if (page.length < pageSize) break;
+
+    if (baseFacts.length >= hardLimit) {
+      return NextResponse.json(
+        { ok: false, error: "DASHBOARD_OBSERVATION_PRESENCE_HARD_LIMIT_REACHED" },
+        { status: 409 },
+      );
+    }
+  }
+
+  const eligibleFacts = baseFacts.filter((row) => {
+    const date = rowDateKey(row, input.timeZone);
+    return Boolean(date && date >= firstKey && date <= todayKey);
+  });
+
+  const dateByFactId = new Map<string, string>();
+  const matchedFactIds = new Set<string>();
+  const factIds: string[] = [];
+
+  for (const row of eligibleFacts) {
+    const factId = asString(row.id);
+    const date = rowDateKey(row, input.timeZone);
+    if (!factId || !date) continue;
+
+    dateByFactId.set(factId, date);
+    factIds.push(factId);
+
+    if (asString(row.value_object_id) === input.config.valueObjectId) {
+      matchedFactIds.add(factId);
+    }
+  }
+
+  for (const ids of chunkStrings(factIds)) {
+    const { data, error } = await supabase
+      .from("activity_fact_value_object_links_effective_v1")
+      .select("fact_id,value_object_id")
+      .in("fact_id", ids)
+      .eq("value_object_id", input.config.valueObjectId);
+
+    if (error) {
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: 500 },
+      );
+    }
+
+    for (const raw of Array.isArray(data) ? data : []) {
+      const factId = asString((raw as Row).fact_id);
+      if (factId) matchedFactIds.add(factId);
+    }
+  }
+
+  const buckets = new Map<
+    string,
+    { valueNumber: number | null; observationCount: number }
+  >();
+
+  for (let offset = 0; offset < input.periodDays; offset += 1) {
+    buckets.set(shiftDateKey(firstKey, offset), {
+      valueNumber: null,
+      observationCount: 0,
+    });
+  }
+
+  for (const factId of matchedFactIds) {
+    const date = dateByFactId.get(factId);
+    if (!date || !buckets.has(date)) continue;
+
+    const bucket = buckets.get(date);
+    if (!bucket) continue;
+
+    bucket.valueNumber = 1;
+    bucket.observationCount += 1;
+  }
+
+  const series = Array.from(buckets.entries()).map(([date, bucket]) => ({
+    date,
+    valueNumber: bucket.valueNumber,
+    observationCount: bucket.observationCount,
+  }));
+
+  return NextResponse.json({
+    ok: true,
+    kind: "observation-presence-series",
+    blockId: input.blockId,
+    timeZone: input.timeZone,
+    locale: input.locale,
+    sourceType: "facts",
+    metricKey: "presence",
+    aggregationKey: "presence",
+    groupByKey: "day",
+    periodDays: input.periodDays,
+    valueObjectId: input.config.valueObjectId,
+    valueObjectTitle,
+    parameterTitle: null,
+    unit: "presence",
+    totalValue: series.reduce(
+      (sum, row) => sum + (row.valueNumber === null ? 0 : row.valueNumber),
+      0,
+    ),
+    resolvedObservationCount: matchedFactIds.size,
+    unknownObservationCount: 0,
+    sourceFactCount: eligibleFacts.length,
+    sourceProjectionCount: matchedFactIds.size,
+    rollupApplied: false,
+    series,
+  });
+}
+
+async function buildObservationFactMultiSeriesResponse(input: {
+  readonly blockId: string;
+  readonly appUserId: string;
+  readonly actorId: string;
+  readonly periodDays: number;
+  readonly timeZone: string;
+  readonly locale: ReturnType<typeof normalizeGlobalSystemValueObjectLocale>;
+  readonly config: ObservationFactMultiSeriesConfig;
+}) {
+  const factSeries = [];
+
+  for (const seriesConfig of input.config.series) {
+    const response =
+      seriesConfig.kind === "presence"
+        ? await buildObservationPresenceSeriesResponse({
+            blockId: input.blockId,
+            appUserId: input.appUserId,
+            actorId: input.actorId,
+            periodDays: input.periodDays,
+            timeZone: input.timeZone,
+            locale: input.locale,
+            config: seriesConfig,
+          })
+        : await buildObservationFactSeriesResponse({
+            blockId: input.blockId,
+            appUserId: input.appUserId,
+            actorId: input.actorId,
+            periodDays: input.periodDays,
+            timeZone: input.timeZone,
+            locale: input.locale,
+            config: seriesConfig,
+          });
+
+    if (!response.ok) return response;
+
+    const payload = (await response.json()) as ObservationFactSeriesPayload;
+    if (!payload.ok || !Array.isArray(payload.series)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            payload.error ?? "Could not resolve one of the multi-series fact rows",
+        },
+        { status: 500 },
+      );
+    }
+
+    factSeries.push({
+      id: seriesConfig.id,
+      kind: seriesConfig.kind,
+      valueObjectId: seriesConfig.valueObjectId,
+      valueObjectTitle:
+        payload.valueObjectTitle ??
+        seriesConfig.valueObjectTitle ??
+        seriesConfig.valueObjectId,
+      parameterDefinitionId:
+        seriesConfig.kind === "numeric"
+          ? seriesConfig.parameterDefinitionId
+          : null,
+      parameterCode:
+        seriesConfig.kind === "numeric" ? seriesConfig.parameterCode : null,
+      parameterTitle:
+        seriesConfig.kind === "numeric"
+          ? payload.parameterTitle ?? seriesConfig.parameterTitle
+          : null,
+      unit:
+        seriesConfig.kind === "numeric"
+          ? payload.unit ?? seriesConfig.canonicalUnitCode
+          : "presence",
+      resolvedObservationCount: payload.resolvedObservationCount ?? 0,
+      unknownObservationCount: payload.unknownObservationCount ?? 0,
+      rollupApplied: payload.rollupApplied ?? false,
+      points: payload.series,
+    });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    kind: "observation-fact-multi-series",
+    blockId: input.blockId,
+    timeZone: input.timeZone,
+    locale: input.locale,
+    sourceType: "facts",
+    metricKey: "multi_series",
+    aggregationKey: "sum",
+    groupByKey: "day",
+    periodDays: input.periodDays,
+    scaleMode: input.config.scaleMode,
+    factSeries,
+  });
+}
+
 async function buildCertificateMapResponse(blockId: string) {
   try {
     const certificates = await listPublicGiftCertificates();
@@ -1062,11 +1473,40 @@ export async function GET(request: Request) {
     periodDays: Number(block.period_days),
   };
 
-  if (!isDashboardAnalyticsV3Supported(input)) {
+  if (!isDashboardAnalyticsV4Supported(input)) {
     return NextResponse.json(
-      { ok: false, error: "Analytics block configuration is not executable in v3" },
+      { ok: false, error: "Analytics block configuration is not executable in v4" },
       { status: 422 },
     );
+  }
+
+  if (
+    input.visualizationType === "line" &&
+    input.sourceType === "facts" &&
+    input.metricKey === "multi_series" &&
+    input.aggregationKey === "sum" &&
+    input.groupByKey === "day"
+  ) {
+    const config = readObservationFactMultiSeriesConfig(block.config_json);
+    if (!config) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Multi-series observation fact analytics configuration is incomplete",
+        },
+        { status: 422 },
+      );
+    }
+
+    return buildObservationFactMultiSeriesResponse({
+      blockId,
+      appUserId: appUser.id,
+      actorId: personActor.id,
+      periodDays: input.periodDays,
+      timeZone,
+      locale,
+      config,
+    });
   }
 
   if (
