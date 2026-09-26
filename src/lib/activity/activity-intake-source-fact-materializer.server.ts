@@ -1,4 +1,10 @@
-import { parseSourceResolution, type SourceBinding } from "./source-snapshot-resolution";
+import {
+  parseSourceResolution,
+  parseSourceTargetQualification,
+  validateSourceBindingTargetQualifications,
+  type SourceBinding,
+  type SourceTargetQualification,
+} from "./source-snapshot-resolution";
 import { resolveSnapshotValue, validateSnapshotBindings } from "./source-snapshot-resolution.server";
 import crypto from "node:crypto";
 
@@ -22,6 +28,7 @@ type Measurement = {
   unit: string;
   valueNumeric: number | null;
   valueText: string | null;
+  qualifier: string | null;
   rawFragment: string;
   confidence: number;
   approximate: boolean;
@@ -168,6 +175,168 @@ function normalizeFragment(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function normalizeQualifierText(value: string): string {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase()
+    .replace(/ё/g, "е")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function levenshteinDistance(left: string, right: string): number {
+  const previous = Array.from(
+    { length: right.length + 1 },
+    (_, index) => index,
+  );
+
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    const current = [leftIndex];
+
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      current[rightIndex] = Math.min(
+        previous[rightIndex] + 1,
+        current[rightIndex - 1] + 1,
+        previous[rightIndex - 1] +
+          Number(left[leftIndex - 1] !== right[rightIndex - 1]),
+      );
+    }
+
+    previous.splice(0, previous.length, ...current);
+  }
+
+  return previous[right.length];
+}
+
+function tokenEquivalent(left: string, right: string): boolean {
+  if (left === right) return true;
+
+  if (
+    left.length >= 5 &&
+    right.length >= 5 &&
+    left.slice(0, 5) === right.slice(0, 5)
+  ) {
+    return true;
+  }
+
+  return (
+    left.length >= 4 &&
+    right.length >= 4 &&
+    Math.abs(left.length - right.length) <= 1 &&
+    levenshteinDistance(left, right) <= 1
+  );
+}
+
+function trigramDice(left: string, right: string): number {
+  const trigrams = (value: string) => {
+    const padded = `  ${value}  `;
+    const result = new Set<string>();
+
+    for (let index = 0; index <= padded.length - 3; index += 1) {
+      result.add(padded.slice(index, index + 3));
+    }
+
+    return result;
+  };
+
+  const a = trigrams(left);
+  const b = trigrams(right);
+  if (a.size === 0 || b.size === 0) return 0;
+
+  let overlap = 0;
+  for (const item of a) {
+    if (b.has(item)) overlap += 1;
+  }
+
+  return (2 * overlap) / (a.size + b.size);
+}
+
+function qualifierSimilarity(
+  qualifier: string,
+  alias: string,
+): number {
+  const left = normalizeQualifierText(qualifier);
+  const right = normalizeQualifierText(alias);
+
+  if (!left || !right) return 0;
+  if (
+    left === right ||
+    left.includes(right) ||
+    right.includes(left)
+  ) {
+    return 1;
+  }
+
+  const leftTokens = left.split(" ").filter(Boolean);
+  const rightTokens = right.split(" ").filter(Boolean);
+
+  let matched = 0;
+  let hasLongMatch = false;
+
+  for (const leftToken of leftTokens) {
+    const rightToken = rightTokens.find(
+      (candidate) =>
+        tokenEquivalent(leftToken, candidate),
+    );
+
+    if (rightToken) {
+      matched += 1;
+      if (
+        leftToken.length >= 5 ||
+        rightToken.length >= 5
+      ) {
+        hasLongMatch = true;
+      }
+    }
+  }
+
+  const tokenScore =
+    matched /
+    Math.max(
+      leftTokens.length,
+      rightTokens.length,
+      1,
+    );
+
+  const shortPhraseBoost =
+    hasLongMatch &&
+    leftTokens.length <= 2 &&
+    rightTokens.length <= 2
+      ? 0.65
+      : 0;
+
+  return Math.max(
+    tokenScore,
+    shortPhraseBoost,
+    trigramDice(left, right),
+  );
+}
+
+function qualificationScore(
+  measurement: Measurement,
+  qualification: SourceTargetQualification | undefined,
+): number {
+  if (
+    !measurement.qualifier ||
+    !qualification ||
+    qualification.aliases.length === 0
+  ) {
+    return 0;
+  }
+
+  return Math.max(
+    ...qualification.aliases.map(
+      (alias) =>
+        qualifierSimilarity(
+          measurement.qualifier ?? "",
+          alias,
+        ),
+    ),
+  );
+}
+
 function readMeasurements(value: unknown): Measurement[] {
   if (!Array.isArray(value) || value.length > MAX_FACTS) return [];
 
@@ -181,6 +350,12 @@ function readMeasurements(value: unknown): Measurement[] {
     const rawFragment = text(row.rawFragment);
     const valueNumeric = finiteNumber(row.valueNumeric);
     const valueText = row.valueText === null ? null : text(row.valueText) || null;
+    const qualifier =
+      row.qualifier === null ||
+      row.qualifier === undefined
+        ? null
+        : text(row.qualifier) ||
+          null;
     const confidence = finiteNumber(row.confidence);
     const exactValueCount = Number(valueNumeric !== null) + Number(valueText !== null);
 
@@ -188,6 +363,15 @@ function readMeasurements(value: unknown): Measurement[] {
       !/^[a-z][a-z0-9_]{0,79}$/.test(parameterCode) ||
       !/^[a-z][a-z0-9_]{0,39}$/.test(unit) ||
       !rawFragment ||
+      (
+        qualifier !== null &&
+        !rawFragment
+          .toLocaleLowerCase()
+          .includes(
+            qualifier
+              .toLocaleLowerCase(),
+          )
+      ) ||
       exactValueCount !== 1 ||
       confidence === null ||
       confidence < 0 ||
@@ -196,7 +380,15 @@ function readMeasurements(value: unknown): Measurement[] {
       continue;
     }
 
-    const key = `${parameterCode}|${unit}|${valueNumeric ?? valueText ?? ""}`;
+    const key = [
+      parameterCode,
+      unit,
+      valueNumeric ?? valueText ?? "",
+      qualifier ?? "",
+      normalizeQualifierText(
+        rawFragment,
+      ),
+    ].join("|");
     if (seen.has(key)) continue;
     seen.add(key);
 
@@ -205,6 +397,7 @@ function readMeasurements(value: unknown): Measurement[] {
       unit,
       valueNumeric,
       valueText,
+      qualifier,
       rawFragment,
       confidence,
       approximate: row.approximate === true,
@@ -453,8 +646,24 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
   const bindingValue = asRecord(profile.metadata_json).sourceValueBindingsV1;
   const bindings: SourceBinding[] | null = Array.isArray(bindingValue) ? bindingValue.map((value) => {
     const row = asRecord(value);
-    const binding: SourceBinding = { parameterDefinitionId: text(row.parameterDefinitionId), valueObjectId: text(row.valueObjectId),
-      sourceResolution: parseSourceResolution(row.sourceResolution) };
+    const binding: SourceBinding = {
+      parameterDefinitionId:
+        text(
+          row.parameterDefinitionId,
+        ),
+      valueObjectId:
+        text(
+          row.valueObjectId,
+        ),
+      sourceResolution:
+        parseSourceResolution(
+          row.sourceResolution,
+        ),
+      targetQualification:
+        parseSourceTargetQualification(
+          row.targetQualification,
+        ),
+    };
     if (!definitions.some((item) => item.id === binding.parameterDefinitionId) ||
         !assignments.some((item) => item.parameter_definition_id === binding.parameterDefinitionId && item.value_object_id === binding.valueObjectId)) {
       throw new Error("SOURCE_BINDING_PROFILE_MISMATCH");
@@ -465,17 +674,35 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
     throw new Error("SOURCE_BINDING_PROFILE_INVALID");
   }
 
+  if (bindings) {
+    validateSourceBindingTargetQualifications(
+      bindings,
+    );
+  }
+
   const declaredPairs = bindings
     ? bindings.map((binding) => ({
         parameterDefinitionId: binding.parameterDefinitionId,
         valueObjectId: binding.valueObjectId,
         sourceResolution: binding.sourceResolution,
+        targetQualification:
+          binding.targetQualification,
       }))
     : definitions.map((definition) => {
         const matchingAssignments = assignments.filter((assignment) => assignment.parameter_definition_id === definition.id);
         if (matchingAssignments.length === 0) throw new Error(`E03_PROFILE_ROUTE_MISSING:${definition.parameter_code}`);
         if (matchingAssignments.length !== 1) throw new Error(`E03_PROFILE_ROUTE_AMBIGUOUS_FOR_CURRENT_WRITER:${definition.parameter_code}`);
-        return { parameterDefinitionId: definition.id, valueObjectId: matchingAssignments[0].value_object_id, sourceResolution: null };
+        return {
+          parameterDefinitionId:
+            definition.id,
+          valueObjectId:
+            matchingAssignments[0]
+              .value_object_id,
+          sourceResolution:
+            null,
+          targetQualification:
+            undefined,
+        };
       });
 
   const inputFingerprint = sha256({ measurements, profileId: profile.id, bindings, sourceText, actorId,
@@ -506,50 +733,373 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
       );
     }
   } else {
-    const plans: { measurement: Measurement; targetId: string; provenance?: JsonRecord }[] = [];
-    if (bindings) await validateSnapshotBindings(bindings);
+    const plans: {
+      measurement: Measurement;
+      targetId: string;
+      provenance?: JsonRecord;
+      targetQualification?: SourceTargetQualification;
+    }[] = [];
 
-    for (const pair of declaredPairs) {
-      const definition = definitions.find((row) => row.id === pair.parameterDefinitionId);
-      if (!definition) throw new Error("SOURCE_BINDING_PROFILE_MISMATCH");
-      const explicit = measurements.filter((row) => row.parameterCode === definition.parameter_code);
-      const resolution = pair.sourceResolution;
+    if (bindings) {
+      await validateSnapshotBindings(
+        bindings,
+      );
+    }
 
-      if (resolution?.mode !== "snapshot_only" && explicit.length > 1) throw new Error(`SOURCE_EXPLICIT_VALUE_AMBIGUOUS:${definition.parameter_code}`);
-      if (resolution?.mode !== "snapshot_only" && explicit.length === 1) {
-        plans.push({ measurement: explicit[0], targetId: pair.valueObjectId });
-        continue;
-      }
-      if (!resolution) {
-        missingValues.push(
-          makeMissingBundleValue(
-            definition,
-            pair.valueObjectId,
-            "EXPLICIT_VALUE_MISSING",
-          ),
-        );
-        continue;
-      }
+    const planSnapshotFallback =
+      async (
+        pair:
+          typeof declaredPairs[number],
+        definition:
+          ParameterDefinitionRow,
+      ) => {
+        const resolution =
+          pair.sourceResolution;
 
-      try {
-        const resolved = await resolveSnapshotValue({ appUserId: input.appUserId, actorId,
-          effectiveAt: text(activityData.started_at), parameterDefinitionId: pair.parameterDefinitionId, resolution });
-        plans.push({ targetId: pair.valueObjectId, provenance: resolved.provenance,
-          measurement: { parameterCode: definition.parameter_code, unit: resolved.unit, valueNumeric: resolved.value,
-            valueText: null, rawFragment: sourceText, confidence: Math.min(resolved.confidence, candidate.confidence), approximate: false } });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (message.startsWith("SOURCE_SNAPSHOT_NOT_FOUND") || message.startsWith("SOURCE_SNAPSHOT_EXPIRED")) {
+        if (!resolution) {
           missingValues.push(
             makeMissingBundleValue(
               definition,
               pair.valueObjectId,
-              "SNAPSHOT_VALUE_MISSING",
+              "EXPLICIT_VALUE_MISSING",
             ),
           );
+          return;
+        }
+
+        try {
+          const resolved =
+            await resolveSnapshotValue({
+              appUserId:
+                input.appUserId,
+              actorId,
+              effectiveAt:
+                text(
+                  activityData.started_at,
+                ),
+              parameterDefinitionId:
+                pair.parameterDefinitionId,
+              resolution,
+            });
+
+          plans.push({
+            targetId:
+              pair.valueObjectId,
+            targetQualification:
+              pair.targetQualification,
+            provenance:
+              resolved.provenance,
+            measurement: {
+              parameterCode:
+                definition.parameter_code,
+              unit:
+                resolved.unit,
+              valueNumeric:
+                resolved.value,
+              valueText:
+                null,
+              qualifier:
+                null,
+              rawFragment:
+                sourceText,
+              confidence:
+                Math.min(
+                  resolved.confidence,
+                  candidate.confidence,
+                ),
+              approximate:
+                false,
+            },
+          });
+        } catch (error) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : String(error);
+
+          if (
+            message.startsWith(
+              "SOURCE_SNAPSHOT_NOT_FOUND",
+            ) ||
+            message.startsWith(
+              "SOURCE_SNAPSHOT_EXPIRED",
+            )
+          ) {
+            missingValues.push(
+              makeMissingBundleValue(
+                definition,
+                pair.valueObjectId,
+                "SNAPSHOT_VALUE_MISSING",
+              ),
+            );
+            return;
+          }
+
+          throw error;
+        }
+      };
+
+    for (const definition of definitions) {
+      const pairs =
+        declaredPairs.filter(
+          (pair) =>
+            pair.parameterDefinitionId ===
+            definition.id,
+        );
+
+      if (pairs.length === 0) {
+        continue;
+      }
+
+      const explicit =
+        measurements.filter(
+          (row) =>
+            row.parameterCode ===
+            definition.parameter_code,
+        );
+
+      const qualificationEnabled =
+        pairs.some(
+          (pair) =>
+            pair.targetQualification !==
+            undefined,
+        );
+
+      if (!qualificationEnabled) {
+        // Backward compatibility: profiles authored before target
+        // qualification keep the historical fan-out behavior.
+        for (const pair of pairs) {
+          const resolution =
+            pair.sourceResolution;
+
+          if (
+            resolution?.mode !==
+              "snapshot_only" &&
+            explicit.length > 1
+          ) {
+            throw new Error(
+              `SOURCE_EXPLICIT_VALUE_AMBIGUOUS:${definition.parameter_code}`,
+            );
+          }
+
+          if (
+            resolution?.mode !==
+              "snapshot_only" &&
+            explicit.length === 1
+          ) {
+            plans.push({
+              measurement:
+                explicit[0],
+              targetId:
+                pair.valueObjectId,
+            });
+            continue;
+          }
+
+          await planSnapshotFallback(
+            pair,
+            definition,
+          );
+        }
+
+        continue;
+      }
+
+      const assignedPairKeys =
+        new Set<string>();
+
+      const usedMeasurementIndexes =
+        new Set<number>();
+
+      const directEligiblePairs =
+        pairs.filter(
+          (pair) =>
+            pair
+              .sourceResolution
+              ?.mode !==
+            "snapshot_only",
+        );
+
+      for (
+        let index = 0;
+        index < explicit.length;
+        index += 1
+      ) {
+        const measurement =
+          explicit[index];
+
+        if (!measurement.qualifier) {
           continue;
         }
-        throw error;
+
+        const ranked =
+          directEligiblePairs
+            .map(
+              (pair) => ({
+                pair,
+                score:
+                  qualificationScore(
+                    measurement,
+                    pair
+                      .targetQualification,
+                  ),
+              }),
+            )
+            .filter(
+              (item) =>
+                item.score >=
+                0.58,
+            )
+            .sort(
+              (left, right) =>
+                right.score -
+                left.score,
+            );
+
+        if (ranked.length === 0) {
+          continue;
+        }
+
+        if (
+          ranked.length > 1 &&
+          Math.abs(
+            ranked[0].score -
+              ranked[1].score,
+          ) <
+            0.08
+        ) {
+          throw new Error(
+            `SOURCE_EXPLICIT_QUALIFIER_AMBIGUOUS:${definition.parameter_code}`,
+          );
+        }
+
+        const pair =
+          ranked[0].pair;
+
+        const pairKey =
+          `${pair.parameterDefinitionId}|${pair.valueObjectId}`;
+
+        if (
+          assignedPairKeys.has(
+            pairKey,
+          )
+        ) {
+          throw new Error(
+            `SOURCE_EXPLICIT_TARGET_MULTIPLE_VALUES:${definition.parameter_code}:${pair.valueObjectId}`,
+          );
+        }
+
+        assignedPairKeys.add(
+          pairKey,
+        );
+        usedMeasurementIndexes.add(
+          index,
+        );
+
+        plans.push({
+          measurement,
+          targetId:
+            pair.valueObjectId,
+          targetQualification:
+            pair.targetQualification,
+        });
+      }
+
+      const defaultPair =
+        directEligiblePairs.find(
+          (pair) =>
+            pair
+              .targetQualification
+              ?.mode ===
+            "default",
+        );
+
+      const unqualifiedIndexes =
+        explicit
+          .map(
+            (
+              measurement,
+              index,
+            ) => ({
+              measurement,
+              index,
+            }),
+          )
+          .filter(
+            ({ measurement, index }) =>
+              !usedMeasurementIndexes.has(
+                index,
+              ) &&
+              measurement.qualifier ===
+                null,
+          )
+          .map(
+            ({ index }) =>
+              index,
+          );
+
+      if (
+        defaultPair &&
+        unqualifiedIndexes.length >
+          1
+      ) {
+        throw new Error(
+          `SOURCE_UNQUALIFIED_VALUE_AMBIGUOUS:${definition.parameter_code}`,
+        );
+      }
+
+      if (
+        defaultPair &&
+        unqualifiedIndexes.length ===
+          1
+      ) {
+        const pairKey =
+          `${defaultPair.parameterDefinitionId}|${defaultPair.valueObjectId}`;
+
+        if (
+          !assignedPairKeys.has(
+            pairKey,
+          )
+        ) {
+          const index =
+            unqualifiedIndexes[0];
+
+          assignedPairKeys.add(
+            pairKey,
+          );
+          usedMeasurementIndexes.add(
+            index,
+          );
+
+          plans.push({
+            measurement:
+              explicit[index],
+            targetId:
+              defaultPair
+                .valueObjectId,
+            targetQualification:
+              defaultPair
+                .targetQualification,
+          });
+        }
+      }
+
+      for (const pair of pairs) {
+        const pairKey =
+          `${pair.parameterDefinitionId}|${pair.valueObjectId}`;
+
+        if (
+          assignedPairKeys.has(
+            pairKey,
+          )
+        ) {
+          continue;
+        }
+
+        await planSnapshotFallback(
+          pair,
+          definition,
+        );
       }
     }
 
@@ -593,8 +1143,15 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
           parameterDefinitionId: definition.id,
           parameterAssignmentId: assignment.id,
           targetValueObjectId: target.id,
+          measurementQualifier:
+            measurement.qualifier,
+          targetQualification:
+            plan.targetQualification ??
+            null,
           approximate: measurement.approximate,
-          routingResolution: "unique_system_assignment_within_active_profile_v1",
+          routingResolution: plan.targetQualification
+            ? "qualified_target_binding_v1"
+            : "unique_system_assignment_within_active_profile_v1",
         },
       };
       if (measurement.valueNumeric !== null) row.valueNumeric = measurement.valueNumeric;

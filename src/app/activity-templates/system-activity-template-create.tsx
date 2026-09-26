@@ -1,6 +1,10 @@
 "use client";
 import { SourceSnapshotSettings } from "./source-snapshot-settings";
-import { parseSourceResolution, type SourceResolution } from "@/lib/activity/source-snapshot-resolution";
+import {
+  parseSourceResolution,
+  parseSourceTargetQualification,
+  type SourceResolution,
+} from "@/lib/activity/source-snapshot-resolution";
 
 import {
   useCallback,
@@ -87,6 +91,9 @@ type Copy = {
   objectSearch: string;
   noObjects: string;
   selected: string;
+  explicitQualifier: string;
+  explicitQualifierHelp: string;
+  defaultTargetConflict: string;
   publish: string;
   publishing: string;
   cancel: string;
@@ -156,6 +163,12 @@ const EN: Copy = {
     "No active System leaf observation objects found.",
   selected:
     "Selected",
+  explicitQualifier:
+    "Require explicit qualifier",
+  explicitQualifierHelp:
+    "When enabled, this target receives a value only when the source explicitly says what the value refers to. The label may come from text, an image/OCR label, or a structured external source.",
+  defaultTargetConflict:
+    "For one parameter, at most one observation object may accept an unqualified value.",
   publish:
     "Publish system typical activity",
   publishing:
@@ -232,6 +245,12 @@ const RU: Copy = {
     "Системные листовые ОН не найдены.",
   selected:
     "Выбрано",
+  explicitQualifier:
+    "Требует явного указания",
+  explicitQualifierHelp:
+    "Если включено, значение попадёт в этот ОН только когда источник явно указывает, к какому показателю относится число: текстом, подписью на изображении/OCR или структурированным полем внешнего источника.",
+  defaultTargetConflict:
+    "Для одного параметра только один ОН может принимать значение без явного указания.",
   publish:
     "Опубликовать системную типовую активность",
   publishing:
@@ -377,6 +396,116 @@ const TECHNICAL_CODE_RE =
 
 function newRequestId() {
   return crypto.randomUUID();
+}
+
+const GENERIC_MEASURE_WORDS: Record<string, string[]> = {
+  duration: [
+    "duration",
+    "time",
+    "продолжительность",
+    "длительность",
+    "тривалість",
+    "czas",
+    "dauer",
+    "duración",
+    "doba",
+  ],
+  mass: [
+    "mass",
+    "weight",
+    "масса",
+    "вес",
+    "маса",
+    "waga",
+    "gewicht",
+    "peso",
+    "hmotnost",
+  ],
+  count: [
+    "count",
+    "number",
+    "quantity",
+    "количество",
+    "число",
+    "кількість",
+    "liczba",
+    "anzahl",
+    "cantidad",
+    "počet",
+  ],
+  volume: [
+    "volume",
+    "объём",
+    "объем",
+    "обʼєм",
+    "objętość",
+    "volumen",
+    "objem",
+  ],
+};
+
+function qualifierAliasesForObject(
+  parameter: ParameterItem,
+  object: ValueObjectItem,
+) {
+  const normalize = (value: string) =>
+    value
+      .trim()
+      .replace(/\s+/g, " ");
+
+  const stripGenericMeasureWords = (
+    value: string,
+  ) => {
+    const generic = new Set(
+      [
+        parameter.parameterCode,
+        parameter.title,
+        ...(GENERIC_MEASURE_WORDS[
+          parameter.parameterCode
+        ] ?? []),
+      ]
+        .flatMap((item) =>
+          item
+            .toLocaleLowerCase()
+            .split(/\s+/)
+            .filter(Boolean),
+        ),
+    );
+
+    return normalize(
+      value
+        .split(/\s+/)
+        .filter(
+          (word) =>
+            !generic.has(
+              word
+                .toLocaleLowerCase()
+                .replace(
+                  /^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu,
+                  "",
+                ),
+            ),
+        )
+        .join(" "),
+    );
+  };
+
+  return Array.from(
+    new Set(
+      [
+        object.title,
+        object.titleEn,
+        stripGenericMeasureWords(
+          object.title,
+        ),
+        stripGenericMeasureWords(
+          object.titleEn,
+        ),
+      ]
+        .map(normalize)
+        .filter(Boolean),
+    ),
+  ).slice(0, 24);
 }
 
 export function
@@ -606,6 +735,17 @@ SystemActivityTemplateCreate({
       Record<
         string,
         string[]
+      >
+    >({});
+
+  const [
+    explicitQualifierByBinding,
+    setExplicitQualifierByBinding,
+  ] =
+    useState<
+      Record<
+        string,
+        boolean
       >
     >({});
 
@@ -1116,6 +1256,22 @@ SystemActivityTemplateCreate({
         return next;
       },
     );
+
+    setExplicitQualifierByBinding(
+      (
+        current,
+      ) =>
+        Object.fromEntries(
+          Object.entries(
+            current,
+          ).filter(
+            ([key]) =>
+              !key.startsWith(
+                `${parameterDefinitionId}|`,
+              ),
+          ),
+        ),
+    );
   }
 
   function toggleObject(
@@ -1124,6 +1280,9 @@ SystemActivityTemplateCreate({
     valueObjectId:
       string,
   ) {
+    const bindingKey =
+      `${parameterDefinitionId}|${valueObjectId}`;
+
     setSelectedObjectIdsByParameter(
       (
         current,
@@ -1134,10 +1293,13 @@ SystemActivityTemplateCreate({
           ] ??
           [];
 
-        const next =
+        const removing =
           existing.includes(
             valueObjectId,
-          )
+          );
+
+        const next =
+          removing
             ? existing.filter(
                 (id) =>
                   id !==
@@ -1148,11 +1310,81 @@ SystemActivityTemplateCreate({
                 valueObjectId,
               ];
 
+        setExplicitQualifierByBinding(
+          (
+            currentRules,
+          ) => {
+            if (removing) {
+              const nextRules = {
+                ...currentRules,
+              };
+              delete nextRules[
+                bindingKey
+              ];
+              return nextRules;
+            }
+
+            // First target is the default recipient for an unqualified value.
+            // Additional targets are explicit-only by default. This is safe for
+            // sleep phases, soup ingredients, body composition, and similar
+            // multi-target uses of one universal parameter.
+            return {
+              ...currentRules,
+              [bindingKey]:
+                existing.length >
+                0,
+            };
+          },
+        );
+
         return {
           ...current,
           [parameterDefinitionId]:
             next,
         };
+      },
+    );
+  }
+
+  function setExplicitQualifier(
+    parameterDefinitionId:
+      string,
+    valueObjectId:
+      string,
+    required:
+      boolean,
+  ) {
+    const selected =
+      selectedObjectIdsByParameter[
+        parameterDefinitionId
+      ] ??
+      [];
+
+    setExplicitQualifierByBinding(
+      (
+        current,
+      ) => {
+        const next = {
+          ...current,
+        };
+
+        if (!required) {
+          // Exactly one target at most may be the fallback for a bare value.
+          for (const objectId of selected) {
+            next[
+              `${parameterDefinitionId}|${objectId}`
+            ] =
+              objectId !==
+              valueObjectId;
+          }
+        } else {
+          next[
+            `${parameterDefinitionId}|${valueObjectId}`
+          ] =
+            true;
+        }
+
+        return next;
       },
     );
   }
@@ -1198,6 +1430,9 @@ SystemActivityTemplateCreate({
     setSelectedObjectIdsByParameter(
       {},
     );
+    setExplicitQualifierByBinding(
+      {},
+    );
     setMessage(
       "",
     );
@@ -1241,28 +1476,115 @@ SystemActivityTemplateCreate({
       setMessage(locale === "ru" ? "Выберите состояние и укажите конечное число-множитель для каждой расчётной связи." : "Select a state and a finite multiplier for each calculated mapping.");
       return;
     }
+
+    const parameterById =
+      new Map(
+        selectedParameters.map(
+          (parameter) => [
+            parameter.id,
+            parameter,
+          ],
+        ),
+      );
+
     const mappings =
       selectedParameterIds
         .flatMap(
           (
             parameterDefinitionId,
-          ) =>
-            (
+          ) => {
+            const parameter =
+              parameterById.get(
+                parameterDefinitionId,
+              );
+
+            if (!parameter) {
+              return [];
+            }
+
+            const all =
+              valueObjectsByParameter[
+                parameterDefinitionId
+              ] ??
+              [];
+
+            return (
               selectedObjectIdsByParameter[
                 parameterDefinitionId
               ] ??
               []
-            )
-              .map(
-                (
-                  valueObjectId,
-                ) => ({
+            ).map(
+              (
+                valueObjectId,
+              ) => {
+                const object =
+                  all.find(
+                    (item) =>
+                      item.id ===
+                      valueObjectId,
+                  );
+
+                if (!object) {
+                  throw new Error(
+                    "DIRECT_SYSTEM_TEMPLATE_SELECTED_OBJECT_MISSING",
+                  );
+                }
+
+                const targetQualification = {
+                  mode:
+                    explicitQualifierByBinding[
+                      `${parameterDefinitionId}|${valueObjectId}`
+                    ]
+                      ? "explicit_qualifier"
+                      : "default",
+                  aliases:
+                    qualifierAliasesForObject(
+                      parameter,
+                      object,
+                    ),
+                } as const;
+
+                parseSourceTargetQualification(
+                  targetQualification,
+                );
+
+                return {
                   parameterDefinitionId,
                   valueObjectId,
-                  sourceResolution: sourceSettings[`${parameterDefinitionId}|${valueObjectId}`],
-                }),
-              ),
+                  sourceResolution:
+                    sourceSettings[
+                      `${parameterDefinitionId}|${valueObjectId}`
+                    ],
+                  targetQualification,
+                };
+              },
+            );
+          },
         );
+
+    for (const parameterDefinitionId of selectedParameterIds) {
+      const rows =
+        mappings.filter(
+          (mapping) =>
+            mapping.parameterDefinitionId ===
+            parameterDefinitionId,
+        );
+
+      if (
+        rows.filter(
+          (mapping) =>
+            mapping
+              .targetQualification
+              .mode ===
+            "default",
+        ).length > 1
+      ) {
+        setMessage(
+          copy.defaultTargetConflict,
+        );
+        return;
+      }
+    }
 
     if (
       selectedParameterIds
@@ -2100,6 +2422,17 @@ SystemActivityTemplateCreate({
                     const key = `${parameter.id}|${objectId}`;
                     return <div key={key} className="mt-3">
                       <p className="text-xs font-bold">{parameter.title} → {all.find((item) => item.id === objectId)?.title ?? objectId}</p>
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        {
+                          explicitQualifierByBinding[
+                            key
+                          ]
+                            ? copy.explicitQualifier
+                            : locale === "ru"
+                              ? "Основное значение без уточнения"
+                              : "Default target for an unqualified value"
+                        }
+                      </p>
                       <SourceSnapshotSettings locale={locale} parameterId={parameter.id} parameterCode={parameter.parameterCode}
                         value={sourceSettings[key]} disabled={busy}
                         onChange={(value) => setSourceSettings((current) => ({ ...current, [key]: value }))} />
@@ -2155,19 +2488,12 @@ SystemActivityTemplateCreate({
                               );
 
                             return (
-                              <button
+                              <div
                                 key={
                                   item.id
                                 }
-                                type="button"
-                                onClick={() =>
-                                  toggleObject(
-                                    parameter.id,
-                                    item.id,
-                                  )
-                                }
                                 className={[
-                                  "flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left",
+                                  "flex w-full items-start gap-2 rounded-lg",
                                   checked
                                     ? "bg-[#eef3ff]"
                                     : "hover:bg-[#f5f6fb]",
@@ -2175,40 +2501,87 @@ SystemActivityTemplateCreate({
                                   " ",
                                 )}
                               >
-                                <span
-                                  className={[
-                                    "mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] font-black",
-                                    checked
-                                      ? "border-[#3b6ef8] bg-[#3b6ef8] text-white"
-                                      : "border-slate-300 bg-white text-transparent",
-                                  ].join(
-                                    " ",
-                                  )}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    toggleObject(
+                                      parameter.id,
+                                      item.id,
+                                    )
+                                  }
+                                  className="flex min-w-0 flex-1 items-start gap-3 px-3 py-2 text-left"
                                 >
-                                  ✓
-                                </span>
-
-                                <span className="min-w-0">
-                                  <span className="block text-sm font-bold text-slate-700">
-                                    {
-                                      item.title
-                                    }
+                                  <span
+                                    className={[
+                                      "mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] font-black",
+                                      checked
+                                        ? "border-[#3b6ef8] bg-[#3b6ef8] text-white"
+                                        : "border-slate-300 bg-white text-transparent",
+                                    ].join(
+                                      " ",
+                                    )}
+                                  >
+                                    ✓
                                   </span>
 
-                                  {
-                                    item
-                                      .titleEn !==
-                                    item
-                                      .title ? (
-                                      <span className="mt-0.5 block text-[11px] text-slate-400">
-                                        {
-                                          item.titleEn
-                                        }
-                                      </span>
-                                    ) : null
-                                  }
-                                </span>
-                              </button>
+                                  <span className="min-w-0 flex-1">
+                                    <span className="block text-sm font-bold text-slate-700">
+                                      {
+                                        item.title
+                                      }
+                                    </span>
+
+                                    {
+                                      item
+                                        .titleEn !==
+                                      item
+                                        .title ? (
+                                        <span className="mt-0.5 block text-[11px] text-slate-400">
+                                          {
+                                            item.titleEn
+                                          }
+                                        </span>
+                                      ) : null
+                                    }
+                                  </span>
+                                </button>
+
+                                {checked ? (
+                                  <label
+                                    className="mr-2 mt-2 flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-slate-500"
+                                    title={
+                                      copy.explicitQualifierHelp
+                                    }
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={
+                                        explicitQualifierByBinding[
+                                          `${parameter.id}|${item.id}`
+                                        ] ===
+                                        true
+                                      }
+                                      onChange={(
+                                        event,
+                                      ) =>
+                                        setExplicitQualifier(
+                                          parameter.id,
+                                          item.id,
+                                          event
+                                            .target
+                                            .checked,
+                                        )
+                                      }
+                                      className="h-4 w-4 accent-[#3b6ef8]"
+                                    />
+                                    <span>
+                                      {
+                                        copy.explicitQualifier
+                                      }
+                                    </span>
+                                  </label>
+                                ) : null}
+                              </div>
                             );
                           },
                         )

@@ -1,4 +1,11 @@
-import { parseSourceResolution, type SourceResolution } from "@/lib/activity/source-snapshot-resolution";
+import {
+  parseSourceResolution,
+  parseSourceTargetQualification,
+  validateSourceBindingTargetQualifications,
+  type SourceBinding,
+  type SourceResolution,
+  type SourceTargetQualification,
+} from "@/lib/activity/source-snapshot-resolution";
 import { NextResponse } from "next/server";
 
 import {
@@ -57,6 +64,7 @@ type MappingPair = {
   parameterDefinitionId: string;
   valueObjectId: string;
   sourceResolution?: SourceResolution;
+  targetQualification?: SourceTargetQualification;
 };
 
 type ValueObjectRow = {
@@ -116,41 +124,69 @@ function mappingArray(
     return [];
   }
 
-  return value.flatMap(
-    (item) => {
-      const row =
-        record(item);
+  const mappings =
+    value.flatMap(
+      (item) => {
+        const row =
+          record(item);
 
-      const parameterDefinitionId =
-        text(
-          row
-            .parameterDefinitionId,
-        );
+        const parameterDefinitionId =
+          text(
+            row
+              .parameterDefinitionId,
+          );
 
-      const valueObjectId =
-        text(
-          row
-            .valueObjectId,
-        );
+        const valueObjectId =
+          text(
+            row
+              .valueObjectId,
+          );
 
-      return (
-        UUID_RE.test(
-          parameterDefinitionId,
-        ) &&
-        UUID_RE.test(
-          valueObjectId,
-        )
-      )
-        ? [
-            {
-              parameterDefinitionId,
-              valueObjectId,
-              ...(row.sourceResolution === undefined ? {} : { sourceResolution: parseSourceResolution(row.sourceResolution) }),
-            },
-          ]
-        : [];
-    },
+        if (
+          !UUID_RE.test(
+            parameterDefinitionId,
+          ) ||
+          !UUID_RE.test(
+            valueObjectId,
+          )
+        ) {
+          return [];
+        }
+
+        const sourceResolution =
+          parseSourceResolution(
+            row.sourceResolution,
+          );
+
+        const targetQualification =
+          parseSourceTargetQualification(
+            row.targetQualification,
+          );
+
+        return [
+          {
+            parameterDefinitionId,
+            valueObjectId,
+            ...(sourceResolution
+              ? {
+                  sourceResolution,
+                }
+              : {}),
+            ...(targetQualification
+              ? {
+                  targetQualification,
+                }
+              : {}),
+          },
+        ];
+      },
+    );
+
+  validateSourceBindingTargetQualifications(
+    mappings as SourceBinding[],
   );
+
+  return mappings;
 }
 
 function errorResponse(
@@ -517,11 +553,35 @@ export async function POST(
   let mappings: MappingPair[];
   try {
     mappings = mappingArray(body.mappings);
-    if (!Array.isArray(body.mappings) || mappings.length !== body.mappings.length ||
-        mappings.some((mapping) => !parameterDefinitionIds.includes(mapping.parameterDefinitionId)) ||
-        new Set(mappings.map((mapping) => `${mapping.parameterDefinitionId}|${mapping.valueObjectId}`)).size !== mappings.length) {
-      throw new Error("SOURCE_BINDINGS_INVALID");
+    if (
+      !Array.isArray(
+        body.mappings,
+      ) ||
+      mappings.length !==
+        body.mappings.length ||
+      mappings.some(
+        (mapping) =>
+          !parameterDefinitionIds.includes(
+            mapping
+              .parameterDefinitionId,
+          ),
+      ) ||
+      new Set(
+        mappings.map(
+          (mapping) =>
+            `${mapping.parameterDefinitionId}|${mapping.valueObjectId}`,
+        ),
+      ).size !==
+        mappings.length
+    ) {
+      throw new Error(
+        "SOURCE_BINDINGS_INVALID",
+      );
     }
+
+    validateSourceBindingTargetQualifications(
+      mappings as SourceBinding[],
+    );
   } catch (error) {
     return errorResponse("SOURCE_BINDINGS_INVALID", error instanceof Error ? error.message : "Invalid bindings", 400);
   }

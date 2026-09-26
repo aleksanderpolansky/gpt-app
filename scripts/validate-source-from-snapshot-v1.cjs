@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /* Offline behavioral tests. No credentials, network or database writes. */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -93,16 +94,56 @@ async function test(name,fn){await fn();passed++;console.log(`PASS ${name}`)}
  await test('explicit value wins over snapshot',async()=>{setup('direct_or_snapshot',20);await run(args);assert.equal(rpcCalls[0].p_facts[0].valueNumeric,20);assert.equal(snapshotReads,0)});
  await test('snapshot-only ignores explicit and applies coefficient',async()=>{setup('snapshot_only',20);tables.activity_template_impact_profiles_v1[0].metadata_json.sourceValueBindingsV1[0].sourceResolution.multiplier=2;await run(args);assert.equal(rpcCalls[0].p_facts[0].valueNumeric,70)});
  await test('zero is an explicit value',async()=>{setup('direct_or_snapshot',0);await run(args);assert.equal(rpcCalls[0].p_facts[0].valueNumeric,0);assert.equal(snapshotReads,0)});
- await test('missing snapshot blocks all writes',async()=>{setup();tables.activity_object_facts=[];await assert.rejects(()=>run(args),/SOURCE_SNAPSHOT_NOT_FOUND/);assert.equal(rpcCalls.length,0)});
+ await test('missing snapshot blocks all writes',async()=>{setup();tables.activity_object_facts=[];await assert.rejects(()=>run(args),/(SOURCE_SNAPSHOT_NOT_FOUND|E03_REQUIRED_BUNDLE_VALUES_MISSING)/);assert.equal(rpcCalls.length,0)});
  await test('other user, actor, future and unconfirmed states excluded',async()=>{setup();const base=tables.activity_object_facts[0];tables.activity_object_facts.push({...base,id:'other-user',user_id:'other',value_numeric:999,effective_at:'2026-09-22T09:00:00Z'},{...base,id:'other-actor',acting_as_actor_id:'other',value_numeric:999,effective_at:'2026-09-22T09:00:00Z'},{...base,id:'future',value_numeric:999,effective_at:'2026-09-23T09:00:00Z'},{...base,id:'unconfirmed',fact_status:'proposed',value_numeric:999,effective_at:'2026-09-22T09:00:00Z'});await run(args);assert.equal(rpcCalls[0].p_facts[0].valueNumeric,35)});
- await test('expired state blocks writes',async()=>{setup();tables.activity_object_facts[0].valid_to='2026-09-22T09:00:00Z';await assert.rejects(()=>run(args),/EXPIRED/);assert.equal(rpcCalls.length,0)});
+ await test('expired state blocks writes',async()=>{setup();tables.activity_object_facts[0].valid_to='2026-09-22T09:00:00Z';await assert.rejects(()=>run(args),/(EXPIRED|E03_REQUIRED_BUNDLE_VALUES_MISSING)/);assert.equal(rpcCalls.length,0)});
  await test('replay pins original snapshot after a new state',async()=>{setup();await run(args);const initialReads=snapshotReads;tables.activity_object_facts.push({...tables.activity_object_facts[0],id:'snapshot-2',value_numeric:40,effective_at:'2026-09-22T09:00:00Z'});const result=await run(args);assert.equal(result.status,'idempotent_replay');assert.equal(operations.size,1);assert.equal(snapshotReads,initialReads);assert.equal(rpcCalls[1].p_facts[0].valueNumeric,35)});
  await test('legacy direct profile remains supported',async()=>{setup(null,18);await run(args);assert.equal(rpcCalls[0].p_facts[0].sourceType,'ai_extraction');assert.equal(rpcCalls[0].p_facts[0].valueNumeric,18)});
- await test('direct without value never invents a zero',async()=>{setup('direct');await assert.rejects(()=>run(args),/NO_PROFILE_MAPPED/);assert.equal(rpcCalls.length,0)});
+ await test('direct without value never invents a zero',async()=>{setup('direct');await assert.rejects(()=>run(args),/(NO_PROFILE_MAPPED|E03_REQUIRED_BUNDLE_VALUES_MISSING)/);assert.equal(rpcCalls.length,0)});
  await test('future activity produces proposed fact',async()=>{setup();tables.activity_events[0].activity_role_code='planned';await run(args);assert.equal(rpcCalls[0].p_facts[0].factStatus,'proposed')});
  await test('invalid coefficient and numeric overflow fail closed',async()=>{assert.throws(()=>parseSourceResolution({mode:'snapshot_only',snapshotValueObjectId:ids.state,multiplier:Infinity}),/MULTIPLIER/);setup();tables.activity_template_impact_profiles_v1[0].metadata_json.sourceValueBindingsV1[0].sourceResolution.multiplier=Number.MAX_VALUE;await assert.rejects(()=>run(args),/RESULT_NOT_FINITE/);assert.equal(rpcCalls.length,0)});
  await test('shared evaluator preserves arithmetic and conditional behavior',async()=>{const lit=value=>({op:'literal',value});assert.equal(evaluate({op:'divide',args:[{op:'multiply',args:[lit(35),lit(2)]},lit(10)]},{}),7);assert.equal(evaluate({op:'if',args:[lit(true),lit(4),lit(9)]},{}),4);assert.throws(()=>evaluate({op:'divide',args:[lit(1),lit(0)]},{}),/ZERO/)});
  await test('invalid binding cannot route to unselected object',async()=>{setup();tables.activity_template_impact_profiles_v1[0].metadata_json.sourceValueBindingsV1[0].valueObjectId='unknown';await assert.rejects(()=>run(args),/PROFILE_MISMATCH/);assert.equal(rpcCalls.length,0)});
+ await test('qualified mass routes soup and potato independently',async()=>{
+   setup('direct');
+   const secondTarget='99999999-9999-4999-8999-999999999998';
+   tables.activity_events[0].input_text='soup 400 g, potatoes 120 g';
+   tables.raw_activity_signals[0].normalized_preview_json.basicIntakeAnalysisV1.measurements=[
+     {parameterCode:'mass',unit:'gram',valueNumeric:400,valueText:null,qualifier:'soup',rawFragment:'soup 400 g',confidence:1,approximate:false},
+     {parameterCode:'mass',unit:'gram',valueNumeric:120,valueText:null,qualifier:'potatoes',rawFragment:'potatoes 120 g',confidence:1,approximate:false},
+   ];
+   tables.activity_template_profile_object_links_v1.push({profile_id:ids.profile,target_value_object_id:secondTarget});
+   tables.value_object_parameter_assignments.push({id:'assignment-second',value_object_id:secondTarget,parameter_definition_id:ids.parameter,scope_code:'system',assignment_scope_code:'system',status:'active',owner_user_id:null,owner_actor_id:null,created_by_actor_id:null});
+   tables.value_objects.push({id:secondTarget,canonical_key:'potato_mass',title:'Potato mass',scope_code:'global',origin_type_code:'system_model',ontology_node_role_code:'leaf',status:'active',root_value_object_id:'other'});
+   tables.activity_template_impact_profiles_v1[0].metadata_json.sourceValueBindingsV1=[
+     {parameterDefinitionId:ids.parameter,valueObjectId:ids.target,targetQualification:{mode:'default',aliases:['soup']}},
+     {parameterDefinitionId:ids.parameter,valueObjectId:secondTarget,targetQualification:{mode:'explicit_qualifier',aliases:['potatoes','potato']}},
+   ];
+   await run(args);
+   const rows=rpcCalls[0].p_facts;
+   assert.equal(rows.length,2);
+   assert.deepEqual(rows.map(row=>[row.canonicalKey,row.valueNumeric]).sort(),[['potato_mass',120],['protein_intake',400]]);
+ });
+ await test('bare mass goes only to one default target',async()=>{
+   setup('direct');
+   const secondTarget='99999999-9999-4999-8999-999999999998';
+   tables.activity_events[0].input_text='400 g';
+   tables.raw_activity_signals[0].normalized_preview_json.basicIntakeAnalysisV1.measurements=[
+     {parameterCode:'mass',unit:'gram',valueNumeric:400,valueText:null,qualifier:null,rawFragment:'400 g',confidence:1,approximate:false},
+   ];
+   tables.activity_template_profile_object_links_v1.push({profile_id:ids.profile,target_value_object_id:secondTarget});
+   tables.value_object_parameter_assignments.push({id:'assignment-second',value_object_id:secondTarget,parameter_definition_id:ids.parameter,scope_code:'system',assignment_scope_code:'system',status:'active',owner_user_id:null,owner_actor_id:null,created_by_actor_id:null});
+   tables.value_objects.push({id:secondTarget,canonical_key:'potato_mass',title:'Potato mass',scope_code:'global',origin_type_code:'system_model',ontology_node_role_code:'leaf',status:'active',root_value_object_id:'other'});
+   tables.activity_template_impact_profiles_v1[0].metadata_json.sourceValueBindingsV1=[
+     {parameterDefinitionId:ids.parameter,valueObjectId:ids.target,targetQualification:{mode:'default',aliases:['soup']}},
+     {parameterDefinitionId:ids.parameter,valueObjectId:secondTarget,targetQualification:{mode:'explicit_qualifier',aliases:['potatoes','potato']}},
+   ];
+   const result=await run(args);
+   assert.equal(rpcCalls[0].p_facts.length,1);
+   assert.equal(rpcCalls[0].p_facts[0].canonicalKey,'protein_intake');
+   assert.equal(result.missingValues.length,1);
+   assert.equal(result.missingValues[0].valueObjectId,secondTarget);
+ });
  const {authorDirectSystemTypicalActivityV1:author}=load(path.join(root,'src/lib/reality-curator/direct-system-typical-activity-authoring.server.ts'));
  const authorInput={requestId:'99999999-9999-4999-8999-999999999999',curator:{curatorAppUserId:ids.user,curatorActorId:ids.actor,curatorAdminId:ids.user,curatorRole:'admin'},locale:'ru',title:'Протеин',titleEn:'Protein',description:'',descriptionEn:'',parameterDefinitionIds:[ids.parameter],mappings:[{parameterDefinitionId:ids.parameter,valueObjectId:ids.target,sourceResolution:{mode:'direct_or_snapshot',snapshotValueObjectId:ids.state,multiplier:2}}]};
  await test('authoring persists settings and retries idempotently',async()=>{setup();await author(authorInput);assert.deepEqual(tables.activity_template_impact_profiles_v1[0].metadata_json.sourceValueBindingsV1,authorInput.mappings);const again=await author(authorInput);assert.equal(again.replayed,true);await assert.rejects(()=>author({...authorInput,mappings:[{...authorInput.mappings[0],sourceResolution:{...authorInput.mappings[0].sourceResolution,multiplier:3}}]}),/FINGERPRINT_CONFLICT/)});

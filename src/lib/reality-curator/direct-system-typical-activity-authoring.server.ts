@@ -1,4 +1,11 @@
-import { parseSourceResolution, type SourceResolution } from "../activity/source-snapshot-resolution";
+import {
+  parseSourceResolution,
+  parseSourceTargetQualification,
+  validateSourceBindingTargetQualifications,
+  type SourceBinding,
+  type SourceResolution,
+  type SourceTargetQualification,
+} from "../activity/source-snapshot-resolution";
 import { validateSnapshotBindings } from "../activity/source-snapshot-resolution.server";
 import crypto from "node:crypto";
 
@@ -19,6 +26,7 @@ type MappingPair = {
   parameterDefinitionId: string;
   valueObjectId: string;
   sourceResolution?: SourceResolution;
+  targetQualification?: SourceTargetQualification;
 };
 
 type CuratorIdentity = {
@@ -111,13 +119,40 @@ function normalizedMappings(
     const mapping
     of mappings
   ) {
+    const sourceResolution =
+      parseSourceResolution(
+        mapping.sourceResolution,
+      );
+
+    const targetQualification =
+      parseSourceTargetQualification(
+        mapping.targetQualification,
+      );
+
     byPair.set(
       `${mapping.parameterDefinitionId}|${mapping.valueObjectId}`,
-      { ...mapping, ...(parseSourceResolution(mapping.sourceResolution) ? { sourceResolution: parseSourceResolution(mapping.sourceResolution) } : {}) },
+      {
+        parameterDefinitionId:
+          mapping
+            .parameterDefinitionId,
+        valueObjectId:
+          mapping
+            .valueObjectId,
+        ...(sourceResolution
+          ? {
+              sourceResolution,
+            }
+          : {}),
+        ...(targetQualification
+          ? {
+              targetQualification,
+            }
+          : {}),
+      },
     );
   }
 
-  return [
+  const normalized = [
     ...byPair.values(),
   ].sort(
     (
@@ -131,6 +166,12 @@ function normalizedMappings(
         right.valueObjectId,
       ),
   );
+
+  validateSourceBindingTargetQualifications(
+    normalized as SourceBinding[],
+  );
+
+  return normalized;
 }
 
 function directFingerprint(
@@ -1036,6 +1077,10 @@ authorDirectSystemTypicalActivityV1(
     normalizedMappings(
       input.mappings,
     );
+
+  validateSourceBindingTargetQualifications(
+    mappings as SourceBinding[],
+  );
 
   if (
     parameterDefinitionIds.length ===
