@@ -4,6 +4,7 @@ import { getActivityUserContext } from "../../../../../lib/activity/activityUser
 import { supabase } from "../../../../../lib/supabase";
 import { listPublicGiftCertificates } from "@/app/certificates/gift-certificate-data";
 import { isDashboardAnalyticsV4Supported } from "@/lib/dashboard/analytics-contract";
+import { getActivityParameterPresentation } from "@/lib/activity/activity-parameter-presentation";
 import { resolveLocalizedContentField } from "@/lib/localization/contentLocalization";
 import {
   localizeGlobalSystemValueObject,
@@ -679,10 +680,16 @@ async function buildObservationFactSeriesResponse(input: {
         fallback: fallbackTitle,
       }) ?? fallbackTitle;
 
-  const parameterTitle =
+  const parameterFallbackTitle =
     asString(definitionRow.title) ??
     input.config.parameterTitle ??
     parameterCode;
+  const parameterTitle = getActivityParameterPresentation(
+    parameterCode,
+    input.locale,
+    parameterFallbackTitle,
+    null,
+  ).title;
 
   let rollupMetadata: ReturnType<
     typeof readMeasurementRollupTargetMetadataV1

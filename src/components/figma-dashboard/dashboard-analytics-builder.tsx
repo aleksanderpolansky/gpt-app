@@ -1857,6 +1857,11 @@ function AnalyticsBlockCard({
                         <YAxis
                           domain={band.domain}
                           ticks={band.ticks}
+                          interval={
+                            band.ticks.length <= 8
+                              ? 0
+                              : "preserveStartEnd"
+                          }
                           allowDecimals={band.family !== "count"}
                           tickFormatter={(value) =>
                             formatMultiSeriesBandTick(
