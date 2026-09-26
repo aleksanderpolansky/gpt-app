@@ -17,6 +17,7 @@ type PersistedMissingValue = {
   parameterCode: string;
   valueObjectId: string;
   reasonCode: string;
+  requirementKind: "required" | "optional_explicit";
 };
 
 type ParameterDefinitionRow = {
@@ -170,6 +171,11 @@ function readPersistedMissingValues(value: unknown): PersistedMissingValue[] {
       parameterCode,
       valueObjectId,
       reasonCode,
+      requirementKind:
+        row.requirementKind ===
+        "optional_explicit"
+          ? "optional_explicit"
+          : "required",
     });
   }
 
@@ -790,7 +796,13 @@ export async function supplementMissingBasicIntakeSourceFactE03V1(input: {
   });
 
   const completeness: "complete" | "partial" =
-    remainingOptions.length === 0 ? "complete" : "partial";
+    remainingOptions.some(
+      (row) =>
+        row.requirementKind !==
+        "optional_explicit",
+    )
+      ? "partial"
+      : "complete";
 
   const nextMaterialization = {
     ...context.materialization,

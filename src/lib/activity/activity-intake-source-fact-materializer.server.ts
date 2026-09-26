@@ -83,9 +83,22 @@ export type E03MissingBundleValue = {
   parameterCode: string;
   valueObjectId: string;
   reasonCode: "EXPLICIT_VALUE_MISSING" | "SNAPSHOT_VALUE_MISSING";
+  requirementKind?: "required" | "optional_explicit";
   valueTypeCode?: string;
   canonicalUnitCode?: string | null;
   targetTitle?: string;
+};
+
+export type E03PlannedBundleValue = {
+  parameterDefinitionId: string;
+  parameterCode: string;
+  valueObjectId: string;
+  targetTitle: string;
+  sourceUnit: string;
+  valueNumeric: number | null;
+  valueText: string | null;
+  qualifier: string | null;
+  rawFragment: string;
 };
 
 type WriterRow = {
@@ -118,6 +131,7 @@ export type E03SourceFactMaterializationResult = {
   factIds: string[];
   measureIds: string[];
   ignoredParameterCodes: string[];
+  plannedValues: E03PlannedBundleValue[];
   missingValues: E03MissingBundleValue[];
   completeness: "complete" | "partial";
   writerResult: unknown;
@@ -134,6 +148,7 @@ export type E03SourceFactPreflightResult = {
   profileVersionNo: number;
   factsPlanned: number;
   ignoredParameterCodes: string[];
+  plannedValues: E03PlannedBundleValue[];
   missingValues: E03MissingBundleValue[];
   completeness: "complete" | "partial" | "missing_all";
   reasonCode?: "E03_REQUIRED_BUNDLE_VALUES_MISSING";
@@ -622,6 +637,7 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
     definition: ParameterDefinitionRow,
     valueObjectId: string,
     reasonCode: E03MissingBundleValue["reasonCode"],
+    requirementKind: E03MissingBundleValue["requirementKind"] = "required",
   ): E03MissingBundleValue => {
     const target = objectById.get(valueObjectId);
     if (!target) {
@@ -632,6 +648,7 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
       parameterCode: definition.parameter_code,
       valueObjectId,
       reasonCode,
+      requirementKind,
       valueTypeCode: definition.value_type_code,
       canonicalUnitCode: definition.canonical_unit_code,
       targetTitle: target.title,
@@ -705,6 +722,19 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
         };
       });
 
+  const missingRequirementKind = (
+    pair: typeof declaredPairs[number],
+  ): E03MissingBundleValue["requirementKind"] => {
+    if (
+      pair.targetQualification?.mode ===
+        "explicit_qualifier" &&
+      !pair.sourceResolution
+    ) {
+      return "optional_explicit";
+    }
+    return "required";
+  };
+
   const inputFingerprint = sha256({ measurements, profileId: profile.id, bindings, sourceText, actorId,
     startedAt: activityData.started_at, temporalDirection });
   const previous = asRecord(analysis.sourceFactMaterializationV1);
@@ -729,6 +759,7 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
           pair.sourceResolution
             ? "SNAPSHOT_VALUE_MISSING"
             : "EXPLICIT_VALUE_MISSING",
+          missingRequirementKind(pair),
         ),
       );
     }
@@ -762,6 +793,7 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
               definition,
               pair.valueObjectId,
               "EXPLICIT_VALUE_MISSING",
+              missingRequirementKind(pair),
             ),
           );
           return;
@@ -1162,7 +1194,48 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
   }
 
   const uniqueIgnoredParameterCodes = Array.from(new Set(ignoredParameterCodes));
-  const completeness = missingValues.length === 0 ? "complete" : writerRows.length === 0 ? "missing_all" : "partial";
+  const plannedValues: E03PlannedBundleValue[] = writerRows.map((row) => {
+    const snapshot = asRecord(row.sourceSnapshotJson);
+    const parameterDefinitionId = text(snapshot.parameterDefinitionId);
+    const valueObjectId = text(snapshot.targetValueObjectId);
+    const target = objectById.get(valueObjectId);
+
+    if (!UUID_RE.test(parameterDefinitionId) || !target) {
+      throw new Error(`E03_PLANNED_ROUTE_INVALID:${row.parameterCode}`);
+    }
+
+    return {
+      parameterDefinitionId,
+      parameterCode: row.parameterCode,
+      valueObjectId,
+      targetTitle: target.title,
+      sourceUnit: row.unit,
+      valueNumeric:
+        typeof row.valueNumeric === "number" &&
+        Number.isFinite(row.valueNumeric)
+          ? row.valueNumeric
+          : null,
+      valueText:
+        typeof row.valueText === "string"
+          ? row.valueText
+          : null,
+      qualifier:
+        text(snapshot.measurementQualifier) ||
+        null,
+      rawFragment: row.rawFragment,
+    };
+  });
+  const requiredMissingValues = missingValues.filter(
+    (value) =>
+      value.requirementKind !==
+      "optional_explicit",
+  );
+  const completeness =
+    requiredMissingValues.length === 0
+      ? "complete"
+      : writerRows.length === 0
+        ? "missing_all"
+        : "partial";
 
   if (input.preflightOnly && writerRows.length === 0) {
     return {
@@ -1176,6 +1249,7 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
       profileVersionNo: profile.version_no,
       factsPlanned: 0,
       ignoredParameterCodes: uniqueIgnoredParameterCodes,
+      plannedValues: [],
       missingValues,
       completeness: "missing_all",
       reasonCode: "E03_REQUIRED_BUNDLE_VALUES_MISSING",
@@ -1226,6 +1300,7 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
       profileVersionNo: profile.version_no,
       factsPlanned: writerRows.length,
       ignoredParameterCodes: uniqueIgnoredParameterCodes,
+      plannedValues,
       missingValues,
       completeness: completeness === "missing_all" ? "partial" : completeness,
     };
@@ -1277,6 +1352,7 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
       factIds: writer.factIds,
       measureIds: writer.measureIds,
       ignoredParameterCodes: uniqueIgnoredParameterCodes,
+      plannedValues,
       missingValues,
       completeness: completeness === "complete" ? "complete" : "partial",
       precisionEvidenceStoredInProvenance: writerRows.some(
@@ -1315,6 +1391,7 @@ export async function materializeBasicIntakeSourceFactsE03V1(input: {
     factIds: writer.factIds,
     measureIds: writer.measureIds,
     ignoredParameterCodes: uniqueIgnoredParameterCodes,
+    plannedValues,
     missingValues,
     completeness: completeness === "complete" ? "complete" : "partial",
     writerResult,

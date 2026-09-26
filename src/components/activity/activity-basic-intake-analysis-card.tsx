@@ -74,9 +74,22 @@ type MissingBundleValue = {
   parameterCode?: string;
   valueObjectId?: string;
   reasonCode?: string;
+  requirementKind?: "required" | "optional_explicit";
   valueTypeCode?: string;
   canonicalUnitCode?: string | null;
   targetTitle?: string;
+};
+
+type PlannedBundleValue = {
+  parameterDefinitionId?: string;
+  parameterCode?: string;
+  valueObjectId?: string;
+  targetTitle?: string;
+  sourceUnit?: string;
+  valueNumeric?: number | null;
+  valueText?: string | null;
+  qualifier?: string | null;
+  rawFragment?: string;
 };
 
 type SourceFactPreflight = {
@@ -87,6 +100,7 @@ type SourceFactPreflight = {
   factsPlanned?: number;
   reasonCode?: string;
   error?: string;
+  plannedValues?: PlannedBundleValue[];
   missingValues?: MissingBundleValue[];
   completeness?: string;
 };
@@ -588,6 +602,80 @@ const MISSING_VALUE_COPY: Record<Locale, { title: string; partial: string }> = {
   cs: { title: "Chybí informace o", partial: "Část zdrojových faktů již může být zapsána; balíček není úplný." },
 };
 
+const ROUTING_REVIEW_COPY: Record<Locale, {
+  plannedTitle: string;
+  parameterLabel: string;
+  objectLabel: string;
+  optionalTitle: string;
+  optionalBadge: string;
+  requiredBadge: string;
+  beforeConfirmHelper: string;
+}> = {
+  ru: {
+    plannedTitle: "Будет записано",
+    parameterLabel: "Параметр",
+    objectLabel: "Объект наблюдения",
+    optionalTitle: "Дополнительные данные не указаны",
+    optionalBadge: "Необязательно",
+    requiredBadge: "Нужно значение",
+    beforeConfirmHelper: "Если эти данные у вас есть, заполните их сейчас. Они будут добавлены после подтверждения основных исходных фактов.",
+  },
+  en: {
+    plannedTitle: "Will be written",
+    parameterLabel: "Parameter",
+    objectLabel: "Observation object",
+    optionalTitle: "Additional data not specified",
+    optionalBadge: "Optional",
+    requiredBadge: "Value needed",
+    beforeConfirmHelper: "If you know these values, enter them now. They will be added after the primary source facts are confirmed.",
+  },
+  pl: {
+    plannedTitle: "Zostanie zapisane",
+    parameterLabel: "Parametr",
+    objectLabel: "Obiekt obserwacji",
+    optionalTitle: "Nie podano dodatkowych danych",
+    optionalBadge: "Opcjonalne",
+    requiredBadge: "Wymagana wartość",
+    beforeConfirmHelper: "Jeśli znasz te wartości, wpisz je teraz. Zostaną dodane po potwierdzeniu podstawowych faktów źródłowych.",
+  },
+  uk: {
+    plannedTitle: "Буде записано",
+    parameterLabel: "Параметр",
+    objectLabel: "Об’єкт спостереження",
+    optionalTitle: "Додаткові дані не вказані",
+    optionalBadge: "Необов’язково",
+    requiredBadge: "Потрібне значення",
+    beforeConfirmHelper: "Якщо ці дані у вас є, введіть їх зараз. Вони будуть додані після підтвердження основних вихідних фактів.",
+  },
+  de: {
+    plannedTitle: "Wird gespeichert",
+    parameterLabel: "Parameter",
+    objectLabel: "Beobachtungsobjekt",
+    optionalTitle: "Zusätzliche Daten nicht angegeben",
+    optionalBadge: "Optional",
+    requiredBadge: "Wert erforderlich",
+    beforeConfirmHelper: "Wenn Sie diese Werte kennen, geben Sie sie jetzt ein. Sie werden nach Bestätigung der primären Quelldaten ergänzt.",
+  },
+  es: {
+    plannedTitle: "Se guardará",
+    parameterLabel: "Parámetro",
+    objectLabel: "Objeto de observación",
+    optionalTitle: "Datos adicionales no especificados",
+    optionalBadge: "Opcional",
+    requiredBadge: "Valor necesario",
+    beforeConfirmHelper: "Si conoce estos valores, introdúzcalos ahora. Se añadirán después de confirmar los hechos de origen principales.",
+  },
+  cs: {
+    plannedTitle: "Bude zapsáno",
+    parameterLabel: "Parametr",
+    objectLabel: "Objekt pozorování",
+    optionalTitle: "Doplňující údaje nebyly uvedeny",
+    optionalBadge: "Volitelné",
+    requiredBadge: "Je potřeba hodnota",
+    beforeConfirmHelper: "Pokud tyto hodnoty znáte, zadejte je nyní. Budou přidány po potvrzení hlavních zdrojových faktů.",
+  },
+};
+
 const SUPPLEMENT_COPY: Record<Locale, {
   add: string;
   adding: string;
@@ -688,6 +776,26 @@ function displayMissingUnit(value: MissingBundleValue, locale: Locale) {
     MISSING_UNIT_FALLBACK_BY_PARAMETER[parameterCode] ||
     "";
   return unitCode ? (UNIT_LABELS[locale][unitCode] ?? unitCode) : "";
+}
+
+function formatPlannedValue(
+  value: PlannedBundleValue,
+  locale: Locale,
+) {
+  const rendered =
+    typeof value.valueNumeric === "number" &&
+    Number.isFinite(value.valueNumeric)
+      ? new Intl.NumberFormat(locale, {
+          maximumFractionDigits: 3,
+        }).format(value.valueNumeric)
+      : value.valueText?.trim() || "—";
+  const unitCode =
+    value.sourceUnit?.trim().toLowerCase() ||
+    "";
+  const unit =
+    UNIT_LABELS[locale][unitCode] ??
+    unitCode;
+  return unit ? `${rendered} ${unit}` : rendered;
 }
 
 function missingValueUsesNumericKeyboard(value: MissingBundleValue) {
@@ -988,6 +1096,19 @@ export function ActivityBasicIntakeAnalysisCard({
   const uniqueMissingValues = Array.from(
     new Map(missingValues.map((value) => [`${value.parameterDefinitionId ?? ""}|${value.valueObjectId ?? ""}|${value.parameterCode ?? ""}`, value])).values(),
   );
+  const plannedValues = factsCommitted
+    ? []
+    : (effectivePreflightState?.preflight?.plannedValues ?? []);
+  const requiredMissingValues = uniqueMissingValues.filter(
+    (value) =>
+      value.requirementKind !==
+      "optional_explicit",
+  );
+  const optionalMissingValues = uniqueMissingValues.filter(
+    (value) =>
+      value.requirementKind ===
+      "optional_explicit",
+  );
   const canMaterializeFacts =
     !factsCommitted &&
     effectivePreflightState?.failed === false &&
@@ -1090,6 +1211,90 @@ export function ActivityBasicIntakeAnalysisCard({
       }
 
       setMaterializedFactsCount(written);
+
+      const supplementDraftEntries = uniqueMissingValues
+        .map((missing) => ({
+          missing,
+          value:
+            supplementDrafts[
+              missingValueKey(missing)
+            ]?.trim() ?? "",
+        }))
+        .filter((entry) => entry.value);
+
+      let finalFactsWritten = written;
+      let finalAnalysis: IntakeAnalysis | null = null;
+
+      for (const entry of supplementDraftEntries) {
+        const parameterDefinitionId =
+          entry.missing.parameterDefinitionId?.trim();
+        const valueObjectId =
+          entry.missing.valueObjectId?.trim();
+
+        if (!parameterDefinitionId || !valueObjectId) {
+          continue;
+        }
+
+        const supplementResponse = await fetch(
+          "/api/activity/intake-analysis/supplement-source-fact",
+          {
+            method: "POST",
+            credentials: "include",
+            cache: "no-store",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              activityEventId,
+              parameterDefinitionId,
+              valueObjectId,
+              value: entry.value,
+            }),
+          },
+        );
+
+        const supplementPayload = (await supplementResponse
+          .json()
+          .catch(() => null)) as
+          | {
+              ok?: boolean;
+              analysis?: IntakeAnalysis;
+              result?: {
+                factsWritten?: number;
+              };
+              error?: string;
+            }
+          | null;
+
+        if (
+          !supplementResponse.ok ||
+          supplementPayload?.ok !== true ||
+          !supplementPayload.analysis
+        ) {
+          throw new Error(
+            supplementPayload?.error ||
+              `Source fact supplement failed: ${supplementResponse.status}`,
+          );
+        }
+
+        finalAnalysis =
+          supplementPayload.analysis;
+
+        if (
+          typeof supplementPayload.result
+            ?.factsWritten === "number"
+        ) {
+          finalFactsWritten =
+            supplementPayload.result.factsWritten;
+        }
+      }
+
+      if (finalAnalysis) {
+        setRetryResult(finalAnalysis);
+      }
+      setMaterializedFactsCount(finalFactsWritten);
+      setSupplementDrafts({});
     } catch (error) {
       setMaterializeFactsError(
         error instanceof Error ? error.message : "E03_MATERIALIZATION_FAILED",
@@ -1353,6 +1558,42 @@ export function ActivityBasicIntakeAnalysisCard({
         )}
 
         <div className="mt-3 border-t border-[#edf0f7] pt-3">
+          {!factsCommitted && plannedValues.length > 0 ? (
+            <div className="mb-3 rounded-lg border border-[#cddaff] bg-[#f6f8ff] px-3 py-2">
+              <div className="text-xs font-black text-[#294dba]">
+                {ROUTING_REVIEW_COPY[locale].plannedTitle}
+              </div>
+              <div className="mt-2 grid gap-2">
+                {plannedValues.map((planned, index) => (
+                  <div
+                    key={`${planned.parameterDefinitionId ?? "parameter"}:${planned.valueObjectId ?? "object"}:${index}`}
+                    className="rounded-lg border border-[#dce5ff] bg-white px-2.5 py-2 text-xs"
+                  >
+                    <div className="font-black text-[#1f3f99]">
+                      {formatPlannedValue(planned, locale)}
+                    </div>
+                    <div className="mt-1 text-[#59627c]">
+                      {ROUTING_REVIEW_COPY[locale].parameterLabel}:{" "}
+                      <span className="font-bold text-[#30384f]">
+                        {PARAMETER_LABELS[locale][
+                          planned.parameterCode?.trim().toLowerCase() || ""
+                        ] ??
+                          planned.parameterCode ??
+                          "—"}
+                      </span>
+                    </div>
+                    <div className="mt-0.5 text-[#59627c]">
+                      {ROUTING_REVIEW_COPY[locale].objectLabel}:{" "}
+                      <span className="font-bold text-[#30384f]">
+                        {planned.targetTitle?.trim() || "—"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           {factsCommitted ? (
             <div className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">
               <span>
@@ -1396,21 +1637,55 @@ export function ActivityBasicIntakeAnalysisCard({
           )}
           {uniqueMissingValues.length > 0 ? (
             <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              <div className="font-black">{MISSING_VALUE_COPY[locale].title}:</div>
+              <div className="font-black">
+                {requiredMissingValues.length > 0
+                  ? MISSING_VALUE_COPY[locale].title
+                  : ROUTING_REVIEW_COPY[locale].optionalTitle}
+                :
+              </div>
+              {!factsCommitted ? (
+                <div className="mt-1 text-[11px] font-semibold leading-relaxed text-amber-800">
+                  {ROUTING_REVIEW_COPY[locale].beforeConfirmHelper}
+                </div>
+              ) : null}
               <div className="mt-2 grid gap-2">
                 {uniqueMissingValues.map((value, index) => {
                   const key = missingValueKey(value) || `missing:${index}`;
                   const unit = displayMissingUnit(value, locale);
                   const busy = supplementingKey === key;
                   const rawValue = supplementDrafts[key] ?? "";
+                  const optional =
+                    value.requirementKind ===
+                    "optional_explicit";
 
                   return (
                     <div
                       key={key}
                       className="rounded-lg border border-amber-200/80 bg-white/70 px-2.5 py-2"
                     >
-                      <div className="flex flex-wrap items-center gap-2 font-semibold">
-                        <span>{displayMissingParameterLabel(value, locale)}</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-black text-[#30384f]">
+                          {value.targetTitle?.trim() || "—"}
+                        </span>
+                        <span
+                          className={`rounded-md px-1.5 py-0.5 text-[10px] font-black ${
+                            optional
+                              ? "bg-sky-100 text-sky-800"
+                              : "bg-amber-100 text-amber-800"
+                          }`}
+                        >
+                          {optional
+                            ? ROUTING_REVIEW_COPY[locale].optionalBadge
+                            : ROUTING_REVIEW_COPY[locale].requiredBadge}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-[#59627c]">
+                        <span>
+                          {ROUTING_REVIEW_COPY[locale].parameterLabel}:{" "}
+                          <span className="font-bold text-[#30384f]">
+                            {displayMissingParameterLabel(value, locale)}
+                          </span>
+                        </span>
                         {unit ? (
                           <span className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-black text-amber-800">
                             {unit}
@@ -1418,30 +1693,33 @@ export function ActivityBasicIntakeAnalysisCard({
                         ) : null}
                       </div>
 
-                      {factsCommitted ? (
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <input
-                            type="text"
-                            inputMode={
-                              missingValueUsesNumericKeyboard(value)
-                                ? "decimal"
-                                : "text"
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <input
+                          type="text"
+                          inputMode={
+                            missingValueUsesNumericKeyboard(value)
+                              ? "decimal"
+                              : "text"
+                          }
+                          value={rawValue}
+                          disabled={
+                            Boolean(supplementingKey) ||
+                            materializingFacts
+                          }
+                          onChange={(event) => {
+                            const nextValue = event.target.value;
+                            setSupplementDrafts((current) => ({
+                              ...current,
+                              [key]: nextValue,
+                            }));
+                            if (supplementError?.key === key) {
+                              setSupplementError(null);
                             }
-                            value={rawValue}
-                            disabled={Boolean(supplementingKey)}
-                            onChange={(event) => {
-                              const nextValue = event.target.value;
-                              setSupplementDrafts((current) => ({
-                                ...current,
-                                [key]: nextValue,
-                              }));
-                              if (supplementError?.key === key) {
-                                setSupplementError(null);
-                              }
-                            }}
-                            placeholder={SUPPLEMENT_COPY[locale].placeholder}
-                            className="min-w-[180px] flex-1 rounded-lg border border-[#d9e1f5] bg-white px-3 py-2 text-xs font-semibold text-[#1f2942] outline-none transition focus:border-[#3b6ef8] focus:ring-2 focus:ring-[#3b6ef8]/10 disabled:bg-slate-50"
-                          />
+                          }}
+                          placeholder={SUPPLEMENT_COPY[locale].placeholder}
+                          className="min-w-[180px] flex-1 rounded-lg border border-[#d9e1f5] bg-white px-3 py-2 text-xs font-semibold text-[#1f2942] outline-none transition focus:border-[#3b6ef8] focus:ring-2 focus:ring-[#3b6ef8]/10 disabled:bg-slate-50"
+                        />
+                        {factsCommitted ? (
                           <button
                             type="button"
                             disabled={Boolean(supplementingKey) || !rawValue.trim()}
@@ -1452,8 +1730,8 @@ export function ActivityBasicIntakeAnalysisCard({
                               ? SUPPLEMENT_COPY[locale].adding
                               : SUPPLEMENT_COPY[locale].add}
                           </button>
-                        </div>
-                      ) : null}
+                        ) : null}
+                      </div>
 
                       {supplementError?.key === key ? (
                         <div className="mt-1.5 text-[11px] font-semibold text-rose-700">
@@ -1469,8 +1747,17 @@ export function ActivityBasicIntakeAnalysisCard({
                   {SUPPLEMENT_COPY[locale].helper}
                 </div>
               ) : null}
-              {factsCommitted || effectivePreflightState?.preflight?.completeness === "partial" ? (
-                <div className="mt-1.5 font-semibold">{MISSING_VALUE_COPY[locale].partial}</div>
+              {requiredMissingValues.length > 0 ? (
+                <div className="mt-1.5 font-semibold">
+                  {MISSING_VALUE_COPY[locale].partial}
+                </div>
+              ) : null}
+              {optionalMissingValues.length > 0 &&
+              requiredMissingValues.length === 0 &&
+              factsCommitted ? (
+                <div className="mt-1.5 text-[11px] font-semibold text-sky-800">
+                  {ROUTING_REVIEW_COPY[locale].optionalTitle}
+                </div>
               ) : null}
             </div>
           ) : null}
