@@ -18,6 +18,11 @@ import {
   readMeasurementRollupTargetMetadataV1,
   toMeasurementRollupDefinitionV1,
 } from "@/lib/reality-core/measurement-rollup-target-metadata-v1";
+import {
+  convertDashboardMeasurementValue,
+  dashboardMeasurementUnitFamily,
+  dashboardPreferredMeasurementUnit,
+} from "@/lib/dashboard/measurement-unit-normalization";
 
 export const dynamic = "force-dynamic";
 
@@ -662,6 +667,7 @@ async function buildObservationFactSeriesResponse(input: {
           {
             canonical_key: asString(valueObject.canonical_key),
             title: fallbackTitle,
+            metadata_json: valueObject.metadata_json,
           },
           input.locale,
         ).title,
@@ -874,6 +880,7 @@ async function buildObservationFactSeriesResponse(input: {
   let resolvedObservationCount = 0;
   let unknownObservationCount = 0;
   let unitMismatchCount = 0;
+  let unitConversionCount = 0;
   let discrepancyCount = 0;
   let directCount = 0;
   let derivedCount = 0;
@@ -912,14 +919,31 @@ async function buildObservationFactSeriesResponse(input: {
         if (seenProjectionKeys.has(projectionKey)) continue;
         seenProjectionKeys.add(projectionKey);
 
+        const normalizedRollupValue =
+          convertDashboardMeasurementValue(
+            valueNumber,
+            unitCode,
+            canonicalUnitCode,
+          );
+
+        if (
+          normalizedRollupValue !== null &&
+          unitCode !== canonicalUnitCode
+        ) {
+          unitConversionCount += 1;
+        }
+
         rollupFacts.push({
           factId: projectionKey,
           activityEventId,
           measurementBundleId: null,
           parameterCode,
           valueObjectId,
-          valueNumber,
-          unitCode,
+          valueNumber: normalizedRollupValue ?? valueNumber,
+          unitCode:
+            normalizedRollupValue === null
+              ? unitCode
+              : canonicalUnitCode,
         });
       }
 
@@ -981,17 +1005,27 @@ async function buildObservationFactSeriesResponse(input: {
       if (seenFactIds.has(factId)) continue;
       seenFactIds.add(factId);
 
-      if (unitCode !== canonicalUnitCode) {
+      const normalizedValue = convertDashboardMeasurementValue(
+        valueNumber,
+        unitCode,
+        canonicalUnitCode,
+      );
+
+      if (normalizedValue === null) {
         unitMismatchCount += 1;
         unknownObservationCount += 1;
         continue;
+      }
+
+      if (unitCode !== canonicalUnitCode) {
+        unitConversionCount += 1;
       }
 
       const date =
         baseDateByFactId.get(factId) ??
         rowDateKey(row, input.timeZone);
 
-      addResolvedValue(date, valueNumber);
+      addResolvedValue(date, normalizedValue);
       resolvedObservationCount += 1;
     }
   }
@@ -1034,6 +1068,7 @@ async function buildObservationFactSeriesResponse(input: {
     resolvedObservationCount,
     unknownObservationCount,
     unitMismatchCount,
+    unitConversionCount,
     sourceFactCount: eligibleBaseFacts.length,
     sourceProjectionCount: relevantRows.length,
     rollupApplied: Boolean(rollupDefinition),
@@ -1112,6 +1147,7 @@ async function buildObservationPresenceSeriesResponse(input: {
           {
             canonical_key: asString(valueObject.canonical_key),
             title: fallbackTitle,
+            metadata_json: valueObject.metadata_json,
           },
           input.locale,
         ).title,
@@ -1313,6 +1349,30 @@ async function buildObservationFactMultiSeriesResponse(input: {
       );
     }
 
+    const sourceUnit =
+      seriesConfig.kind === "numeric"
+        ? payload.unit ?? seriesConfig.canonicalUnitCode
+        : "presence";
+    const preferredUnit =
+      seriesConfig.kind === "numeric"
+        ? dashboardPreferredMeasurementUnit(sourceUnit)
+        : "presence";
+    const unitFamily = dashboardMeasurementUnitFamily(preferredUnit);
+    const normalizedPoints =
+      seriesConfig.kind === "numeric" && preferredUnit !== sourceUnit
+        ? payload.series.map((point) => ({
+            ...point,
+            valueNumber:
+              point.valueNumber === null
+                ? null
+                : convertDashboardMeasurementValue(
+                    point.valueNumber,
+                    sourceUnit,
+                    preferredUnit,
+                  ),
+          }))
+        : payload.series;
+
     factSeries.push({
       id: seriesConfig.id,
       kind: seriesConfig.kind,
@@ -1331,14 +1391,12 @@ async function buildObservationFactMultiSeriesResponse(input: {
         seriesConfig.kind === "numeric"
           ? payload.parameterTitle ?? seriesConfig.parameterTitle
           : null,
-      unit:
-        seriesConfig.kind === "numeric"
-          ? payload.unit ?? seriesConfig.canonicalUnitCode
-          : "presence",
+      unit: preferredUnit,
+      unitFamily,
       resolvedObservationCount: payload.resolvedObservationCount ?? 0,
       unknownObservationCount: payload.unknownObservationCount ?? 0,
       rollupApplied: payload.rollupApplied ?? false,
-      points: payload.series,
+      points: normalizedPoints,
     });
   }
 
@@ -1354,6 +1412,7 @@ async function buildObservationFactMultiSeriesResponse(input: {
     groupByKey: "day",
     periodDays: input.periodDays,
     scaleMode: input.config.scaleMode,
+    layoutMode: "unit_bands",
     factSeries,
   });
 }

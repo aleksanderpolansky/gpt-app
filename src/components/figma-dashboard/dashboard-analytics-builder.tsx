@@ -22,7 +22,6 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Legend,
   Line,
   LineChart,
   Pie,
@@ -42,6 +41,9 @@ import {
   DashboardCertificateMap,
   type CertificateMapMarker,
 } from "@/components/figma-dashboard/dashboard-certificate-map";
+import {
+  dashboardMeasurementUnitFamily,
+} from "@/lib/dashboard/measurement-unit-normalization";
 
 type AnalyticsUi = {
   analytics: string;
@@ -472,6 +474,7 @@ type BlockDataResponse = {
   readonly series?: DataPoint[];
   readonly factSeries?: MultiFactSeries[];
   readonly scaleMode?: "independent";
+  readonly layoutMode?: "unit_bands";
   readonly rootBreakdown?: RootDurationRow[];
   readonly availableCertificateCount?: number;
   readonly markers?: CertificateMapMarker[];
@@ -533,6 +536,7 @@ type MultiFactSeries = {
   readonly parameterCode: string | null;
   readonly parameterTitle: string | null;
   readonly unit: string;
+  readonly unitFamily?: string;
   readonly resolvedObservationCount: number;
   readonly unknownObservationCount: number;
   readonly rollupApplied: boolean;
@@ -948,8 +952,8 @@ const MULTI_SERIES_COPY: Record<
     presenceDescription: "Точка появляется в день, когда по объекту есть подтверждённый факт. Отсутствие факта остаётся неизвестностью, а не нулём.",
     removeSeries: "Удалить ряд",
     maxSeries: "Можно добавить до 6 рядов.",
-    independentScale: "Независимые шкалы",
-    independentScaleDescription: "Каждый ряд сохраняет свои реальные единицы и масштабируется отдельно. Реальные значения видны во всплывающей подсказке.",
+    independentScale: "Группы по единицам",
+    independentScaleDescription: "Совместимые единицы показаны в одной зоне со своей шкалой Y. Для всех зон используется общая ось X времени.",
     needTwoSeries: "Для совместного графика добавьте минимум два ряда.",
     noMultiData: "За выбранный период нет подтверждённых данных для выбранных рядов.",
     present: "есть факт",
@@ -978,8 +982,8 @@ const MULTI_SERIES_COPY: Record<
     presenceDescription: "A point appears on a day when a confirmed fact exists for the object. Missing facts stay unknown rather than becoming zero.",
     removeSeries: "Remove series",
     maxSeries: "You can add up to 6 series.",
-    independentScale: "Independent scales",
-    independentScaleDescription: "Each series keeps its real unit and is scaled independently. Actual values are shown in the tooltip.",
+    independentScale: "Unit groups",
+    independentScaleDescription: "Compatible units share one Y band and one visible Y scale. All bands use one common time X axis.",
     needTwoSeries: "Add at least two series for a combined chart.",
     noMultiData: "No confirmed data for the selected series in this period.",
     present: "fact present",
@@ -1170,6 +1174,121 @@ function multiSeriesDisplayName(
   }`;
 }
 
+type MultiSeriesBand = {
+  readonly key: string;
+  readonly family: string;
+  readonly unit: string;
+  readonly series: Array<{
+    readonly series: MultiFactSeries;
+    readonly seriesIndex: number;
+  }>;
+  readonly domain: [number, number];
+  readonly ticks: number[];
+};
+
+const COUNT_UNIT_SHORT: Record<LocaleCode, string> = {
+  ru: "шт.",
+  pl: "szt.",
+  en: "count",
+  uk: "шт.",
+  de: "Anz.",
+  es: "uds.",
+  cs: "ks",
+};
+
+function nicePositiveStep(maxValue: number, targetTicks = 4): number {
+  if (!Number.isFinite(maxValue) || maxValue <= 0) return 1;
+
+  const rawStep = maxValue / Math.max(1, targetTicks);
+  const magnitude = 10 ** Math.floor(Math.log10(rawStep));
+  const normalized = rawStep / magnitude;
+  const nice =
+    normalized <= 1
+      ? 1
+      : normalized <= 2
+        ? 2
+        : normalized <= 2.5
+          ? 2.5
+          : normalized <= 5
+            ? 5
+            : 10;
+
+  return nice * magnitude;
+}
+
+function buildPositiveBandScale(
+  values: number[],
+  family: string,
+  unit: string,
+): { domain: [number, number]; ticks: number[] } {
+  const finite = values.filter((value) => Number.isFinite(value));
+  const maxValue = finite.length > 0 ? Math.max(...finite, 0) : 0;
+
+  if (family === "presence") {
+    return { domain: [0, 1], ticks: [0, 1] };
+  }
+
+  if (family === "count") {
+    const upper = Math.max(
+      3,
+      Math.ceil(maxValue) + (Number.isInteger(maxValue) ? 1 : 0),
+    );
+    return {
+      domain: [0, upper],
+      ticks: Array.from({ length: upper + 1 }, (_, index) => index),
+    };
+  }
+
+  let step: number;
+  if (family === "duration" && unit === "minute") {
+    const candidates = [5, 10, 15, 30, 60, 120, 180, 240, 360, 480, 720];
+    const target = maxValue > 0 ? maxValue / 4 : 30;
+    step =
+      candidates.find((candidate) => candidate >= target) ??
+      nicePositiveStep(maxValue, 4);
+  } else {
+    step = nicePositiveStep(maxValue, 4);
+  }
+
+  let upper = Math.max(step, Math.ceil(maxValue / step) * step);
+  if (maxValue > 0 && Math.abs(upper - maxValue) < 1e-9) {
+    upper += step;
+  }
+
+  const tickCount = Math.max(1, Math.round(upper / step));
+  const ticks = Array.from(
+    { length: tickCount + 1 },
+    (_, index) => Math.round(index * step * 10000) / 10000,
+  );
+
+  return { domain: [0, upper], ticks };
+}
+
+function multiSeriesBandUnitLabel(
+  unit: string,
+  locale: LocaleCode,
+  ui: AnalyticsUi,
+): string {
+  if (unit === "minute") return ui.minuteShort;
+  if (unit === "hour") return ui.hourShort;
+  if (unit === "count") return COUNT_UNIT_SHORT[locale];
+  if (unit === "presence") return MULTI_SERIES_COPY[locale].presence;
+  return unit;
+}
+
+function formatMultiSeriesBandTick(
+  value: number,
+  band: MultiSeriesBand,
+  locale: LocaleCode,
+): string {
+  if (band.family === "count") return String(Math.round(value));
+  if (band.family === "presence") return value >= 1 ? "1" : "0";
+
+  return new Intl.NumberFormat(NUMBER_LOCALE_MAP[locale], {
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
 function visualizationLabel(
   type: DashboardAnalyticsVisualizationType,
   ui: AnalyticsUi,
@@ -1318,6 +1437,67 @@ function AnalyticsBlockCard({
       return row;
     });
   }, [data?.factSeries, locale]);
+
+  const multiSeriesBands = useMemo(() => {
+    const factSeries = data?.factSeries ?? [];
+    const grouped = new Map<
+      string,
+      {
+        family: string;
+        unit: string;
+        series: Array<{
+          series: MultiFactSeries;
+          seriesIndex: number;
+        }>;
+      }
+    >();
+
+    factSeries.forEach((series, seriesIndex) => {
+      const family =
+        series.unitFamily ??
+        dashboardMeasurementUnitFamily(series.unit);
+      const key = family;
+      const current = grouped.get(key);
+
+      if (current) {
+        current.series.push({ series, seriesIndex });
+        return;
+      }
+
+      grouped.set(key, {
+        family,
+        unit: series.unit,
+        series: [{ series, seriesIndex }],
+      });
+    });
+
+    return Array.from(grouped.entries()).map(
+      ([key, group]): MultiSeriesBand => {
+        const values = group.series.flatMap((item) =>
+          item.series.points.flatMap((point) =>
+            typeof point.valueNumber === "number" &&
+            Number.isFinite(point.valueNumber)
+              ? [point.valueNumber]
+              : [],
+          ),
+        );
+        const scale = buildPositiveBandScale(
+          values,
+          group.family,
+          group.unit,
+        );
+
+        return {
+          key,
+          family: group.family,
+          unit: group.unit,
+          series: group.series,
+          domain: scale.domain,
+          ticks: scale.ticks,
+        };
+      },
+    );
+  }, [data?.factSeries]);
 
   const isActivityCount = block.metricKey === "activity_count";
   const countCopy = ACTIVITY_COUNT_COPY[locale];
@@ -1553,83 +1733,206 @@ function AnalyticsBlockCard({
             <div className="mb-2 text-[10px] leading-4 text-[#7c8099]">
               {MULTI_SERIES_COPY[locale].independentScaleDescription}
             </div>
-            <ResponsiveContainer width="100%" height={190}>
-              <LineChart data={multiSeriesRows}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f2f7" />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fontSize: 10, fill: "#9ca3b8" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                {(data?.factSeries ?? []).map((series, index) => (
-                  <YAxis
+
+            <div className="mb-2 flex flex-wrap gap-x-3 gap-y-1">
+              {(data?.factSeries ?? []).map((series, index) => {
+                const color =
+                  MULTI_SERIES_COLORS[
+                    index % MULTI_SERIES_COLORS.length
+                  ];
+
+                return (
+                  <div
                     key={series.id}
-                    yAxisId={`series-${index}`}
-                    hide
-                    domain={["auto", "auto"]}
-                  />
-                ))}
-                <Tooltip
-                  formatter={(value, name) => {
-                    const matchedSeries = (data?.factSeries ?? []).find(
-                      (series) =>
-                        multiSeriesDisplayName(series, locale) === String(name),
-                    );
-
-                    if (matchedSeries?.kind === "presence") {
-                      return [
-                        MULTI_SERIES_COPY[locale].present,
-                        String(name),
-                      ];
-                    }
-
-                    return [
-                      formatFactNumber(
-                        Number(value),
-                        matchedSeries?.unit,
-                        ui,
-                        locale,
-                      ),
-                      String(name),
-                    ];
-                  }}
-                  contentStyle={{
-                    fontSize: 11,
-                    borderRadius: 8,
-                    border: "1px solid #f0f2f7",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                  }}
-                />
-                <Legend
-                  wrapperStyle={{ fontSize: 10, paddingTop: 8 }}
-                />
-                {(data?.factSeries ?? []).map((series, index) => {
-                  const color =
-                    MULTI_SERIES_COLORS[index % MULTI_SERIES_COLORS.length];
-                  const seriesName = multiSeriesDisplayName(series, locale);
-
-                  return (
-                    <Line
-                      key={series.id}
-                      yAxisId={`series-${index}`}
-                      type="monotone"
-                      dataKey={`series_${index}`}
-                      name={seriesName}
-                      stroke={color}
-                      strokeWidth={series.kind === "presence" ? 0 : 2.5}
-                      dot={{
-                        r: series.kind === "presence" ? 4 : 3,
-                        fill: color,
-                        stroke: color,
-                      }}
-                      activeDot={{ r: series.kind === "presence" ? 5 : 4 }}
-                      connectNulls={false}
+                    className="flex min-w-0 items-center gap-1.5 text-[10px] text-[#5f6478]"
+                  >
+                    <span
+                      className="h-2 w-2 flex-shrink-0 rounded-full"
+                      style={{ backgroundColor: color }}
                     />
-                  );
-                })}
-              </LineChart>
-            </ResponsiveContainer>
+                    <span className="truncate">
+                      {multiSeriesDisplayName(series, locale)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div>
+              {multiSeriesBands.map((band, bandIndex) => {
+                const isBottomBand =
+                  bandIndex === multiSeriesBands.length - 1;
+                const firstSeries =
+                  band.series[0]?.series ?? null;
+                const bandTitle =
+                  firstSeries?.kind === "numeric"
+                    ? [
+                        firstSeries.parameterTitle ??
+                          firstSeries.parameterCode ??
+                          FACT_SERIES_COPY[locale].summary,
+                        multiSeriesBandUnitLabel(
+                          band.unit,
+                          locale,
+                          ui,
+                        ),
+                      ].join(", ")
+                    : MULTI_SERIES_COPY[locale].presence;
+
+                return (
+                  <div
+                    key={band.key}
+                    className={
+                      bandIndex > 0
+                        ? "mt-2 border-t border-[#eef0f6] pt-2"
+                        : ""
+                    }
+                  >
+                    <div className="mb-1 text-[10px] font-semibold text-[#6f7488]">
+                      {bandTitle}
+                    </div>
+                    <ResponsiveContainer
+                      width="100%"
+                      height={isBottomBand ? 145 : 118}
+                    >
+                      <LineChart
+                        data={multiSeriesRows}
+                        syncId={"dashboard-unit-bands-" + block.id}
+                        syncMethod="index"
+                        margin={{
+                          top: 4,
+                          right: 8,
+                          bottom: 0,
+                          left: 0,
+                        }}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="#f0f2f7"
+                        />
+                        <XAxis
+                          dataKey="label"
+                          hide={!isBottomBand}
+                          height={isBottomBand ? 28 : 0}
+                          tick={{
+                            fontSize: 10,
+                            fill: "#9ca3b8",
+                          }}
+                          axisLine={isBottomBand}
+                          tickLine={false}
+                        />
+                        <YAxis
+                          domain={band.domain}
+                          ticks={band.ticks}
+                          allowDecimals={band.family !== "count"}
+                          tickFormatter={(value) =>
+                            formatMultiSeriesBandTick(
+                              Number(value),
+                              band,
+                              locale,
+                            )
+                          }
+                          tick={{
+                            fontSize: 10,
+                            fill: "#8a8fa3",
+                          }}
+                          axisLine={false}
+                          tickLine={false}
+                          width={52}
+                        />
+                        <Tooltip
+                          content={isBottomBand ? undefined : () => null}
+                          cursor={{
+                            stroke: "#cbd2e5",
+                            strokeDasharray: "3 3",
+                          }}
+                          formatter={(value, name) => {
+                            const matchedSeries =
+                              (data?.factSeries ?? []).find(
+                                (series) =>
+                                  multiSeriesDisplayName(
+                                    series,
+                                    locale,
+                                  ) === String(name),
+                              );
+
+                            if (
+                              matchedSeries?.kind === "presence"
+                            ) {
+                              return [
+                                MULTI_SERIES_COPY[locale].present,
+                                String(name),
+                              ];
+                            }
+
+                            return [
+                              formatFactNumber(
+                                Number(value),
+                                matchedSeries?.unit,
+                                ui,
+                                locale,
+                              ),
+                              String(name),
+                            ];
+                          }}
+                          contentStyle={{
+                            fontSize: 11,
+                            borderRadius: 8,
+                            border: "1px solid #f0f2f7",
+                            boxShadow:
+                              "0 4px 12px rgba(0,0,0,0.08)",
+                          }}
+                        />
+
+                        {band.series.map(
+                          ({ series, seriesIndex }) => {
+                            const color =
+                              MULTI_SERIES_COLORS[
+                                seriesIndex %
+                                  MULTI_SERIES_COLORS.length
+                              ];
+                            const seriesName =
+                              multiSeriesDisplayName(
+                                series,
+                                locale,
+                              );
+
+                            return (
+                              <Line
+                                key={series.id}
+                                type="monotone"
+                                dataKey={"series_" + seriesIndex}
+                                name={seriesName}
+                                stroke={color}
+                                strokeWidth={
+                                  series.kind === "presence"
+                                    ? 0
+                                    : 2.5
+                                }
+                                dot={{
+                                  r:
+                                    series.kind === "presence"
+                                      ? 4
+                                      : 3,
+                                  fill: color,
+                                  stroke: color,
+                                }}
+                                activeDot={{
+                                  r:
+                                    series.kind === "presence"
+                                      ? 5
+                                      : 4,
+                                }}
+                                connectNulls={false}
+                              />
+                            );
+                          },
+                        )}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )
       ) : block.visualizationType === "metric" ? (
