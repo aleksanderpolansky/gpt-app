@@ -65,9 +65,18 @@ check("options endpoint has no mutation call", !/\.(insert|update|upsert|delete|
 
 check("analytics data uses V3 support guard", contains(data, "isDashboardAnalyticsV3Supported"));
 check("analytics data has observation series resolver", contains(data, "buildObservationFactSeriesResponse"));
-check("analytics data reads canonical analytics view", contains(data, 'from("activity_fact_analytics_inputs_v1")'));
-check("analytics data filters confirmed owned facts", contains(data, '.eq("fact_status", "confirmed")'));
-check("analytics data binds parameter definition", contains(data, '.eq("parameter_definition_id", input.config.parameterDefinitionId)'));
+const observationStart = data.indexOf("async function buildObservationFactSeriesResponse");
+const observationEnd = data.indexOf("async function buildCertificateMapResponse");
+const observationData =
+  observationStart >= 0 && observationEnd > observationStart
+    ? data.slice(observationStart, observationEnd)
+    : "";
+
+check("analytics data reads physical confirmed numeric fact values", contains(observationData, "value_object_id,value_numeric,unit,measure_type"));
+check("analytics data expands final effective fact links", contains(observationData, 'from("activity_fact_value_object_links_effective_v1")'));
+check("observation series does not depend on legacy projection schema", !contains(observationData, 'from("activity_fact_analytics_inputs_v1")'));
+check("analytics data filters confirmed owned facts", contains(observationData, '.eq("fact_status", "confirmed")'));
+check("analytics data binds parameter definition", contains(observationData, '.eq("parameter_definition_id", input.config.parameterDefinitionId)'));
 check("analytics data reads stored rollup metadata", contains(data, "readMeasurementRollupTargetMetadataV1"));
 check("analytics data uses deterministic rollup resolver", contains(data, "resolveMeasurementRollupV1"));
 check("analytics data keeps UNKNOWN as null", contains(data, "valueNumber: null"));

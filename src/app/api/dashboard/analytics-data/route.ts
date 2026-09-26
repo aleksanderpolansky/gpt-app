@@ -620,7 +620,7 @@ async function buildObservationFactSeriesResponse(input: {
     const { data, error } = await supabase
       .from("activity_object_facts")
       .select(
-        "id,activity_event_id,period_start,effective_at,created_at,fact_status,parameter_definition_id",
+        "id,activity_event_id,value_object_id,value_numeric,unit,measure_type,period_start,effective_at,created_at,fact_status,parameter_definition_id",
       )
       .eq("user_id", input.appUserId)
       .eq("acting_as_actor_id", input.actorId)
@@ -657,22 +657,60 @@ async function buildObservationFactSeriesResponse(input: {
     return Boolean(date && date >= firstKey && date <= todayKey);
   });
 
+  const baseFactById = new Map<string, Row>();
   const baseDateByFactId = new Map<string, string>();
   const factIds = eligibleBaseFacts.flatMap((row) => {
     const factId = asString(row.id);
     const date = rowDateKey(row, input.timeZone);
     if (!factId || !date) return [];
+    baseFactById.set(factId, row);
     baseDateByFactId.set(factId, date);
     return [factId];
   });
 
-  const analyticsRows: Row[] = [];
+  const projectionRows: Row[] = [];
+  const seenProjectionKeys = new Set<string>();
+
+  const appendProjection = (factRow: Row, valueObjectId: string) => {
+    const factId = asString(factRow.id);
+    const activityEventId = asString(factRow.activity_event_id);
+    const valueNumber = asNumber(factRow.value_numeric);
+    const unit = asString(factRow.unit);
+    if (!factId || !activityEventId || valueNumber === null || !unit) {
+      return;
+    }
+
+    const projectionKey = `${factId}|${valueObjectId}`;
+    if (seenProjectionKeys.has(projectionKey)) return;
+    seenProjectionKeys.add(projectionKey);
+
+    projectionRows.push({
+      fact_id: factId,
+      activity_event_id: activityEventId,
+      value_object_id: valueObjectId,
+      metric_value_numeric: valueNumber,
+      unit,
+      period_start: factRow.period_start,
+      effective_at: factRow.effective_at,
+      created_at: factRow.created_at,
+      measure_type: factRow.measure_type,
+    });
+  };
+
+  // The fact's direct value_object_id is always a valid fallback semantic target.
+  for (const row of eligibleBaseFacts) {
+    const directValueObjectId = asString(row.value_object_id);
+    if (directValueObjectId) {
+      appendProjection(row, directValueObjectId);
+    }
+  }
+
+  // Preserve final effective semantic links without depending on the legacy
+  // activity_fact_analytics_inputs_v1 column layout.
   for (const ids of chunkStrings(factIds)) {
     const { data, error } = await supabase
-      .from("activity_fact_analytics_inputs_v1")
-      .select(
-        "fact_id,activity_event_id,value_object_id,metric_value_numeric,unit,occurred_at,created_at,measure_type",
-      )
+      .from("activity_fact_value_object_links_effective_v1")
+      .select("fact_id,value_object_id,source_code,is_materialized")
       .in("fact_id", ids);
 
     if (error) {
@@ -682,10 +720,19 @@ async function buildObservationFactSeriesResponse(input: {
       );
     }
 
-    analyticsRows.push(...(Array.isArray(data) ? (data as Row[]) : []));
+    for (const raw of Array.isArray(data) ? data : []) {
+      const link = raw as Row;
+      const factId = asString(link.fact_id);
+      const valueObjectId = asString(link.value_object_id);
+      if (!factId || !valueObjectId) continue;
+
+      const factRow = baseFactById.get(factId);
+      if (!factRow) continue;
+      appendProjection(factRow, valueObjectId);
+    }
   }
 
-  const relevantRows = analyticsRows.filter((row) => {
+  const relevantRows = projectionRows.filter((row) => {
     const valueObjectId = asString(row.value_object_id);
     const value = asNumber(row.metric_value_numeric);
     return Boolean(

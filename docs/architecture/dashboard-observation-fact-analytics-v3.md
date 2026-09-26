@@ -56,11 +56,18 @@ The resolver:
 
 1. authenticates the current user/actor;
 2. revalidates the selected leaf and parameter assignment;
-3. reads owned confirmed `activity_object_facts` for the selected parameter definition;
-4. reads canonical numeric projections from `activity_fact_analytics_inputs_v1`;
+3. reads owned confirmed `activity_object_facts` for the selected parameter definition, including the physical numeric value and stored unit;
+4. expands each confirmed fact through `activity_fact_value_object_links_effective_v1`, while retaining the fact's direct `value_object_id` as a fallback semantic projection;
 5. keeps only the selected target leaf and, when configured, its `measurementRollupV1` source leaves;
 6. resolves rollup values per activity event through the existing deterministic `resolveMeasurementRollupV1` contract;
 7. groups effective values by user-local calendar day.
+
+The observation-series path intentionally does not depend on the legacy
+`activity_fact_analytics_inputs_v1` column layout. Runtime diagnostics on
+2026-09-26 showed that the production view no longer exposes
+`activity_event_id`, while the confirmed fact row plus effective-link view
+already provides the required event, object, numeric value, unit, and date
+contract without a database migration.
 
 Days without a resolvable value are returned as `valueNumber: null`, not zero.
 
