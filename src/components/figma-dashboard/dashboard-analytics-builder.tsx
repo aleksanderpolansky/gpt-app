@@ -1174,6 +1174,41 @@ function multiSeriesDisplayName(
   }`;
 }
 
+const MULTI_SERIES_GENERIC_TITLES = new Set(
+  Object.values(MULTI_SERIES_COPY).map((copy) => copy.title),
+);
+
+function multiSeriesBlockTitle(
+  blockTitle: string | null | undefined,
+  series: readonly MultiFactSeries[],
+  locale: LocaleCode,
+): string {
+  const valueObjectTitles = Array.from(
+    new Set(
+      series
+        .map((item) => item.valueObjectTitle.trim())
+        .filter(Boolean),
+    ),
+  );
+  const genericBaseTitle =
+    !blockTitle || MULTI_SERIES_GENERIC_TITLES.has(blockTitle);
+  const baseTitle = genericBaseTitle
+    ? MULTI_SERIES_COPY[locale].title
+    : blockTitle;
+
+  if (valueObjectTitles.length === 0) {
+    return baseTitle;
+  }
+
+  const visibleTitles = valueObjectTitles.slice(0, 3);
+  const overflow =
+    valueObjectTitles.length > visibleTitles.length
+      ? ` +${valueObjectTitles.length - visibleTitles.length}`
+      : "";
+
+  return `${baseTitle}: ${visibleTitles.join(", ")}${overflow}`;
+}
+
 type MultiSeriesBand = {
   readonly key: string;
   readonly family: string;
@@ -1547,15 +1582,18 @@ function AnalyticsBlockCard({
     : isActivityCount
       ? countCopy.recorded
       : ui.recordedActivities;
-  const title =
-    block.title ||
-    data?.valueObjectTitle ||
-    (block.visualizationType === "map"
-      ? MAP_BUILDER_COPY[locale].title
-      : isRootTimeDonut
-        ? rootTimeCopy.title
-        : isObservationFactMultiSeries
-          ? MULTI_SERIES_COPY[locale].title
+  const title = isObservationFactMultiSeries
+    ? multiSeriesBlockTitle(
+        block.title,
+        data?.factSeries ?? [],
+        locale,
+      )
+    : block.title ||
+      data?.valueObjectTitle ||
+      (block.visualizationType === "map"
+        ? MAP_BUILDER_COPY[locale].title
+        : isRootTimeDonut
+          ? rootTimeCopy.title
           : isActivityCount
             ? countCopy.title
             : ui.totalDurationByDay);
@@ -1730,10 +1768,6 @@ function AnalyticsBlockCard({
           </div>
         ) : (
           <div>
-            <div className="mb-2 text-[10px] leading-4 text-[#7c8099]">
-              {MULTI_SERIES_COPY[locale].independentScaleDescription}
-            </div>
-
             <div className="mb-2 flex flex-wrap gap-x-3 gap-y-1">
               {(data?.factSeries ?? []).map((series, index) => {
                 const color =
@@ -1787,7 +1821,7 @@ function AnalyticsBlockCard({
                         : ""
                     }
                   >
-                    <div className="mb-1 text-[10px] font-semibold text-[#6f7488]">
+                    <div className="mb-3 text-[10px] font-semibold text-[#6f7488]">
                       {bandTitle}
                     </div>
                     <ResponsiveContainer
