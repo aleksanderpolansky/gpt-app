@@ -62,10 +62,11 @@ const checks = [
       route.includes("direct_user_selected_state_leaf_parameter_v1"),
   ],
   [
-    "admin inline assignment uses guarded existing materializer",
+    "admin assignment materializer remains backend-only",
     route.includes("requirePlatformAdmin") &&
       route.includes("materializeSystemParameterAssignmentsV1") &&
-      page.includes("materializeDirectAssignment"),
+      !page.includes("materializeDirectAssignment") &&
+      !page.includes('action: "materialize_system_assignment"'),
   ],
   [
     "normal user does not materialize global assignment while saving snapshot",

@@ -73,7 +73,7 @@ const COPY: Record<Locale, Copy> = {
     eyebrow: "STATE SNAPSHOT",
     title: "Add a state snapshot",
     subtitle:
-      "A snapshot stores a user-reported state value at a specific moment using the existing system parameter assignment.",
+      "A snapshot stores a user-reported state value for a selected observation object and parameter at a specific moment.",
     explanationTitle: "What is a state snapshot?",
     explanationBody:
       "A snapshot records the value of an observation object's property at a specific moment. It exists independently of a particular activity and can later be used in analytics and calculations.",
@@ -82,7 +82,7 @@ const COPY: Record<Locale, Copy> = {
     explanationNotSnapshot:
       "Not a snapshot: walk duration, exercise repetitions or floors climbed. Those values belong to a particular activity and are recorded as source facts.",
     targetHint:
-      "Choose a property that describes the object's state at the selected moment, not the result of a particular action.",
+      "Choose a leaf observation object in States & Needs, then choose the parameter whose value you want to record.",
     searchLabel: "Search in the list",
     searchPlaceholder: "Type part of the observation object or parameter name",
     searchEmpty: "No system assignments match the search.",
@@ -95,8 +95,8 @@ const COPY: Record<Locale, Copy> = {
     sourceHint: "Optional: e.g. Weighed myself: 96 kg",
     submit: "Confirm and save snapshot",
     saving: "Saving...",
-    loading: "Loading available system assignments...",
-    noOptions: "No eligible system assignment was found.",
+    loading: "Loading state observation objects and parameters...",
+    noOptions: "No eligible state observation objects or parameters were found.",
     success: "Snapshot saved.",
     openFacts: "Open snapshot facts",
     error: "Could not save the snapshot.",
@@ -105,7 +105,7 @@ const COPY: Record<Locale, Copy> = {
     eyebrow: "PRZEKRÓJ STANU",
     title: "Dodaj przekrój stanu",
     subtitle:
-      "Przekrój zapisuje zgłoszoną przez użytkownika wartość stanu na określony moment przez istniejące systemowe przypisanie parametru.",
+      "Przekrój zapisuje zgłoszoną przez użytkownika wartość stanu wybranego obiektu obserwacji i parametru w określonym momencie.",
     explanationTitle: "Czym jest przekrój stanu?",
     explanationBody:
       "Przekrój zapisuje wartość właściwości obiektu obserwacji w określonym momencie. Istnieje niezależnie od konkretnej aktywności i może być później użyty w analizach oraz obliczeniach.",
@@ -114,7 +114,7 @@ const COPY: Record<Locale, Copy> = {
     explanationNotSnapshot:
       "Nie jest przekrojem: czas spaceru, liczba powtórzeń ćwiczenia ani liczba pokonanych pięter. Takie wartości należą do konkretnej aktywności i są zapisywane jako fakty źródłowe.",
     targetHint:
-      "Wybierz właściwość opisującą stan obiektu w wybranym momencie, a nie wynik konkretnego działania.",
+      "Wybierz liściowy obiekt obserwacji w gałęzi Stany i potrzeby, a następnie parametr, którego wartość chcesz zapisać.",
     searchLabel: "Szukaj na liście",
     searchPlaceholder: "Wpisz fragment nazwy obiektu obserwacji albo parametru",
     searchEmpty: "Żadne przypisanie systemowe nie pasuje do wyszukiwania.",
@@ -127,8 +127,8 @@ const COPY: Record<Locale, Copy> = {
     sourceHint: "Opcjonalnie: np. Ważyłem się: 96 kg",
     submit: "Potwierdź i zapisz przekrój",
     saving: "Zapisywanie...",
-    loading: "Ładowanie dostępnych przypisań systemowych...",
-    noOptions: "Nie znaleziono odpowiedniego przypisania systemowego.",
+    loading: "Ładowanie obiektów obserwacji i parametrów stanu...",
+    noOptions: "Nie znaleziono odpowiednich obiektów obserwacji stanu lub parametrów.",
     success: "Przekrój zapisany.",
     openFacts: "Otwórz fakty-przekroje",
     error: "Nie udało się zapisać przekroju.",
@@ -137,7 +137,7 @@ const COPY: Record<Locale, Copy> = {
     eyebrow: "ФАКТ-СРЕЗ СОСТОЯНИЯ",
     title: "Добавить факт-срез состояния",
     subtitle:
-      "Срез сохраняет сообщённое пользователем значение состояния на конкретный момент через существующее системное назначение параметра.",
+      "Срез сохраняет сообщённое пользователем значение состояния выбранного объекта наблюдения и параметра на конкретный момент.",
     explanationTitle: "Что такое факт-срез состояния?",
     explanationBody:
       "Факт-срез фиксирует значение свойства объекта наблюдения на конкретный момент времени. Он существует независимо от отдельной активности и позднее может использоваться в аналитике и расчётах.",
@@ -146,7 +146,7 @@ const COPY: Record<Locale, Copy> = {
     explanationNotSnapshot:
       "Не является фактом-срезом: продолжительность прогулки, количество повторений упражнения или число пройденных этажей. Такие значения относятся к конкретной активности и записываются как исходные факты.",
     targetHint:
-      "Выберите свойство, значение которого характеризует состояние объекта на указанный момент, а не результат отдельного действия.",
+      "Выберите листовой объект наблюдения ветви «Состояния и потребности», затем параметр, значение которого нужно сохранить.",
     searchLabel: "Поиск по списку",
     searchPlaceholder: "Введите часть названия ОН или параметра",
     searchEmpty: "Системные назначения по такому поиску не найдены.",
@@ -159,8 +159,8 @@ const COPY: Record<Locale, Copy> = {
     sourceHint: "Необязательно: например «Взвесился: 96 кг»",
     submit: "Подтвердить и сохранить срез",
     saving: "Сохраняем...",
-    loading: "Загружаем доступные системные назначения...",
-    noOptions: "Подходящее системное назначение не найдено.",
+    loading: "Загружаем объекты наблюдения и параметры...",
+    noOptions: "Подходящие объекты наблюдения или параметры не найдены.",
     success: "Факт-срез сохранён.",
     openFacts: "Открыть факты-срезы",
     error: "Не удалось сохранить факт-срез.",
@@ -169,7 +169,7 @@ const COPY: Record<Locale, Copy> = {
     eyebrow: "ФАКТ-ЗРІЗ СТАНУ",
     title: "Додати факт-зріз стану",
     subtitle:
-      "Зріз зберігає повідомлене користувачем значення стану на конкретний момент через чинне системне призначення параметра.",
+      "Зріз зберігає повідомлене користувачем значення стану вибраного об’єкта спостереження та параметра на конкретний момент.",
     explanationTitle: "Що таке факт-зріз стану?",
     explanationBody:
       "Факт-зріз фіксує значення властивості об’єкта спостереження на конкретний момент часу. Він існує незалежно від окремої активності й надалі може використовуватися в аналітиці та розрахунках.",
@@ -178,7 +178,7 @@ const COPY: Record<Locale, Copy> = {
     explanationNotSnapshot:
       "Не є фактом-зрізом: тривалість прогулянки, кількість повторень вправи або кількість пройдених поверхів. Такі значення належать до конкретної активності та записуються як вихідні факти.",
     targetHint:
-      "Оберіть властивість, значення якої характеризує стан об’єкта у вказаний момент, а не результат окремої дії.",
+      "Оберіть листовий об’єкт спостереження гілки «Стани та потреби», а потім параметр, значення якого потрібно зберегти.",
     searchLabel: "Пошук у списку",
     searchPlaceholder: "Введіть частину назви об’єкта спостереження або параметра",
     searchEmpty: "За цим пошуком системних призначень не знайдено.",
@@ -191,8 +191,8 @@ const COPY: Record<Locale, Copy> = {
     sourceHint: "Необов’язково: наприклад «Зважився: 96 кг»",
     submit: "Підтвердити й зберегти зріз",
     saving: "Зберігаємо...",
-    loading: "Завантажуємо доступні системні призначення...",
-    noOptions: "Відповідне системне призначення не знайдено.",
+    loading: "Завантажуємо об’єкти спостереження та параметри...",
+    noOptions: "Відповідні об’єкти спостереження або параметри не знайдено.",
     success: "Факт-зріз збережено.",
     openFacts: "Відкрити факти-зрізи",
     error: "Не вдалося зберегти факт-зріз.",
@@ -201,7 +201,7 @@ const COPY: Record<Locale, Copy> = {
     eyebrow: "ZUSTANDSSCHNITT",
     title: "Zustandsschnitt hinzufügen",
     subtitle:
-      "Ein Schnitt speichert einen vom Benutzer gemeldeten Zustandswert zu einem bestimmten Zeitpunkt über eine vorhandene Systemzuordnung.",
+      "Ein Schnitt speichert einen vom Benutzer gemeldeten Zustandswert für ein ausgewähltes Beobachtungsobjekt und einen Parameter zu einem bestimmten Zeitpunkt.",
     explanationTitle: "Was ist ein Zustandsschnitt?",
     explanationBody:
       "Ein Zustandsschnitt erfasst den Wert einer Eigenschaft eines Beobachtungsobjekts zu einem bestimmten Zeitpunkt. Er besteht unabhängig von einer einzelnen Aktivität und kann später für Analysen und Berechnungen verwendet werden.",
@@ -210,7 +210,7 @@ const COPY: Record<Locale, Copy> = {
     explanationNotSnapshot:
       "Kein Zustandsschnitt sind Gehzeit, Wiederholungen einer Übung oder gestiegene Stockwerke. Solche Werte gehören zu einer konkreten Aktivität und werden als Quellfakten gespeichert.",
     targetHint:
-      "Wählen Sie eine Eigenschaft, die den Zustand des Objekts zum angegebenen Zeitpunkt beschreibt, nicht das Ergebnis einer einzelnen Handlung.",
+      "Wählen Sie ein Blatt-Beobachtungsobjekt im Zweig Zustände und Bedürfnisse und danach den Parameter, dessen Wert gespeichert werden soll.",
     searchLabel: "In der Liste suchen",
     searchPlaceholder: "Geben Sie einen Teil des Beobachtungsobjekts oder Parameternamens ein",
     searchEmpty: "Keine Systemzuordnung passt zu dieser Suche.",
@@ -223,8 +223,8 @@ const COPY: Record<Locale, Copy> = {
     sourceHint: "Optional: z. B. Gewogen: 96 kg",
     submit: "Bestätigen und speichern",
     saving: "Speichern...",
-    loading: "Systemzuordnungen werden geladen...",
-    noOptions: "Keine passende Systemzuordnung gefunden.",
+    loading: "Beobachtungsobjekte und Parameter werden geladen...",
+    noOptions: "Keine passenden Beobachtungsobjekte oder Parameter gefunden.",
     success: "Zustandsschnitt gespeichert.",
     openFacts: "Snapshot-Fakten öffnen",
     error: "Zustandsschnitt konnte nicht gespeichert werden.",
@@ -233,7 +233,7 @@ const COPY: Record<Locale, Copy> = {
     eyebrow: "CORTE DE ESTADO",
     title: "Añadir corte de estado",
     subtitle:
-      "Un corte guarda un valor de estado informado por el usuario en un momento concreto mediante una asignación de sistema existente.",
+      "Un corte guarda un valor de estado informado por el usuario para un objeto de observación y un parámetro seleccionados en un momento concreto.",
     explanationTitle: "¿Qué es un corte de estado?",
     explanationBody:
       "Un corte registra el valor de una propiedad de un objeto de observación en un momento concreto. Existe independientemente de una actividad específica y después puede utilizarse en análisis y cálculos.",
@@ -242,7 +242,7 @@ const COPY: Record<Locale, Copy> = {
     explanationNotSnapshot:
       "No es un corte: duración de una caminata, repeticiones de un ejercicio o pisos subidos. Esos valores pertenecen a una actividad concreta y se guardan como hechos fuente.",
     targetHint:
-      "Elija una propiedad que describa el estado del objeto en el momento indicado, no el resultado de una acción concreta.",
+      "Elija un objeto de observación hoja de la rama Estados y necesidades y después el parámetro cuyo valor desea guardar.",
     searchLabel: "Buscar en la lista",
     searchPlaceholder: "Escriba una parte del nombre del objeto de observación o del parámetro",
     searchEmpty: "Ninguna asignación del sistema coincide con la búsqueda.",
@@ -255,8 +255,8 @@ const COPY: Record<Locale, Copy> = {
     sourceHint: "Opcional: p. ej. Me pesé: 96 kg",
     submit: "Confirmar y guardar corte",
     saving: "Guardando...",
-    loading: "Cargando asignaciones del sistema...",
-    noOptions: "No se encontró una asignación de sistema adecuada.",
+    loading: "Cargando objetos de observación y parámetros...",
+    noOptions: "No se encontraron objetos de observación o parámetros adecuados.",
     success: "Corte de estado guardado.",
     openFacts: "Abrir hechos de estado",
     error: "No se pudo guardar el corte.",
@@ -265,7 +265,7 @@ const COPY: Record<Locale, Copy> = {
     eyebrow: "SNÍMEK STAVU",
     title: "Přidat snímek stavu",
     subtitle:
-      "Snímek uloží uživatelem oznámenou hodnotu stavu k určitému okamžiku pomocí existujícího systémového přiřazení.",
+      "Snímek uloží uživatelem oznámenou hodnotu stavu pro vybraný objekt pozorování a parametr k určitému okamžiku.",
     explanationTitle: "Co je snímek stavu?",
     explanationBody:
       "Snímek stavu zaznamenává hodnotu vlastnosti objektu pozorování v konkrétním okamžiku. Existuje nezávisle na jednotlivé aktivitě a později může být použit v analýzách a výpočtech.",
@@ -274,7 +274,7 @@ const COPY: Record<Locale, Copy> = {
     explanationNotSnapshot:
       "Snímkem není délka chůze, počet opakování cviku ani počet vystoupaných pater. Tyto hodnoty patří ke konkrétní aktivitě a ukládají se jako zdrojová fakta.",
     targetHint:
-      "Vyberte vlastnost, která popisuje stav objektu v uvedeném okamžiku, nikoli výsledek jednotlivé činnosti.",
+      "Vyberte listový objekt pozorování ve větvi Stavy a potřeby a potom parametr, jehož hodnotu chcete uložit.",
     searchLabel: "Hledat v seznamu",
     searchPlaceholder: "Zadejte část názvu objektu pozorování nebo parametru",
     searchEmpty: "Žádné systémové přiřazení neodpovídá hledání.",
@@ -287,8 +287,8 @@ const COPY: Record<Locale, Copy> = {
     sourceHint: "Volitelné: např. Zvážil jsem se: 96 kg",
     submit: "Potvrdit a uložit snímek",
     saving: "Ukládání...",
-    loading: "Načítání systémových přiřazení...",
-    noOptions: "Vhodné systémové přiřazení nebylo nalezeno.",
+    loading: "Načítání objektů pozorování a parametrů...",
+    noOptions: "Nebyly nalezeny vhodné objekty pozorování nebo parametry.",
     success: "Snímek stavu uložen.",
     openFacts: "Otevřít snímky stavu",
     error: "Snímek stavu se nepodařilo uložit.",
@@ -438,10 +438,6 @@ function normalizeLocale(value: string | null): Locale {
   return value && value in COPY ? (value as Locale) : "en";
 }
 
-function formatSnapshotOptionLabel(option: SnapshotOption) {
-  return `${option.valueObjectTitle} · ${option.parameterTitle}`;
-}
-
 function localDateTimeValue() {
   const now = new Date();
   const offsetMs = now.getTimezoneOffset() * 60_000;
@@ -459,25 +455,19 @@ function SnapshotCapturePageContent() {
   const [parameterOptions, setParameterOptions] = useState<
     SnapshotParameterOption[]
   >([]);
-  const [adminAccess, setAdminAccess] = useState(false);
-  const [directPickerOpen, setDirectPickerOpen] = useState(false);
   const [directLeafQuery, setDirectLeafQuery] = useState("");
   const [directValueObjectId, setDirectValueObjectId] = useState("");
   const [
     directParameterDefinitionId,
     setDirectParameterDefinitionId,
   ] = useState("");
-  const [adminAssigning, setAdminAssigning] = useState(false);
-  const [adminMessage, setAdminMessage] = useState("");
-  const [assignmentId, setAssignmentId] = useState("");
   const [value, setValue] = useState("");
   const [unit, setUnit] = useState("");
   const [effectiveAt, setEffectiveAt] = useState(localDateTimeValue());
   const [sourceText, setSourceText] = useState("");
-  const [targetQuery, setTargetQuery] = useState("");
-  const [targetSearchOpen, setTargetSearchOpen] = useState(false);
-  const [targetActiveIndex, setTargetActiveIndex] = useState(-1);
-  const targetBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [leafSearchOpen, setLeafSearchOpen] = useState(false);
+  const [leafActiveIndex, setLeafActiveIndex] = useState(-1);
+  const leafBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [clientRequestId, setClientRequestId] = useState(() =>
     crypto.randomUUID(),
   );
@@ -503,7 +493,6 @@ function SnapshotCapturePageContent() {
           options?: SnapshotOption[];
           stateLeaves?: SnapshotLeafOption[];
           parameterOptions?: SnapshotParameterOption[];
-          adminAccess?: boolean;
           errorMessage?: string;
         };
 
@@ -528,16 +517,12 @@ function SnapshotCapturePageContent() {
             ? payload.parameterOptions
             : [],
         );
-        setAdminAccess(payload.adminAccess === true);
-
-        setAssignmentId("");
         setUnit("");
-        setTargetQuery("");
-        setDirectPickerOpen(false);
         setDirectLeafQuery("");
         setDirectValueObjectId("");
         setDirectParameterDefinitionId("");
-        setAdminMessage("");
+        setLeafSearchOpen(false);
+        setLeafActiveIndex(-1);
       } catch (error) {
         if (!cancelled) {
           setErrorMessage(
@@ -555,43 +540,6 @@ function SnapshotCapturePageContent() {
       cancelled = true;
     };
   }, [copy.error, locale]);
-
-  const selectedOption = useMemo(
-    () =>
-      options.find((option) => option.assignmentId === assignmentId) ??
-      null,
-    [assignmentId, options],
-  );
-
-  const filteredOptions = useMemo(() => {
-    const query = targetQuery.trim().toLowerCase();
-
-    if (!query) {
-      return options;
-    }
-
-    return options.filter((option) => {
-      const haystack = [
-        formatSnapshotOptionLabel(option),
-        option.valueObjectTitle,
-        option.parameterTitle,
-        option.valueObjectCanonicalKey,
-        option.parameterCode,
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return haystack.includes(query);
-    });
-  }, [options, targetQuery]);
-
-  const searchableOptions = useMemo(() => {
-    if (selectedOption && !filteredOptions.some((option) => option.assignmentId === selectedOption.assignmentId)) {
-      return [selectedOption, ...filteredOptions];
-    }
-
-    return filteredOptions;
-  }, [filteredOptions, selectedOption]);
 
   const selectedDirectLeaf = useMemo(
     () =>
@@ -630,26 +578,17 @@ function SnapshotCapturePageContent() {
     selectedDirectLeaf !== null &&
     selectedDirectParameter !== null;
 
-  const effectiveSelection = selectedOption
+  const effectiveSelection = directSelectionReady
     ? {
-        valueObjectId: selectedOption.valueObjectId,
+        valueObjectId: selectedDirectLeaf.valueObjectId,
         parameterDefinitionId:
-          selectedOption.parameterDefinitionId,
-        assignmentId: selectedOption.assignmentId,
-        allowedUnitCodes: selectedOption.allowedUnitCodes,
-        allowNegative: selectedOption.allowNegative,
+          selectedDirectParameter.parameterDefinitionId,
+        assignmentId: directAssignment?.assignmentId ?? "",
+        allowedUnitCodes:
+          selectedDirectParameter.allowedUnitCodes,
+        allowNegative: selectedDirectParameter.allowNegative,
       }
-    : directSelectionReady
-      ? {
-          valueObjectId: selectedDirectLeaf.valueObjectId,
-          parameterDefinitionId:
-            selectedDirectParameter.parameterDefinitionId,
-          assignmentId: directAssignment?.assignmentId ?? "",
-          allowedUnitCodes:
-            selectedDirectParameter.allowedUnitCodes,
-          allowNegative: selectedDirectParameter.allowNegative,
-        }
-      : null;
+    : null;
 
   const filteredStateLeaves = useMemo(() => {
     const query = directLeafQuery.trim().toLowerCase();
@@ -668,107 +607,18 @@ function SnapshotCapturePageContent() {
     return source.slice(0, 150);
   }, [directLeafQuery, stateLeaves]);
 
-  function selectTargetOption(option: SnapshotOption) {
-    if (targetBlurTimerRef.current) {
-      clearTimeout(targetBlurTimerRef.current);
-      targetBlurTimerRef.current = null;
+  function selectDirectLeaf(leaf: SnapshotLeafOption) {
+    if (leafBlurTimerRef.current) {
+      clearTimeout(leafBlurTimerRef.current);
+      leafBlurTimerRef.current = null;
     }
 
-    setAssignmentId(option.assignmentId);
-    setDirectValueObjectId("");
+    setDirectValueObjectId(leaf.valueObjectId);
+    setDirectLeafQuery(leaf.valueObjectTitle);
     setDirectParameterDefinitionId("");
-    setDirectLeafQuery("");
-    setAdminMessage("");
-    setUnit(option.canonicalUnitCode);
-    setTargetQuery(formatSnapshotOptionLabel(option));
-    setTargetSearchOpen(false);
-    setTargetActiveIndex(-1);
-  }
-
-  async function materializeDirectAssignment() {
-    if (
-      !adminAccess ||
-      !directValueObjectId ||
-      !directParameterDefinitionId ||
-      adminAssigning
-    ) {
-      return;
-    }
-
-    setAdminAssigning(true);
-    setAdminMessage("");
-    setErrorMessage("");
-
-    try {
-      const response = await fetch("/api/activity/facts/snapshots", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          action: "materialize_system_assignment",
-          valueObjectId: directValueObjectId,
-          parameterDefinitionId: directParameterDefinitionId,
-        }),
-      });
-
-      const payload = (await response.json()) as {
-        ok?: boolean;
-        assignmentId?: string;
-        errorMessage?: string;
-      };
-
-      if (!response.ok || payload.ok !== true || !payload.assignmentId) {
-        throw new Error(payload.errorMessage || copy.error);
-      }
-
-      const leaf = stateLeaves.find(
-        (item) => item.valueObjectId === directValueObjectId,
-      );
-      const parameter = parameterOptions.find(
-        (item) =>
-          item.parameterDefinitionId === directParameterDefinitionId,
-      );
-
-      if (!leaf || !parameter) {
-        throw new Error(copy.error);
-      }
-
-      const nextOption: SnapshotOption = {
-        assignmentId: payload.assignmentId,
-        parameterDefinitionId: parameter.parameterDefinitionId,
-        parameterCode: parameter.parameterCode,
-        parameterTitle: parameter.parameterTitle,
-        dimensionCode: parameter.dimensionCode,
-        canonicalUnitCode: parameter.canonicalUnitCode,
-        allowedUnitCodes: parameter.allowedUnitCodes,
-        aggregationMethodCode: parameter.aggregationMethodCode,
-        defaultWindowCode: parameter.defaultWindowCode,
-        allowNegative: parameter.allowNegative,
-        valueObjectId: leaf.valueObjectId,
-        valueObjectCanonicalKey: leaf.valueObjectCanonicalKey,
-        valueObjectTitle: leaf.valueObjectTitle,
-      };
-
-      setOptions((current) => {
-        const withoutSamePair = current.filter(
-          (item) =>
-            !(
-              item.valueObjectId === nextOption.valueObjectId &&
-              item.parameterDefinitionId ===
-                nextOption.parameterDefinitionId
-            ),
-        );
-        return [...withoutSamePair, nextOption];
-      });
-      setAssignmentId(payload.assignmentId);
-      setUnit(parameter.canonicalUnitCode);
-      setAdminMessage(selectionCopy.adminAssigned);
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : copy.error,
-      );
-    } finally {
-      setAdminAssigning(false);
-    }
+    setUnit("");
+    setLeafSearchOpen(false);
+    setLeafActiveIndex(-1);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -874,70 +724,76 @@ function SnapshotCapturePageContent() {
             <p className="text-sm font-bold text-[#7c8099]">
               {copy.loading}
             </p>
-          ) : options.length === 0 && stateLeaves.length === 0 ? (
+          ) : stateLeaves.length === 0 || parameterOptions.length === 0 ? (
             <p className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#f5f6fb] p-4 text-sm font-medium text-[#5a5f7a]">
               {copy.noOptions}
             </p>
           ) : (
             <form className="grid gap-4" onSubmit={submit}>
-              <div className="grid gap-2">
-                <label htmlFor="snapshot-target-search" className="text-sm font-black">
-                  {copy.target}
-                </label>
-                <span className="text-xs font-medium leading-5 text-[#7c8099]">
-                  {copy.targetHint}
-                </span>
+              <div className="grid gap-3">
+                <div className="grid gap-1">
+                  <label
+                    htmlFor="snapshot-state-leaf-search"
+                    className="text-sm font-black"
+                  >
+                    {copy.target}
+                  </label>
+                  <span className="text-xs font-medium leading-5 text-[#7c8099]">
+                    {copy.targetHint}
+                  </span>
+                </div>
 
                 <div className="relative">
                   <input
-                    id="snapshot-target-search"
+                    id="snapshot-state-leaf-search"
                     type="text"
                     role="combobox"
                     aria-autocomplete="list"
-                    aria-expanded={targetSearchOpen}
-                    aria-controls="snapshot-target-options"
+                    aria-expanded={leafSearchOpen}
+                    aria-controls="snapshot-state-leaf-options"
                     aria-activedescendant={
-                      targetSearchOpen &&
-                      targetActiveIndex >= 0 &&
-                      searchableOptions[targetActiveIndex]
-                        ? `snapshot-target-option-${searchableOptions[targetActiveIndex].assignmentId}`
+                      leafSearchOpen &&
+                      leafActiveIndex >= 0 &&
+                      filteredStateLeaves[leafActiveIndex]
+                        ? `snapshot-state-leaf-option-${filteredStateLeaves[leafActiveIndex].valueObjectId}`
                         : undefined
                     }
-                    value={targetQuery}
+                    value={directLeafQuery}
                     onFocus={() => {
-                      if (targetBlurTimerRef.current) {
-                        clearTimeout(targetBlurTimerRef.current);
-                        targetBlurTimerRef.current = null;
+                      if (leafBlurTimerRef.current) {
+                        clearTimeout(leafBlurTimerRef.current);
+                        leafBlurTimerRef.current = null;
                       }
-                      setTargetSearchOpen(true);
+                      setLeafSearchOpen(true);
                     }}
                     onBlur={() => {
-                      targetBlurTimerRef.current = setTimeout(() => {
-                        setTargetSearchOpen(false);
-                        setTargetActiveIndex(-1);
+                      leafBlurTimerRef.current = setTimeout(() => {
+                        setLeafSearchOpen(false);
+                        setLeafActiveIndex(-1);
                       }, 120);
                     }}
                     onChange={(event) => {
                       const nextQuery = event.target.value;
-                      setTargetQuery(nextQuery);
-                      setTargetSearchOpen(true);
-                      setTargetActiveIndex(-1);
+                      setDirectLeafQuery(nextQuery);
+                      setLeafSearchOpen(true);
+                      setLeafActiveIndex(-1);
 
                       if (
-                        selectedOption &&
-                        nextQuery !== formatSnapshotOptionLabel(selectedOption)
+                        selectedDirectLeaf &&
+                        nextQuery !== selectedDirectLeaf.valueObjectTitle
                       ) {
-                        setAssignmentId("");
+                        setDirectValueObjectId("");
+                        setDirectParameterDefinitionId("");
                         setUnit("");
                       }
                     }}
                     onKeyDown={(event) => {
                       if (event.key === "ArrowDown") {
                         event.preventDefault();
-                        setTargetSearchOpen(true);
-                        setTargetActiveIndex((current) => {
-                          if (searchableOptions.length === 0) return -1;
-                          return current < searchableOptions.length - 1
+                        setLeafSearchOpen(true);
+                        setLeafActiveIndex((current) => {
+                          if (filteredStateLeaves.length === 0) return -1;
+                          return current < filteredStateLeaves.length - 1
                             ? current + 1
                             : 0;
                         });
@@ -946,33 +802,35 @@ function SnapshotCapturePageContent() {
 
                       if (event.key === "ArrowUp") {
                         event.preventDefault();
-                        setTargetSearchOpen(true);
-                        setTargetActiveIndex((current) => {
-                          if (searchableOptions.length === 0) return -1;
+                        setLeafSearchOpen(true);
+                        setLeafActiveIndex((current) => {
+                          if (filteredStateLeaves.length === 0) return -1;
                           return current > 0
                             ? current - 1
-                            : searchableOptions.length - 1;
+                            : filteredStateLeaves.length - 1;
                         });
                         return;
                       }
 
                       if (
                         event.key === "Enter" &&
-                        targetSearchOpen &&
-                        targetActiveIndex >= 0 &&
-                        searchableOptions[targetActiveIndex]
+                        leafSearchOpen &&
+                        leafActiveIndex >= 0 &&
+                        filteredStateLeaves[leafActiveIndex]
                       ) {
                         event.preventDefault();
-                        selectTargetOption(searchableOptions[targetActiveIndex]);
+                        selectDirectLeaf(
+                          filteredStateLeaves[leafActiveIndex],
+                        );
                         return;
                       }
 
                       if (event.key === "Escape") {
-                        setTargetSearchOpen(false);
-                        setTargetActiveIndex(-1);
+                        setLeafSearchOpen(false);
+                        setLeafActiveIndex(-1);
                       }
                     }}
-                    placeholder={copy.searchPlaceholder}
+                    placeholder={selectionCopy.leafPlaceholder}
                     className="min-h-11 w-full rounded-xl border border-[rgba(0,0,0,0.08)] bg-white px-4 pr-12 font-bold outline-none focus:border-[#3b6ef8]"
                     autoComplete="off"
                     required
@@ -983,43 +841,43 @@ function SnapshotCapturePageContent() {
                     aria-label={copy.searchLabel}
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => {
-                      setTargetSearchOpen((open) => !open);
-                      setTargetActiveIndex(-1);
+                      setLeafSearchOpen((open) => !open);
+                      setLeafActiveIndex(-1);
                     }}
                     className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-[#7c8099]"
                   >
                     <span aria-hidden="true">⌄</span>
                   </button>
 
-                  {targetSearchOpen ? (
+                  {leafSearchOpen ? (
                     <div
-                      id="snapshot-target-options"
+                      id="snapshot-state-leaf-options"
                       role="listbox"
                       className="absolute z-30 mt-1 max-h-72 w-full overflow-auto rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-1 shadow-lg"
                     >
-                      {searchableOptions.length > 0 ? (
-                        searchableOptions.map((option, index) => {
-                          const active = index === targetActiveIndex;
+                      {filteredStateLeaves.length > 0 ? (
+                        filteredStateLeaves.map((leaf, index) => {
+                          const active = index === leafActiveIndex;
                           const selected =
-                            option.assignmentId === selectedOption?.assignmentId;
+                            leaf.valueObjectId === directValueObjectId;
 
                           return (
                             <button
-                              id={`snapshot-target-option-${option.assignmentId}`}
-                              key={option.assignmentId}
+                              id={`snapshot-state-leaf-option-${leaf.valueObjectId}`}
+                              key={leaf.valueObjectId}
                               type="button"
                               role="option"
                               aria-selected={selected}
                               onMouseDown={(event) => event.preventDefault()}
-                              onMouseEnter={() => setTargetActiveIndex(index)}
-                              onClick={() => selectTargetOption(option)}
+                              onMouseEnter={() => setLeafActiveIndex(index)}
+                              onClick={() => selectDirectLeaf(leaf)}
                               className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-bold ${
                                 active || selected
                                   ? "bg-[#eef2ff] text-[#1a1d2e]"
                                   : "text-[#1a1d2e] hover:bg-[#f5f6fb]"
                               }`}
                             >
-                              <span>{formatSnapshotOptionLabel(option)}</span>
+                              <span>{leaf.valueObjectTitle}</span>
                               {selected ? (
                                 <span className="ml-3 text-[#3b6ef8]">✓</span>
                               ) : null}
@@ -1028,176 +886,46 @@ function SnapshotCapturePageContent() {
                         })
                       ) : (
                         <div className="rounded-lg bg-[#f5f6fb] px-3 py-3 text-xs font-medium text-[#5a5f7a]">
-                          {copy.searchEmpty}
+                          {selectionCopy.leafEmpty}
                         </div>
                       )}
                     </div>
                   ) : null}
                 </div>
 
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs font-medium text-[#7c8099]">
-                    {searchableOptions.length} / {options.length}
-                  </p>
-                  {selectedOption ? (
-                    <p className="text-xs font-bold text-[#3b6ef8]">
-                      {formatSnapshotOptionLabel(selectedOption)}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-[#cfd8ff] bg-[#f7f9ff] p-3">
-                <button
-                  type="button"
-                  onClick={() => setDirectPickerOpen((open) => !open)}
-                  className="min-h-9 rounded-lg border border-[#b9c7ff] bg-white px-3 text-sm font-bold text-[#315de8] hover:bg-[#eef2ff]"
-                >
-                  {directPickerOpen
-                    ? selectionCopy.hideAllStateLeaves
-                    : selectionCopy.allStateLeaves}
-                </button>
-
-                {directPickerOpen ? (
-                  <div className="mt-3 grid gap-3">
-                    <div>
-                      <p className="text-sm font-black text-[#1a1d2e]">
-                        {selectionCopy.directTitle}
-                      </p>
-                      <p className="mt-1 text-xs font-medium leading-5 text-[#5a5f7a]">
-                        {selectionCopy.directHint}
-                      </p>
-                    </div>
-
-                    <div className="grid gap-2">
-                      <label
-                        htmlFor="snapshot-state-leaf-search"
-                        className="text-xs font-black text-[#1a1d2e]"
+                <label className="grid gap-2">
+                  <span className="text-sm font-black">
+                    {selectionCopy.parameterLabel}
+                  </span>
+                  <select
+                    value={directParameterDefinitionId}
+                    onChange={(event) => {
+                      const nextParameterId = event.target.value;
+                      setDirectParameterDefinitionId(nextParameterId);
+                      const parameter = parameterOptions.find(
+                        (item) =>
+                          item.parameterDefinitionId === nextParameterId,
+                      );
+                      setUnit(parameter?.canonicalUnitCode ?? "");
+                    }}
+                    disabled={!directValueObjectId}
+                    className="min-h-11 rounded-xl border border-[rgba(0,0,0,0.08)] bg-white px-4 font-bold outline-none focus:border-[#3b6ef8] disabled:opacity-50"
+                    required
+                  >
+                    <option value="">
+                      {selectionCopy.parameterPlaceholder}
+                    </option>
+                    {parameterOptions.map((parameter) => (
+                      <option
+                        key={parameter.parameterDefinitionId}
+                        value={parameter.parameterDefinitionId}
                       >
-                        {selectionCopy.leafLabel}
-                      </label>
-                      <input
-                        id="snapshot-state-leaf-search"
-                        type="text"
-                        value={directLeafQuery}
-                        onChange={(event) => {
-                          setDirectLeafQuery(event.target.value);
-                          setDirectValueObjectId("");
-                          setDirectParameterDefinitionId("");
-                          setAssignmentId("");
-                          setUnit("");
-                        }}
-                        placeholder={selectionCopy.leafPlaceholder}
-                        className="min-h-10 rounded-lg border border-[rgba(0,0,0,0.08)] bg-white px-3 text-sm font-bold outline-none focus:border-[#3b6ef8]"
-                      />
-
-                      <div className="max-h-52 overflow-auto rounded-lg border border-[rgba(0,0,0,0.08)] bg-white p-1">
-                        {filteredStateLeaves.length > 0 ? (
-                          filteredStateLeaves.map((leaf) => {
-                            const selected =
-                              leaf.valueObjectId === directValueObjectId;
-                            return (
-                              <button
-                                key={leaf.valueObjectId}
-                                type="button"
-                                onClick={() => {
-                                  setDirectValueObjectId(leaf.valueObjectId);
-                                  setDirectLeafQuery(leaf.valueObjectTitle);
-                                  setAssignmentId("");
-                                  setDirectParameterDefinitionId("");
-                                  setUnit("");
-                                }}
-                                className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm font-bold ${
-                                  selected
-                                    ? "bg-[#eef2ff] text-[#1a1d2e]"
-                                    : "text-[#1a1d2e] hover:bg-[#f5f6fb]"
-                                }`}
-                              >
-                                <span>{leaf.valueObjectTitle}</span>
-                                {selected ? (
-                                  <span className="ml-3 text-[#3b6ef8]">✓</span>
-                                ) : null}
-                              </button>
-                            );
-                          })
-                        ) : (
-                          <div className="px-3 py-3 text-xs font-medium text-[#5a5f7a]">
-                            {selectionCopy.leafEmpty}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <label className="grid gap-2">
-                      <span className="text-xs font-black text-[#1a1d2e]">
-                        {selectionCopy.parameterLabel}
-                      </span>
-                      <select
-                        value={directParameterDefinitionId}
-                        onChange={(event) => {
-                          const nextParameterId = event.target.value;
-                          setDirectParameterDefinitionId(nextParameterId);
-                          setAssignmentId("");
-                          const parameter = parameterOptions.find(
-                            (item) =>
-                              item.parameterDefinitionId === nextParameterId,
-                          );
-                          setUnit(parameter?.canonicalUnitCode ?? "");
-                        }}
-                        disabled={!directValueObjectId}
-                        className="min-h-10 rounded-lg border border-[rgba(0,0,0,0.08)] bg-white px-3 text-sm font-bold outline-none focus:border-[#3b6ef8] disabled:opacity-50"
-                      >
-                        <option value="">
-                          {selectionCopy.parameterPlaceholder}
-                        </option>
-                        {parameterOptions.map((parameter) => (
-                          <option
-                            key={parameter.parameterDefinitionId}
-                            value={parameter.parameterDefinitionId}
-                          >
-                            {parameter.parameterTitle} ·{" "}
-                            {parameter.canonicalUnitCode}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    {directSelectionReady ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className={`rounded-full px-3 py-1 text-xs font-black ${
-                            directAssignment
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-amber-50 text-amber-700"
-                          }`}
-                        >
-                          {directAssignment
-                            ? selectionCopy.existingAssignment
-                            : selectionCopy.personalOnly}
-                        </span>
-
-                        {adminAccess && !directAssignment ? (
-                          <button
-                            type="button"
-                            disabled={adminAssigning}
-                            onClick={() => void materializeDirectAssignment()}
-                            className="min-h-8 rounded-lg border border-[#b9c7ff] bg-white px-3 text-xs font-black text-[#315de8] hover:bg-[#eef2ff] disabled:opacity-50"
-                          >
-                            {adminAssigning
-                              ? selectionCopy.adminAssigning
-                              : selectionCopy.adminAssign}
-                          </button>
-                        ) : null}
-                      </div>
-                    ) : null}
-
-                    {adminMessage ? (
-                      <p className="text-xs font-bold text-emerald-700">
-                        {adminMessage}
-                      </p>
-                    ) : null}
-                  </div>
-                ) : null}
+                        {parameter.parameterTitle} ·{" "}
+                        {parameter.canonicalUnitCode}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
