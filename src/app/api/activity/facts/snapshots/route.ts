@@ -3,6 +3,16 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 
 import {
+  getActivityParameterPresentation,
+  type ActivityParameterLocale,
+} from "@/lib/activity/activity-parameter-presentation";
+import {
+  platformAdminErrorResponse,
+  requirePlatformAdmin,
+} from "@/lib/admin/require-platform-admin";
+import { materializeSystemParameterAssignmentsV1 } from "@/lib/reality-curator/system-parameter-assignment.server";
+
+import {
   ActorContextError,
   resolveActiveActorContext,
 } from "../../../../../../lib/actor-context";
@@ -18,6 +28,16 @@ const STATES_AND_NEEDS_ROOT_ID =
   "6ba4ecf1-8a05-5eaa-b280-4eb7aff2a42a" as const;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const PARAMETER_LOCALES = new Set<ActivityParameterLocale>([
+  "en",
+  "pl",
+  "ru",
+  "uk",
+  "de",
+  "es",
+  "cs",
+]);
 
 const SUPPORTED_FACT_MEASURE_TYPES = new Set([
   "duration",
@@ -323,7 +343,10 @@ async function systemSnapshotOptions(input: {
         assignmentId: assignment.id,
         parameterDefinitionId: definition.id,
         parameterCode: definition.parameter_code,
-        parameterTitle: definition.title,
+        parameterTitle: localizedParameterTitle(
+          definition,
+          input.locale,
+        ),
         dimensionCode: definition.dimension_code,
         canonicalUnitCode: canonicalUnit,
         allowedUnitCodes: allowedUnits,
@@ -346,6 +369,129 @@ async function systemSnapshotOptions(input: {
     });
 }
 
+function normalizeParameterLocale(value: string): ActivityParameterLocale {
+  const candidate = text(value).toLowerCase() as ActivityParameterLocale;
+  return PARAMETER_LOCALES.has(candidate) ? candidate : "en";
+}
+
+function localizedParameterTitle(
+  definition: DefinitionRow,
+  locale: string,
+): string {
+  return getActivityParameterPresentation(
+    definition.parameter_code,
+    normalizeParameterLocale(locale),
+    definition.title,
+    definition.description,
+  ).title;
+}
+
+async function stateLeafSnapshotCatalog(input: {
+  locale: string;
+  parameterCode?: string | null;
+}) {
+  let definitionQuery = supabase
+    .from("value_object_parameter_definitions")
+    .select(
+      "id,parameter_code,title,description,dimension_code,value_type_code,canonical_unit_code,allowed_unit_codes,aggregation_method_code,default_window_code,allow_negative,scope_code,status",
+    )
+    .eq("scope_code", "system")
+    .eq("status", "active")
+    .eq("value_type_code", "numeric")
+    .limit(1000);
+
+  const parameterCode = text(input.parameterCode).toLowerCase();
+  if (parameterCode) {
+    definitionQuery = definitionQuery.eq("parameter_code", parameterCode);
+  }
+
+  const [leafResult, definitionResult] = await Promise.all([
+    supabase
+      .from("value_objects")
+      .select(
+        "id,canonical_key,title,metadata_json,scope_code,origin_type_code,ontology_node_role_code,root_value_object_id,status",
+      )
+      .eq("scope_code", "global")
+      .eq("origin_type_code", "system_model")
+      .eq("ontology_node_role_code", "leaf")
+      .eq("root_value_object_id", STATES_AND_NEEDS_ROOT_ID)
+      .eq("status", "active")
+      .limit(5000),
+    definitionQuery,
+  ]);
+
+  if (leafResult.error) {
+    throw new Error(
+      `SNAPSHOT_CAPTURE_STATE_LEAF_READ_FAILED:${leafResult.error.message}`,
+    );
+  }
+
+  if (definitionResult.error) {
+    throw new Error(
+      `SNAPSHOT_CAPTURE_PARAMETER_READ_FAILED:${definitionResult.error.message}`,
+    );
+  }
+
+  const leafOptions = ((leafResult.data ?? []) as ValueObjectRow[])
+    .map((valueObject) => ({
+      valueObjectId: valueObject.id,
+      valueObjectCanonicalKey: valueObject.canonical_key,
+      valueObjectTitle: localizedValueObjectTitle(
+        valueObject,
+        input.locale,
+      ),
+    }))
+    .sort((left, right) =>
+      left.valueObjectTitle.localeCompare(
+        right.valueObjectTitle,
+        input.locale,
+      ),
+    );
+
+  const parameterOptions = ((definitionResult.data ?? []) as DefinitionRow[])
+    .filter((definition) =>
+      SUPPORTED_FACT_MEASURE_TYPES.has(text(definition.parameter_code)),
+    )
+    .map((definition) => {
+      const canonicalUnitCode = text(definition.canonical_unit_code);
+      const allowedUnitCodes = stringArray(definition.allowed_unit_codes);
+
+      if (
+        !canonicalUnitCode ||
+        !allowedUnitCodes.includes(canonicalUnitCode)
+      ) {
+        return null;
+      }
+
+      return {
+        parameterDefinitionId: definition.id,
+        parameterCode: definition.parameter_code,
+        parameterTitle: localizedParameterTitle(
+          definition,
+          input.locale,
+        ),
+        dimensionCode: definition.dimension_code,
+        canonicalUnitCode,
+        allowedUnitCodes,
+        aggregationMethodCode: definition.aggregation_method_code,
+        defaultWindowCode: definition.default_window_code,
+        allowNegative: definition.allow_negative === true,
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) =>
+      (left?.parameterTitle ?? "").localeCompare(
+        right?.parameterTitle ?? "",
+        input.locale,
+      ),
+    );
+
+  return {
+    leafOptions,
+    parameterOptions,
+  };
+}
+
 export async function GET(request: Request) {
   const context = await authenticatedContext();
   if (!context.ok) {
@@ -365,10 +511,18 @@ export async function GET(request: Request) {
   const parameterCode = text(url.searchParams.get("parameterCode")) || null;
 
   try {
-    const options = await systemSnapshotOptions({
-      locale,
-      parameterCode,
-    });
+    const adminGuard = await requirePlatformAdmin();
+
+    const [options, catalog] = await Promise.all([
+      systemSnapshotOptions({
+        locale,
+        parameterCode,
+      }),
+      stateLeafSnapshotCatalog({
+        locale,
+        parameterCode,
+      }),
+    ]);
 
     return NextResponse.json({
       ok: true,
@@ -376,6 +530,9 @@ export async function GET(request: Request) {
       readStatus: "ready",
       options,
       count: options.length,
+      stateLeaves: catalog.leafOptions,
+      parameterOptions: catalog.parameterOptions,
+      adminAccess: adminGuard.ok,
       ownership: {
         appUserId: context.appUserId,
         actorId: context.actorId,
@@ -422,7 +579,152 @@ export async function POST(request: Request) {
     body = {};
   }
 
+  const action = text(body.action);
+
+  if (action === "materialize_system_assignment") {
+    const guard = await requirePlatformAdmin();
+    if (!guard.ok) {
+      return platformAdminErrorResponse(guard, ENDPOINT);
+    }
+
+    const valueObjectId = text(body.valueObjectId);
+    const parameterDefinitionId = text(body.parameterDefinitionId);
+
+    if (
+      !UUID_RE.test(valueObjectId) ||
+      !UUID_RE.test(parameterDefinitionId)
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          endpoint: ENDPOINT,
+          errorCode: "SNAPSHOT_CAPTURE_ADMIN_ASSIGNMENT_INPUT_INVALID",
+          errorMessage:
+            "valueObjectId and parameterDefinitionId are required UUIDs.",
+        },
+        { status: 400 },
+      );
+    }
+
+    try {
+      const [valueObjectResult, definitionResult] = await Promise.all([
+        supabase
+          .from("value_objects")
+          .select(
+            "id,canonical_key,title,metadata_json,scope_code,origin_type_code,ontology_node_role_code,root_value_object_id,status",
+          )
+          .eq("id", valueObjectId)
+          .eq("scope_code", "global")
+          .eq("origin_type_code", "system_model")
+          .eq("ontology_node_role_code", "leaf")
+          .eq("root_value_object_id", STATES_AND_NEEDS_ROOT_ID)
+          .eq("status", "active")
+          .maybeSingle(),
+        supabase
+          .from("value_object_parameter_definitions")
+          .select(
+            "id,parameter_code,title,description,dimension_code,value_type_code,canonical_unit_code,allowed_unit_codes,aggregation_method_code,default_window_code,allow_negative,scope_code,status",
+          )
+          .eq("id", parameterDefinitionId)
+          .eq("scope_code", "system")
+          .eq("status", "active")
+          .eq("value_type_code", "numeric")
+          .maybeSingle(),
+      ]);
+
+      if (valueObjectResult.error) {
+        throw new Error(
+          `SNAPSHOT_CAPTURE_ADMIN_LEAF_READ_FAILED:${valueObjectResult.error.message}`,
+        );
+      }
+      if (definitionResult.error) {
+        throw new Error(
+          `SNAPSHOT_CAPTURE_ADMIN_PARAMETER_READ_FAILED:${definitionResult.error.message}`,
+        );
+      }
+
+      const valueObject = valueObjectResult.data as ValueObjectRow | null;
+      const definition = definitionResult.data as DefinitionRow | null;
+
+      if (!valueObject || !definition) {
+        throw new Error(
+          "SNAPSHOT_CAPTURE_ADMIN_ACTIVE_STATE_LEAF_AND_PARAMETER_REQUIRED",
+        );
+      }
+
+      if (
+        !SUPPORTED_FACT_MEASURE_TYPES.has(
+          text(definition.parameter_code),
+        )
+      ) {
+        throw new Error(
+          "SNAPSHOT_CAPTURE_ADMIN_PARAMETER_NOT_SUPPORTED_V1",
+        );
+      }
+
+      const materialization =
+        await materializeSystemParameterAssignmentsV1({
+          parameterDefinitionId,
+          valueObjectIds: [valueObjectId],
+          curator: {
+            curatorAppUserId: guard.appUser.id,
+            curatorAdminId: guard.platformAdmin.id,
+            curatorRole: guard.platformAdmin.role,
+          },
+          idempotencyKey:
+            `ARCTOR_SNAPSHOT_INLINE_SYSTEM_ASSIGNMENT_V1:${parameterDefinitionId}:${valueObjectId}`,
+        });
+
+      const assignmentId =
+        Array.isArray(materialization.assignmentIds)
+          ? text(materialization.assignmentIds[0])
+          : "";
+
+      if (!UUID_RE.test(assignmentId)) {
+        throw new Error(
+          "SNAPSHOT_CAPTURE_ADMIN_ASSIGNMENT_ID_MISSING",
+        );
+      }
+
+      return NextResponse.json({
+        ok: true,
+        endpoint: ENDPOINT,
+        action,
+        assignmentId,
+        rowsWritten: materialization.rowsWritten ?? 0,
+        idempotentReplay:
+          materialization.idempotentReplay === true,
+        sideEffects: {
+          dbWritesExecuted:
+            (materialization.rowsWritten ?? 0) > 0,
+          sqlExecuted: false,
+          openAiCallExecuted: false,
+        },
+      });
+    } catch (error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          endpoint: ENDPOINT,
+          action,
+          errorCode: "SNAPSHOT_CAPTURE_ADMIN_ASSIGNMENT_FAILED",
+          errorMessage:
+            error instanceof Error
+              ? error.message
+              : "System assignment failed.",
+          sideEffects: {
+            sqlExecuted: false,
+            openAiCallExecuted: false,
+          },
+        },
+        { status: 409 },
+      );
+    }
+  }
+
   const assignmentId = text(body.assignmentId);
+  const valueObjectId = text(body.valueObjectId);
+  const parameterDefinitionId = text(body.parameterDefinitionId);
   const unit = text(body.unit).toLowerCase();
   const sourceText = text(body.sourceText);
   const clientRequestId = text(body.clientRequestId);
@@ -433,7 +735,9 @@ export async function POST(request: Request) {
       : Number.NaN;
 
   if (
-    !UUID_RE.test(assignmentId) ||
+    (assignmentId && !UUID_RE.test(assignmentId)) ||
+    !UUID_RE.test(valueObjectId) ||
+    !UUID_RE.test(parameterDefinitionId) ||
     !UUID_RE.test(clientRequestId) ||
     !unit ||
     !Number.isFinite(value)
@@ -444,7 +748,7 @@ export async function POST(request: Request) {
         endpoint: ENDPOINT,
         errorCode: "SNAPSHOT_CAPTURE_INPUT_INVALID",
         errorMessage:
-          "assignmentId, numeric value, unit and clientRequestId are required.",
+          "valueObjectId, parameterDefinitionId, numeric value, unit and clientRequestId are required; assignmentId is optional.",
       },
       { status: 400 },
     );
@@ -469,37 +773,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { data: assignmentData, error: assignmentError } = await supabase
-      .from("value_object_parameter_assignments")
-      .select(
-        "id,value_object_id,parameter_definition_id,scope_code,assignment_scope_code,owner_user_id,owner_actor_id,status",
-      )
-      .eq("id", assignmentId)
-      .eq("scope_code", "system")
-      .eq("assignment_scope_code", "system")
-      .eq("status", "active")
-      .is("owner_user_id", null)
-      .is("owner_actor_id", null)
-      .maybeSingle();
-
-    if (assignmentError) {
-      throw new Error(
-        `SNAPSHOT_CAPTURE_ASSIGNMENT_READ_FAILED:${assignmentError.message}`,
-      );
-    }
-
-    const assignment = assignmentData as AssignmentRow | null;
-    if (!assignment) {
-      throw new Error("SNAPSHOT_CAPTURE_ACTIVE_SYSTEM_ASSIGNMENT_REQUIRED");
-    }
-
     const [definitionResult, valueObjectResult] = await Promise.all([
       supabase
         .from("value_object_parameter_definitions")
         .select(
           "id,parameter_code,title,description,dimension_code,value_type_code,canonical_unit_code,allowed_unit_codes,aggregation_method_code,default_window_code,allow_negative,scope_code,status",
         )
-        .eq("id", assignment.parameter_definition_id)
+        .eq("id", parameterDefinitionId)
         .eq("scope_code", "system")
         .eq("status", "active")
         .maybeSingle(),
@@ -508,7 +788,7 @@ export async function POST(request: Request) {
         .select(
           "id,canonical_key,title,metadata_json,scope_code,origin_type_code,ontology_node_role_code,root_value_object_id,status",
         )
-        .eq("id", assignment.value_object_id)
+        .eq("id", valueObjectId)
         .eq("scope_code", "global")
         .eq("origin_type_code", "system_model")
         .eq("ontology_node_role_code", "leaf")
@@ -532,7 +812,66 @@ export async function POST(request: Request) {
     const valueObject = valueObjectResult.data as ValueObjectRow | null;
 
     if (!definition || !valueObject) {
-      throw new Error("SNAPSHOT_CAPTURE_ASSIGNMENT_TARGET_INVALID");
+      throw new Error(
+        "SNAPSHOT_CAPTURE_ACTIVE_STATE_LEAF_AND_PARAMETER_REQUIRED",
+      );
+    }
+
+    let assignment: AssignmentRow | null = null;
+
+    if (assignmentId) {
+      const { data: assignmentData, error: assignmentError } =
+        await supabase
+          .from("value_object_parameter_assignments")
+          .select(
+            "id,value_object_id,parameter_definition_id,scope_code,assignment_scope_code,owner_user_id,owner_actor_id,status",
+          )
+          .eq("id", assignmentId)
+          .eq("value_object_id", valueObject.id)
+          .eq("parameter_definition_id", definition.id)
+          .eq("scope_code", "system")
+          .eq("assignment_scope_code", "system")
+          .eq("status", "active")
+          .is("owner_user_id", null)
+          .is("owner_actor_id", null)
+          .maybeSingle();
+
+      if (assignmentError) {
+        throw new Error(
+          `SNAPSHOT_CAPTURE_ASSIGNMENT_READ_FAILED:${assignmentError.message}`,
+        );
+      }
+
+      assignment = assignmentData as AssignmentRow | null;
+      if (!assignment) {
+        throw new Error(
+          "SNAPSHOT_CAPTURE_SYSTEM_ASSIGNMENT_MISMATCH",
+        );
+      }
+    } else {
+      const { data: assignmentData, error: assignmentError } =
+        await supabase
+          .from("value_object_parameter_assignments")
+          .select(
+            "id,value_object_id,parameter_definition_id,scope_code,assignment_scope_code,owner_user_id,owner_actor_id,status",
+          )
+          .eq("value_object_id", valueObject.id)
+          .eq("parameter_definition_id", definition.id)
+          .eq("scope_code", "system")
+          .eq("assignment_scope_code", "system")
+          .eq("status", "active")
+          .is("owner_user_id", null)
+          .is("owner_actor_id", null)
+          .limit(1)
+          .maybeSingle();
+
+      if (assignmentError) {
+        throw new Error(
+          `SNAPSHOT_CAPTURE_ASSIGNMENT_RESOLUTION_FAILED:${assignmentError.message}`,
+        );
+      }
+
+      assignment = assignmentData as AssignmentRow | null;
     }
 
     if (
@@ -556,7 +895,10 @@ export async function POST(request: Request) {
       `${SNAPSHOT_CONTRACT}:${context.appUserId}:${context.actorId}:${clientRequestId}`;
     const requestPayload = {
       contract: SNAPSHOT_CONTRACT,
-      assignmentId: assignment.id,
+      assignmentId: assignment?.id ?? null,
+      selectionMode: assignment
+        ? "system_assignment_v1"
+        : "direct_state_leaf_parameter_v1",
       valueObjectId: valueObject.id,
       parameterDefinitionId: definition.id,
       value,
@@ -644,8 +986,9 @@ export async function POST(request: Request) {
       contract: SNAPSHOT_CONTRACT,
       valueOriginCode: "user_explicit",
       sourceReliabilityCode: "user_reported",
-      systemAssignmentResolution:
-        "active_ownerless_system_parameter_assignment_v1",
+      systemAssignmentResolution: assignment
+        ? "active_ownerless_system_parameter_assignment_v1"
+        : "direct_user_selected_state_leaf_parameter_v1",
       snapshotCaptureV1: {
         contract: SNAPSHOT_CONTRACT,
         idempotencyKey,
@@ -653,7 +996,10 @@ export async function POST(request: Request) {
         clientRequestId,
         capturedAt,
         sourceText: sourceText || null,
-        assignmentId: assignment.id,
+        selectionMode: assignment
+          ? "system_assignment_v1"
+          : "direct_state_leaf_parameter_v1",
+        assignmentId: assignment?.id ?? null,
         parameterDefinitionId: definition.id,
         parameterCode: definition.parameter_code,
         targetValueObjectId: valueObject.id,
@@ -690,7 +1036,7 @@ export async function POST(request: Request) {
         semantic_match_confidence: 1,
         semantic_match_method_code: "user_confirmed",
         parameter_definition_id: definition.id,
-        parameter_assignment_id: assignment.id,
+        parameter_assignment_id: assignment?.id ?? null,
         fact_role_code: "snapshot",
         effective_at: effectiveAt,
         valid_from: null,

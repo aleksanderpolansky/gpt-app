@@ -22,6 +22,24 @@ type SnapshotOption = {
   valueObjectTitle: string;
 };
 
+type SnapshotLeafOption = {
+  valueObjectId: string;
+  valueObjectCanonicalKey: string;
+  valueObjectTitle: string;
+};
+
+type SnapshotParameterOption = {
+  parameterDefinitionId: string;
+  parameterCode: string;
+  parameterTitle: string;
+  dimensionCode: string;
+  canonicalUnitCode: string;
+  allowedUnitCodes: string[];
+  aggregationMethodCode: string;
+  defaultWindowCode: string;
+  allowNegative: boolean;
+};
+
 type Copy = {
   eyebrow: string;
   title: string;
@@ -277,6 +295,145 @@ const COPY: Record<Locale, Copy> = {
   },
 };
 
+type SelectionCopy = {
+  allStateLeaves: string;
+  hideAllStateLeaves: string;
+  directTitle: string;
+  directHint: string;
+  leafLabel: string;
+  leafPlaceholder: string;
+  leafEmpty: string;
+  parameterLabel: string;
+  parameterPlaceholder: string;
+  existingAssignment: string;
+  personalOnly: string;
+  adminAssign: string;
+  adminAssigning: string;
+  adminAssigned: string;
+};
+
+const SELECTION_COPY: Record<Locale, SelectionCopy> = {
+  en: {
+    allStateLeaves: "Choose from all state leaves",
+    hideAllStateLeaves: "Hide all state leaves",
+    directTitle: "Any leaf in States & Needs",
+    directHint:
+      "A personal snapshot may use any active system leaf from the States & Needs branch with an existing system parameter, even when that pair has not yet been assigned globally.",
+    leafLabel: "State leaf",
+    leafPlaceholder: "Search all state leaves...",
+    leafEmpty: "No state leaf matches this search.",
+    parameterLabel: "Parameter",
+    parameterPlaceholder: "Choose an existing system parameter...",
+    existingAssignment: "System assignment exists",
+    personalOnly: "Personal snapshot only; no global assignment yet",
+    adminAssign: "Make this a system assignment",
+    adminAssigning: "Assigning...",
+    adminAssigned: "System assignment created.",
+  },
+  pl: {
+    allStateLeaves: "Wybierz ze wszystkich liści stanu",
+    hideAllStateLeaves: "Ukryj wszystkie liście stanu",
+    directTitle: "Dowolny liść w gałęzi Stany i potrzeby",
+    directHint:
+      "Osobisty przekrój może użyć dowolnego aktywnego systemowego liścia z gałęzi Stany i potrzeby oraz istniejącego parametru systemowego, nawet jeśli ta para nie ma jeszcze globalnego przypisania.",
+    leafLabel: "Liść stanu",
+    leafPlaceholder: "Szukaj we wszystkich liściach stanu...",
+    leafEmpty: "Brak pasującego liścia stanu.",
+    parameterLabel: "Parametr",
+    parameterPlaceholder: "Wybierz istniejący parametr systemowy...",
+    existingAssignment: "Istnieje przypisanie systemowe",
+    personalOnly: "Tylko przekrój osobisty; brak jeszcze przypisania globalnego",
+    adminAssign: "Utwórz przypisanie systemowe",
+    adminAssigning: "Przypisywanie...",
+    adminAssigned: "Utworzono przypisanie systemowe.",
+  },
+  ru: {
+    allStateLeaves: "Выбрать из всех листовых ОН состояний",
+    hideAllStateLeaves: "Скрыть все листовые ОН состояний",
+    directTitle: "Любой лист ветви «Состояния и потребности»",
+    directHint:
+      "Персональный факт-срез можно создать для любого активного системного листового ОН ветви «Состояния и потребности» с существующим системным параметром, даже если эта пара ещё не назначена глобально.",
+    leafLabel: "Листовой ОН состояния",
+    leafPlaceholder: "Поиск по всем листовым ОН состояний...",
+    leafEmpty: "Листовой ОН состояния по такому поиску не найден.",
+    parameterLabel: "Параметр",
+    parameterPlaceholder: "Выберите существующий системный параметр...",
+    existingAssignment: "Системное назначение уже существует",
+    personalOnly: "Только персональный срез; глобального назначения пока нет",
+    adminAssign: "Сделать системным назначением",
+    adminAssigning: "Назначаем...",
+    adminAssigned: "Системное назначение создано.",
+  },
+  uk: {
+    allStateLeaves: "Вибрати з усіх листових ОН станів",
+    hideAllStateLeaves: "Сховати всі листові ОН станів",
+    directTitle: "Будь-який лист гілки «Стани та потреби»",
+    directHint:
+      "Персональний факт-зріз можна створити для будь-якого активного системного листового ОН гілки «Стани та потреби» з наявним системним параметром, навіть якщо ця пара ще не призначена глобально.",
+    leafLabel: "Листовий ОН стану",
+    leafPlaceholder: "Пошук серед усіх листових ОН станів...",
+    leafEmpty: "Листовий ОН стану за таким пошуком не знайдено.",
+    parameterLabel: "Параметр",
+    parameterPlaceholder: "Виберіть наявний системний параметр...",
+    existingAssignment: "Системне призначення вже існує",
+    personalOnly: "Лише персональний зріз; глобального призначення поки немає",
+    adminAssign: "Зробити системним призначенням",
+    adminAssigning: "Призначення...",
+    adminAssigned: "Системне призначення створено.",
+  },
+  de: {
+    allStateLeaves: "Aus allen Zustandsblättern wählen",
+    hideAllStateLeaves: "Alle Zustandsblätter ausblenden",
+    directTitle: "Beliebiges Blatt im Zweig Zustände und Bedürfnisse",
+    directHint:
+      "Ein persönlicher Zustandsschnitt kann jedes aktive systemweite Blatt im Zweig Zustände und Bedürfnisse mit einem bestehenden Systemparameter verwenden, auch wenn diese Paarung noch nicht global zugeordnet ist.",
+    leafLabel: "Zustandsblatt",
+    leafPlaceholder: "Alle Zustandsblätter durchsuchen...",
+    leafEmpty: "Kein passendes Zustandsblatt gefunden.",
+    parameterLabel: "Parameter",
+    parameterPlaceholder: "Vorhandenen Systemparameter auswählen...",
+    existingAssignment: "Systemzuordnung vorhanden",
+    personalOnly: "Nur persönlicher Schnitt; noch keine globale Zuordnung",
+    adminAssign: "Als Systemzuordnung festlegen",
+    adminAssigning: "Zuordnung läuft...",
+    adminAssigned: "Systemzuordnung erstellt.",
+  },
+  es: {
+    allStateLeaves: "Elegir entre todas las hojas de estado",
+    hideAllStateLeaves: "Ocultar todas las hojas de estado",
+    directTitle: "Cualquier hoja de Estados y necesidades",
+    directHint:
+      "Un corte personal puede usar cualquier objeto hoja activo del sistema en Estados y necesidades con un parámetro del sistema existente, aunque esa pareja aún no tenga una asignación global.",
+    leafLabel: "Hoja de estado",
+    leafPlaceholder: "Buscar en todas las hojas de estado...",
+    leafEmpty: "No se encontró una hoja de estado coincidente.",
+    parameterLabel: "Parámetro",
+    parameterPlaceholder: "Seleccione un parámetro del sistema existente...",
+    existingAssignment: "Existe asignación del sistema",
+    personalOnly: "Solo corte personal; todavía no hay asignación global",
+    adminAssign: "Convertir en asignación del sistema",
+    adminAssigning: "Asignando...",
+    adminAssigned: "Asignación del sistema creada.",
+  },
+  cs: {
+    allStateLeaves: "Vybrat ze všech listů stavů",
+    hideAllStateLeaves: "Skrýt všechny listy stavů",
+    directTitle: "Libovolný list ve větvi Stavy a potřeby",
+    directHint:
+      "Osobní snímek může použít libovolný aktivní systémový list ve větvi Stavy a potřeby s existujícím systémovým parametrem, i když tato dvojice zatím nemá globální přiřazení.",
+    leafLabel: "List stavu",
+    leafPlaceholder: "Hledat ve všech listech stavů...",
+    leafEmpty: "Odpovídající list stavu nebyl nalezen.",
+    parameterLabel: "Parametr",
+    parameterPlaceholder: "Vyberte existující systémový parametr...",
+    existingAssignment: "Systémové přiřazení existuje",
+    personalOnly: "Pouze osobní snímek; globální přiřazení zatím neexistuje",
+    adminAssign: "Vytvořit systémové přiřazení",
+    adminAssigning: "Přiřazování...",
+    adminAssigned: "Systémové přiřazení bylo vytvořeno.",
+  },
+};
+
 function normalizeLocale(value: string | null): Locale {
   return value && value in COPY ? (value as Locale) : "en";
 }
@@ -295,8 +452,23 @@ function SnapshotCapturePageContent() {
   const searchParams = useSearchParams();
   const locale = normalizeLocale(searchParams.get("locale"));
   const copy = COPY[locale];
+  const selectionCopy = SELECTION_COPY[locale];
 
   const [options, setOptions] = useState<SnapshotOption[]>([]);
+  const [stateLeaves, setStateLeaves] = useState<SnapshotLeafOption[]>([]);
+  const [parameterOptions, setParameterOptions] = useState<
+    SnapshotParameterOption[]
+  >([]);
+  const [adminAccess, setAdminAccess] = useState(false);
+  const [directPickerOpen, setDirectPickerOpen] = useState(false);
+  const [directLeafQuery, setDirectLeafQuery] = useState("");
+  const [directValueObjectId, setDirectValueObjectId] = useState("");
+  const [
+    directParameterDefinitionId,
+    setDirectParameterDefinitionId,
+  ] = useState("");
+  const [adminAssigning, setAdminAssigning] = useState(false);
+  const [adminMessage, setAdminMessage] = useState("");
   const [assignmentId, setAssignmentId] = useState("");
   const [value, setValue] = useState("");
   const [unit, setUnit] = useState("");
@@ -329,6 +501,9 @@ function SnapshotCapturePageContent() {
         const payload = (await response.json()) as {
           ok?: boolean;
           options?: SnapshotOption[];
+          stateLeaves?: SnapshotLeafOption[];
+          parameterOptions?: SnapshotParameterOption[];
+          adminAccess?: boolean;
           errorMessage?: string;
         };
 
@@ -343,10 +518,26 @@ function SnapshotCapturePageContent() {
           : [];
 
         setOptions(nextOptions);
+        setStateLeaves(
+          Array.isArray(payload.stateLeaves)
+            ? payload.stateLeaves
+            : [],
+        );
+        setParameterOptions(
+          Array.isArray(payload.parameterOptions)
+            ? payload.parameterOptions
+            : [],
+        );
+        setAdminAccess(payload.adminAccess === true);
 
         setAssignmentId("");
         setUnit("");
         setTargetQuery("");
+        setDirectPickerOpen(false);
+        setDirectLeafQuery("");
+        setDirectValueObjectId("");
+        setDirectParameterDefinitionId("");
+        setAdminMessage("");
       } catch (error) {
         if (!cancelled) {
           setErrorMessage(
@@ -402,6 +593,81 @@ function SnapshotCapturePageContent() {
     return filteredOptions;
   }, [filteredOptions, selectedOption]);
 
+  const selectedDirectLeaf = useMemo(
+    () =>
+      stateLeaves.find(
+        (leaf) => leaf.valueObjectId === directValueObjectId,
+      ) ?? null,
+    [directValueObjectId, stateLeaves],
+  );
+
+  const selectedDirectParameter = useMemo(
+    () =>
+      parameterOptions.find(
+        (parameter) =>
+          parameter.parameterDefinitionId ===
+          directParameterDefinitionId,
+      ) ?? null,
+    [directParameterDefinitionId, parameterOptions],
+  );
+
+  const directAssignment = useMemo(
+    () =>
+      options.find(
+        (option) =>
+          option.valueObjectId === directValueObjectId &&
+          option.parameterDefinitionId ===
+            directParameterDefinitionId,
+      ) ?? null,
+    [
+      directParameterDefinitionId,
+      directValueObjectId,
+      options,
+    ],
+  );
+
+  const directSelectionReady =
+    selectedDirectLeaf !== null &&
+    selectedDirectParameter !== null;
+
+  const effectiveSelection = selectedOption
+    ? {
+        valueObjectId: selectedOption.valueObjectId,
+        parameterDefinitionId:
+          selectedOption.parameterDefinitionId,
+        assignmentId: selectedOption.assignmentId,
+        allowedUnitCodes: selectedOption.allowedUnitCodes,
+        allowNegative: selectedOption.allowNegative,
+      }
+    : directSelectionReady
+      ? {
+          valueObjectId: selectedDirectLeaf.valueObjectId,
+          parameterDefinitionId:
+            selectedDirectParameter.parameterDefinitionId,
+          assignmentId: directAssignment?.assignmentId ?? "",
+          allowedUnitCodes:
+            selectedDirectParameter.allowedUnitCodes,
+          allowNegative: selectedDirectParameter.allowNegative,
+        }
+      : null;
+
+  const filteredStateLeaves = useMemo(() => {
+    const query = directLeafQuery.trim().toLowerCase();
+    const source = query
+      ? stateLeaves.filter((leaf) =>
+          [
+            leaf.valueObjectTitle,
+            leaf.valueObjectCanonicalKey,
+          ]
+            .join(" ")
+            .toLowerCase()
+            .includes(query),
+        )
+      : stateLeaves;
+
+    return source.slice(0, 150);
+  }, [directLeafQuery, stateLeaves]);
+
   function selectTargetOption(option: SnapshotOption) {
     if (targetBlurTimerRef.current) {
       clearTimeout(targetBlurTimerRef.current);
@@ -409,16 +675,111 @@ function SnapshotCapturePageContent() {
     }
 
     setAssignmentId(option.assignmentId);
+    setDirectValueObjectId("");
+    setDirectParameterDefinitionId("");
+    setDirectLeafQuery("");
+    setAdminMessage("");
     setUnit(option.canonicalUnitCode);
     setTargetQuery(formatSnapshotOptionLabel(option));
     setTargetSearchOpen(false);
     setTargetActiveIndex(-1);
   }
 
+  async function materializeDirectAssignment() {
+    if (
+      !adminAccess ||
+      !directValueObjectId ||
+      !directParameterDefinitionId ||
+      adminAssigning
+    ) {
+      return;
+    }
+
+    setAdminAssigning(true);
+    setAdminMessage("");
+    setErrorMessage("");
+
+    try {
+      const response = await fetch("/api/activity/facts/snapshots", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          action: "materialize_system_assignment",
+          valueObjectId: directValueObjectId,
+          parameterDefinitionId: directParameterDefinitionId,
+        }),
+      });
+
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        assignmentId?: string;
+        errorMessage?: string;
+      };
+
+      if (!response.ok || payload.ok !== true || !payload.assignmentId) {
+        throw new Error(payload.errorMessage || copy.error);
+      }
+
+      const leaf = stateLeaves.find(
+        (item) => item.valueObjectId === directValueObjectId,
+      );
+      const parameter = parameterOptions.find(
+        (item) =>
+          item.parameterDefinitionId === directParameterDefinitionId,
+      );
+
+      if (!leaf || !parameter) {
+        throw new Error(copy.error);
+      }
+
+      const nextOption: SnapshotOption = {
+        assignmentId: payload.assignmentId,
+        parameterDefinitionId: parameter.parameterDefinitionId,
+        parameterCode: parameter.parameterCode,
+        parameterTitle: parameter.parameterTitle,
+        dimensionCode: parameter.dimensionCode,
+        canonicalUnitCode: parameter.canonicalUnitCode,
+        allowedUnitCodes: parameter.allowedUnitCodes,
+        aggregationMethodCode: parameter.aggregationMethodCode,
+        defaultWindowCode: parameter.defaultWindowCode,
+        allowNegative: parameter.allowNegative,
+        valueObjectId: leaf.valueObjectId,
+        valueObjectCanonicalKey: leaf.valueObjectCanonicalKey,
+        valueObjectTitle: leaf.valueObjectTitle,
+      };
+
+      setOptions((current) => {
+        const withoutSamePair = current.filter(
+          (item) =>
+            !(
+              item.valueObjectId === nextOption.valueObjectId &&
+              item.parameterDefinitionId ===
+                nextOption.parameterDefinitionId
+            ),
+        );
+        return [...withoutSamePair, nextOption];
+      });
+      setAssignmentId(payload.assignmentId);
+      setUnit(parameter.canonicalUnitCode);
+      setAdminMessage(selectionCopy.adminAssigned);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : copy.error,
+      );
+    } finally {
+      setAdminAssigning(false);
+    }
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!selectedOption || !value || !unit || !effectiveAt) {
+    if (
+      !effectiveSelection ||
+      !value ||
+      !unit ||
+      !effectiveAt
+    ) {
       return;
     }
 
@@ -437,7 +798,11 @@ function SnapshotCapturePageContent() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          assignmentId: selectedOption.assignmentId,
+          assignmentId:
+            effectiveSelection.assignmentId || null,
+          valueObjectId: effectiveSelection.valueObjectId,
+          parameterDefinitionId:
+            effectiveSelection.parameterDefinitionId,
           value: numericValue,
           unit,
           effectiveAt: new Date(effectiveAt).toISOString(),
@@ -509,7 +874,7 @@ function SnapshotCapturePageContent() {
             <p className="text-sm font-bold text-[#7c8099]">
               {copy.loading}
             </p>
-          ) : options.length === 0 ? (
+          ) : options.length === 0 && stateLeaves.length === 0 ? (
             <p className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#f5f6fb] p-4 text-sm font-medium text-[#5a5f7a]">
               {copy.noOptions}
             </p>
@@ -682,6 +1047,159 @@ function SnapshotCapturePageContent() {
                 </div>
               </div>
 
+              <div className="rounded-xl border border-[#cfd8ff] bg-[#f7f9ff] p-3">
+                <button
+                  type="button"
+                  onClick={() => setDirectPickerOpen((open) => !open)}
+                  className="min-h-9 rounded-lg border border-[#b9c7ff] bg-white px-3 text-sm font-bold text-[#315de8] hover:bg-[#eef2ff]"
+                >
+                  {directPickerOpen
+                    ? selectionCopy.hideAllStateLeaves
+                    : selectionCopy.allStateLeaves}
+                </button>
+
+                {directPickerOpen ? (
+                  <div className="mt-3 grid gap-3">
+                    <div>
+                      <p className="text-sm font-black text-[#1a1d2e]">
+                        {selectionCopy.directTitle}
+                      </p>
+                      <p className="mt-1 text-xs font-medium leading-5 text-[#5a5f7a]">
+                        {selectionCopy.directHint}
+                      </p>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <label
+                        htmlFor="snapshot-state-leaf-search"
+                        className="text-xs font-black text-[#1a1d2e]"
+                      >
+                        {selectionCopy.leafLabel}
+                      </label>
+                      <input
+                        id="snapshot-state-leaf-search"
+                        type="text"
+                        value={directLeafQuery}
+                        onChange={(event) => {
+                          setDirectLeafQuery(event.target.value);
+                          setDirectValueObjectId("");
+                          setDirectParameterDefinitionId("");
+                          setAssignmentId("");
+                          setUnit("");
+                        }}
+                        placeholder={selectionCopy.leafPlaceholder}
+                        className="min-h-10 rounded-lg border border-[rgba(0,0,0,0.08)] bg-white px-3 text-sm font-bold outline-none focus:border-[#3b6ef8]"
+                      />
+
+                      <div className="max-h-52 overflow-auto rounded-lg border border-[rgba(0,0,0,0.08)] bg-white p-1">
+                        {filteredStateLeaves.length > 0 ? (
+                          filteredStateLeaves.map((leaf) => {
+                            const selected =
+                              leaf.valueObjectId === directValueObjectId;
+                            return (
+                              <button
+                                key={leaf.valueObjectId}
+                                type="button"
+                                onClick={() => {
+                                  setDirectValueObjectId(leaf.valueObjectId);
+                                  setDirectLeafQuery(leaf.valueObjectTitle);
+                                  setAssignmentId("");
+                                  setDirectParameterDefinitionId("");
+                                  setUnit("");
+                                }}
+                                className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm font-bold ${
+                                  selected
+                                    ? "bg-[#eef2ff] text-[#1a1d2e]"
+                                    : "text-[#1a1d2e] hover:bg-[#f5f6fb]"
+                                }`}
+                              >
+                                <span>{leaf.valueObjectTitle}</span>
+                                {selected ? (
+                                  <span className="ml-3 text-[#3b6ef8]">✓</span>
+                                ) : null}
+                              </button>
+                            );
+                          })
+                        ) : (
+                          <div className="px-3 py-3 text-xs font-medium text-[#5a5f7a]">
+                            {selectionCopy.leafEmpty}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <label className="grid gap-2">
+                      <span className="text-xs font-black text-[#1a1d2e]">
+                        {selectionCopy.parameterLabel}
+                      </span>
+                      <select
+                        value={directParameterDefinitionId}
+                        onChange={(event) => {
+                          const nextParameterId = event.target.value;
+                          setDirectParameterDefinitionId(nextParameterId);
+                          setAssignmentId("");
+                          const parameter = parameterOptions.find(
+                            (item) =>
+                              item.parameterDefinitionId === nextParameterId,
+                          );
+                          setUnit(parameter?.canonicalUnitCode ?? "");
+                        }}
+                        disabled={!directValueObjectId}
+                        className="min-h-10 rounded-lg border border-[rgba(0,0,0,0.08)] bg-white px-3 text-sm font-bold outline-none focus:border-[#3b6ef8] disabled:opacity-50"
+                      >
+                        <option value="">
+                          {selectionCopy.parameterPlaceholder}
+                        </option>
+                        {parameterOptions.map((parameter) => (
+                          <option
+                            key={parameter.parameterDefinitionId}
+                            value={parameter.parameterDefinitionId}
+                          >
+                            {parameter.parameterTitle} ·{" "}
+                            {parameter.canonicalUnitCode}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    {directSelectionReady ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-black ${
+                            directAssignment
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-amber-50 text-amber-700"
+                          }`}
+                        >
+                          {directAssignment
+                            ? selectionCopy.existingAssignment
+                            : selectionCopy.personalOnly}
+                        </span>
+
+                        {adminAccess && !directAssignment ? (
+                          <button
+                            type="button"
+                            disabled={adminAssigning}
+                            onClick={() => void materializeDirectAssignment()}
+                            className="min-h-8 rounded-lg border border-[#b9c7ff] bg-white px-3 text-xs font-black text-[#315de8] hover:bg-[#eef2ff] disabled:opacity-50"
+                          >
+                            {adminAssigning
+                              ? selectionCopy.adminAssigning
+                              : selectionCopy.adminAssign}
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {adminMessage ? (
+                      <p className="text-xs font-bold text-emerald-700">
+                        {adminMessage}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-2">
                   <span className="text-sm font-black">{copy.value}</span>
@@ -703,7 +1221,7 @@ function SnapshotCapturePageContent() {
                     className="min-h-11 rounded-xl border border-[rgba(0,0,0,0.08)] bg-white px-4 font-bold outline-none focus:border-[#3b6ef8]"
                     required
                   >
-                    {(selectedOption?.allowedUnitCodes ?? []).map(
+                    {(effectiveSelection?.allowedUnitCodes ?? []).map(
                       (unitCode) => (
                         <option key={unitCode} value={unitCode}>
                           {unitCode}
@@ -756,7 +1274,7 @@ function SnapshotCapturePageContent() {
 
               <button
                 type="submit"
-                disabled={saving || !selectedOption}
+                disabled={saving || !effectiveSelection}
                 className="min-h-10 rounded-lg bg-[#3b6ef8] px-4 text-sm font-medium text-white shadow-sm transition hover:bg-[#2c5df0] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {saving ? copy.saving : copy.submit}
@@ -764,7 +1282,10 @@ function SnapshotCapturePageContent() {
             </form>
           )}
 
-          {!loading && errorMessage && options.length === 0 ? (
+          {!loading &&
+          errorMessage &&
+          options.length === 0 &&
+          stateLeaves.length === 0 ? (
             <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
               {errorMessage}
             </div>
