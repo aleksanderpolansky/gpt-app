@@ -7,19 +7,16 @@ export async function validateSnapshotBindings(bindings: readonly SourceBinding[
   for (const binding of bindings) {
     const resolution = parseSourceResolution(binding.sourceResolution);
     if (!resolution) continue;
-    const [object, definition, assignment] = await Promise.all([
+    const [object, definition] = await Promise.all([
       supabase.from("value_objects").select("id").eq("id", resolution.snapshotValueObjectId!)
         .eq("root_value_object_id", STATE_ROOT).eq("scope_code", "global")
         .eq("origin_type_code", "system_model").eq("ontology_node_role_code", "leaf").eq("status", "active").maybeSingle(),
       supabase.from("value_object_parameter_definitions").select("id").eq("id", binding.parameterDefinitionId)
         .eq("scope_code", "system").eq("status", "active").eq("value_type_code", "numeric").maybeSingle(),
-      supabase.from("value_object_parameter_assignments").select("id").eq("value_object_id", resolution.snapshotValueObjectId!)
-        .eq("parameter_definition_id", binding.parameterDefinitionId).eq("scope_code", "system")
-        .eq("assignment_scope_code", "system").eq("status", "active").is("owner_user_id", null).is("owner_actor_id", null).maybeSingle(),
     ]);
-    for (const result of [object, definition, assignment]) {
+    for (const result of [object, definition]) {
       if (result.error) throw new Error(`SOURCE_SNAPSHOT_VALIDATION_FAILED:${result.error.message}`);
-      if (!result.data) throw new Error("SOURCE_SNAPSHOT_ACTIVE_STATE_ASSIGNMENT_REQUIRED");
+      if (!result.data) throw new Error("SOURCE_SNAPSHOT_ACTIVE_STATE_LEAF_AND_PARAMETER_REQUIRED");
     }
   }
 }

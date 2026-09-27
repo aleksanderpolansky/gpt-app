@@ -2,13 +2,20 @@
 import { useEffect, useState } from "react";
 import type { SourceResolution } from "@/lib/activity/source-snapshot-resolution";
 
-type Option = { valueObjectId: string; valueObjectTitle: string; parameterDefinitionId: string; canonicalUnitCode: string };
+type StateLeafOption = {
+  valueObjectId: string;
+  valueObjectTitle: string;
+};
+
+type ParameterOption = {
+  parameterDefinitionId: string;
+};
 export function SourceSnapshotSettings({ locale, parameterId, parameterCode, value, onChange, disabled }: {
   locale: string; parameterId: string; parameterCode: string; value?: SourceResolution;
   onChange: (value: SourceResolution) => void; disabled: boolean;
 }) {
   const ru = locale === "ru";
-  const [options, setOptions] = useState<Option[]>([]);
+  const [options, setOptions] = useState<StateLeafOption[]>([]);
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,7 +30,18 @@ export function SourceSnapshotSettings({ locale, parameterId, parameterCode, val
         const response = await fetch(`/api/activity/facts/snapshots?locale=${encodeURIComponent(locale)}&parameterCode=${encodeURIComponent(parameterCode)}`, { signal: controller.signal });
         const body = await response.json();
         if (!response.ok || !body.ok) throw new Error(body.errorMessage || "Snapshot catalog unavailable");
-        setOptions((body.options as Option[]).filter((option) => option.parameterDefinitionId === parameterId));
+        const stateLeaves = Array.isArray(body.stateLeaves)
+          ? body.stateLeaves as StateLeafOption[]
+          : [];
+        const parameterOptions = Array.isArray(body.parameterOptions)
+          ? body.parameterOptions as ParameterOption[]
+          : [];
+
+        if (!parameterOptions.some((option) => option.parameterDefinitionId === parameterId)) {
+          throw new Error("Selected parameter is not available for state snapshots.");
+        }
+
+        setOptions(stateLeaves);
       } catch (e) {
         if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "Load failed");
       } finally { if (!controller.signal.aborted) setLoading(false); }
@@ -47,16 +65,16 @@ export function SourceSnapshotSettings({ locale, parameterId, parameterCode, val
         <select required className="mt-1 w-full rounded border p-2 text-sm" value={value?.snapshotValueObjectId ?? ""}
           onChange={(event) => onChange({ ...current, snapshotValueObjectId: event.target.value })}>
           <option value="">{loading ? (ru ? "Загрузка…" : "Loading…") : (ru ? "Выберите состояние" : "Select state")}</option>
-          {visible.map((option) => <option key={option.valueObjectId} value={option.valueObjectId}>{option.valueObjectTitle} · {option.canonicalUnitCode}</option>)}
+          {visible.map((option) => <option key={option.valueObjectId} value={option.valueObjectId}>{option.valueObjectTitle}</option>)}
         </select>
       </label>
       {error && <p role="alert" className="text-xs text-red-600">{error} <button type="button" onClick={() => setAttempt((n) => n + 1)}>{ru ? "Повторить" : "Retry"}</button></p>}
-      {!loading && !error && !options.length && <p className="text-xs">{ru ? "Нет состояний с этим параметром. Назначьте параметр объекту состояния." : "No states with this parameter. Assign the parameter to a state object."}</p>}
+      {!loading && !error && !options.length && <p className="text-xs">{ru ? "Нет доступных системных листовых ОН ветви «Состояния и потребности»." : "No active system state-leaf observation objects are available."}</p>}
       <label className="block text-xs">{ru ? "Умножить на" : "Multiply by"}
         <input type="number" step="any" required className="ml-2 w-28 rounded border p-2" value={Number.isFinite(current.multiplier) ? current.multiplier : ""}
           onChange={(event) => onChange({ ...current, multiplier: event.target.value === "" ? NaN : Number(event.target.value) })} />
       </label>
-      <p className="text-xs text-slate-500">{ru ? "Последний подтверждённый срез пользователя на момент активности × множитель. Если среза нет — потребуется уточнение." : "Latest confirmed user snapshot at activity time × multiplier. A missing snapshot requires clarification."}</p>
+      <p className="text-xs text-slate-500">{ru ? "При выполнении система найдёт последний подтверждённый срез выбранного ОН с этим параметром, действующий на момент активности, и умножит его на коэффициент. Системное назначение ОН ↔ параметр не требуется. Если среза нет — потребуется уточнение." : "At runtime the system finds the latest confirmed snapshot for the selected observation object and this parameter at the activity time, then applies the multiplier. A system object ↔ parameter assignment is not required. A missing snapshot requires clarification."}</p>
     </>}
   </fieldset>;
 }

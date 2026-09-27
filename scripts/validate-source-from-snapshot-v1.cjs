@@ -78,7 +78,7 @@ function setup(mode='direct_or_snapshot',explicit=null){
     activity_template_profile_parameters_v2:[{profile_id:ids.profile,parameter_definition_id:ids.parameter}],
     activity_template_profile_object_links_v1:[{profile_id:ids.profile,target_value_object_id:ids.target}],
     value_object_parameter_definitions:[{id:ids.parameter,parameter_code:'mass',value_type_code:'numeric',scope_code:'system',status:'active',canonical_unit_code:'kilogram'}],
-    value_object_parameter_assignments:[ids.target,ids.state].map((id,i)=>({id:`assignment-${i}`,value_object_id:id,parameter_definition_id:ids.parameter,scope_code:'system',assignment_scope_code:'system',status:'active',owner_user_id:null,owner_actor_id:null,created_by_actor_id:null})),
+    value_object_parameter_assignments:[{id:'assignment-target',value_object_id:ids.target,parameter_definition_id:ids.parameter,scope_code:'system',assignment_scope_code:'system',status:'active',owner_user_id:null,owner_actor_id:null,created_by_actor_id:null}],
     value_objects:[ids.target,ids.state].map(id=>({id,canonical_key:id===ids.target?'protein_intake':'protein_serving',scope_code:'global',origin_type_code:'system_model',ontology_node_role_code:'leaf',status:'active',root_value_object_id:id===ids.state?'6ba4ecf1-8a05-5eaa-b280-4eb7aff2a42a':'other'})),
     activity_object_facts:[{id:'snapshot-1',user_id:ids.user,acting_as_actor_id:ids.actor,fact_role_code:'snapshot',fact_status:'confirmed',value_object_id:ids.state,parameter_definition_id:ids.parameter,value_numeric:35,unit:'gram',effective_at:'2026-09-21T10:00:00Z',created_at:'2026-09-21T10:00:00Z',valid_from:null,valid_to:null,confidence:0.9}]
   };
@@ -90,7 +90,7 @@ const args={appUserId:ids.user,activityEventId:ids.event};
 let passed=0;
 async function test(name,fn){await fn();passed++;console.log(`PASS ${name}`)}
 (async()=>{
- await test('snapshot fallback: missing explicit value, gram retained, provenance',async()=>{setup();await run(args);const r=rpcCalls[0].p_facts[0];assert.equal(r.valueNumeric,35);assert.equal(r.unit,'gram');assert.equal(r.sourceType,'derived_calculation');assert.equal(r.valueOriginCode,'deterministic_calculation');assert.equal(r.sourceReliabilityCode,'deterministic');assert.equal(r.sourceSnapshotJson.sourceFromSnapshotV1.snapshotFactId,'snapshot-1')});
+ await test('snapshot fallback without source system assignment: missing explicit value, gram retained, provenance',async()=>{setup();assert.equal(tables.value_object_parameter_assignments.some((row)=>row.value_object_id===ids.state),false);await run(args);const r=rpcCalls[0].p_facts[0];assert.equal(r.valueNumeric,35);assert.equal(r.unit,'gram');assert.equal(r.sourceType,'derived_calculation');assert.equal(r.valueOriginCode,'deterministic_calculation');assert.equal(r.sourceReliabilityCode,'deterministic');assert.equal(r.sourceSnapshotJson.sourceFromSnapshotV1.snapshotFactId,'snapshot-1')});
  await test('explicit value wins over snapshot',async()=>{setup('direct_or_snapshot',20);await run(args);assert.equal(rpcCalls[0].p_facts[0].valueNumeric,20);assert.equal(snapshotReads,0)});
  await test('snapshot-only ignores explicit and applies coefficient',async()=>{setup('snapshot_only',20);tables.activity_template_impact_profiles_v1[0].metadata_json.sourceValueBindingsV1[0].sourceResolution.multiplier=2;await run(args);assert.equal(rpcCalls[0].p_facts[0].valueNumeric,70)});
  await test('zero is an explicit value',async()=>{setup('direct_or_snapshot',0);await run(args);assert.equal(rpcCalls[0].p_facts[0].valueNumeric,0);assert.equal(snapshotReads,0)});
