@@ -443,6 +443,27 @@ function isOccurrenceCountFragment(value: string) {
   );
 }
 
+function extractExplicitSingularCountFragment(
+  value: string,
+): string | null {
+  const patterns = [
+    /(?:^|[^\p{L}\p{N}_])((?:чашка|чашку|кружка|кружку|стакан|бутылка|бутылку|пляшка|пляшку|склянка|склянку|банка|банку|порция|порцию|порція|порцію|таблетка|таблетку|капсула|капсулу|сигарета|сигарету|яблоко|яблуко))(?=$|[^\p{L}\p{N}_])/giu,
+    /(?:^|[^\p{L}\p{N}_])((?:filiżanka|filiżankę|kubek|szklanka|szklankę|butelka|butelkę|puszka|puszkę|porcja|porcję|tabletka|tabletkę|kapsułka|kapsułkę|papieros|papierosa|jabłko))(?=$|[^\p{L}\p{N}_])/giu,
+    /(?:^|[^\p{L}\p{N}_])((?:(?:a|an|one)\s+(?:cup|glass|bottle|can|serving|portion|tablet|capsule|cigarette|apple)))(?=$|[^\p{L}\p{N}_])/giu,
+    /(?:^|[^\p{L}\p{N}_])((?:(?:eine|einen|ein)\s+(?:tasse|glas|flasche|dose|portion|tablette|kapsel|zigarette|apfel)))(?=$|[^\p{L}\p{N}_])/giu,
+    /(?:^|[^\p{L}\p{N}_])((?:(?:una|un)\s+(?:taza|vaso|botella|lata|porción|porcion|tableta|cápsula|capsula|cigarrillo|manzana)))(?=$|[^\p{L}\p{N}_])/giu,
+    /(?:^|[^\p{L}\p{N}_])((?:šálek|salek|sklenice|sklenici|láhev|lahev|porce|porci|tableta|tabletu|kapsle|kapsli|cigareta|cigaretu|jablko))(?=$|[^\p{L}\p{N}_])/giu,
+  ];
+
+  const matches = patterns.flatMap((pattern) =>
+    Array.from(value.matchAll(pattern), (match) => (match[1] ?? "").trim()),
+  ).filter(Boolean);
+
+  return matches.length === 1
+    ? matches[0]
+    : null;
+}
+
 function hasStairContext(value: string) {
   return /(?:лестниц|сход|stairs?|staircase|schod|trepp|escaler|schodi)/iu.test(value);
 }
@@ -576,6 +597,25 @@ function extractDeterministicMeasurements(
         confidence: 1,
       });
     }
+  }
+
+  const singularCountFragment =
+    extractExplicitSingularCountFragment(
+      sourceText,
+    );
+
+  if (singularCountFragment) {
+    add({
+      parameterCode: "count",
+      label: localeMeasurementLabel(locale, "count"),
+      measureType: "count",
+      unit: "count",
+      valueNumeric: 1,
+      valueText: null,
+      qualifier: null,
+      rawFragment: singularCountFragment,
+      confidence: 1,
+    });
   }
 
   const distanceMatch = sourceText.match(/\b(\d+(?:[.,]\d+)?)\s*(км|km|километр(?:а|ов)?|метр(?:а|ов)?|м|meters?|metres?)(?=$|[^\p{L}\p{N}_])/iu);
@@ -1717,6 +1757,7 @@ Hard rules:
 7. Extract EVERY explicitly stated primitive measurement even when several values use the same parameterCode. Example: "soup 400 g, potatoes 120 g, meat 80 g" is three mass measurements, not one.
 8. qualifier is the shortest verbatim noun phrase inside rawFragment that explicitly identifies what the measurement refers to, such as "deep sleep", "potatoes", "meat", "body fat", "water", or "muscle mass". Use null only when the value is genuinely unqualified.
 8a. Phrases meaning "N times <action>" are occurrence counts: use parameterCode=count, measureType=count, unit=count and keep the stated action phrase as qualifier. Example: "3 раза проснулся" is count=3 with qualifier="проснулся". Use repetitions only when the source explicitly says repetitions/reps or an equivalent repetition term; do not treat a generic "N times" occurrence as exercise repetitions.
+8b. A grammatically explicit singular countable item may itself encode count=1 when exactly one such item is unambiguously stated. Examples: "выпил чашку кофе" and "drank a cup of coffee" explicitly contain one countable unit, so return parameterCode=count, measureType=count, unit=count, valueNumeric=1. For this singular-count rule use qualifier=null so the value belongs to the matched activity's default count target. rawFragment must contain the singular countable marker copied verbatim from sourceText. Do NOT infer count=1 from a bare substance or activity with no singular countable item, such as "выпил кофе" or "drank coffee". If several distinct singular countable items are present, do not synthesize an unqualified count=1 through this rule.
 9. Do not convert an unstated consequence into a measurement. Extract only what the user actually reported: date/time, duration, repetitions, sets, distance, mass, count, volume, money, speed, heart rate, temperature, energy, rate, or another explicit primitive value.
 10. For relative dates/times such as "tomorrow", use reportedAt and timeZone only to normalize the stated timing; do not invent missing clock time.
 11. parameterCode and unit are stable English snake_case codes. label must be short and in the user's locale.
