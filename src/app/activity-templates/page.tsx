@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import {
   requirePlatformAdmin,
-} from "@/lib/admin/require-platform-admin";
+} from "@/lib/admin/require-assist-admin";
 
 import {
   ActivityTemplateImpactProfileEditor,

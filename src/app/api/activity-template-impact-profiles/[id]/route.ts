@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import {
   platformAdminErrorResponse,
   requirePlatformAdmin,
-} from "@/lib/admin/require-platform-admin";
+} from "@/lib/admin/require-assist-admin";
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
 import { supabase } from "../../../../../lib/supabase";
 import { saveActivityTemplateAuthoringV2 } from "@/lib/activity/activity-template-authoring-v2.server";
