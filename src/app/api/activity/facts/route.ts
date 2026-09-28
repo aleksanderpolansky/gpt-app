@@ -476,6 +476,8 @@ export async function GET(request: Request) {
 
   if (factStatus) {
     query = query.eq("fact_status", factStatus);
+  } else {
+    query = query.neq("fact_status", "deleted");
   }
 
   if (factRoleCode) {

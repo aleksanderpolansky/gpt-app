@@ -198,6 +198,16 @@ const FORMULA_RATIONALE_LINK_LABEL: Record<Locale, string> = {
   cs: "Jak to bylo vypočteno?",
 };
 
+type FactMutationMode = "view" | "edit" | "delete";
+const FACT_MUTATION_COPY: Record<Locale,{close:string;edit:string;delete:string;save:string;cancel:string;reason:string;reasonPlaceholder:string;deleteWarning:string;mutationFailed:string;saving:string;deletedStatus:string;readOnlyResult:string}> = {
+  en:{close:"Close",edit:"Edit",delete:"Delete",save:"Save correction",cancel:"Cancel",reason:"Reason",reasonPlaceholder:"Why is this fact being corrected?",deleteWarning:"Safe soft delete: the fact disappears from analytics but remains in the audit trail.",mutationFailed:"Could not change the fact.",saving:"Saving...",deletedStatus:"deleted",readOnlyResult:"Calculated result facts are read-only. Correct the source fact and recalculate."},
+  pl:{close:"Zamknij",edit:"Edytuj",delete:"Usuń",save:"Zapisz korektę",cancel:"Anuluj",reason:"Powód",reasonPlaceholder:"Dlaczego ten fakt jest korygowany?",deleteWarning:"Bezpieczne usunięcie logiczne: fakt znika z analityki, ale pozostaje w audycie.",mutationFailed:"Nie udało się zmienić faktu.",saving:"Zapisywanie...",deletedStatus:"usunięty",readOnlyResult:"Fakt wyniku jest tylko do odczytu. Popraw fakt źródłowy i przelicz wynik."},
+  ru:{close:"Закрыть",edit:"Редактировать",delete:"Удалить",save:"Сохранить исправление",cancel:"Отмена",reason:"Причина",reasonPlaceholder:"Почему этот факт исправляется?",deleteWarning:"Безопасное мягкое удаление: факт исчезнет из аналитики, но останется в журнале аудита.",mutationFailed:"Не удалось изменить факт.",saving:"Сохраняю...",deletedStatus:"удалён",readOnlyResult:"Результирующий вычисляемый факт напрямую не редактируется. Исправьте источник и выполните перерасчёт."},
+  uk:{close:"Закрити",edit:"Редагувати",delete:"Видалити",save:"Зберегти виправлення",cancel:"Скасувати",reason:"Причина",reasonPlaceholder:"Чому цей факт виправляється?",deleteWarning:"Безпечне м’яке видалення: факт зникне з аналітики, але залишиться в аудиті.",mutationFailed:"Не вдалося змінити факт.",saving:"Збереження...",deletedStatus:"видалений",readOnlyResult:"Результуючий факт напряму не редагується. Виправте джерело та перерахуйте."},
+  de:{close:"Schließen",edit:"Bearbeiten",delete:"Löschen",save:"Korrektur speichern",cancel:"Abbrechen",reason:"Grund",reasonPlaceholder:"Warum wird dieser Fakt korrigiert?",deleteWarning:"Sicheres Soft-Delete: Der Fakt verschwindet aus der Analyse, bleibt aber im Audit.",mutationFailed:"Der Fakt konnte nicht geändert werden.",saving:"Speichern...",deletedStatus:"gelöscht",readOnlyResult:"Berechnete Ergebnisfakten sind schreibgeschützt. Quelle korrigieren und neu berechnen."},
+  es:{close:"Cerrar",edit:"Editar",delete:"Eliminar",save:"Guardar corrección",cancel:"Cancelar",reason:"Motivo",reasonPlaceholder:"¿Por qué se corrige este hecho?",deleteWarning:"Eliminación lógica segura: desaparece del análisis pero permanece en auditoría.",mutationFailed:"No se pudo modificar el hecho.",saving:"Guardando...",deletedStatus:"eliminado",readOnlyResult:"Los hechos calculados son de solo lectura. Corrige la fuente y vuelve a calcular."},
+  cs:{close:"Zavřít",edit:"Upravit",delete:"Smazat",save:"Uložit opravu",cancel:"Zrušit",reason:"Důvod",reasonPlaceholder:"Proč je tento fakt opravován?",deleteWarning:"Bezpečné měkké smazání: fakt zmizí z analytiky, ale zůstane v auditu.",mutationFailed:"Fakt se nepodařilo změnit.",saving:"Ukládání...",deletedStatus:"smazaný",readOnlyResult:"Vypočtený výsledný fakt je jen pro čtení. Opravte zdroj a přepočítejte."}
+};
 type FactCollectionKey = "all" | "planned" | "completed" | "snapshot" | "other";
 
 const FACT_COLLECTION_COPY: Record<Locale, Record<FactCollectionKey, { label: string; subtitle: string }>> = {
@@ -1129,6 +1139,7 @@ function ActivityFactsPageContent() {
   const searchParams = useSearchParams();
   const locale = normalizeLocale(searchParams.get("locale"));
   const copy = COPY[locale];
+  const mutationCopy = FACT_MUTATION_COPY[locale];
 
   const collectionCopy = FACT_COLLECTION_COPY[locale];
   const activeCollection =
@@ -1146,6 +1157,12 @@ function ActivityFactsPageContent() {
   const [activityEventId, setActivityEventId] = useState(searchParams.get("activityEventId") ?? "");
   const [factStatus, setFactStatus] = useState(searchParams.get("factStatus") ?? "");
   const [selectedFactId, setSelectedFactId] = useState<string | null>(null);
+  const [mutationMode, setMutationMode] = useState<FactMutationMode>("view");
+  const [editValue, setEditValue] = useState("");
+  const [editUnit, setEditUnit] = useState("");
+  const [mutationReason, setMutationReason] = useState("");
+  const [mutationPending, setMutationPending] = useState(false);
+  const [mutationError, setMutationError] = useState("");
   const [viewMode, setViewMode] = useState<FactsViewMode>("cards");
   const [state, setState] = useState<LoadState>({
     status: "idle",
@@ -1181,7 +1198,7 @@ function ActivityFactsPageContent() {
   );
   const visibleFacts = factCollections[activeCollection];
   const selectedFact =
-    visibleFacts.find((fact) => fact.factId === selectedFactId) ?? visibleFacts[0] ?? null;
+    visibleFacts.find((fact) => fact.factId === selectedFactId) ?? null;
 
   const factTableRows = useMemo<FactTableRow[]>(
     () =>
@@ -1347,17 +1364,9 @@ function ActivityFactsPageContent() {
         response: json,
       });
 
-      if (nextFacts.length > 0) {
-        setSelectedFactId((current) => {
-          if (current && nextFacts.some((fact) => fact.factId === current)) {
-            return current;
-          }
-
-          return nextFacts[0]?.factId ?? null;
-        });
-      } else {
-        setSelectedFactId(null);
-      }
+      setSelectedFactId((current) =>
+        current && nextFacts.some((fact) => fact.factId === current) ? current : null,
+      );
     } catch (error) {
       setState({
         status: "error",
@@ -1366,6 +1375,27 @@ function ActivityFactsPageContent() {
       });
     }
   }, [copy.empty, copy.errorLoad, copy.loaded, copy.loading, queryUrl]);
+
+  function resetMutationUi() {
+    setMutationMode("view"); setEditValue(""); setEditUnit(""); setMutationReason(""); setMutationPending(false); setMutationError("");
+  }
+  function closeFactModal(){ setSelectedFactId(null); resetMutationUi(); }
+  function startFactEdit(){ if(!selectedFact)return; setMutationMode("edit"); setMutationError(""); setMutationReason(""); setEditUnit(selectedFact.unit??""); setEditValue(selectedFact.metricValue===null?"":String(selectedFact.metricValue)); }
+  async function submitFactEdit(){
+    if(!selectedFact?.factId||!selectedFact.updatedAt||mutationPending)return;
+    if(mutationReason.trim().length<3||!editUnit.trim()){setMutationError(mutationCopy.mutationFailed);return;}
+    const body:Record<string,unknown>={mutationId:crypto.randomUUID(),reason:mutationReason.trim(),expectedUpdatedAt:selectedFact.updatedAt,unit:editUnit.trim().toLowerCase()};
+    if(typeof selectedFact.metricValue==="number"){const n=Number(editValue.replace(",","."));if(!Number.isFinite(n)){setMutationError(mutationCopy.mutationFailed);return;}body.valueNumeric=n;}
+    else if(typeof selectedFact.metricValue==="boolean") body.valueBoolean=editValue==="true"; else body.valueText=editValue;
+    setMutationPending(true);setMutationError("");
+    try{const r=await fetch(`/api/activity/facts/${encodeURIComponent(selectedFact.factId)}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const j=await r.json().catch(()=>({})) as {ok?:boolean;error?:string};if(!r.ok||j.ok!==true)throw new Error(j.error??mutationCopy.mutationFailed);closeFactModal();await loadFacts();}catch(e){setMutationError(e instanceof Error?e.message:mutationCopy.mutationFailed);setMutationPending(false);}
+  }
+  async function submitFactDelete(){
+    if(!selectedFact?.factId||!selectedFact.updatedAt||mutationPending)return;
+    if(mutationReason.trim().length<3){setMutationError(mutationCopy.mutationFailed);return;}
+    setMutationPending(true);setMutationError("");
+    try{const r=await fetch(`/api/activity/facts/${encodeURIComponent(selectedFact.factId)}`,{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({mutationId:crypto.randomUUID(),reason:mutationReason.trim(),expectedUpdatedAt:selectedFact.updatedAt})});const j=await r.json().catch(()=>({})) as {ok?:boolean;error?:string};if(!r.ok||j.ok!==true)throw new Error(j.error??mutationCopy.mutationFailed);closeFactModal();await loadFacts();}catch(e){setMutationError(e instanceof Error?e.message:mutationCopy.mutationFailed);setMutationPending(false);}
+  }
 
   function resetFilters() {
     setLimit("50");
@@ -1376,12 +1406,27 @@ function ActivityFactsPageContent() {
   }
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void loadFacts();
-    }, 0);
-
+    const timer = window.setTimeout(() => { void loadFacts(); }, 0);
     return () => window.clearTimeout(timer);
   }, [loadFacts]);
+
+  useEffect(() => {
+    if(!selectedFact)return;
+    const old=document.body.style.overflow;
+    const key=(event:KeyboardEvent)=>{
+      if(event.key==="Escape"){
+        setSelectedFactId(null);
+        setMutationMode("view");
+        setEditValue("");
+        setEditUnit("");
+        setMutationReason("");
+        setMutationPending(false);
+        setMutationError("");
+      }
+    };
+    document.body.style.overflow="hidden"; window.addEventListener("keydown",key);
+    return()=>{document.body.style.overflow=old;window.removeEventListener("keydown",key);};
+  }, [selectedFact]);
 
   return (
     <main className="min-h-[calc(100vh-5rem)] bg-[#f0f2f7] px-3 py-4 text-[#1a1d2e] sm:px-5 lg:px-6">
@@ -1554,6 +1599,7 @@ function ActivityFactsPageContent() {
                 <option value="pending_review">{getStatusLabel("pending_review", copy)}</option>
                 <option value="rejected">{getStatusLabel("rejected", copy)}</option>
                 <option value="superseded">{getStatusLabel("superseded", copy)}</option>
+                <option value="deleted">{mutationCopy.deletedStatus}</option>
               </select>
             </label>
           </div>
@@ -1643,14 +1689,14 @@ function ActivityFactsPageContent() {
           />
         )}
 
-        <section className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4 shadow-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7c8099]">
-            {copy.details}
-          </p>
-          <h2 className="mt-2 text-2xl font-black text-[#1a1d2e]">{copy.selectedFact}</h2>
-
-          {selectedFact ? (
-            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {selectedFact ? (
+          <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/45 p-3 sm:p-6" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)closeFactModal();}}>
+            <section role="dialog" aria-modal="true" aria-label={copy.selectedFact} className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-2xl border border-[rgba(0,0,0,0.08)] bg-white p-4 shadow-2xl sm:p-5" onMouseDown={(event)=>event.stopPropagation()}>
+              <div className="flex items-start justify-between gap-4">
+                <div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7c8099]">{copy.details}</p><h2 className="mt-2 text-2xl font-black text-[#1a1d2e]">{copy.selectedFact}</h2></div>
+                <button type="button" onClick={closeFactModal} className="min-h-10 rounded-lg border border-[rgba(0,0,0,0.08)] bg-white px-3 text-sm font-medium text-[#5a5f7a]">{mutationCopy.close} ×</button>
+              </div>
+              <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-4">
                 <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#7c8099]">
                   {FACT_CARD_LABELS[locale].role}
@@ -1844,16 +1890,39 @@ function ActivityFactsPageContent() {
                 )}
               </div>
 
-              <ActivityFactTaggingPanel
-                fact={selectedFact}
-                locale={locale}
-                onSaved={loadFacts}
-              />
-            </div>
-          ) : (
-            <p className="mt-4 text-sm font-bold text-[#7c8099]">{copy.selectedHint}</p>
-          )}
-        </section>
+              <ActivityFactTaggingPanel fact={selectedFact} locale={locale} onSaved={loadFacts} />
+
+              <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#f8f9fc] p-4 md:col-span-2 xl:col-span-4">
+                {selectedFact.factRoleCode === "result" ? (
+                  <p className="text-sm font-semibold text-[#7c8099]">{mutationCopy.readOnlyResult}</p>
+                ) : mutationMode === "view" ? (
+                  <div className="flex flex-wrap justify-end gap-3">
+                    <button type="button" onClick={startFactEdit} disabled={selectedFact.factStatus==="deleted"} className="min-h-10 rounded-lg border border-[#3b6ef8]/30 bg-white px-4 text-sm font-medium text-[#3b6ef8] disabled:opacity-50">{mutationCopy.edit}</button>
+                    <button type="button" onClick={()=>{setMutationMode("delete");setMutationReason("");setMutationError("");}} disabled={selectedFact.factStatus==="deleted"} className="min-h-10 rounded-lg border border-red-200 bg-white px-4 text-sm font-medium text-red-600 disabled:opacity-50">{mutationCopy.delete}</button>
+                  </div>
+                ) : mutationMode === "edit" ? (
+                  <div className="grid gap-4">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <input value={editValue} onChange={(e)=>setEditValue(e.target.value)} className="min-h-11 rounded-xl border px-3" />
+                      <input value={editUnit} onChange={(e)=>setEditUnit(e.target.value)} className="min-h-11 rounded-xl border px-3" />
+                    </div>
+                    <input value={mutationReason} onChange={(e)=>setMutationReason(e.target.value)} placeholder={mutationCopy.reasonPlaceholder} className="min-h-11 rounded-xl border px-3" />
+                    {mutationError?<p className="text-sm font-semibold text-red-700">{mutationError}</p>:null}
+                    <div className="flex justify-end gap-3"><button type="button" onClick={resetMutationUi} className="min-h-10 rounded-lg border px-4">{mutationCopy.cancel}</button><button type="button" onClick={()=>void submitFactEdit()} disabled={mutationPending} className="min-h-10 rounded-lg bg-[#3b6ef8] px-4 text-white disabled:opacity-50">{mutationPending?mutationCopy.saving:mutationCopy.save}</button></div>
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    <p className="text-sm font-semibold text-[#7c8099]">{mutationCopy.deleteWarning}</p>
+                    <input value={mutationReason} onChange={(e)=>setMutationReason(e.target.value)} placeholder={mutationCopy.reasonPlaceholder} className="min-h-11 rounded-xl border border-red-200 px-3" />
+                    {mutationError?<p className="text-sm font-semibold text-red-700">{mutationError}</p>:null}
+                    <div className="flex justify-end gap-3"><button type="button" onClick={resetMutationUi} className="min-h-10 rounded-lg border px-4">{mutationCopy.cancel}</button><button type="button" onClick={()=>void submitFactDelete()} disabled={mutationPending} className="min-h-10 rounded-lg bg-red-600 px-4 text-white disabled:opacity-50">{mutationPending?mutationCopy.saving:mutationCopy.delete}</button></div>
+                  </div>
+                )}
+              </div>
+              </div>
+            </section>
+          </div>
+        ) : null}
       </div>
     </main>
   );
