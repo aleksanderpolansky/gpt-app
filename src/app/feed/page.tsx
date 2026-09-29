@@ -1,3 +1,4 @@
+import AiChannels from "./AiChannels";
 import { Suspense } from "react";
 
 import { normalizeLocale } from "@/i18n";
@@ -48,6 +49,8 @@ export default async function GlobalFeedPage({
             {copy.subtitle}
           </p>
         </header>
+
+        <AiChannels locale={locale} />
 
         {viewer && authorOptions.length > 0 ? (
           <UserPublicationComposer

@@ -1,3 +1,5 @@
+import { readChannelFeed } from "@/lib/ai-channels/server";
+import { channelWords } from "@/lib/ai-channels/copy";
 import { Suspense } from "react";
 import Link from "next/link";
 
@@ -223,6 +225,14 @@ export default async function GlobalFeedContent({
       mode === "hidden" ? hiddenMessageObjectIds : undefined,
   });
 
+  let aiError = false;
+  const aiItems = mode === "feed" ? await readChannelFeed().catch(() => { aiError = true; return []; }) : [];
+  const aiCopy = channelWords(locale);
+  const feedEntries = [
+    ...result.items.map(item => ({ kind: "native" as const, item, time: item.publishedAt })),
+    ...aiItems.map(item => ({ kind: "ai" as const, item, time: item.activated_at })),
+  ].sort((a,b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+
   if (result.errorMessage) {
     return (
       <div className="rounded-2xl border border-[#f3c7c7] bg-[#fff7f7] px-4 py-4 text-[12px] leading-5 text-[#b42318]">
@@ -231,7 +241,7 @@ export default async function GlobalFeedContent({
     );
   }
 
-  if (result.items.length === 0) {
+  if (feedEntries.length === 0) {
     return (
       <div className="flex min-h-[180px] items-center justify-center rounded-2xl border border-[#e4e8f2] bg-white px-6 text-center text-[13px] text-[#9ca3b8]">
         {emptyLabel ?? copy.empty}
@@ -268,7 +278,19 @@ export default async function GlobalFeedContent({
 
   return (
     <div className="space-y-3">
-      {result.items.map((item) => {
+      {aiError ? <p role="status" className="text-xs text-amber-700">{aiCopy[1]}: {aiCopy[36]}</p> : null}
+      {feedEntries.map((entry) => {
+        if (entry.kind === "ai") {
+          const item = entry.item;
+          return <article key={item.id} data-feed-message-object-id={item.id} className="rounded-2xl border border-[#e4e8f2] bg-white p-4 sm:p-5">
+            <div className="mb-2 text-xs text-slate-500">{item.channelName} · {aiCopy[25]}</div>
+            <p className="text-sm leading-6 text-slate-800">{item.content_text}{" "}
+              <a className="text-blue-700 underline" href={item.canonical_url} target="_blank" rel="noopener noreferrer">{aiCopy[26]}: {item.author_display_name_snapshot ?? new URL(item.canonical_url).hostname}</a>
+            </p>
+            <p className="mt-2 text-xs text-slate-500">{aiCopy[27]}: {formatPublishedAt(String(item.metadata_json.checked_at ?? item.activated_at),locale)} · {item.source_published_at ? formatPublishedAt(item.source_published_at,locale) : aiCopy[37]}</p>
+          </article>;
+        }
+        const item = entry.item;
         const cached = cachedContentById.get(item.id);
 
         if (cached || !pendingIds.has(item.id)) {
