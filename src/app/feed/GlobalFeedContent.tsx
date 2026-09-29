@@ -1,4 +1,3 @@
-import { cleanSummary } from '@/lib/ai-channels/contracts';
 import { readChannelFeed } from "@/lib/ai-channels/server";
 import { channelWords } from "@/lib/ai-channels/copy";
 import { Suspense } from "react";
@@ -13,6 +12,7 @@ import {
   readCachedGlobalArctorFeedItemContent,
   type GlobalArctorFeedItem,
 } from "@/lib/messages/globalFeed.server";
+import AiChannelFeedGroup from "./AiChannelFeedGroup";
 import { getGlobalFeedCopy } from "./feedCopy";
 
 const INTL_LOCALE: Record<LocaleCode, string> = {
@@ -229,9 +229,15 @@ export default async function GlobalFeedContent({
   let aiError = false;
   const aiItems = mode === "feed" ? await readChannelFeed().catch(() => { aiError = true; return []; }) : [];
   const aiCopy = channelWords(locale);
+  const aiGroups = new Map<string, typeof aiItems>();
+  for (const item of aiItems) {
+    const group = aiGroups.get(item.channelId) ?? [];
+    group.push(item);
+    aiGroups.set(item.channelId, group);
+  }
   const feedEntries = [
     ...result.items.map(item => ({ kind: "native" as const, item, time: item.publishedAt })),
-    ...aiItems.map(item => ({ kind: "ai" as const, item, time: item.activated_at })),
+    ...[...aiGroups.values()].filter(group => group.length > 0).map(items => ({ kind: "ai" as const, items, time: items[0].activated_at })),
   ].sort((a,b) => new Date(b.time).getTime() - new Date(a.time).getTime());
 
   if (result.errorMessage) {
@@ -282,14 +288,7 @@ export default async function GlobalFeedContent({
       {aiError ? <p role="status" className="text-xs text-amber-700">{aiCopy[1]}: {aiCopy[36]}</p> : null}
       {feedEntries.map((entry) => {
         if (entry.kind === "ai") {
-          const item = entry.item;
-          return <article key={item.id} data-feed-message-object-id={item.id} className="rounded-2xl border border-[#e4e8f2] bg-white p-4 sm:p-5">
-            <div className="mb-2 text-xs text-slate-500">{item.channelName} · {aiCopy[25]}</div>
-            <p className="text-sm leading-6 text-slate-800">{cleanSummary(item.content_text)}{" "}
-              <a className="text-blue-700 underline" href={item.canonical_url} target="_blank" rel="noopener noreferrer">{aiCopy[26]}: {item.author_display_name_snapshot ?? new URL(item.canonical_url).hostname}</a>
-            </p>
-            <p className="mt-2 text-xs text-slate-500">{aiCopy[27]}: {formatPublishedAt(String(item.metadata_json.checked_at ?? item.activated_at),locale)} · {item.source_published_at ? formatPublishedAt(item.source_published_at,locale) : aiCopy[37]}</p>
-          </article>;
+          return <AiChannelFeedGroup key={`ai:${entry.items[0].channelId}`} items={entry.items} locale={locale} />;
         }
         const item = entry.item;
         const cached = cachedContentById.get(item.id);

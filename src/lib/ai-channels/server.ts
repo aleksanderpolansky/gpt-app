@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 import { auth0 } from '../../../lib/auth0';
 import { resolveActiveActorContext } from '../../../lib/actor-context';
 import { supabase } from '../../../lib/supabase';
-import { CHANNEL_MODEL, canonicalSourceUrl, cleanSummary, validateChannelResults, type ChannelRow, type ChannelSpec, type ChannelItem, type OntologyOption } from './contracts';
+import { CHANNEL_MODEL, canonicalSourceUrl, channelSpecWithDefaults, cleanSummary, validateChannelResults, type ChannelRow, type ChannelSpec, type ChannelItem, type OntologyOption } from './contracts';
 import { channelSearchRequest } from './search';
 export type ChannelIdentity={user:string;actor:string;admin:boolean};
 export async function channelIdentity():Promise<ChannelIdentity|null>{
@@ -25,7 +25,7 @@ export async function listChannels(who:ChannelIdentity|null){
  const preferences=new Map<string,boolean>();
  if(who){const r=await supabase.from('ai_channel_preferences_v1').select('channel_id,enabled').eq('owner_user_id',who.user);
  if(r.error)throw Error('CHANNEL_PREFERENCES_FAILED');for(const p of r.data??[])preferences.set(p.channel_id,p.enabled);}
- const result=channels.map(c=>({...c,enabled:preferences.get(c.id)??true,canManage:Boolean(who&&(c.scope==='public'?who.admin:c.owner_user_id===who.user)),runningRunId:null as string|null}));
+ const result=channels.map(c=>({...c,spec:channelSpecWithDefaults(c.spec),enabled:preferences.get(c.id)??true,canManage:Boolean(who&&(c.scope==='public'?who.admin:c.owner_user_id===who.user)),runningRunId:null as string|null}));
  const managed=result.filter(c=>c.canManage).map(c=>c.id);
  if(managed.length){
   const {data:runs,error:runError}=await supabase.from('ai_channel_runs_v1').select('id,channel_id').in('channel_id',managed).eq('status','running');
@@ -43,7 +43,8 @@ export async function ontologyOptions(search='',ids?:string[]):Promise<OntologyO
 export async function managedChannel(who:ChannelIdentity,id:string){
  const {data,error}=await supabase.from('ai_channels_v1').select('*').eq('id',id).neq('status','archived').maybeSingle();
  const c=data as ChannelRow|null;
- if(error||!c||!(c.scope==='public'?who.admin:c.owner_user_id===who.user))throw Error('CHANNEL_ACCESS_DENIED');return c;
+ if(error||!c||!(c.scope==='public'?who.admin:c.owner_user_id===who.user))throw Error('CHANNEL_ACCESS_DENIED');
+ return {...c,spec:channelSpecWithDefaults(c.spec)} as ChannelRow;
 }
 function collectSourceUrls(output:unknown):string[]{
  const urls:string[]=[];
@@ -84,7 +85,7 @@ async function completeResponse(who:ChannelIdentity,id:string,r:StoredRun,respon
   // retrieve() output_text is SDK-dependent; reconstruct from output when necessary.
   const text=response.output_text||response.output.flatMap(x=>x.type==='message'?x.content.filter(t=>t.type==='output_text').map(t=>t.text):[]).join('');
   const parsed=JSON.parse(text) as {items:unknown;coverageSummary?:unknown};
-  const validated=validateChannelResults(parsed.items,r.spec_snapshot,collectSourceUrls(response.output));
+  const validated=validateChannelResults(parsed.items,channelSpecWithDefaults(r.spec_snapshot),collectSourceUrls(response.output));
   items=validated.items;usage.validation=validated.diagnostics;
   usage.coverageSummary=typeof parsed.coverageSummary==='string'?cleanSummary(parsed.coverageSummary).slice(0,1200):'';
  }catch(error){failure=errorCode(error);}
@@ -92,18 +93,27 @@ async function completeResponse(who:ChannelIdentity,id:string,r:StoredRun,respon
  await channelCommand(who,'finish',id,{runId:r.id,items,usage,...(failure?{error:failure}:{})});
  return runResult(who,id,r.id);
 }
+function providerRuntimeSpec(spec:ChannelSpec,admin:boolean):ChannelSpec{
+ const full=channelSpecWithDefaults(spec),detailed=full.searchDepth==='detailed';
+ if(admin)return full;
+ // Public provider-cost knobs are administrator-only. Non-admin users can still narrow topic/coverage/category,
+ // but cannot silently select a more expensive model or larger provider budget through a handcrafted request.
+ return {...full,model:CHANNEL_MODEL,reasoningEffort:detailed?'medium':'low',maxToolCalls:detailed?10:4,
+  searchContextSize:detailed?'high':'medium',maxOutputTokens:detailed?12000:6500};
+}
 export async function runChannel(who:ChannelIdentity,id:string,kind:'test'|'scheduled'){
  if(process.env.AI_ENABLED==='false')throw Error('CHANNEL_AI_DISABLED');
- const client=provider(),c=await managedChannel(who,id);
+ const client=provider(),c=await managedChannel(who,id),requestSpec=providerRuntimeSpec(c.spec,who.admin);
  const capability=await channelCommand(who,'capabilities',null).catch(()=>{throw Error('CHANNEL_SCHEMA_V2_REQUIRED');});
  if(capability?.version!==2)throw Error('CHANNEL_SCHEMA_V2_REQUIRED');
  const objects=await ontologyOptions('',c.spec.objectIds);
  if(objects.length!==c.spec.objectIds.length)throw Error('CHANNEL_OBJECT_NOT_PUBLIC_ONTOLOGY');
  const started=await channelCommand(who,'start',id,{kind,revision:c.revision});const runId=String(started.runId);
  let response:OpenAI.Responses.Response|undefined;
- const usage:Record<string,unknown>={model:CHANNEL_MODEL,searchDepth:c.spec.searchDepth??'quick',walletDebited:false,billing:'platform_provider_account',providerAttempted:true,background:true};
+ const usage:Record<string,unknown>={model:requestSpec.model??CHANNEL_MODEL,searchDepth:requestSpec.searchDepth??'quick',coverageMode:requestSpec.coverageMode??'ranked',
+  walletDebited:false,billing:'platform_provider_account',providerAttempted:true,background:true,maxToolCalls:requestSpec.maxToolCalls,searchContextSize:requestSpec.searchContextSize};
  try{
-  response=await client.responses.create(channelSearchRequest(c.spec,objects));
+  response=await client.responses.create(channelSearchRequest(requestSpec,objects));
   usage.responseId=response.id;
   await channelCommand(who,'attach_provider',id,{runId,responseId:response.id,usage});
  }catch(error){
@@ -150,7 +160,19 @@ export async function cancelChannel(who:ChannelIdentity,id:string,runId:string){
  await channelCommand(who,'finish',id,{runId,error:'CHANNEL_CANCELLED',usage:r.usage});
  return runResult(who,id,runId);
 }
-export type AiFeedItem={id:string;content_text:string;canonical_url:string;source_published_at:string|null;activated_at:string;author_display_name_snapshot:string|null;metadata_json:Record<string,unknown>;channelName:string};
+export async function setChannelItemVisibility(who:ChannelIdentity,id:string,messageObjectId:string,hidden:boolean){
+ await managedChannel(who,id);
+ const {data:link,error:linkError}=await supabase.from('ai_channel_items_v1').select('message_object_id').eq('channel_id',id).eq('message_object_id',messageObjectId).maybeSingle();
+ if(linkError||!link)throw Error('CHANNEL_ITEM_NOT_FOUND');
+ const {data:message,error:messageError}=await supabase.from('message_objects').select('id,metadata_json,lifecycle_status').eq('id',messageObjectId).eq('origin_provider_code','arctor_ai_channel').maybeSingle();
+ if(messageError||!message)throw Error('CHANNEL_ITEM_NOT_FOUND');
+ const previous=message.metadata_json&&typeof message.metadata_json==='object'&&!Array.isArray(message.metadata_json)?message.metadata_json as Record<string,unknown>:{};
+ const metadata={...previous,ai_channel_hidden:hidden,ai_channel_hidden_at:hidden?new Date().toISOString():null,ai_channel_hidden_by:hidden?who.user:null};
+ const {error:updateError}=await supabase.from('message_objects').update({lifecycle_status:hidden?'withdrawn':'active',metadata_json:metadata}).eq('id',messageObjectId).eq('origin_provider_code','arctor_ai_channel');
+ if(updateError)throw Error('CHANNEL_ITEM_VISIBILITY_FAILED');
+ return {ok:true,hidden};
+}
+export type AiFeedItem={id:string;content_text:string;canonical_url:string;source_published_at:string|null;activated_at:string;author_display_name_snapshot:string|null;metadata_json:Record<string,unknown>;channelId:string;channelName:string;canManage:boolean;feedPreviewCount:number};
 export async function readChannelFeed():Promise<AiFeedItem[]>{
  const who=await channelIdentity();const channels=(await listChannels(who)).filter(c=>c.enabled);
  if(!channels.length)return [];
@@ -159,6 +181,12 @@ export async function readChannelFeed():Promise<AiFeedItem[]>{
  const {data,error}=await supabase.from('message_objects').select('id,content_text,canonical_url,source_published_at,activated_at,author_display_name_snapshot,metadata_json')
  .in('id',links.map(x=>x.message_object_id)).eq('origin_provider_code','arctor_ai_channel').eq('lifecycle_status','active').order('activated_at',{ascending:false}).limit(60);
  if(error)throw Error('CHANNEL_FEED_FAILED');
- const names=new Map(channels.map(c=>[c.id,c.name])), ids=new Map(links.map(x=>[x.message_object_id,x.channel_id]));
- return ((data??[]) as Omit<AiFeedItem,'channelName'>[]).filter(x=>Boolean(canonicalSourceUrl(x.canonical_url))).map(x=>({...x,channelName:names.get(ids.get(x.id)??'')??'AI'}));
+ const channelById=new Map<string,ChannelRow>(channels.map(c=>[c.id,c] as const));
+ const linkRows=(links??[]) as Array<{message_object_id:string;channel_id:string}>;
+ const ids=new Map<string,string>(linkRows.map(x=>[x.message_object_id,x.channel_id] as const));
+ type BaseFeedItem=Omit<AiFeedItem,'channelId'|'channelName'|'canManage'|'feedPreviewCount'>;
+ return ((data??[]) as BaseFeedItem[]).filter(x=>Boolean(canonicalSourceUrl(x.canonical_url))).map(x=>{
+  const channelId=ids.get(x.id)??'',channel=channelById.get(channelId);
+  return {...x,channelId,channelName:channel?.name??'AI',canManage:Boolean(channel?.canManage),feedPreviewCount:channel?.spec.feedPreviewCount??1};
+ });
 }

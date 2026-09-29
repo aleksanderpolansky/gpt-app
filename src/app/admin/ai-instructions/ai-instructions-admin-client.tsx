@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { normalizeLocale, type LocaleCode } from "@/i18n";
+import AiChannels from "@/app/feed/AiChannels";
 
 type InstructionLocale = "global" | LocaleCode;
 type CatalogItem = {
@@ -279,6 +280,8 @@ export default function AiInstructionsAdminClient() {
         <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-amber-300">3 · Системные ограничения</p><h2 className="mt-1 text-2xl font-black text-white">Видимы здесь, редактируются только через code release</h2><p className="mt-2 max-w-4xl text-sm leading-6 text-slate-400">Это самые сильные правила. Здесь для каждого указано назначение, реальный файл/символ, причина блокировки и пошаговая процедура изменения. Они существуют именно для того, чтобы редактируемая инструкция или DB-правило не могли разрушить контракт данных.</p></div><span className="rounded-full border border-amber-800 px-3 py-1 text-xs font-bold text-amber-200">read-only</span></div>
         <div className="mt-5 grid gap-3 lg:grid-cols-2">{guards.map((guard) => <article key={guard.guardCode} className="rounded-xl border border-amber-950/70 bg-slate-950/60 p-4"><div className="flex items-start justify-between gap-3"><div><div className="text-xs font-black uppercase text-amber-300">{guard.guardCode}</div><h3 className="mt-1 font-black text-white">{guard.title}</h3></div><span className="rounded-full border border-amber-900 px-2 py-1 text-[10px] font-bold text-amber-200">priority {guard.precedenceRank}</span></div><p className="mt-2 text-sm leading-6 text-slate-400">{guard.purpose}</p><div className="mt-3 rounded-lg bg-black/70 p-3 text-xs leading-5 text-slate-400"><div><b className="text-slate-200">Runtime:</b> {guard.runtimeTargets.join(", ")}</div><div><b className="text-slate-200">Файл:</b> <code>{guard.sourcePath}</code></div><div><b className="text-slate-200">Символ:</b> <code>{guard.sourceSymbol}</code></div><div><b className="text-slate-200">Контрольная строка:</b> <code>{guard.evidenceNeedle}</code></div></div><pre className="mt-3 whitespace-pre-wrap rounded-lg border border-amber-950/70 bg-black p-3 text-xs leading-5 text-slate-300">{guard.fullText}</pre><div className="mt-3 text-xs leading-5 text-amber-100"><b>Почему нельзя редактировать здесь:</b> {guard.whyLocked}</div><details className="mt-3 rounded-lg border border-slate-800 p-3"><summary className="cursor-pointer text-xs font-bold text-white">Что делать, если это всё-таки нужно изменить</summary><ol className="mt-2 list-decimal space-y-1 pl-5 text-xs leading-5 text-slate-400">{guard.changeSteps.map((step) => <li key={step}>{step}</li>)}</ol></details></article>)}</div>
       </section>
+      <AiChannels locale={interfaceLocale} adminMode />
+
     </div>
   );
 }
