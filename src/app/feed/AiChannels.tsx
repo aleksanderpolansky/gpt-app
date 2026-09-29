@@ -6,6 +6,20 @@ import { channelWords,channelDetailWords } from '@/lib/ai-channels/copy';
 const inputClass='w-full rounded-lg border border-slate-300 bg-white p-2 text-sm text-slate-900';
 const buttonClass='rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-40';
 type Run={id:string;status:string;started_at:string;error_code:string|null;published_count:number;items:ChannelItem[];usage:Record<string,unknown>;revision:number};
+type CreationAccess={allowed:boolean;reason:string;availableEur:number|null};
+const MODERATOR_ACTOR_ID='d4727330-1cd4-475a-ac0b-aaba89087f4a';
+const creationGateCopy=(locale:string)=>{
+ const copy={
+  ru:{lead:'Недостаточно токенов для создания ИИ канала.',action:'Написать сообщение модератору для получения тестовых 100 000 токенов'},
+  pl:{lead:'Za mało tokenów, aby utworzyć kanał AI.',action:'Napisz wiadomość do moderatora, aby otrzymać testowe 100 000 tokenów'},
+  en:{lead:'Not enough tokens to create an AI channel.',action:'Message the moderator to receive 100,000 test tokens'},
+  uk:{lead:'Недостатньо токенів для створення ШІ-каналу.',action:'Напишіть модератору, щоб отримати тестові 100 000 токенів'},
+  de:{lead:'Nicht genügend Token, um einen KI-Kanal zu erstellen.',action:'Schreiben Sie dem Moderator, um 100.000 Test-Token zu erhalten'},
+  es:{lead:'No hay suficientes tokens para crear un canal de IA.',action:'Escribe al moderador para recibir 100 000 tokens de prueba'},
+  cs:{lead:'Pro vytvoření AI kanálu není dostatek tokenů.',action:'Napište moderátorovi a získejte 100 000 testovacích tokenů'}
+ } as const;
+ return copy[locale as keyof typeof copy]??copy.en;
+};
 const fresh=(locale:string,admin:boolean):ChannelSpec=>({
  name:'',topic:'',geography:'',exclusions:'',domains:[],language:locale,intervalHours:24,lookbackDays:7,maxItems:15,
  searchDepth:'detailed',freshness:'recent',timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -21,14 +35,15 @@ const normalized=(value:ChannelSpec,revision:number):ChannelSpec=>{
   maxPerProvider:value.maxPerProvider??3,minDistinctProviders:value.minDistinctProviders??3,categoryMode:value.categoryMode??'open',allowedCategories:value.allowedCategories??[],feedPreviewCount:value.feedPreviewCount??1};
 };
 export default function AiChannels({locale,adminMode=false}:{locale:string;adminMode?:boolean}){
- const t=channelWords(locale),v=channelDetailWords(locale),router=useRouter();
- const [channels,setChannels]=useState<ChannelRow[]>([]),[signedIn,setSignedIn]=useState(false),[admin,setAdmin]=useState(false);
+ const t=channelWords(locale),v=channelDetailWords(locale),router=useRouter(),gateCopy=creationGateCopy(locale);
+ const moderatorMessageHref='/messages?to='+encodeURIComponent(MODERATOR_ACTOR_ID)+'&locale='+encodeURIComponent(locale);
+ const [channels,setChannels]=useState<ChannelRow[]>([]),[signedIn,setSignedIn]=useState(false),[admin,setAdmin]=useState(false),[creationAccess,setCreationAccess]=useState<CreationAccess|null>(null);
  const [open,setOpen]=useState(false),[editing,setEditing]=useState<string|null>(null),[spec,setSpec]=useState<ChannelSpec>(fresh(locale,false));
  const [busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[error,setError]=useState(''),[options,setOptions]=useState<OntologyOption[]>([]),[search,setSearch]=useState('');
  const [preview,setPreview]=useState<{id:string;runId:string;items:ChannelItem[];usage?:Record<string,unknown>}|null>(null),[runs,setRuns]=useState<Run[]>([]),[historyId,setHistoryId]=useState('');
  const [activeRun,setActiveRun]=useState<{id:string;runId:string}|null>(null),[pollPaused,setPollPaused]=useState(false);
- async function load(){const r=await fetch('/api/ai-channels',{cache:'no-store'});const d=await r.json();if(!r.ok)throw Error(d.error);setChannels(d.channels);setSignedIn(d.signedIn);setAdmin(d.admin);const pending=(d.channels as ChannelRow[]).find(c=>c.runningRunId);if(pending)setActiveRun({id:pending.id,runId:pending.runningRunId!});}
- useEffect(()=>{let current=true;fetch('/api/ai-channels',{cache:'no-store'}).then(async r=>{const d=await r.json();if(!r.ok)throw Error(d.error);if(current){setChannels(d.channels);setSignedIn(d.signedIn);setAdmin(d.admin);const pending=(d.channels as ChannelRow[]).find(c=>c.runningRunId);if(pending)setActiveRun({id:pending.id,runId:pending.runningRunId!});}}).catch(e=>{if(current)setError(String(e.message));});return()=>{current=false;};},[]);
+ async function load(){const r=await fetch('/api/ai-channels',{cache:'no-store'});const d=await r.json();if(!r.ok)throw Error(d.error);setChannels(d.channels);setSignedIn(d.signedIn);setAdmin(d.admin);setCreationAccess(d.creationAccess??null);const pending=(d.channels as ChannelRow[]).find(c=>c.runningRunId);if(pending)setActiveRun({id:pending.id,runId:pending.runningRunId!});}
+ useEffect(()=>{let current=true;fetch('/api/ai-channels',{cache:'no-store'}).then(async r=>{const d=await r.json();if(!r.ok)throw Error(d.error);if(current){setChannels(d.channels);setSignedIn(d.signedIn);setAdmin(d.admin);setCreationAccess(d.creationAccess??null);const pending=(d.channels as ChannelRow[]).find(c=>c.runningRunId);if(pending)setActiveRun({id:pending.id,runId:pending.runningRunId!});}}).catch(e=>{if(current)setError(String(e.message));});return()=>{current=false;};},[]);
  useEffect(()=>{if(!open)return;const abort=new AbortController();const timer=setTimeout(()=>{fetch('/api/ai-channels?objects='+encodeURIComponent(search),{signal:abort.signal}).then(r=>r.json()).then(d=>{if(d.error)throw Error(d.error);setOptions(d.objects??[]);}).catch(e=>{if(e.name!=='AbortError')setError(e.message);});},250);return()=>{clearTimeout(timer);abort.abort();};},[search,open]);
  async function action(body:Record<string,unknown>){const r=await fetch('/api/ai-channels',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.error);return d;}
  async function perform(fn:()=>Promise<void>){setBusy(true);setError('');setNotice('');try{await fn();await load();router.refresh();}catch(e){setError(e instanceof Error?e.message:'CHANNEL_REQUEST_FAILED');}finally{setBusy(false);}}
@@ -62,7 +77,7 @@ export default function AiChannels({locale,adminMode=false}:{locale:string;admin
  <button className={buttonClass} disabled={busy||Boolean(c.runningRunId)} onClick={()=>{if(window.confirm(t[35]))void perform(async()=>{await action({action:'status',id:c.id,status:'archived'});setPreview(null);});}}>{t[18]}</button>
  </div></>}
  </div>)}</details>
- {signedIn?<button className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-40" disabled={busy} onClick={()=>{setEditing(null);setSpec(fresh(locale,admin));setSearch('');setOpen(true);setPreview(null);}}>{t[0]}</button>:<p className="text-sm">{t[30]}</p>}</div>
+ {signedIn?<div className="flex items-start gap-2"><button className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-40" disabled={busy||creationAccess?.allowed!==true} onClick={()=>{setEditing(null);setSpec(fresh(locale,admin));setSearch('');setOpen(true);setPreview(null);}}>{t[0]}</button>{creationAccess?.allowed===false&&<span className="group relative inline-flex"><button type="button" aria-label={gateCopy.lead+' '+gateCopy.action} className="flex h-9 w-9 items-center justify-center rounded-full border border-amber-300 bg-amber-50 text-base font-black text-amber-700">!</button><span role="tooltip" className="absolute right-0 top-full z-50 mt-2 hidden w-80 rounded-xl border border-amber-200 bg-white p-3 text-xs leading-5 text-slate-700 shadow-xl group-hover:block group-focus-within:block"><span>{gateCopy.lead} </span><a className="font-semibold text-blue-700 underline" href={moderatorMessageHref}>{gateCopy.action}</a></span></span>}</div>:<p className="text-sm">{t[30]}</p>}</div>
  {signedIn&&<p className="mt-2 text-xs text-slate-500">{t[29]}</p>}
  {busy&&<p role="status" className="mt-2">{t[28]}</p>}{notice&&<p role="status" className="mt-2 text-green-700">{notice}</p>}{error&&<p role="alert" className="mt-2 text-red-700">{/^CHANNEL_SCHEMA/.test(error)?t[36]:error}</p>}
  {activeRun&&<div role="status" className="mt-3 rounded-lg bg-blue-50 p-3 text-sm"><p>{pollPaused?v.retry:v.running}</p>{pollPaused&&<button className={buttonClass} onClick={()=>{setError('');setPollPaused(false);}}>{v.resume}</button>}<button className={buttonClass} disabled={busy} onClick={()=>void perform(async()=>{await action({action:'cancel',id:activeRun.id,runId:activeRun.runId});setActiveRun(null);setPollPaused(false);})}>{v.cancel}</button><p className="mt-1 text-xs">{v.cancelHint}</p></div>}

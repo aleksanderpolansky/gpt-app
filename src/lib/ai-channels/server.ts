@@ -13,6 +13,28 @@ export async function channelIdentity():Promise<ChannelIdentity|null>{
  if(error)throw Error('CHANNEL_IDENTITY_UNAVAILABLE');
  return {user:ctx.appUserId,actor:ctx.actorId,admin:Boolean(data?.length)};
 }
+export type ChannelCreationAccess={allowed:boolean;reason:'available'|'no_wallet'|'wallet_inactive'|'insufficient_balance'|'unavailable';availableEur:number|null};
+function walletNumber(value:unknown):number|null{
+ const n=typeof value==='number'?value:typeof value==='string'&&value.trim()?Number(value):Number.NaN;
+ return Number.isFinite(n)&&n>=0?n:null;
+}
+export async function channelCreationAccess(who:ChannelIdentity):Promise<ChannelCreationAccess>{
+ const {data,error}=await supabase.from('ai_credit_wallets').select('balance_eur,reserved_eur,status').eq('app_user_id',who.user).maybeSingle();
+ if(error)return {allowed:false,reason:'unavailable',availableEur:null};
+ if(!data)return {allowed:false,reason:'no_wallet',availableEur:0};
+ const balance=walletNumber(data.balance_eur),reserved=walletNumber(data.reserved_eur);
+ if(balance===null||reserved===null||reserved>balance)return {allowed:false,reason:'unavailable',availableEur:null};
+ const availableEur=Math.max(balance-reserved,0);
+ if(data.status!=='active')return {allowed:false,reason:'wallet_inactive',availableEur};
+ if(availableEur<=0)return {allowed:false,reason:'insufficient_balance',availableEur};
+ return {allowed:true,reason:'available',availableEur};
+}
+export async function requireChannelCreationBalance(who:ChannelIdentity):Promise<ChannelCreationAccess>{
+ const access=await channelCreationAccess(who);
+ if(access.allowed)return access;
+ if(access.reason==='unavailable')throw Error('CHANNEL_CREATE_BALANCE_UNAVAILABLE');
+ throw Error('CHANNEL_CREATE_BALANCE_REQUIRED');
+}
 export async function channelCommand(who:ChannelIdentity,action:string,id:string|null,body:unknown={}){
  const {data,error}=await supabase.rpc('ai_channel_command_v1',{p_user:who.user,p_actor:who.actor,p_action:action,p_id:id,p_body:body});
  if(error)throw Error(error.message);return data;

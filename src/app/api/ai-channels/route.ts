@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { channelCommand,channelIdentity,listChannels,managedChannel,ontologyOptions,runChannel,pollChannel,cancelChannel,setChannelItemVisibility } from '@/lib/ai-channels/server';
+import { channelCommand,channelIdentity,channelCreationAccess,requireChannelCreationBalance,listChannels,managedChannel,ontologyOptions,runChannel,pollChannel,cancelChannel,setChannelItemVisibility } from '@/lib/ai-channels/server';
 import { CHANNEL_MODEL, parseChannelSpec } from '@/lib/ai-channels/contracts';
 import { supabase } from '../../../../lib/supabase';
 export const runtime='nodejs';
@@ -10,7 +10,7 @@ const UUID=/^[0-9a-f]{8}-[0-9a-f-]{27}$/i;
 function failure(error:unknown){
  const message=error instanceof Error?error.message:'';
  const code=message.match(/(?:CHANNEL_[A-Z0-9_]+|OPENAI_[A-Z0-9_]+)/)?.[0]??'CHANNEL_REQUEST_FAILED';
- return NextResponse.json({error:code},{status:/ACCESS_DENIED|ADMIN_REQUIRED/.test(code)?403:/NOT_FOUND/.test(code)?404:/BUSY|CONFLICT|LIMIT/.test(code)?409:400,headers});
+ return NextResponse.json({error:code},{status:code==='CHANNEL_CREATE_BALANCE_REQUIRED'?402:code==='CHANNEL_CREATE_BALANCE_UNAVAILABLE'?503:/ACCESS_DENIED|ADMIN_REQUIRED/.test(code)?403:/NOT_FOUND/.test(code)?404:/BUSY|CONFLICT|LIMIT/.test(code)?409:400,headers});
 }
 export async function GET(request:Request){try{
  const who=await channelIdentity(),url=new URL(request.url);
@@ -22,8 +22,8 @@ export async function GET(request:Request){try{
  if(history){if(!who)throw Error('CHANNEL_ACCESS_DENIED');await managedChannel(who,history);
   const {data,error}=await supabase.from('ai_channel_runs_v1').select('id,kind,status,usage,error_code,published_count,started_at,finished_at,items,revision').eq('channel_id',history).order('started_at',{ascending:false}).limit(10);
   if(error)throw Error('CHANNEL_HISTORY_FAILED');return NextResponse.json({runs:data},{headers});}
- const channels=await listChannels(who);
- return NextResponse.json({signedIn:Boolean(who),admin:who?.admin??false,channels:channels.map(c=>({id:c.id,name:c.name,scope:c.scope,status:c.status,spec:c.spec,revision:c.revision,enabled:c.enabled,canManage:c.canManage,last_run_at:c.last_run_at,last_error:c.last_error,next_run_at:c.next_run_at,runningRunId:c.runningRunId}))},{headers});
+ const [channels,creationAccess]=await Promise.all([listChannels(who),who?channelCreationAccess(who):Promise.resolve(null)]);
+ return NextResponse.json({signedIn:Boolean(who),admin:who?.admin??false,creationAccess,channels:channels.map(c=>({id:c.id,name:c.name,scope:c.scope,status:c.status,spec:c.spec,revision:c.revision,enabled:c.enabled,canManage:c.canManage,last_run_at:c.last_run_at,last_error:c.last_error,next_run_at:c.next_run_at,runningRunId:c.runningRunId}))},{headers});
  }catch(e){return failure(e);}}
 export async function POST(request:Request){try{
  // JSON-only same-origin browser mutations; never trust client user/actor/admin values.
@@ -33,6 +33,7 @@ export async function POST(request:Request){try{
  const body=JSON.parse(text) as Record<string,unknown>;
  const id=typeof body.id==='string'&&UUID.test(body.id)?body.id:null;
  if(body.action==='save'){
+  if(!id)await requireChannelCreationBalance(who);
   const parsed=parseChannelSpec(body.spec);
   const safeSpec=who.admin?parsed:{...parsed,model:CHANNEL_MODEL,reasoningEffort:parsed.searchDepth==='detailed'?'medium':'low',maxToolCalls:parsed.searchDepth==='detailed'?10:4,searchContextSize:parsed.searchDepth==='detailed'?'high':'medium',maxOutputTokens:parsed.searchDepth==='detailed'?12000:6500};
   return NextResponse.json(await channelCommand(who,'save',id,safeSpec),{headers});
