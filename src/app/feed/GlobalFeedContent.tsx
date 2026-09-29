@@ -1,3 +1,4 @@
+import { cleanSummary } from '@/lib/ai-channels/contracts';
 import { readChannelFeed } from "@/lib/ai-channels/server";
 import { channelWords } from "@/lib/ai-channels/copy";
 import { Suspense } from "react";
@@ -284,7 +285,7 @@ export default async function GlobalFeedContent({
           const item = entry.item;
           return <article key={item.id} data-feed-message-object-id={item.id} className="rounded-2xl border border-[#e4e8f2] bg-white p-4 sm:p-5">
             <div className="mb-2 text-xs text-slate-500">{item.channelName} · {aiCopy[25]}</div>
-            <p className="text-sm leading-6 text-slate-800">{item.content_text}{" "}
+            <p className="text-sm leading-6 text-slate-800">{cleanSummary(item.content_text)}{" "}
               <a className="text-blue-700 underline" href={item.canonical_url} target="_blank" rel="noopener noreferrer">{aiCopy[26]}: {item.author_display_name_snapshot ?? new URL(item.canonical_url).hostname}</a>
             </p>
             <p className="mt-2 text-xs text-slate-500">{aiCopy[27]}: {formatPublishedAt(String(item.metadata_json.checked_at ?? item.activated_at),locale)} · {item.source_published_at ? formatPublishedAt(item.source_published_at,locale) : aiCopy[37]}</p>

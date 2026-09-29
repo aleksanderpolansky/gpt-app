@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { channelCommand,channelIdentity,listChannels,managedChannel,ontologyOptions,runChannel } from '@/lib/ai-channels/server';
+import { channelCommand,channelIdentity,listChannels,managedChannel,ontologyOptions,runChannel,pollChannel,cancelChannel } from '@/lib/ai-channels/server';
 import { parseChannelSpec } from '@/lib/ai-channels/contracts';
 import { supabase } from '../../../../lib/supabase';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
-export const maxDuration=180;
+export const maxDuration=60;
 const headers={'Cache-Control':'private, no-store'};
 function failure(error:unknown){
  const message=error instanceof Error?error.message:'';
@@ -22,7 +22,7 @@ export async function GET(request:Request){try{
   const {data,error}=await supabase.from('ai_channel_runs_v1').select('id,kind,status,usage,error_code,published_count,started_at,finished_at,items,revision').eq('channel_id',history).order('started_at',{ascending:false}).limit(10);
   if(error)throw Error('CHANNEL_HISTORY_FAILED');return NextResponse.json({runs:data},{headers});}
  const channels=await listChannels(who);
- return NextResponse.json({signedIn:Boolean(who),admin:who?.admin??false,channels:channels.map(c=>({id:c.id,name:c.name,scope:c.scope,status:c.status,spec:c.spec,revision:c.revision,enabled:c.enabled,canManage:c.canManage,last_run_at:c.last_run_at,last_error:c.last_error,next_run_at:c.next_run_at}))},{headers});
+ return NextResponse.json({signedIn:Boolean(who),admin:who?.admin??false,channels:channels.map(c=>({id:c.id,name:c.name,scope:c.scope,status:c.status,spec:c.spec,revision:c.revision,enabled:c.enabled,canManage:c.canManage,last_run_at:c.last_run_at,last_error:c.last_error,next_run_at:c.next_run_at,runningRunId:c.runningRunId}))},{headers});
  }catch(e){return failure(e);}}
 export async function POST(request:Request){try{
  // JSON-only same-origin browser mutations; never trust client user/actor/admin values.
@@ -37,6 +37,9 @@ export async function POST(request:Request){try{
   if(typeof body.enabled!=='boolean')throw Error('CHANNEL_FORM_INVALID');
   return NextResponse.json(await channelCommand(who,'preference',id,{enabled:body.enabled}),{headers});}
  await managedChannel(who,id);
+ if(['poll','cancel'].includes(String(body.action))&&typeof body.runId==='string'&&/^[0-9a-f-]{36}$/i.test(body.runId)){
+  return NextResponse.json(await (body.action==='poll'?pollChannel:cancelChannel)(who,id,body.runId),{headers});
+ }
  if(body.action==='test')return NextResponse.json(await runChannel(who,id,'test'),{headers});
  if(body.action==='status'&&['active','paused','archived'].includes(String(body.status)))return NextResponse.json(await channelCommand(who,'status',id,{status:body.status}),{headers});
  if(body.action==='publish'&&typeof body.runId==='string'&&/^[0-9a-f-]{36}$/i.test(body.runId))return NextResponse.json(await channelCommand(who,'publish',id,{runId:body.runId}),{headers});

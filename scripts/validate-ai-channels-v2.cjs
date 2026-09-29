@@ -1,0 +1,23 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
+function mod(file,requires={}){const ctx={exports:{},URL,Date,Set,Error,Intl,require:n=>{if(n in requires)return requires[n];throw Error(n);}};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,ctx);return ctx.exports;}
+const c=mod('src/lib/ai-channels/contracts.ts'),o='55555555-5555-4555-8555-555555555555';
+const spec=c.parseChannelSpec({name:'Offers',topic:'Offers',geography:'Szczecin',exclusions:'',domains:[],language:'ru',intervalHours:24,lookbackDays:7,maxItems:30,objectIds:[o],scope:'private',searchDepth:'detailed',freshness:'current',timeZone:'Europe/Warsaw'}),now=new Date('2026-09-29T10:00:00Z');
+const a={title:'Milk',summary:'Milk costs 2 PLN.',url:'https://example.com/leaflet',publishedAt:'2026-09-01',validFrom:'2026-09-20',validUntil:'2026-09-30',findingKey:'shop|milk|1l|2pln|2026-09-30',author:null,objectIds:[o]},b={...a,title:'Bread',summary:'Bread costs 3 PLN.',findingKey:'shop|bread|3pln|2026-09-30'};
+const validate=(items,sp=spec,urls=[a.url])=>c.validateChannelResults(items,sp,urls,now);
+assert.equal(validate([a,b]).items.length,2);
+assert.equal(validate([a,{...a,url:'https://example.org/report'}],spec,[a.url,'https://example.org/report']).items.length,1);
+assert.equal(validate([a],{...spec,freshness:'recent'}).items.length,0);assert.equal(validate([a]).items.length,1);
+assert.equal(validate([{...a,validUntil:'2026-09-28'}]).diagnostics.rejected.expired,1);
+assert.equal(validate([{...a,validFrom:'2026-10-01',validUntil:'2026-10-10'}]).items.length,0);
+assert.equal(validate([{...a,validUntil:null}]).items.length,0);assert.equal(validate([{...a,validUntil:'2026-02-30'}]).items.length,0);
+assert.equal(validate([a],spec,[]).diagnostics.rejected.source_not_grounded,1);
+assert.equal(validate([{...a,objectIds:['private']}]).diagnostics.rejected.ontology,1);
+assert.equal(validate([a],{...spec,domains:['other.com']}).items.length,0);assert.equal(validate([a,b],{...spec,maxItems:1}).diagnostics.rejected.result_limit,1);
+assert.equal(c.channelDate(new Date('2026-09-29T23:00:00Z'),'Europe/Warsaw'),'2026-09-30');
+assert.equal(c.cleanSummary('Milk costs 2 PLN. ([shop](https://example.com/?utm_source=openai))'),'Milk costs 2 PLN.');
+assert.throws(()=>c.parseChannelSpec({...spec,maxItems:31}));assert.throws(()=>c.parseChannelSpec({...spec,timeZone:'Not/AZone'}));assert.throws(()=>c.parseChannelSpec({...spec,searchDepth:'unlimited'}));
+const s=mod('src/lib/ai-channels/search.ts',{'./contracts':c}),req=s.channelSearchRequest(spec,[{id:o,title:'Assortment'}],now);
+assert.equal(req.background,true);assert.equal(req.store,true);assert.equal(req.max_tool_calls,10);assert.equal(req.reasoning.effort,'medium');assert.equal(req.text.format.schema.properties.items.items.required.includes('findingKey'),true);assert.equal(s.channelSearchRequest({...spec,searchDepth:'quick'},[]).max_tool_calls,4);
+const api=fs.readFileSync('src/app/api/ai-channels/route.ts','utf8');assert.ok(!api.includes("body.action==='finish'"));assert.ok(!api.includes("body.action==='attach_provider'"));
+console.log('AI_CHANNELS_V2 PASS: distinct findings per source, duplicate finding across sources, validity dates, timezone, evidence, ontology, domains, limits, plain summaries, background search contract, API boundary.');
