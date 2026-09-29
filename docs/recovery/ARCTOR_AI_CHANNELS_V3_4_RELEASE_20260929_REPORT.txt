@@ -1,0 +1,966 @@
+ARCTOR AI CHANNELS V3.4 - RELEASE RECOVERY LOG
+CREATED_UTC=2026-09-29T16:18:50.096Z
+BASELINE=3c8e2494785317725287f743bcaa28e7cce3fc52
+PRODUCT_COMMIT=41788ac641029225566419081570c367ad517a63
+REMOTE_MAIN_AFTER_PRODUCT_PUSH=41788ac641029225566419081570c367ad517a63
+PRODUCT_PUSH=PASS
+PUBLISH_REPORT=C:\Users\Admin\Downloads\ARCTOR_AI_CHANNELS_V3_4_RUN_303cbeae685a43c783fffcb7d7ed65a9\ARCTOR_AI_CHANNELS_V3_4_PUBLISH_20260929_181630_REPORT.txt
+APPLY_REPORT=C:\Users\Admin\Downloads\ARCTOR_AI_CHANNELS_V3_4_RUN_303cbeae685a43c783fffcb7d7ed65a9\ARCTOR_AI_CHANNELS_V3_4_20260929_175816_REPORT.txt
+RECOVERY_LOG_COMMIT=SECOND_DOCUMENTATION_COMMIT
+UNRELATED_WORKTREE_POLICY=PRESERVE
+
+=== PUBLISH REPORT SNAPSHOT ===
+ARCTOR_AI_CHANNELS_V3_4_PUBLISH
+START=2026-09-29T16:16:30.335Z
+PACKAGE_MANIFEST=PASS_20
+ENCODING=PASS
+REPO=C:\Users\Admin\Documents\projects\gpt-app
+ORIGIN=https://github.com/aleksanderpolansky/gpt-app.git
+HEAD=3c8e2494785317725287f743bcaa28e7cce3fc52
+UNRELATED_STATUS_FINGERPRINT=205d6d49469fbfa1c7bef4d48227c3938fb3762c3ac36a79223ec91114f44a7e
+LOCAL_DEPENDENCIES=PASS
+
+=== PRECOMMIT_DIFF_CHECK ===
+PRECOMMIT_DIFF_CHECK=PASS
+PRECOMMIT_DIFF_CHECK_FILESET=PASS_10
+
+=== PRECOMMIT_VALIDATOR ===
+VALIDATOR=PASS_MARKERS_9_9
+TS_SYNTAX=PASS_8
+UNIT_CONTRACTS=PASS_9
+PRECOMMIT_VALIDATOR=PASS
+
+=== PRECOMMIT_TYPECHECK ===
+PRECOMMIT_TYPECHECK=PASS
+
+=== PRECOMMIT_ESLINT ===
+PRECOMMIT_ESLINT=PASS
+
+=== PRECOMMIT_BUILD ===
+▲ Next.js 16.2.11 (Turbopack)
+- Environments: .env.local
+  Creating an optimized production build ...
+✓ Compiled successfully in 26.5s
+  Running TypeScript ...
+  Finished TypeScript in 52s ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/30) ...
+  Generating static pages using 11 workers (7/30) 
+  Generating static pages using 11 workers (14/30) 
+  Generating static pages using 11 workers (22/30) 
+✓ Generating static pages using 11 workers (30/30) in 317ms
+  Finalizing page optimization ...
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /activities
+├ ƒ /activities/new
+├ ƒ /activity-ai-lab
+├ ƒ /activity-capture
+├ ƒ /activity-capture/controlled-flow-map
+├ ƒ /activity-capture/facts-preview
+├ ƒ /activity-capture/guarded-persistence-contract-preview
+├ ƒ /activity-capture/save-gate-plan-preview
+├ ƒ /activity-capture/save-gate-preview
+├ ƒ /activity-facts
+├ ƒ /activity-facts/snapshot
+├ ƒ /activity-review
+├ ƒ /activity-templates
+├ ƒ /activity-today
+├ ƒ /activity/debug/semantic-dry-run-review
+├ ƒ /activity/debug/semantic-v3-review
+├ ƒ /activity/debug/server-auth-readiness-review
+├ ƒ /admin
+├ ƒ /admin/ai-billing
+├ ƒ /admin/ai-instructions
+├ ƒ /admin/assist
+├ ƒ /admin/consequence-constructor
+├ ƒ /admin/consequence-constructor/[taskId]
+├ ƒ /admin/formula-builder
+├ ƒ /admin/formula-catalog
+├ ƒ /admin/formula-rationales
+├ ƒ /admin/help-system
+├ ƒ /admin/localization-jobs
+├ ƒ /admin/object-action
+├ ƒ /admin/object-action/categories
+├ ƒ /admin/object-action/classifications
+├ ƒ /admin/object-action/suggestions
+├ ƒ /admin/reality-curator/signals
+├ ƒ /admin/relation-constructor
+├ ƒ /admin/relations
+├ ƒ /admin/users
+├ ƒ /analytics
+├ ƒ /api/activities
+├ ƒ /api/activity-fact-coefficient-rules
+├ ƒ /api/activity-template-impact-profiles
+├ ƒ /api/activity-template-impact-profiles/[id]
+├ ƒ /api/activity-template-impact-profiles/catalog
+├ ƒ /api/activity-template-impact-profiles/system
+├ ƒ /api/activity-template-impact-profiles/system/[id]
+├ ƒ /api/activity/capture/detached-semantic-preview
+├ ƒ /api/activity/complete
+├ ƒ /api/activity/controlled-intake
+├ ƒ /api/activity/day-summary
+├ ƒ /api/activity/debug-known-template-registry
+├ ƒ /api/activity/debug-rubricator-value-object-bridge
+├ ƒ /api/activity/debug-trace
+├ ƒ /api/activity/debug/activity-capture-semantic-integration-proof
+├ ƒ /api/activity/debug/activity-semantic-orchestration-skeleton
+├ ƒ /api/activity/debug/actor-bootstrap-controlled-write
+├ ƒ /api/activity/debug/actor-bootstrap-link-inventory
+├ ƒ /api/activity/debug/app-user-mapping-lookup-error-focused-test
+├ ƒ /api/activity/debug/auth0-session-diagnostic
+├ ƒ /api/activity/debug/c8-i-post-sql-api-verify
+├ ƒ /api/activity/debug/category-derivation-complete-route-adapter-failure-test
+├ ƒ /api/activity/debug/category-derivation-complete-route-adapter-idempotency-test
+├ ƒ /api/activity/debug/category-derivation-controlled-production-persist-proof
+├ ƒ /api/activity/debug/category-derivation-route-runner-test
+├ ƒ /api/activity/debug/create-free-text-start-event
+├ ƒ /api/activity/debug/external-concept-stub
+├ ƒ /api/activity/debug/free-text-value-object-test
+├ ƒ /api/activity/debug/internal-user-actor-mapping-readiness
+├ ƒ /api/activity/debug/local-controlled-category-lookup
+├ ƒ /api/activity/debug/ownership-context-column-contract-probe-read-only-test
+├ ƒ /api/activity/debug/ownership-context-positive-auto-candidate-read-only-test
+├ ƒ /api/activity/debug/ownership-context-resolution-read-only-test
+├ ƒ /api/activity/debug/ownership-rls-verification-readiness
+├ ƒ /api/activity/debug/primary-category-source-search-order-proof
+├ ƒ /api/activity/debug/real-auth-session-runtime-read-test
+├ ƒ /api/activity/debug/resolver-decision-contract
+├ ƒ /api/activity/debug/semantic-actor-resolution-dry-run
+├ ƒ /api/activity/debug/semantic-final-write-gate-contract
+├ ƒ /api/activity/debug/semantic-next-action-preview
+├ ƒ /api/activity/debug/semantic-v3-contract-invariants
+├ ƒ /api/activity/debug/semantic-v3-persistence-route-gate
+├ ƒ /api/activity/debug/semantic-v3-preview
+├ ƒ /api/activity/debug/semantic-v3-regression-matrix
+├ ƒ /api/activity/debug/server-side-app-user-mapping-read-only-test
+├ ƒ /api/activity/debug/source-order-resolver-blocker-preview
+├ ƒ /api/activity/debug/stable-bundle-persistence-gate-blocker
+├ ƒ /api/activity/debug/stable-bundle-resolver-gate-integration
+├ ƒ /api/activity/debug/stable-semantic-bundle-activity-event-reference-dry-run
+├ ƒ /api/activity/debug/stable-semantic-bundle-explicit-sandbox-write-gate
+├ ƒ /api/activity/debug/stable-semantic-bundle-persistence-service-dry-run-parity
+├ ƒ /api/activity/debug/stable-semantic-bundle-persistence-service-sandbox-write-adapter
+├ ƒ /api/activity/debug/stable-semantic-bundle-persistence-service-skeleton
+├ ƒ /api/activity/debug/stable-semantic-bundle-post-schema-write-gate-readiness
+├ ƒ /api/activity/debug/stable-semantic-bundle-post-write-verification
+├ ƒ /api/activity/debug/stable-semantic-bundle-preview
+├ ƒ /api/activity/debug/stable-semantic-bundle-schema-preflight
+├ ƒ /api/activity/debug/stable-semantic-bundle-transaction-contract
+├ ƒ /api/activity/debug/stable-semantic-bundle-write-contract
+├ ƒ /api/activity/debug/stable-semantic-bundle-write-gate-dry-run
+├ ƒ /api/activity/debug/state-fact-rollback-no-write-proof
+├ ƒ /api/activity/debug/state-signal-candidate-shadow-test
+├ ƒ /api/activity/debug/unknown-term-detector
+├ ƒ /api/activity/debug/unresolved-stable-bundle-blocker
+├ ƒ /api/activity/debug/value-object-bridge-proof
+├ ƒ /api/activity/events
+├ ƒ /api/activity/events/[id]
+├ ƒ /api/activity/events/[id]/corrections
+├ ƒ /api/activity/facts
+├ ƒ /api/activity/facts/[id]
+├ ƒ /api/activity/facts/[id]/tagging
+├ ƒ /api/activity/facts/save-gate
+├ ƒ /api/activity/facts/snapshots
+├ ƒ /api/activity/intake
+├ ƒ /api/activity/intake-analysis
+├ ƒ /api/activity/intake-analysis/materialize-source-facts
+├ ƒ /api/activity/intake-analysis/reject-template-match
+├ ƒ /api/activity/intake-analysis/supplement-source-fact
+├ ƒ /api/activity/intake/events
+├ ƒ /api/activity/intake/events/[id]
+├ ƒ /api/activity/intake/events/[id]/confirm
+├ ƒ /api/activity/intake/events/[id]/reject
+├ ƒ /api/activity/intake/signals
+├ ƒ /api/activity/intake/signals/[id]/ignore
+├ ƒ /api/activity/intake/signals/[id]/promote
+├ ƒ /api/activity/mutual-links
+├ ƒ /api/activity/quick-capture
+├ ƒ /api/activity/record
+├ ƒ /api/activity/review-analysis
+├ ƒ /api/activity/review-commit
+├ ƒ /api/activity/review-queue
+├ ƒ /api/activity/review-queue/[id]/resolve
+├ ƒ /api/activity/semantic-orchestration-preview
+├ ƒ /api/activity/semantic-review/new-concept-candidates-preview
+├ ƒ /api/activity/semantic/first-activity-value-object-link-write
+├ ƒ /api/activity/semantic/first-persistence-write
+├ ƒ /api/activity/semantic/first-persistence-write/verify
+├ ƒ /api/activity/semantic/first-value-object-write
+├ ƒ /api/activity/semantic/persistence-dry-run
+├ ƒ /api/activity/semantic/runtime-schema-proof
+├ ƒ /api/activity/semantic/server-auth-readiness
+├ ƒ /api/activity/semantic/stable-bundle-proof
+├ ƒ /api/activity/semantic/value-object-link-readiness
+├ ƒ /api/activity/semantic/value-object-scope-readiness
+├ ƒ /api/activity/semantic/value-object-space-decision
+├ ƒ /api/activity/start
+├ ƒ /api/activity/state-facts/controlled-persist
+├ ƒ /api/activity/state-hooks/preview
+├ ƒ /api/activity/templates
+├ ƒ /api/activity/value-objects/candidates-preview
+├ ƒ /api/actor-context
+├ ƒ /api/admin/activity-parameter-definitions
+├ ƒ /api/admin/activity-templates/system/create
+├ ƒ /api/admin/ai-billing/grant
+├ ƒ /api/admin/ai-instructions
+├ ƒ /api/admin/assist
+├ ƒ /api/admin/calculation-models
+├ ƒ /api/admin/consequence-constructor
+├ ƒ /api/admin/external-service-limits
+├ ƒ /api/admin/formula-rationales
+├ ƒ /api/admin/formula-rules
+├ ƒ /api/admin/help-system
+├ ƒ /api/admin/localization-jobs
+├ ƒ /api/admin/navigation
+├ ƒ /api/admin/reality-curator/signals
+├ ƒ /api/admin/reality-curator/signals/object-bootstrap
+├ ƒ /api/admin/reality-curator/signals/system-template-materialization
+├ ƒ /api/admin/reality-curator/signals/template-parameters
+├ ƒ /api/admin/reality-curator/signals/templates
+├ ƒ /api/admin/reality-curator/signals/work
+├ ƒ /api/admin/relation-constructor
+├ ƒ /api/admin/relations
+├ ƒ /api/admin/users
+├ ƒ /api/admin/value-objects/[id]/measurement-rollup
+├ ƒ /api/ai-billing/balance
+├ ƒ /api/ai-channels
+├ ƒ /api/ai-processing/preferences
+├ ƒ /api/ai/model-catalog
+├ ƒ /api/ai/reality/fact-materialize
+├ ƒ /api/ai/reality/feedback
+├ ƒ /api/ai/reality/global-observation-preview
+├ ƒ /api/ai/reality/manual-link-materialize
+├ ƒ /api/ai/semantic-intake/organization
+├ ƒ /api/app/session-heartbeat
+├ ƒ /api/assist-control
+├ ƒ /api/availability-rules
+├ ƒ /api/bookings
+├ ƒ /api/bookings/[id]/cancel
+├ ƒ /api/bookings/[id]/complete
+├ ƒ /api/bookings/[id]/confirm
+├ ƒ /api/calendar-rebuild/events
+├ ƒ /api/calendar/activity-enrichment/[activityEventId]
+├ ƒ /api/calendar/activity-review/semantic-preview
+├ ƒ /api/calendar/ai-rules
+├ ƒ /api/calendar/events
+├ ƒ /api/calendar/task-shelf
+├ ƒ /api/calendar/task-shelf/[activityEventId]
+├ ƒ /api/certificates/cancel
+├ ƒ /api/certificates/expire-due
+├ ƒ /api/certificates/redeem
+├ ƒ /api/certificates/request
+├ ƒ /api/dashboard/analytics-blocks
+├ ƒ /api/dashboard/analytics-data
+├ ƒ /api/dashboard/analytics-observation-options
+├ ƒ /api/direct-messages
+├ ƒ /api/directory/filters
+├ ƒ /api/directory/organizations
+├ ƒ /api/directory/organizations/[slug]
+├ ƒ /api/directory/organizations/[slug]/logo
+├ ƒ /api/directory/organizations/[slug]/offers
+├ ƒ /api/geo/address-autocomplete
+├ ƒ /api/geo/areas
+├ ƒ /api/geo/suggestions
+├ ƒ /api/gift-certificates/[activityEventId]/fulfillment-confirmation
+├ ƒ /api/gift-certificates/[activityEventId]/fulfillment-qr
+├ ƒ /api/gift-certificates/[activityEventId]/order
+├ ƒ /api/gift-certificates/[activityEventId]/publish
+├ ƒ /api/gift-certificates/[activityEventId]/terms
+├ ƒ /api/gift-certificates/[activityEventId]/visibility
+├ ƒ /api/gift-certificates/check-in
+├ ƒ /api/gift-certificates/redeem
+├ ƒ /api/goal-worlds
+├ ƒ /api/goal-worlds/[id]
+├ ƒ /api/help
+├ ƒ /api/locations
+├ ƒ /api/maintenance/ai-channels
+├ ƒ /api/maintenance/localization
+├ ƒ /api/me
+├ ƒ /api/messages
+├ ƒ /api/my/purchase-confirmations
+├ ƒ /api/object-action/categories
+├ ƒ /api/object-action/categories/audit-verify
+├ ƒ /api/object-action/suggestions
+├ ƒ /api/object-action/suggestions/audit-verify
+├ ƒ /api/offers
+├ ƒ /api/offers/[id]/available-slots
+├ ƒ /api/organizations
+├ ƒ /api/organizations/[id]/category-review
+├ ƒ /api/organizations/[id]/featured-media
+├ ƒ /api/organizations/[id]/location
+├ ƒ /api/organizations/[id]/logo
+├ ƒ /api/organizations/[id]/messages
+├ ƒ /api/organizations/[id]/public-profile
+├ ƒ /api/organizations/[id]/visibility
+├ ƒ /api/organizations/draft
+├ ƒ /api/points/transactions
+├ ƒ /api/points/wallet
+├ ƒ /api/profiles
+├ ƒ /api/profiles/[id]
+├ ƒ /api/profiles/[id]/image
+├ ƒ /api/profiles/[id]/visibility
+├ ƒ /api/public/purchase-history
+├ ƒ /api/public/rewards
+├ ƒ /api/publications
+├ ƒ /api/publications/[id]/comments
+├ ƒ /api/publications/[id]/visibility
+├ ƒ /api/purchase-confirmations
+├ ƒ /api/purchase-confirmations/[id]/confirm
+├ ƒ /api/purchase-confirmations/[id]/events
+├ ƒ /api/purchase-confirmations/[id]/reject
+├ ƒ /api/reputation/history
+├ ƒ /api/reputation/summary
+├ ƒ /api/semantic-cloud/public
+├ ƒ /api/service-log/runs
+├ ƒ /api/service-log/runs/[id]
+├ ƒ /api/sync-user
+├ ƒ /api/test
+├ ƒ /api/time-blocks
+├ ƒ /api/uploaded-files
+├ ƒ /api/uploaded-files/open
+├ ƒ /api/value-object-branch-policies
+├ ƒ /api/value-objects
+├ ƒ /api/value-objects/[id]
+├ ƒ /api/value-objects/[id]/aliases
+├ ƒ /api/value-objects/[id]/analytics-profile
+├ ƒ /api/value-objects/[id]/gift-certificates/draft
+├ ƒ /api/value-objects/[id]/ontology-definition
+├ ƒ /api/value-objects/[id]/parameter-assignments
+├ ƒ /api/value-objects/[id]/parameter-assignments/[assignmentId]
+├ ƒ /api/value-objects/[id]/parameter-assignments/[assignmentId]/targets
+├ ƒ /api/value-objects/[id]/parameter-assignments/[assignmentId]/targets/[targetSeriesId]
+├ ƒ /api/value-objects/[id]/parameter-catalog
+├ ƒ /api/value-objects/[id]/public-image
+├ ƒ /api/value-objects/[id]/relations
+├ ƒ /api/value-objects/[id]/relations/[relationId]
+├ ƒ /api/value-objects/[id]/relationship-coverage
+├ ƒ /api/value-objects/[id]/standards
+├ ƒ /api/value-objects/[id]/standards/save-gate
+├ ƒ /api/value-objects/[id]/tree-restructure/apply
+├ ƒ /api/value-objects/[id]/tree-restructure/preview
+├ ƒ /api/value-objects/debug/cloud-profile
+├ ƒ /api/value-objects/localization/backfill
+├ ƒ /api/value-objects/ontology
+├ ƒ /api/value-objects/ontology/[id]
+├ ƒ /api/value-objects/ontology/[id]/lifecycle
+├ ƒ /api/value-objects/ontology/[id]/structure-card
+├ ƒ /api/value-objects/product-service
+├ ƒ /api/value-objects/recognize
+├ ƒ /api/value-objects/relations/validate
+├ ƒ /api/value-objects/selector
+├ ƒ /api/value-objects/tree-restructure/[operationId]/rollback
+├ ƒ /assist
+├ ƒ /availability-rules
+├ ƒ /availability-rules/new
+├ ƒ /beta-notice
+├ ƒ /bookings
+├ ƒ /bookings/new
+├ ƒ /businesses
+├ ƒ /businesses/new
+├ ƒ /calendar
+├ ƒ /calendar-rebuild
+├ ƒ /calendar/activity-review
+├ ƒ /calendar/add
+├ ƒ /calendar/new
+├ ƒ /certificates
+├ ƒ /certificates/[activityEventId]
+├ ƒ /certificates/-/opengraph-image
+├ ƒ /certificates/new
+├ ƒ /certificates/redeem
+├ ƒ /directory
+├ ƒ /directory/[slug]
+├ ƒ /feed
+├ ƒ /feed/hidden
+├ ƒ /formula-rationale
+├ ƒ /gift-certificates
+├ ƒ /gift-certificates/[activityEventId]
+├ ƒ /gift-certificates/scan
+├ ƒ /local-editors
+├ ƒ /locations
+├ ƒ /locations/new
+├ ƒ /m
+├ ƒ /messages
+├ ƒ /my-certificates
+├ ƒ /my-purchase-confirmations
+├ ƒ /next
+├ ƒ /offers
+├ ƒ /offers/[id]
+├ ƒ /offers/available-slots
+├ ƒ /offers/new
+├ ƒ /organizations
+├ ƒ /organizations/[id]
+├ ƒ /organizations/[id]/edit
+├ ƒ /organizations/deleted
+├ ƒ /organizations/new
+├ ƒ /people
+├ ƒ /people/[slug]
+├ ƒ /points
+├ ƒ /points/about
+├ ƒ /points/transactions
+├ ƒ /privacy-audit
+├ ƒ /profiles/[id]/edit
+├ ƒ /profiles/new
+├ ƒ /project-knowledge
+├ ƒ /project-knowledge/api-map
+├ ƒ /project-knowledge/decisions
+├ ƒ /project-knowledge/file-map
+├ ƒ /project-knowledge/glossary
+├ ƒ /project-knowledge/page-map
+├ ƒ /project-knowledge/process-map
+├ ƒ /project-knowledge/risks
+├ ƒ /project-knowledge/sources
+├ ƒ /project-knowledge/troubleshooting
+├ ƒ /public/purchases
+├ ƒ /purchase-confirmations
+├ ƒ /purchase-confirmations/[id]/events
+├ ƒ /purchase-history
+├ ƒ /reputation
+├ ƒ /rewards
+├ ƒ /seller-certificates
+├ ƒ /seller/purchase-confirmations
+├ ƒ /semantic/review
+├ ƒ /service-log
+├ ƒ /service-log/[id]
+├ ƒ /settings
+├ ƒ /settings/ai-processing
+├ ƒ /time-blocks
+├ ƒ /time-blocks/new
+├ ƒ /today
+├ ƒ /uploaded-files
+├ ƒ /value-objects
+├ ƒ /value-objects/[id]
+├ ƒ /value-objects/[id]/edit
+├ ƒ /value-objects/[id]/gift-certificates/new
+├ ƒ /value-objects/[id]/new-intermediate
+├ ƒ /value-objects/[id]/new-leaf
+├ ƒ /value-objects/[id]/restructure
+├ ƒ /value-objects/[id]/standards
+├ ƒ /value-objects/analytics-preview
+├ ƒ /value-objects/characteristics-rollup-preview
+├ ƒ /value-objects/debug/cloud-profile
+├ ƒ /value-objects/new
+├ ƒ /value-objects/new/product-service
+├ ƒ /value-objects/new/root
+├ ƒ /value-objects/standards
+├ ƒ /value-objects/table
+├ ƒ /value-objects/tree
+├ ƒ /value-objects/tree-preview
+└ ƒ /workspace
+ƒ Proxy (Middleware)
+ƒ  (Dynamic)  server-rendered on demand
+PRECOMMIT_BUILD=PASS
+
+=== REMOTE_FETCH ===
+From https://github.com/aleksanderpolansky/gpt-app
+ * branch              main       -> FETCH_HEAD
+REMOTE_FETCH=PASS
+REMOTE_MAIN=3c8e2494785317725287f743bcaa28e7cce3fc52
+
+=== TEMP_INDEX_DIFF_CHECK ===
+TEMP_INDEX_DIFF_CHECK=PASS
+
+=== COMMIT ===
+[main 41788ac6] feat: add AI channel admin controls, coverage and feed grouping
+ 10 files changed, 446 insertions(+), 85 deletions(-)
+ create mode 100644 docs/recovery/ARCTOR_AI_CHANNELS_V3_4_ADMIN_COVERAGE_FEED_GROUPING_RU_20260929.md
+ create mode 100644 scripts/validate-ai-channels-v3.cjs
+ create mode 100644 src/app/feed/AiChannelFeedGroup.tsx
+COMMIT=PASS
+COMMIT_HEAD=41788ac641029225566419081570c367ad517a63
+REAL_INDEX_TARGET_RECONCILE=PASS
+
+=== PUSH ===
+To https://github.com/aleksanderpolansky/gpt-app.git
+   3c8e2494..41788ac6  41788ac641029225566419081570c367ad517a63 -> main
+PUSH=PASS
+PUSH=PASS
+UNRELATED_WORKTREE_PRESERVED=PASS
+STATUS=PASS
+END=2026-09-29T16:18:47.777Z
+
+
+=== APPLY REPORT SNAPSHOT ===
+ARCTOR_AI_CHANNELS_V3_4
+START=2026-09-29T15:58:16.985Z
+PACKAGE=C:\Users\Admin\Downloads\ARCTOR_AI_CHANNELS_V3_4_RUN_303cbeae685a43c783fffcb7d7ed65a9\ARCTOR_AI_CHANNELS_V3_4_PATCH
+PACKAGE_MANIFEST=PASS_20
+ENCODING=PASS
+
+=== NODE_CHECK_LIB ===
+NODE_CHECK_LIB=PASS
+
+=== NODE_CHECK_APPLY ===
+NODE_CHECK_APPLY=PASS
+
+=== NODE_CHECK_PUBLISH ===
+NODE_CHECK_PUBLISH=PASS
+
+=== NODE_CHECK_ROLLBACK ===
+NODE_CHECK_ROLLBACK=PASS
+
+=== NODE_CHECK_PATCHER ===
+NODE_CHECK_PATCHER=PASS
+
+=== NODE_CHECK_VALIDATOR ===
+NODE_CHECK_VALIDATOR=PASS
+REPO=C:\Users\Admin\Documents\projects\gpt-app
+HEAD=3c8e2494785317725287f743bcaa28e7cce3fc52
+BASELINE_BLOBS=PASS_7
+UNRELATED_STATUS_FINGERPRINT=205d6d49469fbfa1c7bef4d48227c3938fb3762c3ac36a79223ec91114f44a7e
+LOCAL_DEPENDENCIES=PASS
+
+=== BACKUP_ARCHIVE ===
+BACKUP_ARCHIVE=PASS
+BACKUP=C:\Users\Admin\Downloads\ARCTOR_AI_CHANNELS_V3_4_RUN_303cbeae685a43c783fffcb7d7ed65a9\ARCTOR_AI_CHANNELS_V3_4_BACKUP_20260929_175816.zip
+DIRECT_APPLY_BEGIN
+
+=== PATCH_ADMIN_CLIENT ===
+PATCH_ADMIN_CLIENT=PASS
+PATCH_ADMIN_CLIENT=PASS
+
+=== PRIMARY_DIFF_CHECK ===
+PRIMARY_DIFF_CHECK=PASS
+PRIMARY_DIFF_CHECK_FILESET=PASS_10
+
+=== PRIMARY_VALIDATOR ===
+VALIDATOR=PASS_MARKERS_9_9
+TS_SYNTAX=PASS_8
+UNIT_CONTRACTS=PASS_9
+PRIMARY_VALIDATOR=PASS
+
+=== PRIMARY_TYPECHECK ===
+PRIMARY_TYPECHECK=PASS
+
+=== PRIMARY_ESLINT ===
+PRIMARY_ESLINT=PASS
+
+=== PRIMARY_BUILD ===
+▲ Next.js 16.2.11 (Turbopack)
+- Environments: .env.local
+  Creating an optimized production build ...
+✓ Compiled successfully in 27.5s
+  Running TypeScript ...
+  Finished TypeScript in 52s ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/30) ...
+  Generating static pages using 11 workers (7/30) 
+  Generating static pages using 11 workers (14/30) 
+  Generating static pages using 11 workers (22/30) 
+✓ Generating static pages using 11 workers (30/30) in 267ms
+  Finalizing page optimization ...
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /activities
+├ ƒ /activities/new
+├ ƒ /activity-ai-lab
+├ ƒ /activity-capture
+├ ƒ /activity-capture/controlled-flow-map
+├ ƒ /activity-capture/facts-preview
+├ ƒ /activity-capture/guarded-persistence-contract-preview
+├ ƒ /activity-capture/save-gate-plan-preview
+├ ƒ /activity-capture/save-gate-preview
+├ ƒ /activity-facts
+├ ƒ /activity-facts/snapshot
+├ ƒ /activity-review
+├ ƒ /activity-templates
+├ ƒ /activity-today
+├ ƒ /activity/debug/semantic-dry-run-review
+├ ƒ /activity/debug/semantic-v3-review
+├ ƒ /activity/debug/server-auth-readiness-review
+├ ƒ /admin
+├ ƒ /admin/ai-billing
+├ ƒ /admin/ai-instructions
+├ ƒ /admin/assist
+├ ƒ /admin/consequence-constructor
+├ ƒ /admin/consequence-constructor/[taskId]
+├ ƒ /admin/formula-builder
+├ ƒ /admin/formula-catalog
+├ ƒ /admin/formula-rationales
+├ ƒ /admin/help-system
+├ ƒ /admin/localization-jobs
+├ ƒ /admin/object-action
+├ ƒ /admin/object-action/categories
+├ ƒ /admin/object-action/classifications
+├ ƒ /admin/object-action/suggestions
+├ ƒ /admin/reality-curator/signals
+├ ƒ /admin/relation-constructor
+├ ƒ /admin/relations
+├ ƒ /admin/users
+├ ƒ /analytics
+├ ƒ /api/activities
+├ ƒ /api/activity-fact-coefficient-rules
+├ ƒ /api/activity-template-impact-profiles
+├ ƒ /api/activity-template-impact-profiles/[id]
+├ ƒ /api/activity-template-impact-profiles/catalog
+├ ƒ /api/activity-template-impact-profiles/system
+├ ƒ /api/activity-template-impact-profiles/system/[id]
+├ ƒ /api/activity/capture/detached-semantic-preview
+├ ƒ /api/activity/complete
+├ ƒ /api/activity/controlled-intake
+├ ƒ /api/activity/day-summary
+├ ƒ /api/activity/debug-known-template-registry
+├ ƒ /api/activity/debug-rubricator-value-object-bridge
+├ ƒ /api/activity/debug-trace
+├ ƒ /api/activity/debug/activity-capture-semantic-integration-proof
+├ ƒ /api/activity/debug/activity-semantic-orchestration-skeleton
+├ ƒ /api/activity/debug/actor-bootstrap-controlled-write
+├ ƒ /api/activity/debug/actor-bootstrap-link-inventory
+├ ƒ /api/activity/debug/app-user-mapping-lookup-error-focused-test
+├ ƒ /api/activity/debug/auth0-session-diagnostic
+├ ƒ /api/activity/debug/c8-i-post-sql-api-verify
+├ ƒ /api/activity/debug/category-derivation-complete-route-adapter-failure-test
+├ ƒ /api/activity/debug/category-derivation-complete-route-adapter-idempotency-test
+├ ƒ /api/activity/debug/category-derivation-controlled-production-persist-proof
+├ ƒ /api/activity/debug/category-derivation-route-runner-test
+├ ƒ /api/activity/debug/create-free-text-start-event
+├ ƒ /api/activity/debug/external-concept-stub
+├ ƒ /api/activity/debug/free-text-value-object-test
+├ ƒ /api/activity/debug/internal-user-actor-mapping-readiness
+├ ƒ /api/activity/debug/local-controlled-category-lookup
+├ ƒ /api/activity/debug/ownership-context-column-contract-probe-read-only-test
+├ ƒ /api/activity/debug/ownership-context-positive-auto-candidate-read-only-test
+├ ƒ /api/activity/debug/ownership-context-resolution-read-only-test
+├ ƒ /api/activity/debug/ownership-rls-verification-readiness
+├ ƒ /api/activity/debug/primary-category-source-search-order-proof
+├ ƒ /api/activity/debug/real-auth-session-runtime-read-test
+├ ƒ /api/activity/debug/resolver-decision-contract
+├ ƒ /api/activity/debug/semantic-actor-resolution-dry-run
+├ ƒ /api/activity/debug/semantic-final-write-gate-contract
+├ ƒ /api/activity/debug/semantic-next-action-preview
+├ ƒ /api/activity/debug/semantic-v3-contract-invariants
+├ ƒ /api/activity/debug/semantic-v3-persistence-route-gate
+├ ƒ /api/activity/debug/semantic-v3-preview
+├ ƒ /api/activity/debug/semantic-v3-regression-matrix
+├ ƒ /api/activity/debug/server-side-app-user-mapping-read-only-test
+├ ƒ /api/activity/debug/source-order-resolver-blocker-preview
+├ ƒ /api/activity/debug/stable-bundle-persistence-gate-blocker
+├ ƒ /api/activity/debug/stable-bundle-resolver-gate-integration
+├ ƒ /api/activity/debug/stable-semantic-bundle-activity-event-reference-dry-run
+├ ƒ /api/activity/debug/stable-semantic-bundle-explicit-sandbox-write-gate
+├ ƒ /api/activity/debug/stable-semantic-bundle-persistence-service-dry-run-parity
+├ ƒ /api/activity/debug/stable-semantic-bundle-persistence-service-sandbox-write-adapter
+├ ƒ /api/activity/debug/stable-semantic-bundle-persistence-service-skeleton
+├ ƒ /api/activity/debug/stable-semantic-bundle-post-schema-write-gate-readiness
+├ ƒ /api/activity/debug/stable-semantic-bundle-post-write-verification
+├ ƒ /api/activity/debug/stable-semantic-bundle-preview
+├ ƒ /api/activity/debug/stable-semantic-bundle-schema-preflight
+├ ƒ /api/activity/debug/stable-semantic-bundle-transaction-contract
+├ ƒ /api/activity/debug/stable-semantic-bundle-write-contract
+├ ƒ /api/activity/debug/stable-semantic-bundle-write-gate-dry-run
+├ ƒ /api/activity/debug/state-fact-rollback-no-write-proof
+├ ƒ /api/activity/debug/state-signal-candidate-shadow-test
+├ ƒ /api/activity/debug/unknown-term-detector
+├ ƒ /api/activity/debug/unresolved-stable-bundle-blocker
+├ ƒ /api/activity/debug/value-object-bridge-proof
+├ ƒ /api/activity/events
+├ ƒ /api/activity/events/[id]
+├ ƒ /api/activity/events/[id]/corrections
+├ ƒ /api/activity/facts
+├ ƒ /api/activity/facts/[id]
+├ ƒ /api/activity/facts/[id]/tagging
+├ ƒ /api/activity/facts/save-gate
+├ ƒ /api/activity/facts/snapshots
+├ ƒ /api/activity/intake
+├ ƒ /api/activity/intake-analysis
+├ ƒ /api/activity/intake-analysis/materialize-source-facts
+├ ƒ /api/activity/intake-analysis/reject-template-match
+├ ƒ /api/activity/intake-analysis/supplement-source-fact
+├ ƒ /api/activity/intake/events
+├ ƒ /api/activity/intake/events/[id]
+├ ƒ /api/activity/intake/events/[id]/confirm
+├ ƒ /api/activity/intake/events/[id]/reject
+├ ƒ /api/activity/intake/signals
+├ ƒ /api/activity/intake/signals/[id]/ignore
+├ ƒ /api/activity/intake/signals/[id]/promote
+├ ƒ /api/activity/mutual-links
+├ ƒ /api/activity/quick-capture
+├ ƒ /api/activity/record
+├ ƒ /api/activity/review-analysis
+├ ƒ /api/activity/review-commit
+├ ƒ /api/activity/review-queue
+├ ƒ /api/activity/review-queue/[id]/resolve
+├ ƒ /api/activity/semantic-orchestration-preview
+├ ƒ /api/activity/semantic-review/new-concept-candidates-preview
+├ ƒ /api/activity/semantic/first-activity-value-object-link-write
+├ ƒ /api/activity/semantic/first-persistence-write
+├ ƒ /api/activity/semantic/first-persistence-write/verify
+├ ƒ /api/activity/semantic/first-value-object-write
+├ ƒ /api/activity/semantic/persistence-dry-run
+├ ƒ /api/activity/semantic/runtime-schema-proof
+├ ƒ /api/activity/semantic/server-auth-readiness
+├ ƒ /api/activity/semantic/stable-bundle-proof
+├ ƒ /api/activity/semantic/value-object-link-readiness
+├ ƒ /api/activity/semantic/value-object-scope-readiness
+├ ƒ /api/activity/semantic/value-object-space-decision
+├ ƒ /api/activity/start
+├ ƒ /api/activity/state-facts/controlled-persist
+├ ƒ /api/activity/state-hooks/preview
+├ ƒ /api/activity/templates
+├ ƒ /api/activity/value-objects/candidates-preview
+├ ƒ /api/actor-context
+├ ƒ /api/admin/activity-parameter-definitions
+├ ƒ /api/admin/activity-templates/system/create
+├ ƒ /api/admin/ai-billing/grant
+├ ƒ /api/admin/ai-instructions
+├ ƒ /api/admin/assist
+├ ƒ /api/admin/calculation-models
+├ ƒ /api/admin/consequence-constructor
+├ ƒ /api/admin/external-service-limits
+├ ƒ /api/admin/formula-rationales
+├ ƒ /api/admin/formula-rules
+├ ƒ /api/admin/help-system
+├ ƒ /api/admin/localization-jobs
+├ ƒ /api/admin/navigation
+├ ƒ /api/admin/reality-curator/signals
+├ ƒ /api/admin/reality-curator/signals/object-bootstrap
+├ ƒ /api/admin/reality-curator/signals/system-template-materialization
+├ ƒ /api/admin/reality-curator/signals/template-parameters
+├ ƒ /api/admin/reality-curator/signals/templates
+├ ƒ /api/admin/reality-curator/signals/work
+├ ƒ /api/admin/relation-constructor
+├ ƒ /api/admin/relations
+├ ƒ /api/admin/users
+├ ƒ /api/admin/value-objects/[id]/measurement-rollup
+├ ƒ /api/ai-billing/balance
+├ ƒ /api/ai-channels
+├ ƒ /api/ai-processing/preferences
+├ ƒ /api/ai/model-catalog
+├ ƒ /api/ai/reality/fact-materialize
+├ ƒ /api/ai/reality/feedback
+├ ƒ /api/ai/reality/global-observation-preview
+├ ƒ /api/ai/reality/manual-link-materialize
+├ ƒ /api/ai/semantic-intake/organization
+├ ƒ /api/app/session-heartbeat
+├ ƒ /api/assist-control
+├ ƒ /api/availability-rules
+├ ƒ /api/bookings
+├ ƒ /api/bookings/[id]/cancel
+├ ƒ /api/bookings/[id]/complete
+├ ƒ /api/bookings/[id]/confirm
+├ ƒ /api/calendar-rebuild/events
+├ ƒ /api/calendar/activity-enrichment/[activityEventId]
+├ ƒ /api/calendar/activity-review/semantic-preview
+├ ƒ /api/calendar/ai-rules
+├ ƒ /api/calendar/events
+├ ƒ /api/calendar/task-shelf
+├ ƒ /api/calendar/task-shelf/[activityEventId]
+├ ƒ /api/certificates/cancel
+├ ƒ /api/certificates/expire-due
+├ ƒ /api/certificates/redeem
+├ ƒ /api/certificates/request
+├ ƒ /api/dashboard/analytics-blocks
+├ ƒ /api/dashboard/analytics-data
+├ ƒ /api/dashboard/analytics-observation-options
+├ ƒ /api/direct-messages
+├ ƒ /api/directory/filters
+├ ƒ /api/directory/organizations
+├ ƒ /api/directory/organizations/[slug]
+├ ƒ /api/directory/organizations/[slug]/logo
+├ ƒ /api/directory/organizations/[slug]/offers
+├ ƒ /api/geo/address-autocomplete
+├ ƒ /api/geo/areas
+├ ƒ /api/geo/suggestions
+├ ƒ /api/gift-certificates/[activityEventId]/fulfillment-confirmation
+├ ƒ /api/gift-certificates/[activityEventId]/fulfillment-qr
+├ ƒ /api/gift-certificates/[activityEventId]/order
+├ ƒ /api/gift-certificates/[activityEventId]/publish
+├ ƒ /api/gift-certificates/[activityEventId]/terms
+├ ƒ /api/gift-certificates/[activityEventId]/visibility
+├ ƒ /api/gift-certificates/check-in
+├ ƒ /api/gift-certificates/redeem
+├ ƒ /api/goal-worlds
+├ ƒ /api/goal-worlds/[id]
+├ ƒ /api/help
+├ ƒ /api/locations
+├ ƒ /api/maintenance/ai-channels
+├ ƒ /api/maintenance/localization
+├ ƒ /api/me
+├ ƒ /api/messages
+├ ƒ /api/my/purchase-confirmations
+├ ƒ /api/object-action/categories
+├ ƒ /api/object-action/categories/audit-verify
+├ ƒ /api/object-action/suggestions
+├ ƒ /api/object-action/suggestions/audit-verify
+├ ƒ /api/offers
+├ ƒ /api/offers/[id]/available-slots
+├ ƒ /api/organizations
+├ ƒ /api/organizations/[id]/category-review
+├ ƒ /api/organizations/[id]/featured-media
+├ ƒ /api/organizations/[id]/location
+├ ƒ /api/organizations/[id]/logo
+├ ƒ /api/organizations/[id]/messages
+├ ƒ /api/organizations/[id]/public-profile
+├ ƒ /api/organizations/[id]/visibility
+├ ƒ /api/organizations/draft
+├ ƒ /api/points/transactions
+├ ƒ /api/points/wallet
+├ ƒ /api/profiles
+├ ƒ /api/profiles/[id]
+├ ƒ /api/profiles/[id]/image
+├ ƒ /api/profiles/[id]/visibility
+├ ƒ /api/public/purchase-history
+├ ƒ /api/public/rewards
+├ ƒ /api/publications
+├ ƒ /api/publications/[id]/comments
+├ ƒ /api/publications/[id]/visibility
+├ ƒ /api/purchase-confirmations
+├ ƒ /api/purchase-confirmations/[id]/confirm
+├ ƒ /api/purchase-confirmations/[id]/events
+├ ƒ /api/purchase-confirmations/[id]/reject
+├ ƒ /api/reputation/history
+├ ƒ /api/reputation/summary
+├ ƒ /api/semantic-cloud/public
+├ ƒ /api/service-log/runs
+├ ƒ /api/service-log/runs/[id]
+├ ƒ /api/sync-user
+├ ƒ /api/test
+├ ƒ /api/time-blocks
+├ ƒ /api/uploaded-files
+├ ƒ /api/uploaded-files/open
+├ ƒ /api/value-object-branch-policies
+├ ƒ /api/value-objects
+├ ƒ /api/value-objects/[id]
+├ ƒ /api/value-objects/[id]/aliases
+├ ƒ /api/value-objects/[id]/analytics-profile
+├ ƒ /api/value-objects/[id]/gift-certificates/draft
+├ ƒ /api/value-objects/[id]/ontology-definition
+├ ƒ /api/value-objects/[id]/parameter-assignments
+├ ƒ /api/value-objects/[id]/parameter-assignments/[assignmentId]
+├ ƒ /api/value-objects/[id]/parameter-assignments/[assignmentId]/targets
+├ ƒ /api/value-objects/[id]/parameter-assignments/[assignmentId]/targets/[targetSeriesId]
+├ ƒ /api/value-objects/[id]/parameter-catalog
+├ ƒ /api/value-objects/[id]/public-image
+├ ƒ /api/value-objects/[id]/relations
+├ ƒ /api/value-objects/[id]/relations/[relationId]
+├ ƒ /api/value-objects/[id]/relationship-coverage
+├ ƒ /api/value-objects/[id]/standards
+├ ƒ /api/value-objects/[id]/standards/save-gate
+├ ƒ /api/value-objects/[id]/tree-restructure/apply
+├ ƒ /api/value-objects/[id]/tree-restructure/preview
+├ ƒ /api/value-objects/debug/cloud-profile
+├ ƒ /api/value-objects/localization/backfill
+├ ƒ /api/value-objects/ontology
+├ ƒ /api/value-objects/ontology/[id]
+├ ƒ /api/value-objects/ontology/[id]/lifecycle
+├ ƒ /api/value-objects/ontology/[id]/structure-card
+├ ƒ /api/value-objects/product-service
+├ ƒ /api/value-objects/recognize
+├ ƒ /api/value-objects/relations/validate
+├ ƒ /api/value-objects/selector
+├ ƒ /api/value-objects/tree-restructure/[operationId]/rollback
+├ ƒ /assist
+├ ƒ /availability-rules
+├ ƒ /availability-rules/new
+├ ƒ /beta-notice
+├ ƒ /bookings
+├ ƒ /bookings/new
+├ ƒ /businesses
+├ ƒ /businesses/new
+├ ƒ /calendar
+├ ƒ /calendar-rebuild
+├ ƒ /calendar/activity-review
+├ ƒ /calendar/add
+├ ƒ /calendar/new
+├ ƒ /certificates
+├ ƒ /certificates/[activityEventId]
+├ ƒ /certificates/-/opengraph-image
+├ ƒ /certificates/new
+├ ƒ /certificates/redeem
+├ ƒ /directory
+├ ƒ /directory/[slug]
+├ ƒ /feed
+├ ƒ /feed/hidden
+├ ƒ /formula-rationale
+├ ƒ /gift-certificates
+├ ƒ /gift-certificates/[activityEventId]
+├ ƒ /gift-certificates/scan
+├ ƒ /local-editors
+├ ƒ /locations
+├ ƒ /locations/new
+├ ƒ /m
+├ ƒ /messages
+├ ƒ /my-certificates
+├ ƒ /my-purchase-confirmations
+├ ƒ /next
+├ ƒ /offers
+├ ƒ /offers/[id]
+├ ƒ /offers/available-slots
+├ ƒ /offers/new
+├ ƒ /organizations
+├ ƒ /organizations/[id]
+├ ƒ /organizations/[id]/edit
+├ ƒ /organizations/deleted
+├ ƒ /organizations/new
+├ ƒ /people
+├ ƒ /people/[slug]
+├ ƒ /points
+├ ƒ /points/about
+├ ƒ /points/transactions
+├ ƒ /privacy-audit
+├ ƒ /profiles/[id]/edit
+├ ƒ /profiles/new
+├ ƒ /project-knowledge
+├ ƒ /project-knowledge/api-map
+├ ƒ /project-knowledge/decisions
+├ ƒ /project-knowledge/file-map
+├ ƒ /project-knowledge/glossary
+├ ƒ /project-knowledge/page-map
+├ ƒ /project-knowledge/process-map
+├ ƒ /project-knowledge/risks
+├ ƒ /project-knowledge/sources
+├ ƒ /project-knowledge/troubleshooting
+├ ƒ /public/purchases
+├ ƒ /purchase-confirmations
+├ ƒ /purchase-confirmations/[id]/events
+├ ƒ /purchase-history
+├ ƒ /reputation
+├ ƒ /rewards
+├ ƒ /seller-certificates
+├ ƒ /seller/purchase-confirmations
+├ ƒ /semantic/review
+├ ƒ /service-log
+├ ƒ /service-log/[id]
+├ ƒ /settings
+├ ƒ /settings/ai-processing
+├ ƒ /time-blocks
+├ ƒ /time-blocks/new
+├ ƒ /today
+├ ƒ /uploaded-files
+├ ƒ /value-objects
+├ ƒ /value-objects/[id]
+├ ƒ /value-objects/[id]/edit
+├ ƒ /value-objects/[id]/gift-certificates/new
+├ ƒ /value-objects/[id]/new-intermediate
+├ ƒ /value-objects/[id]/new-leaf
+├ ƒ /value-objects/[id]/restructure
+├ ƒ /value-objects/[id]/standards
+├ ƒ /value-objects/analytics-preview
+├ ƒ /value-objects/characteristics-rollup-preview
+├ ƒ /value-objects/debug/cloud-profile
+├ ƒ /value-objects/new
+├ ƒ /value-objects/new/product-service
+├ ƒ /value-objects/new/root
+├ ƒ /value-objects/standards
+├ ƒ /value-objects/table
+├ ƒ /value-objects/tree
+├ ƒ /value-objects/tree-preview
+└ ƒ /workspace
+ƒ Proxy (Middleware)
+ƒ  (Dynamic)  server-rendered on demand
+PRIMARY_BUILD=PASS
+
+=== PRIMARY_DIFF_CHECK_AFTER_BUILD ===
+PRIMARY_DIFF_CHECK_AFTER_BUILD=PASS
+PRIMARY_DIFF_CHECK_AFTER_BUILD_FILESET=PASS_10
+UNRELATED_WORKTREE_PRESERVED=PASS
+PRIMARY_TRANSACTION=PASS
+STATUS=PASS
+BACKUP=C:\Users\Admin\Downloads\ARCTOR_AI_CHANNELS_V3_4_RUN_303cbeae685a43c783fffcb7d7ed65a9\ARCTOR_AI_CHANNELS_V3_4_BACKUP_20260929_175816.zip
+DATABASE_CHANGES=NONE_REQUIRED
+COMMIT_PUSH=NOT_PERFORMED
+TARGET_CHANGED_FILES=10
+END=2026-09-29T16:00:25.624Z
+
