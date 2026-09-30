@@ -1,6 +1,9 @@
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
-import { runAiJsonWithUsageMetadata } from "../../../../lib/ai/openaiClient";
+import {
+  AiBillingRequestAlreadyAcquiredError,
+  runBillableAiJson,
+} from "@/lib/ai-billing/gateway.server";
 import type { RunAiJsonUsageMetadata } from "../../../../lib/ai/openaiClient";
 import { resolveRuntimeMethodologyContext } from "@/lib/ai/methodology/methodologyContext.server";
 import {
@@ -116,6 +119,32 @@ function parseSelectedTier(value: unknown): AiTierCode {
   }
 
   return DEFAULT_TIER;
+}
+
+function resolveRequestIdempotencyKey(
+  request: Request,
+  body: Record<string, unknown>,
+) {
+  const candidates: unknown[] = [
+    body.requestIdempotencyKey,
+    body.requestId,
+    request.headers.get("idempotency-key"),
+    request.headers.get("x-request-id"),
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+
+    const trimmed = candidate.trim();
+    if (!trimmed) continue;
+
+    const normalized =
+      trimmed.length >= 8 ? trimmed : `api-test:${trimmed}`;
+
+    return normalized.slice(0, 200);
+  }
+
+  return `api-test:${crypto.randomUUID()}`;
 }
 
 function asNumber(value: string | number | null | undefined): number | null {
@@ -947,6 +976,7 @@ export async function POST(request: Request) {
     const userMessage =
       typeof body.message === "string" ? body.message.trim() : "";
     selectedTier = parseSelectedTier(body.selectedTier);
+    const requestIdempotencyKey = resolveRequestIdempotencyKey(request, body);
 
     let chatImage: ReturnType<typeof parseChatImage> = null;
     try {
@@ -1033,15 +1063,37 @@ export async function POST(request: Request) {
       content: userMessage || `[image:${chatImage?.name ?? "attachment"}]`,
     });
 
-    const aiCall = await runAiJsonWithUsageMetadata<ChatAiResponse>({
-      system: systemPrompt,
-      user: modelUserPayload,
-      model: preflightResult.preflight.modelName,
-      reasoningEffort: getNavigatorModelDefinition(selectedTier).reasoningEffort,
-      maxOutputTokens: CHAT_MAX_OUTPUT_TOKENS,
-      structuredOutput: methodologyContext.structuredOutput,
-      userImageDataUrl: chatImage?.dataUrl ?? null,
-      store: false,
+    const aiCall = await runBillableAiJson<ChatAiResponse>({
+      billingUserId: appUser.id,
+      requestIdempotencyKey,
+      routePath: "/api/test",
+      operationKind: "chat_message",
+      modelName: preflightResult.preflight.modelName,
+      tierCode: selectedTier,
+      estimatedInputTokens: preflightResult.preflight.estimatedInputTokens,
+      estimatedOutputTokens: preflightResult.preflight.estimatedOutputTokens,
+      preflightSafetyMultiplier: PREFLIGHT_COST_SAFETY_MULTIPLIER,
+      providerRequest: {
+        system: systemPrompt,
+        user: modelUserPayload,
+        reasoningEffort: getNavigatorModelDefinition(selectedTier).reasoningEffort,
+        maxOutputTokens: CHAT_MAX_OUTPUT_TOKENS,
+        structuredOutput: methodologyContext.structuredOutput,
+        userImageDataUrl: chatImage?.dataUrl ?? null,
+        store: false,
+      },
+      reason: "Navigator chat /api/test via unified AI Billing Gateway",
+      requestMetadata: {
+        selectedTier,
+        runtimeCode: "navigator_chat",
+        hasImage: Boolean(chatImage),
+        legacyPreflightAvailableBalanceEur:
+          preflightResult.preflight.availableBalanceEur,
+      },
+      settlementMetadata: {
+        selectedTier,
+        runtimeCode: "navigator_chat",
+      },
     });
 
     const aiResult = aiCall.parsed;
@@ -1056,12 +1108,6 @@ export async function POST(request: Request) {
       content: reply,
     });
 
-    const settlement = await settleAiUsageDebit({
-      appUser,
-      preflight: preflightResult.preflight,
-      usage: aiCall.usage,
-    });
-
     return Response.json({
       success: true,
       model: preflightResult.preflight.modelName,
@@ -1070,26 +1116,71 @@ export async function POST(request: Request) {
       instructionContext: methodologyContext.processingInstructionContext,
       methodologyTrace: methodologyContext.methodologyTrace,
       billing: {
-        status: settlement.status,
-        walletId: settlement.walletId,
-        usageEventId: settlement.usageEventId,
-        balanceBeforeEur: settlement.balanceBeforeEur,
-        balanceAfterEur: settlement.balanceAfterEur,
-        availableBalanceEur: preflightResult.preflight.availableBalanceEur,
-        estimatedCostEur: preflightResult.preflight.estimatedCostEur,
-        actualCostEur: settlement.actualCostEur,
-        walletDebitEur: settlement.walletDebitEur,
-        inputTokens: settlement.inputTokens,
-        cachedInputTokens: settlement.cachedInputTokens,
-        outputTokens: settlement.outputTokens,
-        totalTokens: settlement.totalTokens,
-        openaiResponseId: settlement.openaiResponseId,
+        status: aiCall.billing.status,
+        walletId: aiCall.billing.walletId,
+        usageEventId: aiCall.billing.usageEventId,
+        balanceBeforeEur: aiCall.billing.balanceBeforeEur,
+        balanceAfterEur: aiCall.billing.balanceAfterEur,
+        availableBalanceEur: aiCall.billing.availableBeforeEur,
+        availableAfterReservationEur:
+          aiCall.billing.availableAfterReservationEur,
+        estimatedCostEur: aiCall.billing.estimatedMaxCostEur,
+        reservationEur: aiCall.billing.reservationEur,
+        reservationReleasedEur: aiCall.billing.reservationReleasedEur,
+        reservedAfterEur: aiCall.billing.reservedAfterEur,
+        actualCostEur: aiCall.billing.actualCostEur,
+        walletDebitEur: aiCall.billing.walletDebitEur,
+        inputTokens: aiCall.usage.inputTokens,
+        cachedInputTokens: aiCall.usage.cachedInputTokens,
+        outputTokens: aiCall.usage.outputTokens,
+        totalTokens: aiCall.usage.totalTokens,
+        openaiResponseId: aiCall.usage.responseId,
+        requestIdempotencyKey: aiCall.billing.requestIdempotencyKey,
+        requestFingerprint: aiCall.billing.requestFingerprint,
+        reserveLedgerId: aiCall.billing.reserveLedgerId,
+        releaseLedgerId: aiCall.billing.releaseLedgerId,
+        debitLedgerId: aiCall.billing.debitLedgerId,
         debitImplemented: true,
-        errorCode: settlement.errorCode ?? null,
-        errorMessage: settlement.errorMessage ?? null,
+        gateway: "B2.2",
+        errorCode: null,
+        errorMessage: null,
       },
     });
   } catch (error) {
+    if (error instanceof AiBillingRequestAlreadyAcquiredError) {
+      return Response.json(
+        {
+          success: false,
+          error: "ai_request_already_acquired",
+          reply: "This AI request is already being processed or was already processed.",
+          selectedTier,
+          billing: {
+            status: "duplicate_request",
+            usageEventId: error.usageEventId,
+            usageStatus: error.usageStatus,
+          },
+        },
+        { status: 409 },
+      );
+    }
+
+    const billingFailureMessage =
+      error instanceof Error ? error.message : String(error);
+
+    if (
+      billingFailureMessage.includes("INSUFFICIENT") ||
+      billingFailureMessage.includes("WALLET_NOT_ACTIVE") ||
+      billingFailureMessage.includes("WALLET_NOT_FOUND")
+    ) {
+      return billingErrorResponse({
+        status: 402,
+        code: "insufficient_ai_balance",
+        message: "Insufficient AI balance for this request.",
+        selectedTier,
+        modelName: getNavigatorModelDefinition(selectedTier).modelName,
+      });
+    }
+
     console.error("OPENAI_ERROR:", error);
 
     return Response.json(
