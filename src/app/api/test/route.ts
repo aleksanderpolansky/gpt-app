@@ -99,7 +99,12 @@ type UsageDebitSettlement = {
   errorMessage?: string;
 };
 
-const ALLOWED_TIERS = new Set<AiTierCode>(["nano", "standard", "pro"]);
+const ALLOWED_TIERS = new Set<AiTierCode>([
+  "nano",
+  "standard",
+  "pro",
+  "max",
+]);
 const DEFAULT_TIER: AiTierCode = "standard";
 const CHAT_MAX_OUTPUT_TOKENS = 200;
 const PREFLIGHT_COST_SAFETY_MULTIPLIER = 1.25;

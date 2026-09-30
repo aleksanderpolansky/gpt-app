@@ -54,7 +54,7 @@ export type AiNavigatorSendOptions = {
 };
 
 export type AiNavigatorModelOption = {
-  tierCode: "nano" | "standard" | "pro";
+  tierCode: "nano" | "standard" | "pro" | "max";
   modelName: string;
   displayName: string;
   shortLabel: string;
@@ -66,7 +66,8 @@ export type AiNavigatorModelOption = {
 const DEFAULT_MODEL_OPTIONS: AiNavigatorModelOption[] = [
   { tierCode: "nano", modelName: "gpt-5.6-luna", displayName: "GPT-5.6 Luna", shortLabel: "Luna", caption: "fast / economy", reasoningEffort: "low", frontier: false },
   { tierCode: "standard", modelName: "gpt-5.6-terra", displayName: "GPT-5.6 Terra", shortLabel: "Terra", caption: "balanced", reasoningEffort: "medium", frontier: false },
-  { tierCode: "pro", modelName: "gpt-5.6-sol", displayName: "GPT-5.6 Sol", shortLabel: "Sol", caption: "max", reasoningEffort: "max", frontier: true },
+  { tierCode: "pro", modelName: "gpt-5.6-sol", displayName: "GPT-5.6 Sol", shortLabel: "Sol", caption: "powerful", reasoningEffort: "max", frontier: false },
+  { tierCode: "max", modelName: "gpt-6-astra", displayName: "GPT-6 Astra", shortLabel: "Astra", caption: "flagship / max", reasoningEffort: "max", frontier: true },
 ];
 
 type ApiTestResponse = {
@@ -94,10 +95,10 @@ type AiNavigatorContextValue = {
   input: string;
   isSending: boolean;
   navigatorMode: AiNavigatorMode;
-  selectedTier: "nano" | "standard" | "pro";
+  selectedTier: "nano" | "standard" | "pro" | "max";
   modelOptions: AiNavigatorModelOption[];
   setNavigatorMode: (value: AiNavigatorMode) => void;
-  setSelectedTier: (value: "nano" | "standard" | "pro") => void;
+  setSelectedTier: (value: "nano" | "standard" | "pro" | "max") => void;
   setInput: (value: string) => void;
   sendMessage: (message?: string, options?: AiNavigatorSendOptions) => Promise<void>;
   addActivityPreview: (text: string) => void;
@@ -2745,7 +2746,7 @@ function buildCalendarActivityReviewPackageReply(message: string): string {
 }
 async function askLegacyAi(
   message: string,
-  selectedTier: "nano" | "standard" | "pro",
+  selectedTier: "nano" | "standard" | "pro" | "max",
   options?: {
     forceChat?: boolean;
     image?: AiNavigatorImageAttachment | null;
@@ -2935,7 +2936,7 @@ export function AiNavigatorProvider({
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [navigatorMode, setNavigatorMode] = useState<AiNavigatorMode>("chat");
-  const [selectedTier, setSelectedTier] = useState<"nano" | "standard" | "pro">("standard");
+  const [selectedTier, setSelectedTier] = useState<"nano" | "standard" | "pro" | "max">("standard");
   const [modelOptions, setModelOptions] = useState<AiNavigatorModelOption[]>(DEFAULT_MODEL_OPTIONS);
 
   useEffect(() => {
@@ -3159,12 +3160,15 @@ export function AiNavigatorProvider({
         const models = payload.models.filter(
           (item): item is AiNavigatorModelOption =>
             Boolean(item) &&
-            (item.tierCode === "nano" || item.tierCode === "standard" || item.tierCode === "pro") &&
+            (item.tierCode === "nano" ||
+              item.tierCode === "standard" ||
+              item.tierCode === "pro" ||
+              item.tierCode === "max") &&
             typeof item.modelName === "string" &&
             typeof item.displayName === "string" &&
             typeof item.shortLabel === "string",
         );
-        if (models.length === 3) setModelOptions(models);
+        if (models.length >= 4) setModelOptions(models);
       })
       .catch(() => {
         // The server catalog is presentation metadata. Safe built-in labels remain available.

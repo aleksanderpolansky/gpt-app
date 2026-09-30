@@ -27,7 +27,12 @@ function asDateMs(value: unknown): number | null {
 }
 
 function normalizeTierCode(value: string): NavigatorAiTierCode {
-  if (value === "nano" || value === "standard" || value === "pro") {
+  if (
+    value === "nano" ||
+    value === "standard" ||
+    value === "pro" ||
+    value === "max"
+  ) {
     return value;
   }
   throw new Error(`NAVIGATOR_PRICE_TIER_UNSUPPORTED:${value}`);

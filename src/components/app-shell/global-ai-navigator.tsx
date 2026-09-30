@@ -887,7 +887,7 @@ export function GlobalAiNavigator({
             <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-[#b0b4c8]">
               {navigationT("navigation.aiModel")}
             </p>
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-2 gap-1.5">
               {modelOptions.map((tier) => {
                 const isSelected = selectedTier === tier.tierCode;
                 return (
@@ -900,8 +900,8 @@ export function GlobalAiNavigator({
                       ? "rounded-lg border border-[#3b6ef8]/25 bg-[#eef2ff] px-2 py-2 text-left shadow-[0_3px_10px_rgba(59,110,248,0.10)] transition-all"
                       : "rounded-lg border border-transparent bg-[#f5f6fb] px-2 py-2 text-left transition-all hover:border-[#3b6ef8]/15 hover:bg-[#eef2ff]"}
                   >
-                    <span className={isSelected ? "block text-[11px] font-semibold leading-tight text-[#3b6ef8]" : "block text-[11px] font-semibold leading-tight text-[#2d3047]"}>{`5.6 ${tier.shortLabel}`}</span>
-                    <span className={isSelected ? "mt-1 block text-[10px] font-medium leading-tight text-[#6f7fb8]" : "mt-1 block text-[10px] font-medium leading-tight text-[#7a8199]"}>{tier.reasoningEffort === "max" ? "Max" : tier.caption}</span>
+                    <span className={isSelected ? "block text-[11px] font-semibold leading-tight text-[#3b6ef8]" : "block text-[11px] font-semibold leading-tight text-[#2d3047]"}>{tier.displayName.replace(/^GPT-/i, "")}</span>
+                    <span className={isSelected ? "mt-1 block text-[10px] font-medium leading-tight text-[#6f7fb8]" : "mt-1 block text-[10px] font-medium leading-tight text-[#7a8199]"}>{tier.frontier ? "Flagship · Max" : tier.caption}</span>
                   </button>
                 );
               })}

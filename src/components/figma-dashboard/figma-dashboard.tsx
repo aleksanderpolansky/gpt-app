@@ -141,9 +141,13 @@ type ReputationSummaryResponse = {
 type AiTokenProjection = {
   readonly tierCode?: string | null;
   readonly displayName?: string | null;
+  readonly description?: string | null;
+  readonly modelName?: string | null;
   readonly pricingStatus?: "ready" | "missing_active_price_snapshot" | string;
   readonly approximateInputTokensForBalance?: number | null;
   readonly approximateOutputTokensForBalance?: number | null;
+  readonly inputCostPer1mTokensEur?: number | null;
+  readonly outputCostPer1mTokensEur?: number | null;
   readonly sourceNote?: string | null;
 };
 
@@ -232,38 +236,39 @@ function getProjectionTokens(projection: AiTokenProjection): number | null {
 function sortAiTokenProjections(
   projections: readonly AiTokenProjection[],
 ): AiTokenProjection[] {
-  const order = ["nano", "standard", "pro"];
-
   return [...projections].sort((left, right) => {
-    const leftIndex = order.indexOf(String(left.tierCode ?? "").toLowerCase());
-    const rightIndex = order.indexOf(String(right.tierCode ?? "").toLowerCase());
+    const leftCost = Number(left.outputCostPer1mTokensEur);
+    const rightCost = Number(right.outputCostPer1mTokensEur);
+    const leftReady = Number.isFinite(leftCost) && leftCost > 0;
+    const rightReady = Number.isFinite(rightCost) && rightCost > 0;
 
-    return (
-      (leftIndex === -1 ? 99 : leftIndex) -
-      (rightIndex === -1 ? 99 : rightIndex)
+    if (leftReady && rightReady) return leftCost - rightCost;
+    if (leftReady) return -1;
+    if (rightReady) return 1;
+
+    return String(left.displayName ?? left.modelName ?? "").localeCompare(
+      String(right.displayName ?? right.modelName ?? ""),
     );
   });
 }
 
-function getTierDisplayName(
+function getModelDisplayName(
   projection: AiTokenProjection,
   t: DashboardTranslate,
 ): string {
-  const tierCode = String(projection.tierCode ?? "").toLowerCase();
+  return projection.displayName ?? projection.modelName ?? t("dashboard.model");
+}
 
-  if (tierCode === "nano") {
-    return "Nano";
-  }
-
-  if (tierCode === "standard") {
-    return "Standard";
-  }
-
-  if (tierCode === "pro") {
-    return "Pro";
-  }
-
-  return projection.displayName ?? tierCode ?? t("dashboard.model");
+function getModelDetailsLabel(locale: LocaleCode) {
+  return {
+    ru: "Все модели и расчёт",
+    pl: "Wszystkie modele i kalkulacja",
+    en: "All models and estimate",
+    es: "Todos los modelos y cálculo",
+    uk: "Усі моделі та розрахунок",
+    de: "Alle Modelle und Berechnung",
+    cs: "Všechny modely a výpočet",
+  }[locale];
 }
 
 function KpiCard({
@@ -378,21 +383,18 @@ function AiTokenProjectionsKpi({
   readonly locale: LocaleCode;
   readonly t: DashboardTranslate;
 }) {
-  const sortedRows = sortAiTokenProjections(projections).filter(
-    (projection) =>
-      ["nano", "standard", "pro"].includes(
-        String(projection.tierCode ?? "").toLowerCase(),
-      ),
-  );
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const sortedRows = sortAiTokenProjections(projections);
 
   const visibleRows =
-    sortedRows.length > 0
+    sortedRows.length <= 2
       ? sortedRows
-      : [
-          { tierCode: "nano" },
-          { tierCode: "standard" },
-          { tierCode: "pro" },
-        ];
+      : [sortedRows[0], sortedRows[sortedRows.length - 1]];
+
+  const fallbackRows: AiTokenProjection[] =
+    visibleRows.length > 0
+      ? visibleRows
+      : [{ displayName: t("dashboard.model") }];
 
   const subtitle =
     status === "loading"
@@ -404,7 +406,7 @@ function AiTokenProjectionsKpi({
           : t("dashboard.tokenBalanceBasis");
 
   return (
-    <div className="flex flex-col gap-2.5 rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
+    <div className="relative flex flex-col gap-2.5 rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-medium uppercase tracking-wide text-[#7c8099]">
           {t("dashboard.tokensLabel")}
@@ -419,7 +421,7 @@ function AiTokenProjectionsKpi({
           {t("dashboard.availableApprox")}
         </div>
         <div className="mt-2 flex flex-col gap-1">
-          {visibleRows.map((projection) => {
+          {fallbackRows.map((projection) => {
             const tokens = getProjectionTokens(projection);
 
             return (
@@ -428,7 +430,7 @@ function AiTokenProjectionsKpi({
                 className="flex items-center justify-between gap-2 text-[11px]"
               >
                 <span className="font-semibold text-[#5a5f7a]">
-                  {getTierDisplayName(projection, t)}
+                  {getModelDisplayName(projection, t)}
                 </span>
                 <span className="text-right font-bold text-[#1a1d2e]">
                   {formatTokenAmount(tokens, locale, t)}
@@ -437,6 +439,46 @@ function AiTokenProjectionsKpi({
             );
           })}
         </div>
+
+        {sortedRows.length > 2 ? (
+          <button
+            type="button"
+            onClick={() => setDetailsOpen((value) => !value)}
+            className="mt-2 text-left text-[11px] font-semibold text-[#3b6ef8] hover:underline"
+          >
+            {getModelDetailsLabel(locale)} →
+          </button>
+        ) : null}
+
+        {detailsOpen ? (
+          <div className="absolute left-3 right-3 top-[calc(100%-8px)] z-30 rounded-xl border border-[#e6e9f2] bg-white p-3 shadow-[0_16px_45px_rgba(15,23,42,0.16)]">
+            <div className="mb-2 text-[11px] font-semibold text-[#1a1d2e]">
+              {getModelDetailsLabel(locale)}
+            </div>
+            <div className="flex flex-col gap-2">
+              {sortedRows.map((projection) => (
+                <div
+                  key={String(projection.modelName ?? projection.tierCode)}
+                  className="rounded-lg bg-[#f7f8fc] px-2.5 py-2"
+                >
+                  <div className="flex items-center justify-between gap-3 text-[11px]">
+                    <span className="font-semibold text-[#2d3047]">
+                      {getModelDisplayName(projection, t)}
+                    </span>
+                    <span className="font-bold text-[#1a1d2e]">
+                      {formatTokenAmount(getProjectionTokens(projection), locale, t)}
+                    </span>
+                  </div>
+                  {projection.outputCostPer1mTokensEur ? (
+                    <div className="mt-1 text-[10px] text-[#8b90a7]">
+                      output ≈ {projection.outputCostPer1mTokensEur.toFixed(4)} EUR / 1M
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-2 text-[11px] text-[#9ca3b8]">{subtitle}</div>
 
