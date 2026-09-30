@@ -226,6 +226,84 @@ function extractUsageMetadata(
   };
 }
 
+
+export const OPENAI_WEB_SEARCH_USD_PER_CALL = 0.01 as const;
+
+export type AiBackgroundProviderResponse = OpenAI.Responses.Response;
+
+export function extractAiResponseUsageMetadata(
+  response: unknown,
+  fallbackModel = "",
+): RunAiJsonUsageMetadata {
+  return extractUsageMetadata(response, fallbackModel);
+}
+
+export function countAiWebSearchCalls(response: unknown): number {
+  const record = readRecord(response);
+  const output = record?.output;
+
+  if (!Array.isArray(output)) return 0;
+
+  return output.filter((item) => {
+    const row = readRecord(item);
+    return row?.type === "web_search_call";
+  }).length;
+}
+
+export async function createAiBackgroundResponse(input: {
+  request: unknown;
+  idempotencyKey: string;
+  requestTimeoutMs?: number;
+  maxRetries?: number;
+}): Promise<AiBackgroundProviderResponse> {
+  if (!AI_ENABLED) {
+    throw new Error("AI is disabled by AI_ENABLED=false");
+  }
+
+  if (!input.idempotencyKey.trim()) {
+    throw new Error("AI_BACKGROUND_PROVIDER_IDEMPOTENCY_REQUIRED");
+  }
+
+  return openai.responses.create(
+    input.request as never,
+    {
+      idempotencyKey: input.idempotencyKey.trim(),
+      ...(typeof input.requestTimeoutMs === "number"
+        ? { timeout: input.requestTimeoutMs }
+        : {}),
+      ...(typeof input.maxRetries === "number"
+        ? { maxRetries: input.maxRetries }
+        : {}),
+    },
+  );
+}
+
+export async function retrieveAiBackgroundResponse(input: {
+  responseId: string;
+  include?: string[];
+}): Promise<AiBackgroundProviderResponse> {
+  if (!input.responseId.trim()) {
+    throw new Error("AI_BACKGROUND_PROVIDER_RESPONSE_ID_REQUIRED");
+  }
+
+  return openai.responses.retrieve(
+    input.responseId.trim(),
+    (input.include?.length
+      ? { include: input.include }
+      : {}) as never,
+  );
+}
+
+export async function cancelAiBackgroundResponse(input: {
+  responseId: string;
+}): Promise<AiBackgroundProviderResponse> {
+  if (!input.responseId.trim()) {
+    throw new Error("AI_BACKGROUND_PROVIDER_RESPONSE_ID_REQUIRED");
+  }
+
+  return openai.responses.cancel(input.responseId.trim());
+}
+
 export async function runAiJsonWithUsageMetadata<T = unknown>({
   system,
   user,

@@ -53,6 +53,31 @@ function roundEur(value: number, digits = 8): number {
   return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
+export function convertAiProviderCostToEur(input: {
+  providerCost: number;
+  price: AiPriceSnapshot;
+}): number {
+  if (!Number.isFinite(input.providerCost) || input.providerCost < 0) {
+    throw new Error("AI_BILLING_PROVIDER_COST_INVALID");
+  }
+
+  const pricingCurrency = input.price.pricingCurrency.toUpperCase();
+
+  if (
+    pricingCurrency === "USD" &&
+    (!input.price.usdToEurRate || input.price.usdToEurRate <= 0)
+  ) {
+    throw new Error("AI_BILLING_USD_TO_EUR_RATE_REQUIRED");
+  }
+
+  const eurBase =
+    pricingCurrency === "USD"
+      ? input.providerCost * input.price.usdToEurRate!
+      : input.providerCost;
+
+  return roundEur(eurBase * input.price.eurMarkupMultiplier, 8);
+}
+
 export function calculateAiUsageCostEur(input: {
   usage: AiUsageTokens;
   price: AiPriceSnapshot;
@@ -75,20 +100,10 @@ export function calculateAiUsageCostEur(input: {
       outputTokens * input.price.outputCostPer1mTokens) /
     1_000_000;
 
-  const pricingCurrency = input.price.pricingCurrency.toUpperCase();
-  if (
-    pricingCurrency === "USD" &&
-    (!input.price.usdToEurRate || input.price.usdToEurRate <= 0)
-  ) {
-    throw new Error("AI_BILLING_USD_TO_EUR_RATE_REQUIRED");
-  }
-
-  const eurBase =
-    pricingCurrency === "USD"
-      ? providerCost * input.price.usdToEurRate!
-      : providerCost;
-
-  return roundEur(eurBase * input.price.eurMarkupMultiplier, 8);
+  return convertAiProviderCostToEur({
+    providerCost,
+    price: input.price,
+  });
 }
 
 export async function readAiWalletAccess(

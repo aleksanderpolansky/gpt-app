@@ -24,6 +24,7 @@ export type AiBillingGatewayOperationKind =
   | "chat_message"
   | "activity_preview"
   | "semantic_intake"
+  | "ai_channel"
   | "admin_test"
   | "other";
 
