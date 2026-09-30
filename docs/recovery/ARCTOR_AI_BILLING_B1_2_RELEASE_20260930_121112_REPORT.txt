@@ -1,0 +1,28 @@
+ARCTOR_AI_BILLING_B1_2_RELEASE_REPORT
+RUN_ID=20260930_121112
+STATUS=PASS
+BASELINE_HEAD=a2d3f344afcb8a98fe25f27c2e3133d29aee4252
+PRODUCT_COMMIT=337d8bac4d4f2c1a97a2d27e9bd8b686284146bc
+REMOTE_BEFORE=a2d3f344afcb8a98fe25f27c2e3133d29aee4252
+SQL_SHA256=d1efcbfc764984994f75166a12eff7da5dbdd5727db4322c1584de72b5786484
+SQL_PRODUCTION_CHECK=ARCTOR_AI_BILLING_B1_PRODUCTION_VERIFY
+SQL_ALL_CHECKS_PASS=true
+SQL_USAGE_ROWS=501
+SQL_LEDGER_ROWS=23
+SQL_WALLET_ROWS=2
+SQL_LIFETIME_SUMMARY_ROWS=2
+SQL_VERIFICATION_SOURCE=operator-confirmed Supabase read-only verification before release
+PRODUCT_TARGET_COUNT=5
+PRODUCT_TARGETS:
+- scripts/validate-ai-billing-b1.mjs
+- src/app/admin/users/page.tsx
+- src/app/api/admin/users/route.ts
+- src/lib/ai-billing/runtime.ts
+- supabase/migrations/20260930111500_ai_billing_b1_foundation.sql
+
+RELEASE_NOTES:
+- AI EUR can be adjusted from /admin/users through ledger-first RPC.
+- AI usage on /admin/users uses lifetime server-side aggregation.
+- B1 atomic AI settlement RPC/runtime foundation is installed.
+- Existing AI call sites are NOT all migrated to the common gateway yet; that is B2.
+- System AI channels remain billed to the channel owner once their calls are migrated.
