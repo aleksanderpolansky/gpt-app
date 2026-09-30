@@ -1,0 +1,64 @@
+{
+  "contract": "ARCTOR_AI_PROVIDER_BOUNDARY_B2_4_V1_2",
+  "transportFiles": [
+    "lib/ai/openaiClient.ts"
+  ],
+  "legacyDirectProviderExceptions": [
+    {
+      "path": "src/lib/ai-channels/server.ts",
+      "reason": "Existing OpenAI Background Responses lifecycle. Move to Background Billing Gateway before exception removal.",
+      "nextStage": "B3.0_B3.1"
+    },
+    {
+      "path": "lib/organizations/organizationSemanticIntake.ts",
+      "reason": "Existing direct provider semantic intake path.",
+      "nextStage": "B3.2"
+    },
+    {
+      "path": "lib/objectAction/suggestionAnalysis.ts",
+      "reason": "Existing direct provider object-action suggestion path.",
+      "nextStage": "B3.3"
+    }
+  ],
+  "gatewayWrapperAllowedFiles": [
+    "lib/ai/openaiClient.ts",
+    "src/lib/ai-billing/gateway.server.ts"
+  ],
+  "legacyWrapperExceptions": [
+    {
+      "path": "lib/reality/globalObservationPilot.ts",
+      "reason": "Existing low-level wrapper caller with legacy pilot budget / usage accounting.",
+      "nextStage": "B3.4_EXISTING_WRAPPER_MIGRATION"
+    },
+    {
+      "path": "src/lib/activity/activity-basic-intake-analysis.server.ts",
+      "reason": "Existing activity intake wrapper caller.",
+      "nextStage": "B3.4_EXISTING_WRAPPER_MIGRATION"
+    },
+    {
+      "path": "src/lib/activity/typical-activity-template-matcher.server.ts",
+      "reason": "Existing typical-activity matcher wrapper caller.",
+      "nextStage": "B3.4_EXISTING_WRAPPER_MIGRATION"
+    },
+    {
+      "path": "src/lib/ai/activitySemanticReviewA31.server.ts",
+      "reason": "Existing activity semantic review wrapper caller.",
+      "nextStage": "B3.4_EXISTING_WRAPPER_MIGRATION"
+    },
+    {
+      "path": "src/lib/goal-world/intake/goalIntakeRuntime.server.ts",
+      "reason": "Existing goal-world intake wrapper caller.",
+      "nextStage": "B3.4_EXISTING_WRAPPER_MIGRATION"
+    },
+    {
+      "path": "src/lib/help/helpTranslation.server.ts",
+      "reason": "Existing help translation wrapper caller.",
+      "nextStage": "B3.4_EXISTING_WRAPPER_MIGRATION"
+    },
+    {
+      "path": "src/lib/localization/contentLocalization.server.ts",
+      "reason": "Existing content localization wrapper caller.",
+      "nextStage": "B3.4_EXISTING_WRAPPER_MIGRATION"
+    }
+  ]
+}

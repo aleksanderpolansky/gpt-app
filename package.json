@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "validate:ai-gateway-boundary": "node scripts/validate-ai-gateway-boundary.mjs",
+    "prebuild": "node scripts/validate-ai-gateway-boundary.mjs"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.19.0",
