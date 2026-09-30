@@ -1,0 +1,70 @@
+﻿ARCTOR_AI_BILLING_B1_4_PRODUCTION_LEDGER_EVIDENCE_V1
+timestamp=20260930_135921
+branch=main
+head=e540689b7ffb46036000a9736778cdf013aba5ba
+origin_main=e540689b7ffb46036000a9736778cdf013aba5ba
+
+STATUS=PASS
+READ_ONLY_SQL=TRUE
+CHECK=ARCTOR_AI_BILLING_B1_4_PRODUCTION_LEDGER_EVIDENCE
+RPC_EXISTS=True
+WALLET_ROWS=3
+LEDGER_ROWS=25
+B1_3_MANUAL_ADJUSTMENT_ROWS=2
+TODAY_B1_3_MANUAL_ADJUSTMENT_ROWS=2
+LATEST_WALLETS_CHECKED=2
+LEDGER_ARITHMETIC_OK=True
+WALLET_BALANCE_MATCHES_LATEST_LEDGER=True
+AVAILABLE_MATH_CONSISTENT=True
+EXPECTED_MICRO_CREDIT_FOUND=True
+EXPECTED_ZEROING_DEBIT_FOUND=True
+
+JSON_EVIDENCE:
+{
+    "pass":  true,
+    "check":  "ARCTOR_AI_BILLING_B1_4_PRODUCTION_LEDGER_EVIDENCE",
+    "readOnly":  true,
+    "rpcExists":  true,
+    "ledgerRows":  25,
+    "walletRows":  3,
+    "ledgerArithmeticOk":  true,
+    "latestWalletsChecked":  2,
+    "availableMathConsistent":  true,
+    "b13ManualAdjustmentRows":  2,
+    "expectedMicroCreditFound":  true,
+    "expectedZeroingDebitFound":  true,
+    "recentProductionAdjustments":  [
+                                        {
+                                            "email":  "alexanderpolansky@gmail.com",
+                                            "reason":  "Available AI EUR set from admin users table.",
+                                            "ledgerId":  "244d2e19-524c-4f12-a9ad-653577bc45e0",
+                                            "walletId":  "301ef81e-9ce9-4707-97eb-549eee0e50b4",
+                                            "amountEur":  0.996927,
+                                            "appUserId":  "d5b0e90a-1a3e-4feb-b080-414080311b88",
+                                            "direction":  "debit",
+                                            "adjustedAt":  "2026-09-30T11:28:50.035853+00:00",
+                                            "idempotencyKey":  "admin_users_set_ai_balance:d5b0e90a-1a3e-4feb-b080-414080311b88:28bbaadf-c8a0-4a60-a5c5-493bbddd8ec9",
+                                            "balanceAfterEur":  0.000000,
+                                            "balanceBeforeEur":  0.996927,
+                                            "targetAvailableEur":  0.000000,
+                                            "reservedEurAtAdjustment":  0.000000
+                                        },
+                                        {
+                                            "email":  "katepolanska1@gmail.com",
+                                            "reason":  "Available AI EUR set from admin users table.",
+                                            "ledgerId":  "d19f5369-0234-481b-90a9-e95ca73801be",
+                                            "walletId":  "10cf1ed2-0530-4a8d-ba7a-cf21b8d8f4e9",
+                                            "amountEur":  0.000001,
+                                            "appUserId":  "fffba008-41b9-4f77-99ad-1ed53aa008d2",
+                                            "direction":  "credit",
+                                            "adjustedAt":  "2026-09-30T11:28:17.136935+00:00",
+                                            "idempotencyKey":  "admin_users_set_ai_balance:fffba008-41b9-4f77-99ad-1ed53aa008d2:a2dc198f-c4e7-49e0-8efd-ca7ed5141eba",
+                                            "balanceAfterEur":  0.000001,
+                                            "balanceBeforeEur":  0.000000,
+                                            "targetAvailableEur":  0.000001,
+                                            "reservedEurAtAdjustment":  0.000000
+                                        }
+                                    ],
+    "todayB13ManualAdjustmentRows":  2,
+    "walletBalanceMatchesLatestLedger":  true
+}
