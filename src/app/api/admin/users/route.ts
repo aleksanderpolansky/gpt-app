@@ -9,7 +9,7 @@ import {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const ROUTE_MARKER = "admin-users-list-route-step19h-v1" as const;
+const ROUTE_MARKER = "admin-users-billing-b1-v1" as const;
 const MAX_USERS = 250;
 const RECENT_ACTIVITY_LIMIT = 2000;
 const PROTECTED_OWNER_EMAILS = new Set([
@@ -65,17 +65,17 @@ type PointsWalletRow = {
   updated_at: string | null;
 };
 
-type AiUsageRow = {
+type AiUsageSummaryRow = {
   app_user_id: string;
-  selected_tier_code: string | null;
-  model_name: string | null;
+  usage_event_count: unknown;
+  provider_call_count: unknown;
+  input_tokens: unknown;
+  cached_input_tokens: unknown;
+  output_tokens: unknown;
   total_tokens: unknown;
-  estimated_cost_eur: unknown;
-  actual_cost_eur: unknown;
+  usage_cost_eur: unknown;
   wallet_debit_eur: unknown;
-  status: string | null;
-  created_at: string | null;
-  completed_at: string | null;
+  last_ai_usage_at: string | null;
 };
 
 type TimestampRow = {
@@ -135,6 +135,21 @@ function asNullableString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0
     ? value.trim()
     : null;
+}
+
+function parseTargetAvailableEur(value: unknown): number | null {
+  const raw =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number(value.replace(",", "."))
+        : Number.NaN;
+
+  if (!Number.isFinite(raw) || raw < 0 || raw > 100000) {
+    return null;
+  }
+
+  return Math.round(raw * 1_000_000) / 1_000_000;
 }
 
 function normalizeEmail(value: string | null): string {
@@ -300,37 +315,36 @@ function chooseLatestPriceSnapshots(rows: readonly PriceSnapshotRow[]): Map<stri
   return map;
 }
 
-function buildAiUsageSummary(rows: readonly AiUsageRow[]) {
+function buildAiUsageSummary(rows: readonly AiUsageSummaryRow[]) {
   const map = new Map<
     string,
     {
       lastAiUsageAt: string | null;
       totalAiSpentEur: number;
+      totalAiCostEur: number;
+      totalAiWalletDebitedEur: number;
       totalAiTokens: number;
+      totalAiInputTokens: number;
+      totalAiCachedInputTokens: number;
+      totalAiOutputTokens: number;
       aiUsageEventCount: number;
+      aiProviderCallCount: number;
     }
   >();
 
   for (const row of rows) {
-    const current =
-      map.get(row.app_user_id) ??
-      {
-        lastAiUsageAt: null,
-        totalAiSpentEur: 0,
-        totalAiTokens: 0,
-        aiUsageEventCount: 0,
-      };
-
-    const eventAt = maxIsoTimestamp([row.completed_at, row.created_at]);
-    current.lastAiUsageAt = maxIsoTimestamp([current.lastAiUsageAt, eventAt]);
-    current.totalAiSpentEur +=
-      asNumber(row.wallet_debit_eur, NaN) ||
-      asNumber(row.actual_cost_eur, NaN) ||
-      asNumber(row.estimated_cost_eur, 0);
-    current.totalAiTokens += asNumber(row.total_tokens, 0);
-    current.aiUsageEventCount += 1;
-
-    map.set(row.app_user_id, current);
+    map.set(row.app_user_id, {
+      lastAiUsageAt: row.last_ai_usage_at,
+      totalAiSpentEur: asNumber(row.wallet_debit_eur, 0),
+      totalAiCostEur: asNumber(row.usage_cost_eur, 0),
+      totalAiWalletDebitedEur: asNumber(row.wallet_debit_eur, 0),
+      totalAiTokens: asNumber(row.total_tokens, 0),
+      totalAiInputTokens: asNumber(row.input_tokens, 0),
+      totalAiCachedInputTokens: asNumber(row.cached_input_tokens, 0),
+      totalAiOutputTokens: asNumber(row.output_tokens, 0),
+      aiUsageEventCount: asNumber(row.usage_event_count, 0),
+      aiProviderCallCount: asNumber(row.provider_call_count, 0),
+    });
   }
 
   return map;
@@ -388,6 +402,91 @@ export async function PATCH(request: Request) {
   const targetUserId = asNullableString(body.userId);
   const action = asNullableString(body.action);
   const reason = asNullableString(body.reason);
+
+  if (targetUserId && action === "set_ai_balance") {
+    const targetAvailableEur = parseTargetAvailableEur(body.targetAvailableEur);
+
+    if (targetAvailableEur === null) {
+      return NextResponse.json(
+        {
+          ok: false,
+          routeMarker: ROUTE_MARKER,
+          errorCode: "ADMIN_USERS_INVALID_AI_AVAILABLE_EUR",
+          errorMessage: "targetAvailableEur must be a number from 0 to 100000.",
+          sideEffects: {
+            dbReadExecuted: true,
+            dbWriteExecuted: false,
+            openAiCallExecuted: false,
+            rowsActuallyWritten: 0,
+          },
+        },
+        { status: 400 },
+      );
+    }
+
+    const idempotencyKey =
+      asNullableString(body.idempotencyKey)?.slice(0, 200) ??
+      [
+        "admin_users_set_ai_balance",
+        platformAdminGuard.platformAdmin.id,
+        targetUserId,
+        Date.now().toString(36),
+      ].join(":");
+
+    const { data, error } = await supabase.rpc(
+      "admin_set_ai_available_eur_v1",
+      {
+        p_target_app_user_id: targetUserId,
+        p_platform_admin_id: platformAdminGuard.platformAdmin.id,
+        p_target_available_eur: targetAvailableEur,
+        p_reason:
+          reason ??
+          "Available AI EUR set from /admin/users.",
+        p_idempotency_key: idempotencyKey,
+        p_metadata: {
+          routeMarker: ROUTE_MARKER,
+          mode: "set_available_balance",
+          requestedByAppUserId: platformAdminGuard.appUser.id,
+        },
+      },
+    );
+
+    if (error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          routeMarker: ROUTE_MARKER,
+          errorCode: "ADMIN_USERS_AI_BALANCE_UPDATE_FAILED",
+          errorMessage: error.message,
+          sideEffects: {
+            dbReadExecuted: true,
+            dbWriteExecuted: true,
+            openAiCallExecuted: false,
+            rowsActuallyWritten: 0,
+          },
+        },
+        { status: 500 },
+      );
+    }
+
+    const result =
+      (((data ?? []) as unknown) as Array<Record<string, unknown>>)[0] ?? null;
+
+    return NextResponse.json({
+      ok: true,
+      routeMarker: ROUTE_MARKER,
+      routeStatus: "admin_user_ai_available_eur_set",
+      targetUserId,
+      targetAvailableEur,
+      adjustment: result,
+      sideEffects: {
+        dbReadExecuted: true,
+        dbWriteExecuted: true,
+        openAiCallExecuted: false,
+        rowsActuallyWritten: result ? 1 : 0,
+      },
+    });
+  }
 
   if (!targetUserId || (action !== "block" && action !== "unblock")) {
     return NextResponse.json(
@@ -637,13 +736,9 @@ export async function GET() {
         "user_id",
         userIds,
       ),
-      readRowsByUserIds<AiUsageRow>(
-        "ai_usage_events",
-        "app_user_id, selected_tier_code, model_name, total_tokens, estimated_cost_eur, actual_cost_eur, wallet_debit_eur, status, created_at, completed_at",
-        "app_user_id",
-        userIds,
-        RECENT_ACTIVITY_LIMIT,
-      ),
+      supabase.rpc("admin_get_ai_usage_lifetime_summary_v1", {
+        p_app_user_ids: userIds,
+      }),
       readRowsByUserIds<TimestampRow>(
         "activity_events",
         "user_id, created_at",
@@ -678,7 +773,7 @@ export async function GET() {
       ["platform_admins", platformAdminsResult.error],
       ["ai_credit_wallets", aiWalletsResult.error],
       ["user_points_wallets", pointsWalletsResult.error],
-      ["ai_usage_events", aiUsageResult.error],
+      ["ai_usage_events", aiUsageResult.error?.message ?? null],
       ["activity_events", activityEventsResult.error],
       ["chat_messages", chatMessagesResult.error],
       ["app_user_sessions", appUserSessionsResult.error],
@@ -719,7 +814,9 @@ export async function GET() {
       "user_id",
     ) as Map<string, PointsWalletRow>;
 
-    const aiUsageByUser = buildAiUsageSummary(aiUsageResult.rows);
+    const aiUsageByUser = buildAiUsageSummary(
+      (((aiUsageResult.data ?? []) as unknown) as AiUsageSummaryRow[]),
+    );
     const activityByUser = buildLatestTimestampMap(activityEventsResult.rows);
     const chatByUser = buildLatestTimestampMap(chatMessagesResult.rows);
     const sessionsByUser = buildManyByKey(
@@ -741,8 +838,14 @@ export async function GET() {
       const aiUsage = aiUsageByUser.get(appUser.id) ?? {
         lastAiUsageAt: null,
         totalAiSpentEur: 0,
+        totalAiCostEur: 0,
+        totalAiWalletDebitedEur: 0,
         totalAiTokens: 0,
+        totalAiInputTokens: 0,
+        totalAiCachedInputTokens: 0,
+        totalAiOutputTokens: 0,
         aiUsageEventCount: 0,
+        aiProviderCallCount: 0,
       };
 
       const aiBalanceEur = aiWallet ? asNumber(aiWallet.balance_eur, 0) : 0;
@@ -833,8 +936,16 @@ export async function GET() {
         lastActivityAt,
         lastAiUsageAt: aiUsage.lastAiUsageAt,
         totalAiSpentEur: Number(aiUsage.totalAiSpentEur.toFixed(8)),
+        totalAiCostEur: Number(aiUsage.totalAiCostEur.toFixed(8)),
+        totalAiWalletDebitedEur: Number(
+          aiUsage.totalAiWalletDebitedEur.toFixed(8),
+        ),
         totalAiTokens: aiUsage.totalAiTokens,
+        totalAiInputTokens: aiUsage.totalAiInputTokens,
+        totalAiCachedInputTokens: aiUsage.totalAiCachedInputTokens,
+        totalAiOutputTokens: aiUsage.totalAiOutputTokens,
         aiUsageEventCount: aiUsage.aiUsageEventCount,
+        aiProviderCallCount: aiUsage.aiProviderCallCount,
       };
     });
 
@@ -860,7 +971,8 @@ export async function GET() {
           "Presence is derived from app_users.last_seen_at and app_user_sessions.last_seen_at.",
           "Active sessions use a five-minute heartbeat window; recent presence uses a thirty-minute window.",
           "Points balance is read from user_points_wallets.user_id -> app_users.id.",
-          "AI balance is internal/admin-facing EUR accounting; end-user UI should prefer usage projections, not raw EUR balance.",
+          "AI EUR is one internal EUR wallet per user; Nano / Standard / Pro are projections over that single available balance.",
+          "AI usage totals are lifetime server-side aggregates. Preflight-only token estimates are excluded from token totals.",
           "Access moderation blocks are admin-only and protected owner accounts cannot be blocked.",
         ],
       },

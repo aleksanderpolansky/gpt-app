@@ -46,8 +46,14 @@ type AdminUserRow = {
   lastActivityAt: string | null;
   lastAiUsageAt: string | null;
   totalAiSpentEur: number;
+  totalAiCostEur: number;
+  totalAiWalletDebitedEur: number;
   totalAiTokens: number;
+  totalAiInputTokens: number;
+  totalAiCachedInputTokens: number;
+  totalAiOutputTokens: number;
   aiUsageEventCount: number;
+  aiProviderCallCount: number;
 };
 
 type AdminUsersResponse = {
@@ -160,6 +166,8 @@ export default function AdminUsersPage() {
   const [limitations, setLimitations] = useState<string[]>([]);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [editingAiUserId, setEditingAiUserId] = useState<string | null>(null);
+  const [editingAiValue, setEditingAiValue] = useState("");
   const [searchText, setSearchText] = useState("");
   const [onlyAdmins, setOnlyAdmins] = useState(false);
   const [onlyOnline, setOnlyOnline] = useState(false);
@@ -194,6 +202,75 @@ export default function AdminUsersPage() {
       setLimitations([]);
       setErrorMessage(error instanceof Error ? error.message : "Unknown error");
       setLoadState("error");
+    }
+  }
+
+  async function saveAiBalance(row: AdminUserRow) {
+    const parsed = Number(editingAiValue.replace(",", "."));
+
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100000) {
+      setActionMessage("AI EUR должен быть числом от 0 до 100000.");
+      return;
+    }
+
+    setPendingUserId(row.userId);
+    setActionMessage(null);
+
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          userId: row.userId,
+          action: "set_ai_balance",
+          targetAvailableEur: Math.round(parsed * 1_000_000) / 1_000_000,
+          reason: "Available AI EUR set from admin users table.",
+          idempotencyKey: [
+            "admin_users_set_ai_balance",
+            row.userId,
+            window.crypto.randomUUID(),
+          ].join(":"),
+        }),
+      });
+
+      const json = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            errorMessage?: string;
+            adjustment?: {
+              adjustment_direction?: string;
+              adjustment_amount_eur?: number | string;
+              available_after_eur?: number | string;
+            } | null;
+          }
+        | null;
+
+      if (!response.ok || json?.ok !== true) {
+        throw new Error(
+          json?.errorMessage ?? `AI EUR update failed: ${response.status}`,
+        );
+      }
+
+      const direction = json.adjustment?.adjustment_direction ?? "none";
+      const amount = Number(json.adjustment?.adjustment_amount_eur ?? 0);
+      setActionMessage(
+        direction === "none"
+          ? "AI EUR не изменился."
+          : `AI EUR сохранён через ledger: ${direction} ${formatEur(amount)} EUR.`,
+      );
+      setEditingAiUserId(null);
+      setEditingAiValue("");
+      await refreshUsers();
+    } catch (error) {
+      setActionMessage(
+        error instanceof Error ? error.message : "Unknown AI EUR update error.",
+      );
+    } finally {
+      setPendingUserId(null);
     }
   }
 
@@ -259,7 +336,13 @@ export default function AdminUsersPage() {
     }
   }
   useEffect(() => {
-    void refreshUsers();
+    const timerId = window.setTimeout(() => {
+      void refreshUsers();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
   }, []);
 
 
@@ -340,9 +423,10 @@ export default function AdminUsersPage() {
                 Список пользователей
               </h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
-                Admin-only read model: пользователи, AI EUR ledger projection,
-                пункты, активность и заготовка под presence/sessions. Таблица
-                не выполняет записей и не вызывает OpenAI.
+                Пользователи, единый AI EUR кошелёк, lifetime AI usage,
+                пункты, активность и presence/sessions. AI EUR можно менять
+                прямо в таблице: сервер пишет credit/debit через ledger.
+                Эта страница сама не вызывает OpenAI.
               </p>
             </div>
 
@@ -480,7 +564,7 @@ export default function AdminUsersPage() {
                     <th className="px-4 py-4">Роль</th>
                     <th className="px-4 py-4">Доступ</th>
                     <th className="px-4 py-4">AI EUR</th>
-                    <th className="px-4 py-4">Nano / Standard / Pro</th>
+                    <th className="px-4 py-4">≈ доступно при текущем AI EUR</th>
                     <th className="px-4 py-4">Points</th>
                     <th className="px-4 py-4">Активность</th>
                     <th className="px-4 py-4">Сессии</th>
@@ -526,9 +610,58 @@ export default function AdminUsersPage() {
                       </td>
 
                       <td className="px-4 py-4">
-                        <p className="font-semibold text-white">
-                          {formatEur(row.aiAvailableEur)} EUR
-                        </p>
+                        {editingAiUserId === row.userId ? (
+                          <div className="min-w-[180px]">
+                            <input
+                              type="number"
+                              min={0}
+                              max={100000}
+                              step={0.000001}
+                              value={editingAiValue}
+                              disabled={pendingUserId === row.userId}
+                              onChange={(event) =>
+                                setEditingAiValue(event.target.value)
+                              }
+                              className="w-full rounded-lg border border-cyan-700 bg-slate-950 px-2 py-1.5 text-sm text-white outline-none focus:border-cyan-300"
+                              aria-label={`AI EUR для ${row.email ?? row.displayName}`}
+                            />
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              <button
+                                type="button"
+                                disabled={pendingUserId === row.userId}
+                                onClick={() => void saveAiBalance(row)}
+                                className="rounded-lg bg-cyan-300 px-2 py-1 text-xs font-semibold text-slate-950 disabled:opacity-50"
+                              >
+                                {pendingUserId === row.userId
+                                  ? "Сохраняю..."
+                                  : "Сохранить"}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={pendingUserId === row.userId}
+                                onClick={() => {
+                                  setEditingAiUserId(null);
+                                  setEditingAiValue("");
+                                }}
+                                className="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-200 disabled:opacity-50"
+                              >
+                                Отмена
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingAiUserId(row.userId);
+                              setEditingAiValue(row.aiAvailableEur.toFixed(6));
+                            }}
+                            className="font-semibold text-white underline decoration-dotted underline-offset-4 hover:text-cyan-200"
+                            title="Изменить доступный AI EUR через ledger"
+                          >
+                            {formatEur(row.aiAvailableEur)} EUR ✎
+                          </button>
+                        )}
                         <p className="mt-1 text-xs text-slate-400">
                           balance {formatEur(row.aiBalanceEur)} · reserved{" "}
                           {formatEur(row.aiReservedEur)}
@@ -549,7 +682,7 @@ export default function AdminUsersPage() {
                           Pro: {getTierInputTokens(row, "pro")}
                         </p>
                         <p className="mt-1 text-xs text-slate-500">
-                          approx input tokens
+                          примерные input tokens одного общего EUR-баланса
                         </p>
                       </td>
 
@@ -591,11 +724,20 @@ export default function AdminUsersPage() {
 
                       <td className="px-4 py-4">
                         <p className="font-semibold text-white">
-                          {formatEur(row.totalAiSpentEur)} EUR
+                          {formatEur(row.totalAiWalletDebitedEur)} EUR списано
+                        </p>
+                        <p className="mt-1 text-xs text-slate-300">
+                          cost {formatEur(row.totalAiCostEur)} EUR ·{" "}
+                          {row.aiProviderCallCount} calls
                         </p>
                         <p className="mt-1 text-xs text-slate-400">
-                          {row.aiUsageEventCount} events ·{" "}
-                          {formatTokens(row.totalAiTokens)} tokens
+                          {formatTokens(row.totalAiTokens)} tokens ·{" "}
+                          {row.aiUsageEventCount} usage events
+                        </p>
+                        <p className="mt-1 max-w-[260px] text-xs text-slate-500">
+                          input {formatTokens(row.totalAiInputTokens)} · cached{" "}
+                          {formatTokens(row.totalAiCachedInputTokens)} · output{" "}
+                          {formatTokens(row.totalAiOutputTokens)}
                         </p>
                         <p className="mt-1 text-xs text-slate-400">
                           last: {formatDateTime(row.lastAiUsageAt)}
