@@ -1,0 +1,41 @@
+﻿ARCTOR_AI_BILLING_B2_2_RESUME_AFTER_RUNTIME_V1
+timestamp=20260930_165604
+baseline_head=8340d2e0d00b038bb30a64638294df2f531de1bc
+branch=main
+
+STATUS=PASS
+RECOVERY_REASON=Supabase JSON cell copied in CSV-quoted form; original installer parser stopped after DB PASS and before commit/push.
+
+SUPABASE_APPLY=PASS
+SUPABASE_RUNTIME_TEST=PASS_SAVEPOINT_ROLLED_BACK
+
+IMPLEMENTED:
+request idempotency unique per app_user_id
+request SHA-256 fingerprint conflict guard
+provider-level OpenAI request idempotency key
+atomic pre-provider EUR reservation
+reserve ledger entry
+provider-failure atomic release ledger entry
+reserved settlement: release + debit + wallet + usage in one transaction
+duplicate request returns acquired=false and must not call provider again
+
+VALIDATOR=PASS
+TYPECHECK=PASS
+BUILD=PASS
+
+ROUTES_MIGRATED=0
+API_TEST_MIGRATED=FALSE
+NEXT=B2.3_API_TEST_GATEWAY_PILOT
+
+SUPABASE_EVIDENCE:
+{
+    "pass":  true,
+    "check":  "ARCTOR_AI_BILLING_B2_2_RESERVATION_IDEMPOTENCY",
+    "releaseRpc":  true,
+    "reserveRpc":  true,
+    "reservationColumn":  true,
+    "reservedSettlementRpc":  true,
+    "requestFingerprintColumn":  true,
+    "requestIdempotencyColumn":  true,
+    "runtimeTransactionalTest":  "PASS_SAVEPOINT_ROLLED_BACK"
+}

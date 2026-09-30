@@ -38,6 +38,7 @@ type RunAiJsonRequest = {
   // explicitly so a provider retry can never bypass its operation budget.
   requestTimeoutMs?: number;
   maxRetries?: number;
+  idempotencyKey?: string;
   signal?: AbortSignal;
   store?: boolean;
   reasoningEffort?: RunAiReasoningEffort;
@@ -233,6 +234,7 @@ export async function runAiJsonWithUsageMetadata<T = unknown>({
   structuredOutput,
   requestTimeoutMs,
   maxRetries,
+  idempotencyKey,
   signal,
   store,
   reasoningEffort,
@@ -291,6 +293,9 @@ export async function runAiJsonWithUsageMetadata<T = unknown>({
       ? { timeout: requestTimeoutMs }
       : {}),
     ...(typeof maxRetries === "number" ? { maxRetries } : {}),
+    ...(typeof idempotencyKey === "string" && idempotencyKey.trim()
+      ? { idempotencyKey: idempotencyKey.trim() }
+      : {}),
     ...(signal ? { signal } : {}),
   };
 
@@ -327,6 +332,7 @@ export async function runAiJson<T = unknown>({
   structuredOutput,
   requestTimeoutMs,
   maxRetries,
+  idempotencyKey,
   signal,
   store,
   reasoningEffort,
@@ -341,6 +347,7 @@ export async function runAiJson<T = unknown>({
     structuredOutput,
     requestTimeoutMs,
     maxRetries,
+    idempotencyKey,
     signal,
     store,
     reasoningEffort,
