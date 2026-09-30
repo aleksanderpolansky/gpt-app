@@ -1,0 +1,36 @@
+﻿ARCTOR_AI_BILLING_B2_1_GATEWAY_FOUNDATION_V1
+timestamp=20260930_162026
+baseline_head=ff1a1aedc7a0e8e1fdf512be247c61e98a527fb3
+branch=main
+
+STATUS=PASS
+SCOPE=GATEWAY_FOUNDATION_ONLY
+
+ADDED:
+src/lib/ai-billing/gateway.server.ts
+scripts/validate-ai-billing-b2-1.mjs
+
+CONTRACT:
+ARCTOR_AI_BILLING_GATEWAY_B2_1_FOUNDATION_V1
+
+FLOW:
+billingUserId
+-> active price snapshot
+-> estimated-cost wallet preflight
+-> ai_usage_events(preflight_allowed)
+-> runAiJsonWithUsageMetadata
+-> actual provider usage
+-> actual EUR cost
+-> ai_usage_events(openai_completed)
+-> settle_ai_usage_debit_v1
+-> atomic usage+ledger+wallet settlement
+
+IMPORTANT:
+B2.1 DOES NOT yet migrate /api/test or the four provider call sites.
+B2.1 DOES NOT yet reserve wallet funds.
+B2.1 DOES NOT yet provide request-level idempotency before the provider call.
+Those are B2.2/B2.3 acceptance items.
+
+VALIDATOR=PASS
+TYPECHECK=PASS
+BUILD=PASS
