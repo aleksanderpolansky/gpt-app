@@ -1,7 +1,7 @@
 'use client';
 import { useEffect,useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CHANNEL_MODEL_OPTIONS, type ChannelSpec, type ChannelRow, type ChannelItem, type OntologyOption } from '@/lib/ai-channels/contracts';
+import { CHANNEL_MODEL, CHANNEL_MODEL_OPTIONS, channelReasoningForModel, type ChannelSpec, type ChannelRow, type ChannelItem, type OntologyOption } from '@/lib/ai-channels/contracts';
 import { channelWords,channelDetailWords } from '@/lib/ai-channels/copy';
 const inputClass='w-full rounded-lg border border-slate-300 bg-white p-2 text-sm text-slate-900';
 const buttonClass='rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-40';
@@ -23,14 +23,14 @@ const creationGateCopy=(locale:string)=>{
 const fresh=(locale:string,admin:boolean):ChannelSpec=>({
  name:'',topic:'',geography:'',exclusions:'',domains:[],language:locale,intervalHours:24,lookbackDays:7,maxItems:15,
  searchDepth:'detailed',freshness:'recent',timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone,
- model:'gpt-5.4-mini',reasoningEffort:'medium',maxToolCalls:10,searchContextSize:'high',maxOutputTokens:12000,
+ model:CHANNEL_MODEL,reasoningEffort:'medium',maxToolCalls:10,searchContextSize:'high',maxOutputTokens:12000,
  coverageMode:'diverse',maxPerProvider:3,minDistinctProviders:3,categoryMode:'open',allowedCategories:[],feedPreviewCount:1,
  objectIds:[],scope:admin?'public':'private'
 });
 const normalized=(value:ChannelSpec,revision:number):ChannelSpec=>{
  const detailed=(value.searchDepth??'quick')==='detailed';
  return {...value,revision,searchDepth:value.searchDepth??'quick',freshness:value.freshness??'recent',timeZone:value.timeZone??Intl.DateTimeFormat().resolvedOptions().timeZone,
-  model:value.model??'gpt-5.4-mini',reasoningEffort:value.reasoningEffort??(detailed?'medium':'low'),maxToolCalls:value.maxToolCalls??(detailed?10:4),
+  model:value.model??CHANNEL_MODEL,reasoningEffort:value.reasoningEffort??(detailed?'medium':'low'),maxToolCalls:value.maxToolCalls??(detailed?10:4),
   searchContextSize:value.searchContextSize??(detailed?'high':'medium'),maxOutputTokens:value.maxOutputTokens??(detailed?12000:6500),coverageMode:value.coverageMode??'ranked',
   maxPerProvider:value.maxPerProvider??3,minDistinctProviders:value.minDistinctProviders??3,categoryMode:value.categoryMode??'open',allowedCategories:value.allowedCategories??[],feedPreviewCount:value.feedPreviewCount??1};
 };
@@ -67,7 +67,7 @@ export default function AiChannels({locale,adminMode=false}:{locale:string;admin
  <div className="flex flex-wrap items-start gap-2"><details className="min-w-[160px] flex-1" open={adminMode||undefined}><summary className="cursor-pointer py-2 font-semibold">{t[1]} ({channels.length})</summary>
  {!channels.length&&<p className="py-2 text-sm">{t[38]}</p>}
  {channels.map(c=><div key={c.id} className="border-t py-3"><label className="flex items-center gap-2"><input type="checkbox" checked={c.enabled} disabled={!signedIn||busy} onChange={e=>{const enabled=e.target.checked;void perform(async()=>{await action({action:'preference',id:c.id,enabled});});}} aria-label={`${t[31]}: ${c.name}`}/><strong>{c.name}</strong><span className="text-xs">{c.scope==='public'?t[19]:t[20]}</span></label>
- {adminMode&&c.canManage&&<p className="mt-1 text-xs text-slate-500">{c.spec.model??'gpt-5.4-mini'} · {c.spec.searchDepth??'quick'} · {c.spec.coverageMode??'ranked'} · max {c.spec.maxItems} · preview {c.spec.feedPreviewCount??1}</p>}
+ {adminMode&&c.canManage&&<p className="mt-1 text-xs text-slate-500">{c.spec.model??CHANNEL_MODEL} · {c.spec.searchDepth??'quick'} · {c.spec.coverageMode??'ranked'} · max {c.spec.maxItems} · preview {c.spec.feedPreviewCount??1}</p>}
  {c.canManage&&<><p className="my-1 text-xs">{t[27]}: {c.last_run_at?new Date(c.last_run_at).toLocaleString(locale):'—'} · {c.status==='active'?v.active:v.paused}</p>{c.last_error&&<p className="text-xs text-red-700">{c.last_error}</p>}
  <div className="flex flex-wrap gap-1">
  <button className={buttonClass} disabled={busy||Boolean(c.runningRunId)} onClick={()=>{setEditing(c.id);setSpec(normalized(c.spec,c.revision));setSearch('');setOpen(true);setPreview(null);}}>{t[13]}</button>
@@ -89,17 +89,18 @@ export default function AiChannels({locale,adminMode=false}:{locale:string;admin
  <label>{t[8]}<select className={inputClass} value={spec.intervalHours} onChange={e=>field('intervalHours',Number(e.target.value))}>{[1,6,24,168].map(h=><option key={h} value={h}>{h} h</option>)}</select></label>
  <label>{t[22]}<input className={inputClass} type="number" min={1} max={30} disabled={spec.freshness==='current'} value={spec.lookbackDays} onChange={e=>field('lookbackDays',Number(e.target.value))}/></label>
  <label>{t[23]}<input className={inputClass} type="number" min={1} max={30} value={spec.maxItems} onChange={e=>field('maxItems',Number(e.target.value))}/></label></div>
- <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
- <label className="text-sm">{v.depth}<select className={inputClass} value={spec.searchDepth??'quick'} onChange={e=>field('searchDepth',e.target.value)}><option value="quick">{v.quick}</option><option value="detailed">{v.detailed}</option></select></label>
+  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+  <label className="text-sm">{v.model}<select className={inputClass} value={spec.model??CHANNEL_MODEL} onChange={e=>setSpec(s=>({...s,model:e.target.value,reasoningEffort:channelReasoningForModel(e.target.value)}))}>{CHANNEL_MODEL_OPTIONS.map(model=><option key={model.id} value={model.id}>{model.label} · {model.caption}</option>)}</select></label>
+  <label className="text-sm">{v.depth}<select className={inputClass} value={spec.searchDepth??'quick'} onChange={e=>field('searchDepth',e.target.value)}><option value="quick">{v.quick}</option><option value="detailed">{v.detailed}</option></select></label>
  <label className="text-sm">{v.freshness}<select className={inputClass} value={spec.freshness??'recent'} onChange={e=>field('freshness',e.target.value)}><option value="recent">{v.recent}</option><option value="current">{v.current}</option></select></label>
  <label className="text-sm">{v.timeZone}<input className={inputClass} required value={spec.timeZone??'UTC'} onChange={e=>field('timeZone',e.target.value)}/></label></div>
  <p className="text-xs text-slate-500">{v.cost}</p>{spec.freshness==='current'&&<p className="text-xs text-slate-500">{v.currentHint}</p>}
  {adminMode&&admin&&<details className="rounded-xl border border-cyan-200 bg-cyan-50 p-3" open><summary className="cursor-pointer text-sm font-bold text-cyan-900">Расширенные настройки администратора</summary><p className="mt-2 text-xs leading-5 text-slate-600">Эти значения хранятся в spec канала. Сервер всё равно применяет жёсткие пределы: до 20 поисковых вызовов, до 20 000 выходных токенов, до 30 результатов и до 10 результатов одного поставщика.</p>
   <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-   <label className="text-sm">Модель<select className={inputClass} value={spec.model??'gpt-5.4-mini'} onChange={e=>field('model',e.target.value)}>{CHANNEL_MODEL_OPTIONS.map(model=><option key={model.id} value={model.id}>{model.label} · {model.id}</option>)}</select></label>
-   <label className="text-sm">Уровень рассуждения<select className={inputClass} value={spec.reasoningEffort??'medium'} onChange={e=>field('reasoningEffort',e.target.value)}><option value="low">low</option><option value="medium">medium</option><option value="high">high</option></select></label>
+   
+   <label className="text-sm">Уровень рассуждения<select className={inputClass} value={spec.reasoningEffort??'medium'} onChange={e=>field('reasoningEffort',e.target.value)}><option value="low">low</option><option value="medium">medium</option><option value="high">high</option><option value="max">max</option></select></label>
    <label className="text-sm">Макс. поисковых вызовов<input className={inputClass} type="number" min={1} max={20} value={spec.maxToolCalls??10} onChange={e=>field('maxToolCalls',Number(e.target.value))}/></label>
-   <label className="text-sm">Контекст веб-поиска<select className={inputClass} value={spec.searchContextSize??'high'} onChange={e=>field('searchContextSize',e.target.value)}><option value="low">low</option><option value="medium">medium</option><option value="high">high</option></select></label>
+   <label className="text-sm">Контекст веб-поиска<select className={inputClass} value={spec.searchContextSize??'high'} onChange={e=>field('searchContextSize',e.target.value)}><option value="low">low</option><option value="medium">medium</option><option value="high">high</option><option value="max">max</option></select></label>
    <label className="text-sm">Макс. выходных токенов<input className={inputClass} type="number" min={1000} max={20000} step={500} value={spec.maxOutputTokens??12000} onChange={e=>field('maxOutputTokens',Number(e.target.value))}/></label>
    <label className="text-sm">Стратегия охвата<select className={inputClass} value={spec.coverageMode??'ranked'} onChange={e=>field('coverageMode',e.target.value)}><option value="ranked">Обычная</option><option value="diverse">Разнообразная</option><option value="exhaustive">Исчерпывающая</option></select></label>
    <label className="text-sm">Макс. находок одного поставщика<input className={inputClass} type="number" min={1} max={10} value={spec.maxPerProvider??3} onChange={e=>field('maxPerProvider',Number(e.target.value))}/></label>

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { channelCommand,channelIdentity,channelCreationAccess,requireChannelCreationBalance,listChannels,managedChannel,ontologyOptions,runChannel,pollChannel,cancelChannel,setChannelItemVisibility } from '@/lib/ai-channels/server';
-import { CHANNEL_MODEL, parseChannelSpec } from '@/lib/ai-channels/contracts';
+import { CHANNEL_MODEL, channelReasoningForModel, parseChannelSpec } from '@/lib/ai-channels/contracts';
 import { supabase } from '../../../../lib/supabase';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -9,8 +9,9 @@ const headers={'Cache-Control':'private, no-store'};
 const UUID=/^[0-9a-f]{8}-[0-9a-f-]{27}$/i;
 function failure(error:unknown){
  const message=error instanceof Error?error.message:'';
- const code=message.match(/(?:CHANNEL_[A-Z0-9_]+|OPENAI_[A-Z0-9_]+)/)?.[0]??'CHANNEL_REQUEST_FAILED';
- return NextResponse.json({error:code},{status:code==='CHANNEL_CREATE_BALANCE_REQUIRED'?402:code==='CHANNEL_CREATE_BALANCE_UNAVAILABLE'?503:/ACCESS_DENIED|ADMIN_REQUIRED/.test(code)?403:/NOT_FOUND/.test(code)?404:/BUSY|CONFLICT|LIMIT/.test(code)?409:400,headers});
+ const code=message.match(/(?:CHANNEL_[A-Z0-9_]+|AI_BILLING_[A-Z0-9_]+|AI_PROVIDER_[A-Z0-9_]+|OPENAI_[A-Z0-9_]+)/)?.[0]??'CHANNEL_REQUEST_FAILED';
+ const status=/INSUFFICIENT_BALANCE|BALANCE_REQUIRED|WALLET_REQUIRED/.test(code)?402:/BALANCE_UNAVAILABLE|WALLET_UNAVAILABLE/.test(code)?503:/ACCESS_DENIED|ADMIN_REQUIRED/.test(code)?403:/NOT_FOUND/.test(code)?404:/BUSY|CONFLICT|LIMIT/.test(code)?409:400;
+ return NextResponse.json({error:code},{status,headers});
 }
 export async function GET(request:Request){try{
  const who=await channelIdentity(),url=new URL(request.url);
@@ -35,7 +36,7 @@ export async function POST(request:Request){try{
  if(body.action==='save'){
   if(!id)await requireChannelCreationBalance(who);
   const parsed=parseChannelSpec(body.spec);
-  const safeSpec=who.admin?parsed:{...parsed,model:CHANNEL_MODEL,reasoningEffort:parsed.searchDepth==='detailed'?'medium':'low',maxToolCalls:parsed.searchDepth==='detailed'?10:4,searchContextSize:parsed.searchDepth==='detailed'?'high':'medium',maxOutputTokens:parsed.searchDepth==='detailed'?12000:6500};
+  const safeSpec=who.admin?parsed:{...parsed,model:parsed.model??CHANNEL_MODEL,reasoningEffort:channelReasoningForModel(parsed.model??CHANNEL_MODEL),maxToolCalls:parsed.searchDepth==='detailed'?10:4,searchContextSize:parsed.searchDepth==='detailed'?'high':'medium',maxOutputTokens:parsed.searchDepth==='detailed'?12000:6500};
   return NextResponse.json(await channelCommand(who,'save',id,safeSpec),{headers});
  }
  if(!id)throw Error('CHANNEL_NOT_FOUND');

@@ -1,10 +1,18 @@
 import 'server-only';
-import OpenAI from 'openai';
 import { auth0 } from '../../../lib/auth0';
 import { resolveActiveActorContext } from '../../../lib/actor-context';
 import { supabase } from '../../../lib/supabase';
-import { CHANNEL_MODEL, canonicalSourceUrl, channelSpecWithDefaults, cleanSummary, validateChannelResults, type ChannelRow, type ChannelSpec, type ChannelItem, type OntologyOption } from './contracts';
+import { CHANNEL_MODEL, canonicalSourceUrl, channelBillingTierForModel, channelReasoningForModel, channelSpecWithDefaults, cleanSummary, validateChannelResults, type ChannelRow, type ChannelSpec, type ChannelItem, type OntologyOption } from './contracts';
 import { channelSearchRequest } from './search';
+import {
+ AI_BACKGROUND_WEB_SEARCH_USD_PER_CALL,
+ cancelBillableAiBackgroundProvider,
+ pollBillableAiBackgroundResponse,
+ startBillableAiBackgroundResponse,
+ type AiBackgroundPollResult,
+ type AiBackgroundReservationContext,
+ type AiBackgroundStartResult,
+} from '../ai-billing/backgroundGateway.server';
 export type ChannelIdentity={user:string;actor:string;admin:boolean};
 export async function channelIdentity():Promise<ChannelIdentity|null>{
  const session=await auth0.getSession();if(!session?.user?.sub)return null;
@@ -78,17 +86,30 @@ function collectSourceUrls(output:unknown):string[]{
  }
  walk(output);return urls;
 }
-type StoredRun={id:string;channel_id:string;kind:'test'|'scheduled';status:string;revision:number;spec_snapshot:ChannelSpec;items:ChannelItem[];usage:Record<string,unknown>;error_code:string|null;started_at:string;provider_response_id:string|null};
-function provider(){
- if(!process.env.OPENAI_API_KEY)throw Error('CHANNEL_API_KEY_MISSING');
- return new OpenAI({apiKey:process.env.OPENAI_API_KEY,timeout:25000,maxRetries:0});
-}
+type StoredRun={id:string;channel_id:string;kind:'test'|'scheduled';status:string;revision:number;spec_snapshot:ChannelSpec;items:ChannelItem[];usage:Record<string,unknown>;error_code:string|null;started_at:string;provider_response_id:string|null;billing_user_id:string|null;ai_usage_event_id:string|null;billing_request_idempotency_key:string|null};
+
+type BillingEventState={status:string;openaiResponseId:string|null;errorCode:string|null};
+
 function errorCode(error:unknown){
- return error instanceof OpenAI.APIError?`OPENAI_${error.status??'NETWORK'}`:error instanceof Error&&/^CHANNEL_/.test(error.message)?error.message:'CHANNEL_COLLECTION_FAILED';
+ const message=error instanceof Error?error.message:String(error??'');
+ const explicit=message.match(/^(CHANNEL_[A-Z0-9_]+|AI_BILLING_[A-Z0-9_]+|AI_PROVIDER_[A-Z0-9_]+|OPENAI_[A-Z0-9_]+)/)?.[0];
+ if(explicit)return explicit;
+ if(error&&typeof error==='object'){
+  const status=Number((error as {status?:unknown}).status);
+  if(Number.isInteger(status)&&status>=100&&status<=599)return `OPENAI_${status}`;
+ }
+ return 'CHANNEL_COLLECTION_FAILED';
 }
 async function storedRun(id:string,runId:string):Promise<StoredRun>{
  const {data,error}=await supabase.from('ai_channel_runs_v1').select('*').eq('channel_id',id).eq('id',runId).maybeSingle();
  if(error||!data)throw Error('CHANNEL_RUN_NOT_FOUND');return data as StoredRun;
+}
+async function billingEventState(r:StoredRun):Promise<BillingEventState|null>{
+ if(!r.ai_usage_event_id)return null;
+ const {data,error}=await supabase.from('ai_usage_events').select('status,openai_response_id,error_code').eq('id',r.ai_usage_event_id).eq('app_user_id',r.billing_user_id??'').maybeSingle();
+ if(error)throw Error('CHANNEL_BILLING_STATE_UNAVAILABLE');
+ if(!data)return null;
+ return {status:String(data.status??''),openaiResponseId:typeof data.openai_response_id==='string'?data.openai_response_id:null,errorCode:typeof data.error_code==='string'?data.error_code:null};
 }
 async function runResult(who:ChannelIdentity,id:string,runId:string){
  let r=await storedRun(id,runId);
@@ -97,90 +118,147 @@ async function runResult(who:ChannelIdentity,id:string,runId:string){
  }
  return {runId:r.id,status:r.status,kind:r.kind,items:r.status==='running'?[]:r.items,usage:r.usage,error:r.error_code};
 }
-async function completeResponse(who:ChannelIdentity,id:string,r:StoredRun,response:OpenAI.Responses.Response){
- if(response.status==='queued'||response.status==='in_progress')return runResult(who,id,r.id);
- const searches=response.output.filter(x=>x.type==='web_search_call').length;
- const usage:Record<string,unknown>={...r.usage,responseId:response.id,model:response.model,tokens:response.usage,webSearchCalls:searches,providerStatus:response.status};
- let items:ChannelItem[]=[],failure:string|undefined;
+function billedUsage(r:StoredRun,poll:AiBackgroundPollResult):Record<string,unknown>{
+ return {...r.usage,responseId:poll.response.id,model:poll.response.model,tokens:poll.response.usage,webSearchCalls:poll.billing.webSearchCalls,providerStatus:poll.providerStatus,
+  walletDebited:Boolean((poll.billing.walletDebitEur??0)>0),billing:'user_ai_eur',billingUserId:r.billing_user_id,
+  usageEventId:poll.billing.usageEventId,actualCostEur:poll.billing.actualCostEur,tokenCostEur:poll.billing.tokenCostEur,
+  toolCostEur:poll.billing.toolCostEur,walletDebitEur:poll.billing.walletDebitEur,reservationReleasedEur:poll.billing.reservationReleasedEur,
+  billingStatus:poll.billing.usageStatus,billingPhase:poll.phase};
+}
+async function completeResponse(who:ChannelIdentity,id:string,r:StoredRun,poll:AiBackgroundPollResult,failureOverride?:string){
+ if(poll.phase==='pending')return runResult(who,id,r.id);
+ const response=poll.response;
+ const usage=billedUsage(r,poll);
+ let items:ChannelItem[]=[],failure:string|undefined=failureOverride;
  try{
-  if(response.status!=='completed'||!searches)throw Error('CHANNEL_SEARCH_INCOMPLETE');
-  // retrieve() output_text is SDK-dependent; reconstruct from output when necessary.
+  if(failure)throw Error(failure);
+  if(response.status!=='completed'||!poll.billing.webSearchCalls)throw Error('CHANNEL_SEARCH_INCOMPLETE');
   const text=response.output_text||response.output.flatMap(x=>x.type==='message'?x.content.filter(t=>t.type==='output_text').map(t=>t.text):[]).join('');
   const parsed=JSON.parse(text) as {items:unknown;coverageSummary?:unknown};
   const validated=validateChannelResults(parsed.items,channelSpecWithDefaults(r.spec_snapshot),collectSourceUrls(response.output));
   items=validated.items;usage.validation=validated.diagnostics;
   usage.coverageSummary=typeof parsed.coverageSummary==='string'?cleanSummary(parsed.coverageSummary).slice(0,1200):'';
- }catch(error){failure=errorCode(error);}
- // Idempotent DB completion: concurrent browser/scheduler polls cannot overwrite terminal runs.
+ }catch(error){failure=failure??errorCode(error);}
  await channelCommand(who,'finish',id,{runId:r.id,items,usage,...(failure?{error:failure}:{})});
  return runResult(who,id,r.id);
 }
-function providerRuntimeSpec(spec:ChannelSpec,admin:boolean):ChannelSpec{
+function providerRuntimeSpec(spec:ChannelSpec):ChannelSpec{
  const full=channelSpecWithDefaults(spec),detailed=full.searchDepth==='detailed';
- if(admin)return full;
- // Public provider-cost knobs are administrator-only. Non-admin users can still narrow topic/coverage/category,
- // but cannot silently select a more expensive model or larger provider budget through a handcrafted request.
- return {...full,model:CHANNEL_MODEL,reasoningEffort:detailed?'medium':'low',maxToolCalls:detailed?10:4,
-  searchContextSize:detailed?'high':'medium',maxOutputTokens:detailed?12000:6500};
+ return {...full,model:full.model??CHANNEL_MODEL,reasoningEffort:full.reasoningEffort??channelReasoningForModel(full.model??CHANNEL_MODEL),
+  maxToolCalls:Math.min(full.maxToolCalls??(detailed?10:4),20),searchContextSize:full.searchContextSize??(detailed?'high':'medium'),
+  maxOutputTokens:Math.min(full.maxOutputTokens??(detailed?12000:6500),20000)};
+}
+function estimateProviderInputTokens(request:unknown){
+ let serialized='';
+ try{serialized=JSON.stringify(request);}catch{}
+ return Math.max(256,Math.min(200000,Math.ceil(serialized.length/3)));
+}
+function requestIdempotencyKey(id:string,runId:string){return `ai-channel:${id}:${runId}`;}
+async function bindRunBilling(c:ChannelRow,r:StoredRun,billing:AiBackgroundReservationContext){
+ const {error}=await supabase.rpc('bind_ai_channel_run_billing_v1',{
+  p_channel_id:c.id,p_run_id:r.id,p_billing_user_id:c.owner_user_id,p_usage_event_id:billing.usageEventId,p_request_idempotency_key:billing.requestIdempotencyKey
+ });
+ if(error)throw Error('CHANNEL_BILLING_RUN_BIND_FAILED:'+error.message);
+}
+async function bindProviderBilling(c:ChannelRow,r:StoredRun,start:AiBackgroundStartResult,usage:Record<string,unknown>){
+ const {error}=await supabase.rpc('bind_ai_channel_provider_response_v1',{
+  p_channel_id:c.id,p_run_id:r.id,p_billing_user_id:c.owner_user_id,p_usage_event_id:start.billing.usageEventId,p_response_id:start.response.id,p_usage:usage
+ });
+ if(error)throw Error('CHANNEL_BILLING_PROVIDER_BIND_FAILED:'+error.message);
+}
+async function extendRunLock(c:ChannelRow){
+ try{await supabase.from('ai_channels_v1').update({lock_until:new Date(Date.now()+5*60000).toISOString()}).eq('id',c.id);}catch{}
+}
+async function startOrResumeBackground(c:ChannelRow,r:StoredRun){
+ const requestSpec=providerRuntimeSpec(r.spec_snapshot),objects=await ontologyOptions('',requestSpec.objectIds);
+ if(objects.length!==requestSpec.objectIds.length)throw Error('CHANNEL_OBJECT_NOT_PUBLIC_ONTOLOGY');
+ const model=requestSpec.model??CHANNEL_MODEL,tier=channelBillingTierForModel(model);
+ if(!tier)throw Error('CHANNEL_MODEL_INVALID');
+ const request=channelSearchRequest(requestSpec,objects,new Date(r.started_at));
+ const idempotencyKey=requestIdempotencyKey(c.id,r.id);
+ const start=await startBillableAiBackgroundResponse({
+  billingUserId:c.owner_user_id,requestIdempotencyKey:idempotencyKey,
+  routePath:r.kind==='scheduled'?'/api/maintenance/ai-channels':'/api/ai-channels',operationKind:'ai_channel',
+  modelName:model,tierCode:tier,estimatedInputTokens:estimateProviderInputTokens(request),
+  estimatedOutputTokens:requestSpec.maxOutputTokens??6500,
+  estimatedAdditionalProviderCostUsd:(requestSpec.maxToolCalls??4)*AI_BACKGROUND_WEB_SEARCH_USD_PER_CALL,
+  preflightSafetyMultiplier:1.25,providerRequest:request,requestTimeoutMs:25000,maxRetries:0,
+  requestMetadata:{channelId:c.id,channelRunId:r.id,channelRunKind:r.kind,channelRevision:r.revision,channelOwnerUserId:c.owner_user_id},
+  onReserved:async billing=>bindRunBilling(c,r,billing),
+ });
+ const usage:Record<string,unknown>={...r.usage,model,searchDepth:requestSpec.searchDepth??'quick',coverageMode:requestSpec.coverageMode??'ranked',
+  walletDebited:false,billing:'user_ai_eur',billingUserId:c.owner_user_id,usageEventId:start.billing.usageEventId,walletId:start.billing.walletId,
+  reservationEur:start.billing.reservationEur,estimatedMaxCostEur:start.billing.estimatedMaxCostEur,providerAttempted:true,background:true,
+  maxToolCalls:requestSpec.maxToolCalls,searchContextSize:requestSpec.searchContextSize,responseId:start.response.id};
+ await bindProviderBilling(c,r,start,usage);
+ return {start,requestSpec};
+}
+async function finishStartFailure(who:ChannelIdentity,c:ChannelRow,r:StoredRun,error:unknown){
+ const latest=await storedRun(c.id,r.id);
+ const billing=await billingEventState(latest).catch(()=>null);
+ if(billing&&billing.status!=='openai_failed'){
+  await extendRunLock(c);
+  return runResult(who,c.id,r.id);
+ }
+ const code=billing?.errorCode??errorCode(error);
+ await channelCommand(who,'finish',c.id,{runId:r.id,error:code,usage:{...latest.usage,billing:'user_ai_eur',billingUserId:c.owner_user_id}}).catch(()=>{});
+ throw error;
+}
+async function pollBilledRun(who:ChannelIdentity,c:ChannelRow,r:StoredRun,failureOverride?:string){
+ let current=r;
+ if(!current.ai_usage_event_id||!current.provider_response_id){
+  const state=await billingEventState(current).catch(()=>null);
+  if(state?.status==='openai_failed'&&!state.openaiResponseId){
+   await channelCommand(who,'finish',c.id,{runId:current.id,error:state.errorCode??'CHANNEL_COLLECTION_FAILED',usage:current.usage}).catch(()=>{});
+   return runResult(who,c.id,current.id);
+  }
+  try{await startOrResumeBackground(c,current);}catch(error){return finishStartFailure(who,c,current,error);}
+  current=await storedRun(c.id,current.id);
+ }
+ if(!current.ai_usage_event_id||!current.billing_user_id)throw Error('CHANNEL_BILLING_LINK_MISSING');
+ const poll=await pollBillableAiBackgroundResponse({
+  billingUserId:current.billing_user_id,usageEventId:current.ai_usage_event_id,providerResponseId:current.provider_response_id,
+  include:['web_search_call.action.sources']
+ });
+ return completeResponse(who,c.id,current,poll,failureOverride);
 }
 export async function runChannel(who:ChannelIdentity,id:string,kind:'test'|'scheduled'){
  if(process.env.AI_ENABLED==='false')throw Error('CHANNEL_AI_DISABLED');
- const client=provider(),c=await managedChannel(who,id),requestSpec=providerRuntimeSpec(c.spec,who.admin);
+ const c=await managedChannel(who,id);
  const capability=await channelCommand(who,'capabilities',null).catch(()=>{throw Error('CHANNEL_SCHEMA_V2_REQUIRED');});
  if(capability?.version!==2)throw Error('CHANNEL_SCHEMA_V2_REQUIRED');
- const objects=await ontologyOptions('',c.spec.objectIds);
- if(objects.length!==c.spec.objectIds.length)throw Error('CHANNEL_OBJECT_NOT_PUBLIC_ONTOLOGY');
- const started=await channelCommand(who,'start',id,{kind,revision:c.revision});const runId=String(started.runId);
- let response:OpenAI.Responses.Response|undefined;
- const usage:Record<string,unknown>={model:requestSpec.model??CHANNEL_MODEL,searchDepth:requestSpec.searchDepth??'quick',coverageMode:requestSpec.coverageMode??'ranked',
-  walletDebited:false,billing:'platform_provider_account',providerAttempted:true,background:true,maxToolCalls:requestSpec.maxToolCalls,searchContextSize:requestSpec.searchContextSize};
- try{
-  response=await client.responses.create(channelSearchRequest(requestSpec,objects));
-  usage.responseId=response.id;
-  await channelCommand(who,'attach_provider',id,{runId,responseId:response.id,usage});
- }catch(error){
-  if(response)await client.responses.cancel(response.id).catch(()=>{});
-  await channelCommand(who,'finish',id,{runId,error:errorCode(error),usage}).catch(()=>{});
-  throw error;
- }
- // No long-lived server task. Provider ID is persisted before returning to the browser.
- return completeResponse(who,id,await storedRun(id,runId),response);
+ const started=await channelCommand(who,'start',id,{kind,revision:c.revision}),runId=String(started.runId);
+ const r=await storedRun(id,runId);
+ let start:AiBackgroundStartResult;
+ try{({start}=await startOrResumeBackground(c,r));}
+ catch(error){return finishStartFailure(who,c,r,error);}
+ if(start.response.status==='queued'||start.response.status==='in_progress')return runResult(who,id,runId);
+ return pollBilledRun(who,c,await storedRun(id,runId));
 }
 export async function pollChannel(who:ChannelIdentity,id:string,runId:string){
- await managedChannel(who,id);const r=await storedRun(id,runId);
+ const c=await managedChannel(who,id),r=await storedRun(id,runId);
  if(r.status!=='running')return runResult(who,id,runId);
- const client=provider();
  if(Date.now()-new Date(r.started_at).getTime()>30*60000){
-  if(r.provider_response_id)await client.responses.cancel(r.provider_response_id).catch(()=>{});
-  await channelCommand(who,'finish',id,{runId,error:'CHANNEL_RUN_EXPIRED',usage:r.usage});
-  return runResult(who,id,runId);
+  try{
+   let current=r;
+   if(!current.provider_response_id){
+    await startOrResumeBackground(c,current);current=await storedRun(id,runId);
+   }
+   if(!current.ai_usage_event_id||!current.billing_user_id)throw Error('CHANNEL_BILLING_LINK_MISSING');
+   await cancelBillableAiBackgroundProvider({billingUserId:current.billing_user_id,usageEventId:current.ai_usage_event_id,providerResponseId:current.provider_response_id});
+   return pollBilledRun(who,c,current,'CHANNEL_RUN_EXPIRED');
+  }catch(error){await extendRunLock(c);throw error;}
  }
- if(!r.provider_response_id){
-  // Another request may still be starting the background response.
-  if(Date.now()-new Date(r.started_at).getTime()>120000){
-   await channelCommand(who,'finish',id,{runId,error:'CHANNEL_START_INTERRUPTED',usage:r.usage});
-  }
-  return runResult(who,id,runId);
- }
- let response:OpenAI.Responses.Response;
- try{response=await client.responses.retrieve(r.provider_response_id,{include:['web_search_call.action.sources']});}
- catch(error){
-  // A temporary provider/network failure must not lose a paid in-progress response.
-  if(error instanceof OpenAI.APIError&&error.status===404){
-   await channelCommand(who,'finish',id,{runId,error:'CHANNEL_PROVIDER_RESULT_EXPIRED',usage:r.usage});return runResult(who,id,runId);
-  }
-  throw error;
- }
- return completeResponse(who,id,r,response);
+ try{return await pollBilledRun(who,c,r);}
+ catch(error){await extendRunLock(c);throw error;}
 }
 export async function cancelChannel(who:ChannelIdentity,id:string,runId:string){
- await managedChannel(who,id);const r=await storedRun(id,runId);
+ const c=await managedChannel(who,id),r=await storedRun(id,runId);
  if(r.status!=='running')return runResult(who,id,runId);
- // Do not cancel a create request before its provider ID has been durably bound.
- if(!r.provider_response_id)throw Error('CHANNEL_START_IN_PROGRESS');
- await provider().responses.cancel(r.provider_response_id);
- await channelCommand(who,'finish',id,{runId,error:'CHANNEL_CANCELLED',usage:r.usage});
- return runResult(who,id,runId);
+ if(!r.ai_usage_event_id||!r.billing_user_id||!r.provider_response_id)throw Error('CHANNEL_START_IN_PROGRESS');
+ await cancelBillableAiBackgroundProvider({billingUserId:r.billing_user_id,usageEventId:r.ai_usage_event_id,providerResponseId:r.provider_response_id});
+ try{return await pollBilledRun(who,c,r,'CHANNEL_CANCELLED');}
+ catch(error){await extendRunLock(c);throw error;}
 }
 export async function setChannelItemVisibility(who:ChannelIdentity,id:string,messageObjectId:string,hidden:boolean){
  await managedChannel(who,id);

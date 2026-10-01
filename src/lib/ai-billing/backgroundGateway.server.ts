@@ -26,6 +26,9 @@ import {
 export const AI_BILLING_BACKGROUND_GATEWAY_B3_0_CONTRACT =
   "ARCTOR_AI_BILLING_BACKGROUND_GATEWAY_B3_0_V1" as const;
 
+export const AI_BACKGROUND_WEB_SEARCH_USD_PER_CALL =
+  OPENAI_WEB_SEARCH_USD_PER_CALL;
+
 export type BillableAiBackgroundInput = {
   billingUserId: string;
   requestIdempotencyKey: string;
@@ -95,6 +98,11 @@ type UsageEventState = {
   openaiResponseId: string | null;
   requestMetadata: Record<string, unknown>;
   responseMetadata: Record<string, unknown>;
+  actualCostEur: number | null;
+  tokenCostEur: number | null;
+  toolCostEur: number | null;
+  webSearchCalls: number;
+  walletDebitEur: number | null;
 };
 
 function recordValue(value: unknown): Record<string, unknown> {
@@ -294,7 +302,7 @@ async function readUsageEvent(
   const { data, error } = await supabase
     .from("ai_usage_events")
     .select(
-      "id,app_user_id,wallet_id,status,reservation_eur,model_name,selected_tier_code,request_idempotency_key,request_fingerprint,openai_response_id,request_metadata,response_metadata",
+      "id,app_user_id,wallet_id,status,reservation_eur,model_name,selected_tier_code,request_idempotency_key,request_fingerprint,openai_response_id,request_metadata,response_metadata,actual_cost_eur,provider_token_cost_eur,provider_tool_calls,provider_tool_cost_eur,wallet_debit_eur",
     )
     .eq("id", usageEventId)
     .eq("app_user_id", billingUserId)
@@ -331,6 +339,11 @@ async function readUsageEvent(
         : null,
     requestMetadata: recordValue(data.request_metadata),
     responseMetadata: recordValue(data.response_metadata),
+    actualCostEur: finiteNumber(data.actual_cost_eur),
+    tokenCostEur: finiteNumber(data.provider_token_cost_eur),
+    toolCostEur: finiteNumber(data.provider_tool_cost_eur),
+    webSearchCalls: Math.max(0,Math.trunc(finiteNumber(data.provider_tool_calls)??0)),
+    walletDebitEur: finiteNumber(data.wallet_debit_eur),
   };
 }
 
@@ -771,6 +784,56 @@ export async function pollBillableAiBackgroundResponse(input: {
     include: input.include,
   });
   const providerStatus = String(response.status ?? "");
+
+  // Retry/poll idempotency: a channel may be polled again after provider work
+  // was billed but before its own run row was finalized. Never move a settled
+  // usage event back to openai_completed, otherwise a later retry could debit
+  // the same provider response twice.
+  if (event.status === "wallet_debited") {
+    return {
+      response,
+      providerStatus,
+      phase: providerStatus === "completed" ? "settled" : "settled_provider_error",
+      billing: {
+        usageEventId: event.id,
+        walletId: event.walletId,
+        actualCostEur: event.actualCostEur,
+        tokenCostEur: event.tokenCostEur,
+        toolCostEur: event.toolCostEur,
+        webSearchCalls: event.webSearchCalls,
+        walletDebitEur: event.walletDebitEur,
+        usageStatus: event.status,
+        reservationReleasedEur: null,
+        debitLedgerId: null,
+        releaseLedgerId: null,
+      },
+    };
+  }
+
+  if (event.status === "openai_failed" && event.reservationEur <= 0) {
+    return {
+      response,
+      providerStatus,
+      phase: "released",
+      billing: {
+        usageEventId: event.id,
+        walletId: event.walletId,
+        actualCostEur: event.actualCostEur ?? 0,
+        tokenCostEur: event.tokenCostEur ?? 0,
+        toolCostEur: event.toolCostEur ?? 0,
+        webSearchCalls: event.webSearchCalls,
+        walletDebitEur: 0,
+        usageStatus: event.status,
+        reservationReleasedEur: null,
+        debitLedgerId: null,
+        releaseLedgerId: null,
+      },
+    };
+  }
+
+  if (event.status === "debit_failed") {
+    throw new Error("AI_BILLING_BACKGROUND_PREVIOUS_DEBIT_FAILED");
+  }
 
   if (providerStatus === "queued" || providerStatus === "in_progress") {
     return {

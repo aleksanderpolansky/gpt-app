@@ -1,6 +1,12 @@
+import {
+  ARCTOR_AI_MODEL_CATALOG,
+  ARCTOR_AI_MODEL_ORDER,
+  type ArctorAiBillingTierCode,
+} from "../../../lib/ai/platformModelCatalog";
+
 export type ChannelSearchDepth='quick'|'detailed';
 export type ChannelFreshness='recent'|'current';
-export type ChannelReasoningEffort='low'|'medium'|'high';
+export type ChannelReasoningEffort='low'|'medium'|'high'|'max';
 export type ChannelSearchContextSize='low'|'medium'|'high';
 export type ChannelCoverageMode='ranked'|'diverse'|'exhaustive';
 export type ChannelCategoryMode='open'|'strict';
@@ -24,15 +30,24 @@ export type ChannelRow = {id:string; name:string; scope:'public'|'private'; stat
  owner_user_id:string; creator_actor_id:string; next_run_at:string; last_run_at:string|null; last_error:string|null; enabled?:boolean; canManage?:boolean; runningRunId?:string|null};
 export type OntologyOption = {id:string;title:string};
 
-export const CHANNEL_MODEL='gpt-5.4-mini';
-export const CHANNEL_MODEL_OPTIONS=[
- {id:'gpt-5.4-nano',label:'GPT-5.4 Nano (legacy / lowest cost)'},
- {id:'gpt-5.4-mini',label:'GPT-5.4 Mini (legacy default)'},
- {id:'gpt-5.6-luna',label:'GPT-5.6 Luna'},
- {id:'gpt-5.6-terra',label:'GPT-5.6 Terra'},
- {id:'gpt-5.6-sol',label:'GPT-5.6 Sol'},
-] as const;
+export const CHANNEL_MODEL=ARCTOR_AI_MODEL_CATALOG.standard.modelName;
+export const CHANNEL_MODEL_OPTIONS=ARCTOR_AI_MODEL_ORDER
+ .map(tier=>ARCTOR_AI_MODEL_CATALOG[tier])
+ .filter(model=>model.surfaces.aiChannels)
+ .map(model=>({id:model.modelName,label:model.displayName,caption:model.caption,tierCode:model.tierCode}));
 export const CHANNEL_ALLOWED_MODELS=new Set<string>(CHANNEL_MODEL_OPTIONS.map(x=>x.id));
+
+export function channelBillingTierForModel(modelName:string):ArctorAiBillingTierCode|null{
+ for(const tier of ARCTOR_AI_MODEL_ORDER){
+  if(ARCTOR_AI_MODEL_CATALOG[tier].modelName===modelName)return tier;
+ }
+ return null;
+}
+export function channelReasoningForModel(modelName:string):ChannelReasoningEffort{
+ const tier=channelBillingTierForModel(modelName);
+ return tier?ARCTOR_AI_MODEL_CATALOG[tier].reasoningEffort:'medium';
+}
+
 export const CHANNEL_MODEL_MAX_LENGTH=80;
 
 function finiteInteger(value:unknown,fallback:number,min:number,max:number,code:string){
@@ -52,10 +67,10 @@ export function channelSpecWithDefaults(spec:ChannelSpec):ChannelSpec{
  const searchDepth:ChannelSearchDepth=spec.searchDepth==='detailed'?'detailed':'quick';
  const detailed=searchDepth==='detailed';
  const freshness:ChannelFreshness=spec.freshness==='current'?'current':'recent';
- const reasoningEffort:ChannelReasoningEffort=['low','medium','high'].includes(String(spec.reasoningEffort))?spec.reasoningEffort as ChannelReasoningEffort:(detailed?'medium':'low');
+ const model=typeof spec.model==='string'&&CHANNEL_ALLOWED_MODELS.has(spec.model)?spec.model:CHANNEL_MODEL;
+ const reasoningEffort:ChannelReasoningEffort=['low','medium','high','max'].includes(String(spec.reasoningEffort))?spec.reasoningEffort as ChannelReasoningEffort:channelReasoningForModel(model);
  const searchContextSize:ChannelSearchContextSize=['low','medium','high'].includes(String(spec.searchContextSize))?spec.searchContextSize as ChannelSearchContextSize:(detailed?'high':'medium');
  const coverageMode:ChannelCoverageMode=['ranked','diverse','exhaustive'].includes(String(spec.coverageMode))?spec.coverageMode as ChannelCoverageMode:'ranked';
- const model=typeof spec.model==='string'&&CHANNEL_ALLOWED_MODELS.has(spec.model)?spec.model:CHANNEL_MODEL;
  const safeInt=(value:unknown,fallback:number,min:number,max:number)=>{const n=Number(value);return Number.isInteger(n)&&n>=min&&n<=max?n:fallback;};
  const maxItems=safeInt(spec.maxItems,15,1,30);
  const maxToolCalls=safeInt(spec.maxToolCalls,detailed?10:4,1,20);
@@ -97,8 +112,8 @@ export function parseChannelSpec(value:unknown):ChannelSpec {
  const model=(text('model',CHANNEL_MODEL_MAX_LENGTH)||CHANNEL_MODEL);
  if(!CHANNEL_ALLOWED_MODELS.has(model))throw Error('CHANNEL_MODEL_INVALID');
  const detailed=searchDepth==='detailed';
- const reasoningEffort=(v.reasoningEffort??(detailed?'medium':'low')) as ChannelReasoningEffort;
- if(!['low','medium','high'].includes(String(reasoningEffort)))throw Error('CHANNEL_REASONING_INVALID');
+ const reasoningEffort=(v.reasoningEffort??channelReasoningForModel(model)) as ChannelReasoningEffort;
+ if(!['low','medium','high','max'].includes(String(reasoningEffort)))throw Error('CHANNEL_REASONING_INVALID');
  const maxToolCalls=finiteInteger(v.maxToolCalls,detailed?10:4,1,20,'CHANNEL_TOOL_LIMIT_INVALID');
  const searchContextSize=(v.searchContextSize??(detailed?'high':'medium')) as ChannelSearchContextSize;
  if(!['low','medium','high'].includes(String(searchContextSize)))throw Error('CHANNEL_SEARCH_CONTEXT_INVALID');

@@ -5,11 +5,6 @@
   ],
   "legacyDirectProviderExceptions": [
     {
-      "path": "src/lib/ai-channels/server.ts",
-      "reason": "Existing OpenAI Background Responses lifecycle. Move to Background Billing Gateway before exception removal.",
-      "nextStage": "B3.0_B3.1"
-    },
-    {
       "path": "lib/organizations/organizationSemanticIntake.ts",
       "reason": "Existing direct provider semantic intake path.",
       "nextStage": "B3.2"

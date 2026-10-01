@@ -63,7 +63,7 @@ export const ARCTOR_AI_MODEL_CATALOG: Record<
     surfaces: {
       navigator: true,
       dashboardProjection: true,
-      aiChannels: false,
+      aiChannels: true,
     },
   },
   standard: {
@@ -84,7 +84,7 @@ export const ARCTOR_AI_MODEL_CATALOG: Record<
     surfaces: {
       navigator: true,
       dashboardProjection: true,
-      aiChannels: false,
+      aiChannels: true,
     },
   },
   pro: {
@@ -105,7 +105,7 @@ export const ARCTOR_AI_MODEL_CATALOG: Record<
     surfaces: {
       navigator: true,
       dashboardProjection: true,
-      aiChannels: false,
+      aiChannels: true,
     },
   },
   max: {
@@ -126,9 +126,7 @@ export const ARCTOR_AI_MODEL_CATALOG: Record<
     surfaces: {
       navigator: true,
       dashboardProjection: true,
-      // AI channels still bypass the unified billing gateway today.
-      // Enable this only in the channel-gateway migration patch.
-      aiChannels: false,
+      aiChannels: true,
     },
   },
 };

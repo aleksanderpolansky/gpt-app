@@ -19,7 +19,7 @@ export function channelSearchRequest(inputSpec:ChannelSpec,objects:OntologyOptio
   ?`STRICT CATEGORY FILTER. Return only findings whose concrete subject belongs to one of these allowed category codes: ${(spec.allowedCategories??[]).join(', ')}. If the item does not clearly belong, omit it. For food_grocery and non_alcoholic_beverage, exclude electronics, smartwatches, home appliances, clothing, cosmetics, toys, pet products, household accessories and other non-food merchandise, even if sold by a supermarket chain.`
   :'Category filtering is open. Use category=null unless a supplied/obvious channel category is useful.';
  return {
-  model,background:true,store:true,reasoning:{effort:spec.reasoningEffort??(detailed?'medium':'low')},
+  model,background:true,store:true,reasoning:{effort:(spec.reasoningEffort??(detailed?'medium':'low')) as NonNullable<OpenAI.Responses.ResponseCreateParamsNonStreaming['reasoning']>['effort']},
   max_output_tokens:spec.maxOutputTokens??(detailed?12000:6500),max_tool_calls:spec.maxToolCalls??(detailed?10:4),
   tools:[{type:'web_search',search_context_size:spec.searchContextSize??(detailed?'high':'medium'),...(spec.domains.length?{filters:{allowed_domains:spec.domains}}:{})}],
   tool_choice:'required',include:['web_search_call.action.sources'],
