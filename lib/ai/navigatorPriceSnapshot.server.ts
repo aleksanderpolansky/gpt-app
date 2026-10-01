@@ -90,6 +90,18 @@ export async function ensureNavigatorPriceSnapshotV1(input: {
     }
   }
 
+  const currentUsdToEurRate = current
+    ? finiteNumber(current.usd_to_eur_rate)
+    : null;
+  const currentEurMarkupMultiplier = current
+    ? finiteNumber(current.eur_markup_multiplier)
+    : null;
+  const currentHasBillingFx =
+    currentUsdToEurRate !== null &&
+    currentUsdToEurRate > 0 &&
+    currentEurMarkupMultiplier !== null &&
+    currentEurMarkupMultiplier > 0;
+
   const nowMs = Date.now();
   const currentMs = asDateMs(current?.valid_from);
   const ageMs = currentMs === null ? Number.POSITIVE_INFINITY : Math.max(0, nowMs - currentMs);
@@ -101,6 +113,7 @@ export async function ensureNavigatorPriceSnapshotV1(input: {
 
   if (
     current &&
+    currentHasBillingFx &&
     ageMs <= maxAgeMs &&
     (!input.forceRefresh || ageMs <= forceMinAgeMs)
   ) {
@@ -112,10 +125,8 @@ export async function ensureNavigatorPriceSnapshotV1(input: {
     };
   }
 
-  let usdToEurRate = current ? finiteNumber(current.usd_to_eur_rate) : null;
-  let eurMarkupMultiplier = current
-    ? finiteNumber(current.eur_markup_multiplier)
-    : null;
+  let usdToEurRate = currentUsdToEurRate;
+  let eurMarkupMultiplier = currentEurMarkupMultiplier;
 
   if (usdToEurRate === null || eurMarkupMultiplier === null) {
     const { data: fxRows, error: fxError } = await supabase
@@ -134,6 +145,18 @@ export async function ensureNavigatorPriceSnapshotV1(input: {
     usdToEurRate = usdToEurRate ?? finiteNumber(fx?.usd_to_eur_rate);
     eurMarkupMultiplier =
       eurMarkupMultiplier ?? finiteNumber(fx?.eur_markup_multiplier);
+  }
+
+  if (usdToEurRate === null || usdToEurRate <= 0) {
+    throw new Error(
+      `NAVIGATOR_PRICE_POSITIVE_USD_TO_EUR_RATE_REQUIRED:${tierCode}:${definition.modelName}`,
+    );
+  }
+
+  if (eurMarkupMultiplier === null || eurMarkupMultiplier <= 0) {
+    throw new Error(
+      `NAVIGATOR_PRICE_POSITIVE_EUR_MARKUP_REQUIRED:${tierCode}:${definition.modelName}`,
+    );
   }
 
   const now = new Date(nowMs).toISOString();
@@ -204,7 +227,7 @@ export async function syncNavigatorPriceSnapshotsV1(input?: {
   maxAgeHours?: number;
 }) {
   const results: Array<Record<string, unknown>> = [];
-  for (const tierCode of ["nano", "standard", "pro"] as const) {
+  for (const tierCode of ["nano", "standard", "pro", "max"] as const) {
     const definition = getNavigatorModelDefinition(tierCode);
     try {
       const result = await ensureNavigatorPriceSnapshotV1({

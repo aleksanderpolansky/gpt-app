@@ -168,6 +168,10 @@ export async function readActiveModelPriceSnapshot(input: {
   const cachedPrice = finiteNumber(data.cached_input_cost_per_1m_tokens);
   const usdToEurRate = finiteNumber(data.usd_to_eur_rate);
   const markup = finiteNumber(data.eur_markup_multiplier) ?? 1;
+  const pricingCurrency =
+    typeof data.pricing_currency === "string"
+      ? data.pricing_currency.toUpperCase()
+      : "USD";
 
   if (
     inputPrice === null ||
@@ -179,13 +183,19 @@ export async function readActiveModelPriceSnapshot(input: {
     throw new Error("AI_BILLING_PRICE_SNAPSHOT_INVALID");
   }
 
+  if (
+    pricingCurrency === "USD" &&
+    (usdToEurRate === null || usdToEurRate <= 0)
+  ) {
+    throw new Error(
+      `AI_BILLING_ACTIVE_PRICE_SNAPSHOT_FX_MISSING:${String(data.id)}:${String(data.model_name)}`,
+    );
+  }
+
   return {
     id: String(data.id),
     modelName: String(data.model_name),
-    pricingCurrency:
-      typeof data.pricing_currency === "string"
-        ? data.pricing_currency
-        : "USD",
+    pricingCurrency,
     inputCostPer1mTokens: inputPrice,
     cachedInputCostPer1mTokens:
       cachedPrice !== null && cachedPrice >= 0 ? cachedPrice : null,
