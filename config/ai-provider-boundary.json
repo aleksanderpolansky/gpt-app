@@ -35,11 +35,6 @@
       "nextStage": "B3.4_EXISTING_WRAPPER_MIGRATION"
     },
     {
-      "path": "src/lib/help/helpTranslation.server.ts",
-      "reason": "Existing help translation wrapper caller.",
-      "nextStage": "B3.4_EXISTING_WRAPPER_MIGRATION"
-    },
-    {
       "path": "src/lib/localization/contentLocalization.server.ts",
       "reason": "Existing content localization wrapper caller.",
       "nextStage": "B3.4_EXISTING_WRAPPER_MIGRATION"

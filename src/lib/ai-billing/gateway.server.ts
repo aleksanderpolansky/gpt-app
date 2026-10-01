@@ -26,6 +26,7 @@ export type AiBillingGatewayOperationKind =
   | "semantic_intake"
   | "ai_channel"
   | "object_action_suggestion"
+  | "content_localization"
   | "admin_test"
   | "other";
 

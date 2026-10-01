@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { NextResponse } from "next/server";
 
 import { isLocaleCode } from "@/i18n";
@@ -117,6 +119,11 @@ export async function PUT(request: Request) {
     const translated = await translateHelpBlockAllLocales({
       sourceLocale,
       sourceText,
+      billingUserId: guard.appUser.id,
+      requestIdempotencyKey:
+        `help-translation:${helpKey}:${blockKind}:${randomUUID()}`,
+      helpKey,
+      blockKind,
     });
 
     const content = await writeHelpContentRevision({
