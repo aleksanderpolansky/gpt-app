@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth0 } from "../../../../../../lib/auth0";
@@ -303,6 +305,9 @@ export async function POST(request: NextRequest) {
     city,
     district,
     classifiedByUserId: appUser.id,
+    billingUserId: appUser.id,
+    billingRoutePath: "/api/ai/semantic-intake/organization",
+    requestIdempotencyKey: `organization-semantic:${objectId || "preview"}:${randomUUID()}`,
     persist,
     replaceExistingAiPrimary,
   });

@@ -5,11 +5,6 @@
   ],
   "legacyDirectProviderExceptions": [
     {
-      "path": "lib/organizations/organizationSemanticIntake.ts",
-      "reason": "Existing direct provider semantic intake path.",
-      "nextStage": "B3.2"
-    },
-    {
       "path": "lib/objectAction/suggestionAnalysis.ts",
       "reason": "Existing direct provider object-action suggestion path.",
       "nextStage": "B3.3"

@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { NextResponse } from "next/server";
 import {
   getDefaultCurrencyByCountryCode,
@@ -1157,6 +1159,9 @@ export async function POST(request: Request) {
       city: organizationLocation?.city ?? locationInput.city,
       district: organizationLocation?.district ?? locationInput.district,
       classifiedByUserId: actorContext.appUserId,
+      billingUserId: actorContext.appUserId,
+      billingRoutePath: "/api/organizations",
+      requestIdempotencyKey: `organization-create-semantic:${organization.id}:${randomUUID()}`,
       persist: true,
       replaceExistingAiPrimary: true,
     });

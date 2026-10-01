@@ -1,4 +1,4 @@
-﻿import OpenAI from "openai";
+﻿import { runBillableAiJson } from "../../src/lib/ai-billing/gateway.server";
 
 import { getNavigatorModelDefinition } from "../ai/navigatorModelCatalog";
 import { supabase } from "../supabase";
@@ -22,6 +22,9 @@ export type OrganizationSemanticIntakeInput = {
   city?: string | null;
   district?: string | null;
   classifiedByUserId?: string | null;
+  billingUserId: string;
+  billingRoutePath: string;
+  requestIdempotencyKey: string;
   persist?: boolean;
   replaceExistingAiPrimary?: boolean;
 };
@@ -691,55 +694,96 @@ async function persistSemanticCategory(input: {
   };
 }
 
+const ORGANIZATION_SEMANTIC_MAX_OUTPUT_TOKENS = 1200;
+const ORGANIZATION_SEMANTIC_PREFLIGHT_SAFETY_MULTIPLIER = 1.25;
+
+function estimateOrganizationSemanticInputTokens(
+  systemPrompt: string,
+  semanticInput: Record<string, unknown>,
+) {
+  const serializedInput = JSON.stringify(semanticInput);
+  return Math.max(
+    1,
+    Math.ceil((systemPrompt.length + serializedInput.length) / 4),
+  );
+}
+
 async function runOpenAiSemanticExtraction(input: {
   semanticInput: Record<string, unknown>;
   model: string;
   fallbackName: string;
+  billingUserId: string;
+  billingRoutePath: string;
+  requestIdempotencyKey: string;
+  objectId: string | null;
+  source: string;
 }) {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY_MISSING");
-  }
+  const systemPrompt = [
+    "You are a semantic intake extractor for a B2B platform.",
+    "Analyze the provided organization data.",
+    "Return ONLY valid JSON. Do not return markdown.",
+    "Do not create final truth. Return candidates only.",
+    "Find important business categories, domains, services, industries, customer groups, and operational themes.",
+    "Avoid private personal data. Prefer public-safe business categories when possible.",
+    "Use this JSON shape:",
+    "{",
+    '  "language": "en|pl|de|es|ru|mixed|unknown",',
+    '  "normalizedTitle": "short normalized organization title",',
+    '  "shortSummary": "one sentence summary",',
+    '  "categoryCandidates": [',
+    '    { "label": "AI automation consulting", "slug": "ai-automation-consulting", "confidence": 0.95, "reason": "why this category is relevant", "sourceText": "text fragment", "visibilitySuggestion": "public_safe|internal_only|needs_review" }',
+    "  ],",
+    '  "unknownTermCandidates": [',
+    '    { "term": "term needing lookup", "reason": "why lookup is useful", "suggestedLookup": "optional lookup phrase" }',
+    "  ],",
+    '  "riskFlags": ["optional safety or ambiguity flags"]',
+    "}",
+  ].join("\n");
 
-  const client = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+  const aiCall = await runBillableAiJson<ParsedSemanticOutput>({
+    billingUserId: input.billingUserId,
+    requestIdempotencyKey: input.requestIdempotencyKey,
+    routePath: input.billingRoutePath,
+    operationKind: "semantic_intake",
+    modelName: input.model,
+    tierCode: "nano",
+    estimatedInputTokens: estimateOrganizationSemanticInputTokens(
+      systemPrompt,
+      input.semanticInput,
+    ),
+    estimatedOutputTokens: ORGANIZATION_SEMANTIC_MAX_OUTPUT_TOKENS,
+    preflightSafetyMultiplier:
+      ORGANIZATION_SEMANTIC_PREFLIGHT_SAFETY_MULTIPLIER,
+    providerRequest: {
+      system: systemPrompt,
+      user: input.semanticInput,
+      reasoningEffort: getNavigatorModelDefinition("nano").reasoningEffort,
+      maxOutputTokens: ORGANIZATION_SEMANTIC_MAX_OUTPUT_TOKENS,
+      outputTokenCeiling: ORGANIZATION_SEMANTIC_MAX_OUTPUT_TOKENS,
+    },
+    reason: "Organization semantic intake via unified AI Billing Gateway",
+    requestMetadata: {
+      runtimeCode: "organization_semantic_intake",
+      objectType: "organization",
+      objectId: input.objectId,
+      source: input.source,
+    },
+    settlementMetadata: {
+      runtimeCode: "organization_semantic_intake",
+      objectType: "organization",
+      objectId: input.objectId,
+      source: input.source,
+    },
   });
 
-  const response = await client.responses.create({
-    model: input.model,
-    instructions: [
-      "You are a semantic intake extractor for a B2B platform.",
-      "Analyze the provided organization data.",
-      "Return ONLY valid JSON. Do not return markdown.",
-      "Do not create final truth. Return candidates only.",
-      "Find important business categories, domains, services, industries, customer groups, and operational themes.",
-      "Avoid private personal data. Prefer public-safe business categories when possible.",
-      "Use this JSON shape:",
-      "{",
-      '  "language": "en|pl|de|es|ru|mixed|unknown",',
-      '  "normalizedTitle": "short normalized organization title",',
-      '  "shortSummary": "one sentence summary",',
-      '  "categoryCandidates": [',
-      '    { "label": "AI automation consulting", "slug": "ai-automation-consulting", "confidence": 0.95, "reason": "why this category is relevant", "sourceText": "text fragment", "visibilitySuggestion": "public_safe|internal_only|needs_review" }',
-      "  ],",
-      '  "unknownTermCandidates": [',
-      '    { "term": "term needing lookup", "reason": "why lookup is useful", "suggestedLookup": "optional lookup phrase" }',
-      "  ],",
-      '  "riskFlags": ["optional safety or ambiguity flags"]',
-      "}",
-    ].join("\n"),
-    input: JSON.stringify(input.semanticInput, null, 2),
-    max_output_tokens: 1200,
-  });
-
-  const outputText = (response as { output_text?: string }).output_text ?? "";
   const analysis = normalizeParsedOutput(
-    tryParseJsonObject(outputText),
+    tryParseJsonObject(aiCall.outputText),
     input.fallbackName,
   );
 
   return {
-    responseId: response.id ?? null,
-    usage: response.usage ?? null,
+    responseId: aiCall.usage.responseId,
+    usage: aiCall.usage.rawUsage ?? null,
     analysis,
   };
 }
@@ -760,6 +804,9 @@ export async function runOrganizationSemanticIntake(
   const persist = input.persist !== false;
   const replaceExistingAiPrimary = input.replaceExistingAiPrimary ?? true;
   const classifiedByUserId = asText(input.classifiedByUserId ?? "") || null;
+  const billingUserId = asText(input.billingUserId ?? "");
+  const billingRoutePath = asText(input.billingRoutePath ?? "");
+  const requestIdempotencyKey = asText(input.requestIdempotencyKey ?? "");
 
   if (objectType !== "organization") {
     return {
@@ -842,6 +889,11 @@ export async function runOrganizationSemanticIntake(
       semanticInput,
       model,
       fallbackName: name || "organization",
+      billingUserId,
+      billingRoutePath,
+      requestIdempotencyKey,
+      objectId,
+      source,
     });
 
     openaiStatus = "succeeded";
