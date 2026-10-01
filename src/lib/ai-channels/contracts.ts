@@ -10,6 +10,7 @@ export type ChannelReasoningEffort='low'|'medium'|'high'|'max';
 export type ChannelSearchContextSize='low'|'medium'|'high';
 export type ChannelCoverageMode='ranked'|'diverse'|'exhaustive';
 export type ChannelCategoryMode='open'|'strict';
+export type ChannelBillingPolicy='creator'|'platform_owner';
 
 export type ChannelSpec = {
  name:string; topic:string; geography:string; exclusions:string; domains:string[];
@@ -27,7 +28,8 @@ export type ChannelItem = {
  providerKey?:string; category?:string|null;
 };
 export type ChannelRow = {id:string; name:string; scope:'public'|'private'; status:string; spec:ChannelSpec; revision:number;
- owner_user_id:string; creator_actor_id:string; next_run_at:string; last_run_at:string|null; last_error:string|null; enabled?:boolean; canManage?:boolean; runningRunId?:string|null};
+ owner_user_id:string; creator_actor_id:string; billing_policy:ChannelBillingPolicy; billing_user_id:string;
+ next_run_at:string; last_run_at:string|null; last_error:string|null; enabled?:boolean; canManage?:boolean; runningRunId?:string|null};
 export type OntologyOption = {id:string;title:string};
 
 export const CHANNEL_MODEL=ARCTOR_AI_MODEL_CATALOG.standard.modelName;

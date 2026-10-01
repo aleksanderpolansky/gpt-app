@@ -13,6 +13,11 @@ import {
  type AiBackgroundReservationContext,
  type AiBackgroundStartResult,
 } from '../ai-billing/backgroundGateway.server';
+import {
+ resolveAiChannelCreationBillingUser,
+ resolveStoredAiChannelBillingUser,
+} from './billingPolicy.server';
+import type { ChannelBillingPolicy } from './contracts';
 export type ChannelIdentity={user:string;actor:string;admin:boolean};
 export async function channelIdentity():Promise<ChannelIdentity|null>{
  const session=await auth0.getSession();if(!session?.user?.sub)return null;
@@ -21,21 +26,31 @@ export async function channelIdentity():Promise<ChannelIdentity|null>{
  if(error)throw Error('CHANNEL_IDENTITY_UNAVAILABLE');
  return {user:ctx.appUserId,actor:ctx.actorId,admin:Boolean(data?.length)};
 }
-export type ChannelCreationAccess={allowed:boolean;reason:'available'|'no_wallet'|'wallet_inactive'|'insufficient_balance'|'unavailable';availableEur:number|null};
+export type ChannelCreationAccess={
+ allowed:boolean;
+ reason:'available'|'no_wallet'|'wallet_inactive'|'insufficient_balance'|'unavailable';
+ availableEur:number|null;
+ billingUserId:string|null;
+ billingPolicy:ChannelBillingPolicy|null;
+};
 function walletNumber(value:unknown):number|null{
  const n=typeof value==='number'?value:typeof value==='string'&&value.trim()?Number(value):Number.NaN;
  return Number.isFinite(n)&&n>=0?n:null;
 }
 export async function channelCreationAccess(who:ChannelIdentity):Promise<ChannelCreationAccess>{
- const {data,error}=await supabase.from('ai_credit_wallets').select('balance_eur,reserved_eur,status').eq('app_user_id',who.user).maybeSingle();
- if(error)return {allowed:false,reason:'unavailable',availableEur:null};
- if(!data)return {allowed:false,reason:'no_wallet',availableEur:0};
+ let billing;
+ try{billing=await resolveAiChannelCreationBillingUser(who);}
+ catch{return {allowed:false,reason:'unavailable',availableEur:null,billingUserId:null,billingPolicy:null};}
+ const {billingUserId,billingPolicy}=billing;
+ const {data,error}=await supabase.from('ai_credit_wallets').select('balance_eur,reserved_eur,status').eq('app_user_id',billingUserId).maybeSingle();
+ if(error)return {allowed:false,reason:'unavailable',availableEur:null,billingUserId,billingPolicy};
+ if(!data)return {allowed:false,reason:'no_wallet',availableEur:0,billingUserId,billingPolicy};
  const balance=walletNumber(data.balance_eur),reserved=walletNumber(data.reserved_eur);
- if(balance===null||reserved===null||reserved>balance)return {allowed:false,reason:'unavailable',availableEur:null};
+ if(balance===null||reserved===null||reserved>balance)return {allowed:false,reason:'unavailable',availableEur:null,billingUserId,billingPolicy};
  const availableEur=Math.max(balance-reserved,0);
- if(data.status!=='active')return {allowed:false,reason:'wallet_inactive',availableEur};
- if(availableEur<=0)return {allowed:false,reason:'insufficient_balance',availableEur};
- return {allowed:true,reason:'available',availableEur};
+ if(data.status!=='active')return {allowed:false,reason:'wallet_inactive',availableEur,billingUserId,billingPolicy};
+ if(availableEur<=0)return {allowed:false,reason:'insufficient_balance',availableEur,billingUserId,billingPolicy};
+ return {allowed:true,reason:'available',availableEur,billingUserId,billingPolicy};
 }
 export async function requireChannelCreationBalance(who:ChannelIdentity):Promise<ChannelCreationAccess>{
  const access=await channelCreationAccess(who);
@@ -154,15 +169,15 @@ function estimateProviderInputTokens(request:unknown){
  return Math.max(256,Math.min(200000,Math.ceil(serialized.length/3)));
 }
 function requestIdempotencyKey(id:string,runId:string){return `ai-channel:${id}:${runId}`;}
-async function bindRunBilling(c:ChannelRow,r:StoredRun,billing:AiBackgroundReservationContext){
+async function bindRunBilling(c:ChannelRow,r:StoredRun,billingUserId:string,billing:AiBackgroundReservationContext){
  const {error}=await supabase.rpc('bind_ai_channel_run_billing_v1',{
-  p_channel_id:c.id,p_run_id:r.id,p_billing_user_id:c.owner_user_id,p_usage_event_id:billing.usageEventId,p_request_idempotency_key:billing.requestIdempotencyKey
+  p_channel_id:c.id,p_run_id:r.id,p_billing_user_id:billingUserId,p_usage_event_id:billing.usageEventId,p_request_idempotency_key:billing.requestIdempotencyKey
  });
  if(error)throw Error('CHANNEL_BILLING_RUN_BIND_FAILED:'+error.message);
 }
-async function bindProviderBilling(c:ChannelRow,r:StoredRun,start:AiBackgroundStartResult,usage:Record<string,unknown>){
+async function bindProviderBilling(c:ChannelRow,r:StoredRun,billingUserId:string,start:AiBackgroundStartResult,usage:Record<string,unknown>){
  const {error}=await supabase.rpc('bind_ai_channel_provider_response_v1',{
-  p_channel_id:c.id,p_run_id:r.id,p_billing_user_id:c.owner_user_id,p_usage_event_id:start.billing.usageEventId,p_response_id:start.response.id,p_usage:usage
+  p_channel_id:c.id,p_run_id:r.id,p_billing_user_id:billingUserId,p_usage_event_id:start.billing.usageEventId,p_response_id:start.response.id,p_usage:usage
  });
  if(error)throw Error('CHANNEL_BILLING_PROVIDER_BIND_FAILED:'+error.message);
 }
@@ -170,6 +185,8 @@ async function extendRunLock(c:ChannelRow){
  try{await supabase.from('ai_channels_v1').update({lock_until:new Date(Date.now()+5*60000).toISOString()}).eq('id',c.id);}catch{}
 }
 async function startOrResumeBackground(c:ChannelRow,r:StoredRun){
+ const channelBilling=await resolveStoredAiChannelBillingUser(c);
+ if(r.billing_user_id&&r.billing_user_id!==channelBilling.billingUserId)throw Error('CHANNEL_BILLING_OWNER_MISMATCH');
  const requestSpec=providerRuntimeSpec(r.spec_snapshot),objects=await ontologyOptions('',requestSpec.objectIds);
  if(objects.length!==requestSpec.objectIds.length)throw Error('CHANNEL_OBJECT_NOT_PUBLIC_ONTOLOGY');
  const model=requestSpec.model??CHANNEL_MODEL,tier=channelBillingTierForModel(model);
@@ -177,20 +194,22 @@ async function startOrResumeBackground(c:ChannelRow,r:StoredRun){
  const request=channelSearchRequest(requestSpec,objects,new Date(r.started_at));
  const idempotencyKey=requestIdempotencyKey(c.id,r.id);
  const start=await startBillableAiBackgroundResponse({
-  billingUserId:c.owner_user_id,requestIdempotencyKey:idempotencyKey,
+  billingUserId:channelBilling.billingUserId,requestIdempotencyKey:idempotencyKey,
   routePath:r.kind==='scheduled'?'/api/maintenance/ai-channels':'/api/ai-channels',operationKind:'ai_channel',
   modelName:model,tierCode:tier,estimatedInputTokens:estimateProviderInputTokens(request),
   estimatedOutputTokens:requestSpec.maxOutputTokens??6500,
   estimatedAdditionalProviderCostUsd:(requestSpec.maxToolCalls??4)*AI_BACKGROUND_WEB_SEARCH_USD_PER_CALL,
   preflightSafetyMultiplier:1.25,providerRequest:request,requestTimeoutMs:25000,maxRetries:0,
-  requestMetadata:{channelId:c.id,channelRunId:r.id,channelRunKind:r.kind,channelRevision:r.revision,channelOwnerUserId:c.owner_user_id},
-  onReserved:async billing=>bindRunBilling(c,r,billing),
+  requestMetadata:{channelId:c.id,channelRunId:r.id,channelRunKind:r.kind,channelRevision:r.revision,channelOwnerUserId:c.owner_user_id,
+   channelBillingUserId:channelBilling.billingUserId,channelBillingPolicy:channelBilling.billingPolicy},
+  onReserved:async billing=>bindRunBilling(c,r,channelBilling.billingUserId,billing),
  });
  const usage:Record<string,unknown>={...r.usage,model,searchDepth:requestSpec.searchDepth??'quick',coverageMode:requestSpec.coverageMode??'ranked',
-  walletDebited:false,billing:'user_ai_eur',billingUserId:c.owner_user_id,usageEventId:start.billing.usageEventId,walletId:start.billing.walletId,
+  walletDebited:false,billing:'user_ai_eur',billingUserId:channelBilling.billingUserId,billingPolicy:channelBilling.billingPolicy,
+  usageEventId:start.billing.usageEventId,walletId:start.billing.walletId,
   reservationEur:start.billing.reservationEur,estimatedMaxCostEur:start.billing.estimatedMaxCostEur,providerAttempted:true,background:true,
   maxToolCalls:requestSpec.maxToolCalls,searchContextSize:requestSpec.searchContextSize,responseId:start.response.id};
- await bindProviderBilling(c,r,start,usage);
+ await bindProviderBilling(c,r,channelBilling.billingUserId,start,usage);
  return {start,requestSpec};
 }
 async function finishStartFailure(who:ChannelIdentity,c:ChannelRow,r:StoredRun,error:unknown){
@@ -201,7 +220,7 @@ async function finishStartFailure(who:ChannelIdentity,c:ChannelRow,r:StoredRun,e
   return runResult(who,c.id,r.id);
  }
  const code=billing?.errorCode??errorCode(error);
- await channelCommand(who,'finish',c.id,{runId:r.id,error:code,usage:{...latest.usage,billing:'user_ai_eur',billingUserId:c.owner_user_id}}).catch(()=>{});
+ await channelCommand(who,'finish',c.id,{runId:r.id,error:code,usage:{...latest.usage,billing:'user_ai_eur',billingUserId:latest.billing_user_id??c.billing_user_id,billingPolicy:c.billing_policy}}).catch(()=>{});
  throw error;
 }
 async function pollBilledRun(who:ChannelIdentity,c:ChannelRow,r:StoredRun,failureOverride?:string){
@@ -225,6 +244,8 @@ async function pollBilledRun(who:ChannelIdentity,c:ChannelRow,r:StoredRun,failur
 export async function runChannel(who:ChannelIdentity,id:string,kind:'test'|'scheduled'){
  if(process.env.AI_ENABLED==='false')throw Error('CHANNEL_AI_DISABLED');
  const c=await managedChannel(who,id);
+ // Resolve before creating a run: unresolved payer means no run row, no reservation and no provider call.
+ await resolveStoredAiChannelBillingUser(c);
  const capability=await channelCommand(who,'capabilities',null).catch(()=>{throw Error('CHANNEL_SCHEMA_V2_REQUIRED');});
  if(capability?.version!==2)throw Error('CHANNEL_SCHEMA_V2_REQUIRED');
  const started=await channelCommand(who,'start',id,{kind,revision:c.revision}),runId=String(started.runId);
