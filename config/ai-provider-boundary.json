@@ -3,13 +3,7 @@
   "transportFiles": [
     "lib/ai/openaiClient.ts"
   ],
-  "legacyDirectProviderExceptions": [
-    {
-      "path": "lib/objectAction/suggestionAnalysis.ts",
-      "reason": "Existing direct provider object-action suggestion path.",
-      "nextStage": "B3.3"
-    }
-  ],
+  "legacyDirectProviderExceptions": [],
   "gatewayWrapperAllowedFiles": [
     "lib/ai/openaiClient.ts",
     "src/lib/ai-billing/gateway.server.ts"

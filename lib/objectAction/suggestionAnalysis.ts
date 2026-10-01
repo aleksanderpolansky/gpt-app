@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { runBillableAiJson } from "../../src/lib/ai-billing/gateway.server";
 import {
   OPENAI_DEFAULT_MODEL,
   OPENAI_MAX_OUTPUT_TOKENS,
@@ -22,6 +22,10 @@ export type ObjectActionSuggestionAnalysisInput = {
   locale: string;
   contextCode: string;
   existingCategories: ObjectActionExistingCategoryInput[];
+  billingUserId: string;
+  billingRoutePath: string;
+  requestIdempotencyKey: string;
+  suggestionRequestId: string;
 };
 
 export type ObjectActionSuggestionAnalysisResult = {
@@ -37,6 +41,10 @@ export type ObjectActionSuggestionAnalysisResult = {
   rawAnalysisJson: Record<string, unknown>;
   aiModel: string | null;
   aiPromptVersion: string;
+  aiUsageEventId: string | null;
+  aiProviderResponseId: string | null;
+  aiWalletDebitEur: number | null;
+  requestIdempotencyKey: string | null;
   errorMessage: string | null;
 };
 
@@ -147,16 +155,6 @@ const suggestionAnalysisSchema = {
   ],
 } as const;
 
-function getOpenAiClient() {
-  if (!process.env.OPENAI_API_KEY) {
-    return null;
-  }
-
-  return new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
-}
-
 function getModelName() {
   return DEFAULT_MODEL;
 }
@@ -245,6 +243,10 @@ function createFailedAnalysisResult(
     rawAnalysisJson,
     aiModel: getModelName(),
     aiPromptVersion: AI_PROMPT_VERSION,
+    aiUsageEventId: null,
+    aiProviderResponseId: null,
+    aiWalletDebitEur: null,
+    requestIdempotencyKey: null,
     errorMessage,
   };
 }
@@ -498,6 +500,10 @@ function normalizeRawAnalysisResult(
     rawAnalysisJson,
     aiModel,
     aiPromptVersion: AI_PROMPT_VERSION,
+    aiUsageEventId: null,
+    aiProviderResponseId: null,
+    aiWalletDebitEur: null,
+    requestIdempotencyKey: null,
     errorMessage: null,
   };
 }
@@ -505,69 +511,81 @@ function normalizeRawAnalysisResult(
 export async function analyzeObjectActionSuggestion(
   input: ObjectActionSuggestionAnalysisInput
 ): Promise<ObjectActionSuggestionAnalysisResult> {
-  const openai = getOpenAiClient();
   const aiModel = getModelName();
-
-  if (!openai) {
-    return createFailedAnalysisResult(
-      "OPENAI_API_KEY is not configured. AI analysis was not requested."
-    );
-  }
-
   const userText = input.userText.trim();
 
   if (!userText) {
     return createFailedAnalysisResult("userText is empty.");
   }
 
+  const systemInstruction = buildSystemInstruction();
+  const normalizedInput = {
+    ...input,
+    userText,
+  };
+  const userPayload = JSON.parse(
+    buildUserPrompt(normalizedInput)
+  ) as Record<string, unknown>;
+  const maxOutputTokens = getSuggestionAnalysisMaxOutputTokens();
+  const estimatedInputTokens = Math.max(
+    1,
+    Math.ceil(
+      (systemInstruction.length + JSON.stringify(userPayload).length) / 4
+    )
+  );
+
   try {
-    const response = await openai.responses.create({
-      model: aiModel,
-      reasoning: {
-        effort: "low",
-      },
-      input: [
-        {
-          role: "system",
-          content: buildSystemInstruction(),
-        },
-        {
-          role: "user",
-          content: buildUserPrompt({
-            ...input,
-            userText,
-          }),
-        },
-      ],
-      max_output_tokens: getSuggestionAnalysisMaxOutputTokens(),
-      text: {
-        format: {
-          type: "json_schema",
+    const aiCall = await runBillableAiJson<RawAiAnalysisResult>({
+      billingUserId: input.billingUserId,
+      requestIdempotencyKey: input.requestIdempotencyKey,
+      routePath: input.billingRoutePath,
+      operationKind: "object_action_suggestion",
+      modelName: aiModel,
+      tierCode: "nano",
+      estimatedInputTokens,
+      estimatedOutputTokens: maxOutputTokens,
+      preflightSafetyMultiplier: 1.25,
+      providerRequest: {
+        system: systemInstruction,
+        user: userPayload,
+        reasoningEffort: "low",
+        maxOutputTokens,
+        outputTokenCeiling: maxOutputTokens,
+        structuredOutput: {
           name: "object_action_suggestion_analysis",
+          schema: suggestionAnalysisSchema as unknown as Record<string, unknown>,
           strict: true,
-          schema: suggestionAnalysisSchema,
         },
+      },
+      reason: "Object-Action suggestion analysis via unified AI Billing Gateway",
+      requestMetadata: {
+        runtimeCode: "object_action_suggestion_analysis",
+        suggestionRequestId: input.suggestionRequestId,
+        contextCode: input.contextCode,
+        locale: input.locale,
+        billingPolicy: "initiating_admin",
+        billingUserId: input.billingUserId,
+      },
+      settlementMetadata: {
+        runtimeCode: "object_action_suggestion_analysis",
+        suggestionRequestId: input.suggestionRequestId,
+        contextCode: input.contextCode,
+        billingPolicy: "initiating_admin",
+        billingUserId: input.billingUserId,
       },
     });
 
-    const outputText = parseOutputText(response);
-
-    if (!outputText) {
-      const diagnostic = createResponseDiagnostic(response);
-
-      return createFailedAnalysisResult(
-        `AI response did not contain text. status=${String(
-          diagnostic.status ?? "unknown"
-        )}`,
-        {
-          responseDiagnostic: diagnostic as unknown as Record<string, unknown>,
-        }
-      );
-    }
-
-    const rawAnalysisJson = parseRawAnalysisJson(outputText);
-
-    return normalizeRawAnalysisResult(rawAnalysisJson, input, aiModel);
+    return {
+      ...normalizeRawAnalysisResult(
+        aiCall.parsed as unknown as Record<string, unknown>,
+        normalizedInput,
+        aiCall.usage.model ?? aiModel
+      ),
+      aiUsageEventId: aiCall.billing.usageEventId,
+      aiProviderResponseId: aiCall.usage.responseId,
+      aiWalletDebitEur: aiCall.billing.walletDebitEur,
+      requestIdempotencyKey: input.requestIdempotencyKey,
+    };
   } catch (error) {
     return createFailedAnalysisResult(
       error instanceof Error ? error.message : "Unknown AI analysis error."

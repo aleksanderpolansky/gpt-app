@@ -1,4 +1,4 @@
-﻿import { createHash } from "node:crypto";
+﻿import { createHash, randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { auth0 } from "../../../../../lib/auth0";
 import {
@@ -1200,6 +1200,11 @@ async function analyzeSuggestionRequest(
     locale: suggestion.locale,
     contextCode: suggestion.context_code,
     existingCategories: categories,
+    billingUserId: appUser.id,
+    billingRoutePath: "/api/object-action/suggestions",
+    requestIdempotencyKey:
+      `object-action-suggestion:${suggestion.id}:${randomUUID()}`,
+    suggestionRequestId: suggestion.id,
   });
 
   const analyzedAt = new Date().toISOString();
@@ -1221,6 +1226,14 @@ async function analyzeSuggestionRequest(
     rationale: analysis.rationale,
     riskNotes: analysis.riskNotes,
     rawAnalysisJson: analysis.rawAnalysisJson,
+    billing: {
+      usageEventId: analysis.aiUsageEventId,
+      providerResponseId: analysis.aiProviderResponseId,
+      walletDebitEur: analysis.aiWalletDebitEur,
+      requestIdempotencyKey: analysis.requestIdempotencyKey,
+      billingUserId: appUser.id,
+      billingPolicy: "initiating_admin",
+    },
     safetyNote:
       "AI analysis is advisory only. It does not create, approve, publish or merge Object-Action Rubricator data.",
   };
@@ -1279,6 +1292,12 @@ async function analyzeSuggestionRequest(
       existingCategoriesConsidered: categories.length,
       matchedExistingCategoryId: analysis.matchedExistingCategoryId,
       errorMessage: analysis.errorMessage,
+      aiUsageEventId: analysis.aiUsageEventId,
+      aiProviderResponseId: analysis.aiProviderResponseId,
+      aiWalletDebitEur: analysis.aiWalletDebitEur,
+      requestIdempotencyKey: analysis.requestIdempotencyKey,
+      billingUserId: appUser.id,
+      billingPolicy: "initiating_admin",
       publicDataMutation: false,
       safetyNote:
         "AI analysis is advisory only. It does not create, approve, publish or merge Object-Action Rubricator data.",
