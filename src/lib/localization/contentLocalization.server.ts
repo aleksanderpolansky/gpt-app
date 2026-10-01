@@ -1,10 +1,6 @@
 import crypto from "node:crypto";
 import { Buffer } from "node:buffer";
 
-import {
-  runAiJsonWithUsageMetadata,
-  type RunAiJsonUsageMetadata,
-} from "../../../lib/ai/openaiClient";
 import { getNavigatorModelDefinition } from "../../../lib/ai/navigatorModelCatalog";
 import { ensureNavigatorPriceSnapshotV1 } from "../../../lib/ai/navigatorPriceSnapshot.server";
 import { supabase } from "../../../lib/supabase";
@@ -17,6 +13,7 @@ import {
   markAiContextManifestProviderCompleted,
   markAiContextManifestValidated,
 } from "../../../lib/ai/contextManifest";
+import { runBillableAiJson } from "../ai-billing/gateway.server";
 import { compileRuntimeContextPackV1 } from "../ai/runtimeContextCompiler.server";
 import {
   ARCTOR_CONTENT_LOCALES,
@@ -68,12 +65,6 @@ type ActivityLocalizationInput = {
   description?: string | null;
 };
 
-type BudgetReservation = {
-  reservationId: string;
-  priceSnapshotId: string;
-  requestedCallMaxCostUsd: number | null;
-};
-
 type JsonRecord = Record<string, unknown>;
 
 function asRecord(value: unknown): JsonRecord {
@@ -84,15 +75,6 @@ function asRecord(value: unknown): JsonRecord {
 
 function asText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
-}
-
-function asFiniteNumber(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
 }
 
 function sourceRevision(sourceLocaleHint: ArctorContentLocale, fields: LocalizedContentFieldMap) {
@@ -180,151 +162,29 @@ function estimateInputTokensUpperBound(input: {
   return Buffer.byteLength(serialized, "utf8") + 1_024;
 }
 
-async function reserveBudget(input: {
+function buildContentLocalizationRequestIdempotencyKey(input: {
   userId: string;
   operationId: string;
-  model: string;
-  estimatedInputTokens: number;
+  sourceLocaleHint: ArctorContentLocale;
+  targetLocales: readonly ArctorContentLocale[];
+  items: readonly TranslationInput[];
 }) {
-  await ensureNavigatorPriceSnapshotV1({
-    tierCode: MODEL_TIER,
-    modelName: input.model,
-    maxAgeHours: 72,
-  });
-
-  const { data, error } = await supabase.rpc("preflight_ai_pilot_call_budget_v1", {
-    p_app_user_id: input.userId,
-    p_operation_id: input.operationId,
-    p_tier_code: MODEL_TIER,
-    p_model_name: input.model,
-    p_input_tokens: input.estimatedInputTokens,
-    p_cached_input_tokens: 0,
-    p_max_output_tokens: MAX_OUTPUT_TOKENS,
-  });
-  if (error) throw new Error(`CONTENT_LOCALIZATION_BUDGET_PREFLIGHT_FAILED:${error.message}`);
-  const row = asRecord(data);
-  if (row.allowed !== true) {
-    throw new Error(`CONTENT_LOCALIZATION_BUDGET_BLOCKED:${asText(row.reason) || "UNKNOWN"}`);
-  }
-  const reservationId = asText(row.reservationId);
-  const priceSnapshotId = asText(row.priceSnapshotId);
-  if (!reservationId || !priceSnapshotId) {
-    throw new Error("CONTENT_LOCALIZATION_BUDGET_RESERVATION_INVALID");
-  }
-  return {
-    reservationId,
-    priceSnapshotId,
-    requestedCallMaxCostUsd: asFiniteNumber(row.requestedCallMaxCostUsd),
-  } satisfies BudgetReservation;
-}
-
-async function createUsageEvent(input: {
-  userId: string;
-  analysisExecutionId: string;
-  operationId: string;
-  model: string;
-  reservation: BudgetReservation;
-  estimatedInputTokens: number;
-}) {
-  const { data, error } = await supabase
-    .from("ai_usage_events")
-    .insert({
-      app_user_id: input.userId,
-      analysis_execution_id: input.analysisExecutionId,
-      selected_tier_code: MODEL_TIER,
-      model_name: input.model,
-      provider: "openai",
-      route_path: ROUTE_PATH,
-      operation_kind: "content_localization",
-      input_tokens: input.estimatedInputTokens,
-      cached_input_tokens: 0,
-      output_tokens: 0,
-      total_tokens: input.estimatedInputTokens,
-      status: "preflight_allowed",
-      request_metadata: {
+  const digest = crypto
+    .createHash("sha256")
+    .update(
+      JSON.stringify({
         contract: ARCTOR_CONTENT_LOCALIZATION_RUNTIME,
-        stage: "content_localization",
-        walletDebited: false,
-        conservativeInputTokenUpperBound: input.estimatedInputTokens,
-      },
-      response_metadata: {},
-      pilot_operation_id: input.operationId,
-      pilot_budget_reservation_id: input.reservation.reservationId,
-      estimated_provider_cost_usd: input.reservation.requestedCallMaxCostUsd,
-      max_output_tokens: MAX_OUTPUT_TOKENS,
-    })
-    .select("id")
-    .single();
-  if (error || !data?.id) {
-    throw new Error(`CONTENT_LOCALIZATION_USAGE_PREFLIGHT_LOG_FAILED:${error?.message ?? "missing id"}`);
-  }
-  return String(data.id);
-}
+        userId: input.userId,
+        operationId: input.operationId,
+        sourceLocaleHint: input.sourceLocaleHint,
+        targetLocales: input.targetLocales,
+        items: input.items,
+      }),
+      "utf8",
+    )
+    .digest("hex");
 
-async function calculateActualProviderCostUsd(input: {
-  priceSnapshotId: string;
-  usage: RunAiJsonUsageMetadata;
-}) {
-  const { data, error } = await supabase
-    .from("ai_model_price_snapshots")
-    .select("input_cost_per_1m_tokens,cached_input_cost_per_1m_tokens,output_cost_per_1m_tokens")
-    .eq("id", input.priceSnapshotId)
-    .maybeSingle();
-  if (error || !data) return null;
-  const inputPrice = asFiniteNumber(data.input_cost_per_1m_tokens);
-  const cachedPrice = asFiniteNumber(data.cached_input_cost_per_1m_tokens) ?? inputPrice;
-  const outputPrice = asFiniteNumber(data.output_cost_per_1m_tokens);
-  if (inputPrice === null || cachedPrice === null || outputPrice === null) return null;
-  const cachedInput = Math.min(input.usage.inputTokens, input.usage.cachedInputTokens);
-  const uncachedInput = Math.max(0, input.usage.inputTokens - cachedInput);
-  return (
-    uncachedInput * inputPrice +
-    cachedInput * cachedPrice +
-    input.usage.outputTokens * outputPrice
-  ) / 1_000_000;
-}
-
-async function finalizeUsageEvent(input: {
-  usageEventId: string;
-  priceSnapshotId: string;
-  usage: RunAiJsonUsageMetadata;
-}) {
-  const actualProviderCostUsd = await calculateActualProviderCostUsd({
-    priceSnapshotId: input.priceSnapshotId,
-    usage: input.usage,
-  });
-  const { error } = await supabase
-    .from("ai_usage_events")
-    .update({
-      input_tokens: input.usage.inputTokens,
-      cached_input_tokens: input.usage.cachedInputTokens,
-      output_tokens: input.usage.outputTokens,
-      total_tokens: input.usage.totalTokens,
-      actual_provider_cost_usd: actualProviderCostUsd,
-      status: "openai_completed",
-      openai_response_id: input.usage.responseId,
-      response_metadata: {
-        contract: ARCTOR_CONTENT_LOCALIZATION_RUNTIME,
-        rawUsage: input.usage.rawUsage,
-      },
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", input.usageEventId);
-  if (error) {
-    throw new Error(`CONTENT_LOCALIZATION_USAGE_FINALIZE_FAILED:${error.message}`);
-  }
-}
-
-async function markUsageFailed(usageEventId: string) {
-  await supabase
-    .from("ai_usage_events")
-    .update({
-      status: "openai_failed",
-      error_code: "CONTENT_LOCALIZATION_STAGE_FAILED",
-      error_message: "Content localization AI stage failed; raw provider output is not stored here.",
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", usageEventId);
+  return `content-localization:${digest}`;
 }
 
 function sanitizeTranslatedItem(input: {
@@ -435,9 +295,7 @@ export async function generateLocalizedContentBatch(input: {
     },
   });
 
-  let usageEventId: string | null = null;
   let contextManifestId: string | null = null;
-  let usageFinalized = false;
   let manifestValidated = false;
 
   try {
@@ -499,25 +357,17 @@ export async function generateLocalizedContentBatch(input: {
       throw new Error(`CONTENT_LOCALIZATION_INPUT_TOKEN_LIMIT:${estimatedInputTokens}`);
     }
 
-    const reservation = await reserveBudget({
-      userId: input.userId,
-      operationId: input.operationId,
-      model,
-      estimatedInputTokens,
+    await ensureNavigatorPriceSnapshotV1({
+      tierCode: MODEL_TIER,
+      modelName: model,
+      maxAgeHours: 72,
     });
-    usageEventId = await createUsageEvent({
-      userId: input.userId,
-      analysisExecutionId: localizationExecutionId,
-      operationId: input.operationId,
-      model,
-      reservation,
-      estimatedInputTokens,
-    });
+
     contextManifestId = await createAiContextManifest({
       analysisExecutionId: localizationExecutionId,
       stageCode: "content_localization",
       stageSequence: 1,
-      aiUsageEventId: usageEventId,
+      aiUsageEventId: null,
       protocolCode: "ARCTOR_CONTENT_LOCALIZATION",
       protocolVersion: "v1",
       schemaName: "arctor_content_localization_v1",
@@ -542,33 +392,64 @@ export async function generateLocalizedContentBatch(input: {
       contextMetadata: compiledContext.contextMetadata,
     });
 
-    const response = await runAiJsonWithUsageMetadata<TranslationOutput>({
-      model,
-      reasoningEffort: "none",
-      maxRetries: 0,
-      requestTimeoutMs: REQUEST_TIMEOUT_MS,
-      maxOutputTokens: MAX_OUTPUT_TOKENS,
-      outputTokenCeiling: MAX_OUTPUT_TOKENS,
-      store: false,
-      system: compiledContext.systemPrompt,
-      user: compiledContext.requestPayload,
-      structuredOutput: {
-        name: "arctor_content_localization_v1",
-        strict: true,
-        schema,
+    const response = await runBillableAiJson<TranslationOutput>({
+      billingUserId: input.userId,
+      requestIdempotencyKey:
+        buildContentLocalizationRequestIdempotencyKey({
+          userId: input.userId,
+          operationId: input.operationId,
+          sourceLocaleHint,
+          targetLocales,
+          items,
+        }),
+      routePath: ROUTE_PATH,
+      operationKind: "content_localization",
+      modelName: model,
+      tierCode: MODEL_TIER,
+      estimatedInputTokens,
+      estimatedOutputTokens: MAX_OUTPUT_TOKENS,
+      preflightSafetyMultiplier: 1.25,
+      analysisExecutionId: localizationExecutionId,
+      contextManifestId,
+      providerRequest: {
+        reasoningEffort: "none",
+        maxRetries: 0,
+        requestTimeoutMs: REQUEST_TIMEOUT_MS,
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
+        outputTokenCeiling: MAX_OUTPUT_TOKENS,
+        store: false,
+        system: compiledContext.systemPrompt,
+        user: compiledContext.requestPayload,
+        structuredOutput: {
+          name: "arctor_content_localization_v1",
+          strict: true,
+          schema,
+        },
+      },
+      reason: "ARCTor content localization",
+      requestMetadata: {
+        runtimeCode: "content_localization",
+        runtimeContract: ARCTOR_CONTENT_LOCALIZATION_RUNTIME,
+        stage: "content_localization",
+        actorId: input.actorId,
+        operationId: input.operationId,
+        parentSemanticExecutionId: input.analysisExecutionId ?? null,
+        conservativeInputTokenUpperBound: estimatedInputTokens,
+        billingPolicy: "explicit_user_id",
+        billingUserId: input.userId,
+      },
+      settlementMetadata: {
+        runtimeCode: "content_localization",
+        runtimeContract: ARCTOR_CONTENT_LOCALIZATION_RUNTIME,
+        operationId: input.operationId,
+        billingPolicy: "explicit_user_id",
+        billingUserId: input.userId,
       },
     });
     await markAiContextManifestProviderCompleted(
       contextManifestId,
       response.outputText,
     );
-
-    await finalizeUsageEvent({
-      usageEventId,
-      priceSnapshotId: reservation.priceSnapshotId,
-      usage: response.usage,
-    });
-    usageFinalized = true;
 
     const outputItems = Array.isArray(response.parsed?.items)
       ? (response.parsed.items as TranslationOutputItem[])
@@ -638,9 +519,6 @@ export async function generateLocalizedContentBatch(input: {
   } catch (error) {
     if (contextManifestId && !manifestValidated) {
       await markAiContextManifestFailed(contextManifestId, error).catch(() => undefined);
-    }
-    if (usageEventId && !usageFinalized) {
-      await markUsageFailed(usageEventId);
     }
     await failAiAnalysisExecution(localizationExecutionId, error);
     throw error;

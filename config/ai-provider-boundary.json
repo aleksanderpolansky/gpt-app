@@ -33,11 +33,6 @@
       "path": "src/lib/goal-world/intake/goalIntakeRuntime.server.ts",
       "reason": "Existing goal-world intake wrapper caller.",
       "nextStage": "B3.4_EXISTING_WRAPPER_MIGRATION"
-    },
-    {
-      "path": "src/lib/localization/contentLocalization.server.ts",
-      "reason": "Existing content localization wrapper caller.",
-      "nextStage": "B3.4_EXISTING_WRAPPER_MIGRATION"
     }
   ]
 }

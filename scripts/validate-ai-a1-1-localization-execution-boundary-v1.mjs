@@ -39,9 +39,10 @@ const localization = readNormalized(localizationPath);
 const compiler = readNormalized(compilerPath);
 const processing = readNormalized(processingPath);
 const diagnostic = readNormalized(diagnosticPath);
+const gateway = readNormalized("src/lib/ai-billing/gateway.server.ts");
 const usageCall = callBlock(
   localization,
-  "usageEventId = await createUsageEvent({",
+  "const response = await runBillableAiJson<TranslationOutput>({",
 );
 
 check(
@@ -53,14 +54,15 @@ check(
 check(
   "PARENT_SEMANTIC_EXECUTION_IS_LINEAGE_ONLY",
   localization.includes("parentSemanticExecutionId: input.analysisExecutionId ?? null") &&
-    localization.includes("analysisExecutionId: input.analysisExecutionId ?? null,") &&
     usageCall.includes("analysisExecutionId: localizationExecutionId") &&
-    !usageCall.includes("input.analysisExecutionId"),
+    usageCall.includes("parentSemanticExecutionId: input.analysisExecutionId ?? null") &&
+    !usageCall.includes("analysisExecutionId: input.analysisExecutionId"),
 );
 check(
   "LOCALIZATION_USAGE_LINKS_OWN_EXECUTION",
   usageCall.includes("analysisExecutionId: localizationExecutionId") &&
-    localization.includes('operation_kind: "content_localization"'),
+    usageCall.includes('operationKind: "content_localization"') &&
+    gateway.includes("analysis_execution_id: analysisExecutionId"),
 );
 check(
   "LOCALIZATION_CONTEXT_COMPILER_USED",
@@ -71,10 +73,10 @@ check(
   "COMPILED_CONTEXT_PRECEDES_BUDGET",
   localization.indexOf("const compiledContext = await compileRuntimeContextPackV1") >= 0 &&
     localization.indexOf("const compiledContext = await compileRuntimeContextPackV1") <
-      localization.indexOf("const reservation = await reserveBudget"),
+      localization.indexOf("const response = await runBillableAiJson<TranslationOutput>"),
 );
 check(
-  "BUDGET_USES_COMPILED_CONTEXT",
+  "GATEWAY_USES_COMPILED_CONTEXT",
   localization.includes("system: compiledContext.systemPrompt") &&
     localization.includes("user: compiledContext.requestPayload"),
 );
@@ -82,7 +84,9 @@ check(
   "MANIFEST_LINKS_USAGE_AND_EXECUTION",
   localization.includes("contextManifestId = await createAiContextManifest") &&
     localization.includes("analysisExecutionId: localizationExecutionId") &&
-    localization.includes("aiUsageEventId: usageEventId"),
+    localization.includes("aiUsageEventId: null") &&
+    usageCall.includes("contextManifestId") &&
+    gateway.includes("ai_usage_event_id: input.usageEventId"),
 );
 check(
   "MANIFEST_USES_EXACT_COMPILED_CONTEXT",
@@ -99,11 +103,11 @@ check(
     localization.includes("maxRetries: 0"),
 );
 check(
-  "PROVIDER_USAGE_FINALIZED_BEFORE_OUTPUT_VALIDATION",
-  localization.indexOf("await markAiContextManifestProviderCompleted(") >= 0 &&
+  "GATEWAY_SETTLES_BEFORE_OUTPUT_VALIDATION",
+  localization.indexOf("const response = await runBillableAiJson<TranslationOutput>") >= 0 &&
+    localization.indexOf("const response = await runBillableAiJson<TranslationOutput>") <
+      localization.indexOf("await markAiContextManifestProviderCompleted(") &&
     localization.indexOf("await markAiContextManifestProviderCompleted(") <
-      localization.indexOf("await finalizeUsageEvent({") &&
-    localization.indexOf("await finalizeUsageEvent({") <
       localization.indexOf("const outputItems = Array.isArray(response.parsed?.items)"),
 );
 check(
@@ -119,8 +123,11 @@ check(
     localization.includes("failAiAnalysisExecution(localizationExecutionId, error)"),
 );
 check(
-  "USAGE_FINALIZATION_FAILURE_IS_NOT_IGNORED",
-  localization.includes("CONTENT_LOCALIZATION_USAGE_FINALIZE_FAILED"),
+  "GATEWAY_OWNS_USAGE_SETTLEMENT",
+  localization.includes("runBillableAiJson<TranslationOutput>") &&
+    !localization.includes("CONTENT_LOCALIZATION_USAGE_FINALIZE_FAILED") &&
+    !localization.includes("preflight_ai_pilot_call_budget_v1") &&
+    !localization.includes('from("ai_usage_events")'),
 );
 check(
   "LOCALIZATION_INPUT_HASH_IS_STRING",

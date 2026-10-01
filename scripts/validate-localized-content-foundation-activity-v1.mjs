@@ -63,11 +63,11 @@ add("CONTENT_GENERIC_FIELD_MAP", has(contract, "Record<string, string | null>") 
 add("CONTENT_DETECTED_SOURCE_LANGUAGE", has(server, "detectedSourceLocale") && has(server, "sourceLocaleHint is only a hint"));
 add("CONTENT_ALL_LOCALE_VARIANTS", has(server, "required: [...ARCTOR_CONTENT_LOCALES]") && has(server, "targetLocales: ARCTOR_CONTENT_LOCALES"));
 add("CONTENT_ONE_BATCH_CALL", has(server, "generateLocalizedContentBatch") && has(server, "MAX_BATCH_ITEMS = 5"));
-add("CONTENT_NANO_MODEL", has(server, '.eq("tier_code", MODEL_TIER)') && has(server, 'const MODEL_TIER = "nano"'));
+add("CONTENT_NANO_MODEL", has(server, "getNavigatorModelDefinition(MODEL_TIER)") && has(server, 'const MODEL_TIER = "nano"'));
 add("CONTENT_NO_PROVIDER_RETRY", has(server, "maxRetries: 0"));
 add("CONTENT_OPENAI_STORE_FALSE", has(server, "store: false"));
-add("CONTENT_BUDGET_PREFLIGHT", has(server, 'preflight_ai_pilot_call_budget_v1') && has(server, "pilot_budget_reservation_id"));
-add("CONTENT_USAGE_EVENT", has(server, '.from("ai_usage_events")') && has(server, "actual_provider_cost_usd"));
+add("CONTENT_UNIFIED_BILLING_GATEWAY", has(server, "runBillableAiJson<TranslationOutput>") && has(server, 'operationKind: "content_localization"') && has(server, "billingUserId: input.userId"));
+add("CONTENT_USAGE_AUDIT_BINDING", has(server, "analysisExecutionId: localizationExecutionId") && has(server, "contextManifestId"));
 add("CONTENT_TRANSLATION_FAILURE_NON_FATAL", has(durable, "CONTENT_LOCALIZATION_WARNING") && has(durable, "try {"));
 add("CONTENT_ACTIVITY_RUNTIME_WIRED", has(durable, "ensureActivityEventLocalizations") && has(durable, "localizationInputs"));
 add("CONTENT_ACTIVITY_ANALYSIS_PROVENANCE", has(durable, "analysisExecutionId: analysis.preview.analysisExecutionId") && has(durable, "operationId"));

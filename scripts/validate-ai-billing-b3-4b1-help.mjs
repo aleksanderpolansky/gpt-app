@@ -99,8 +99,8 @@ const checks = [
     !remaining.some((entry) => entry.path === HELP),
   ],
   [
-    "SIX_LEGACY_WRAPPERS_REMAIN",
-    remaining.length === 6,
+    "FIVE_LEGACY_WRAPPERS_REMAIN",
+    remaining.length === 5,
   ],
   [
     "OTHER_LEGACY_WRAPPERS_PRESERVED",
@@ -110,7 +110,6 @@ const checks = [
       "src/lib/activity/typical-activity-template-matcher.server.ts",
       "src/lib/ai/activitySemanticReviewA31.server.ts",
       "src/lib/goal-world/intake/goalIntakeRuntime.server.ts",
-      "src/lib/localization/contentLocalization.server.ts",
     ].every((target) => remaining.some((entry) => entry.path === target)),
   ],
 ];

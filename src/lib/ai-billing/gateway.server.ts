@@ -46,6 +46,9 @@ export type BillableAiJsonInput = {
 
   providerRequest: Omit<ProviderRequest, "model" | "idempotencyKey">;
 
+  analysisExecutionId?: string | null;
+  contextManifestId?: string | null;
+
   reason?: string | null;
   requestMetadata?: Record<string, unknown>;
   settlementMetadata?: Record<string, unknown>;
@@ -211,6 +214,60 @@ function requestFingerprint(input: BillableAiJsonInput): string {
   return createHash("sha256")
     .update(JSON.stringify(payload))
     .digest("hex");
+}
+
+async function bindUsageAuditContext(input: {
+  billingUserId: string;
+  usageEventId: string;
+  analysisExecutionId?: string | null;
+  contextManifestId?: string | null;
+}) {
+  const analysisExecutionId =
+    input.analysisExecutionId?.trim() || null;
+  const contextManifestId =
+    input.contextManifestId?.trim() || null;
+
+  if (contextManifestId && !analysisExecutionId) {
+    throw new Error(
+      "AI_BILLING_GATEWAY_CONTEXT_MANIFEST_REQUIRES_ANALYSIS_EXECUTION",
+    );
+  }
+
+  if (analysisExecutionId) {
+    const { data, error } = await supabase
+      .from("ai_usage_events")
+      .update({
+        analysis_execution_id: analysisExecutionId,
+      })
+      .eq("id", input.usageEventId)
+      .eq("app_user_id", input.billingUserId)
+      .select("id")
+      .maybeSingle();
+
+    if (error || !data?.id) {
+      throw new Error(
+        `AI_BILLING_GATEWAY_ANALYSIS_EXECUTION_BIND_FAILED:${error?.message ?? "usage_not_found"}`,
+      );
+    }
+  }
+
+  if (contextManifestId && analysisExecutionId) {
+    const { data, error } = await supabase
+      .from("ai_context_manifests")
+      .update({
+        ai_usage_event_id: input.usageEventId,
+      })
+      .eq("id", contextManifestId)
+      .eq("analysis_execution_id", analysisExecutionId)
+      .select("id")
+      .maybeSingle();
+
+    if (error || !data?.id) {
+      throw new Error(
+        `AI_BILLING_GATEWAY_CONTEXT_MANIFEST_BIND_FAILED:${error?.message ?? "manifest_not_found"}`,
+      );
+    }
+  }
 }
 
 async function writeProviderUsage(input: {
@@ -388,6 +445,8 @@ export async function runBillableAiJson<T = unknown>(
       preflightSafetyMultiplier: safetyMultiplier,
       providerRequestIdempotencyKey,
       ...(input.requestMetadata ?? {}),
+      analysisExecutionId: input.analysisExecutionId ?? null,
+      contextManifestId: input.contextManifestId ?? null,
     },
   });
 
@@ -396,6 +455,41 @@ export async function runBillableAiJson<T = unknown>(
       usageEventId: reservation.usageEventId,
       usageStatus: reservation.usageStatus,
     });
+  }
+
+  try {
+    await bindUsageAuditContext({
+      billingUserId: input.billingUserId,
+      usageEventId: reservation.usageEventId,
+      analysisExecutionId: input.analysisExecutionId,
+      contextManifestId: input.contextManifestId,
+    });
+  } catch (auditBindingError) {
+    try {
+      await releaseAiUsageReservation({
+        appUserId: input.billingUserId,
+        usageEventId: reservation.usageEventId,
+        errorCode: errorCode(
+          auditBindingError,
+          "AI_BILLING_GATEWAY_AUDIT_BIND_FAILED",
+        ),
+        errorMessage: errorMessage(auditBindingError).slice(0, 4000),
+        metadata: {
+          contract: AI_BILLING_GATEWAY_B2_2_CONTRACT,
+          providerAttempted: false,
+          providerCompleted: false,
+          auditBindingFailed: true,
+        },
+      });
+    } catch (releaseError) {
+      throw new Error(
+        `AI_BILLING_GATEWAY_AUDIT_BIND_AND_RESERVATION_RELEASE_FAILED:${errorMessage(
+          auditBindingError,
+        )}:${errorMessage(releaseError)}`,
+      );
+    }
+
+    throw auditBindingError;
   }
 
   let providerResult: RunAiJsonWithUsageMetadataResult<T>;
@@ -520,6 +614,8 @@ export async function runBillableAiJson<T = unknown>(
         providerRequestIdempotencyKey,
         openaiResponseId: providerResult.usage.responseId,
         ...(input.settlementMetadata ?? {}),
+        analysisExecutionId: input.analysisExecutionId ?? null,
+        contextManifestId: input.contextManifestId ?? null,
       },
     });
   } catch (error) {
