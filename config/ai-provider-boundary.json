@@ -10,11 +10,6 @@
   ],
   "legacyWrapperExceptions": [
     {
-      "path": "lib/reality/globalObservationPilot.ts",
-      "reason": "Existing low-level wrapper caller with legacy pilot budget / usage accounting.",
-      "nextStage": "B3.4_EXISTING_WRAPPER_MIGRATION"
-    },
-    {
       "path": "src/lib/activity/typical-activity-template-matcher.server.ts",
       "reason": "Existing typical-activity matcher wrapper caller.",
       "nextStage": "B3.4_EXISTING_WRAPPER_MIGRATION"

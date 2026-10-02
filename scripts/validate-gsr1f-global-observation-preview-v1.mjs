@@ -92,8 +92,13 @@ check(
   pilot.includes("const PROVIDER_CALL_TIMEOUT_MS = 25_000"),
 );
 check(
-  "pilot_budget_preflight",
-  pilot.includes('"preflight_ai_pilot_call_budget_v1"'),
+  "pilot_gateway_billing_with_local_hard_cap",
+  pilot.includes("runBillableAiJson") &&
+    pilot.includes("readActiveModelPriceSnapshot") &&
+    pilot.includes("const HARD_CAP_USD = 0.1") &&
+    pilot.includes("pilotOperationReservedMaxCostUsd") &&
+    pilot.includes("AI_BUDGET_BLOCKED_HARD_COST_CAP_EXCEEDED") &&
+    !pilot.includes('"preflight_ai_pilot_call_budget_v1"'),
 );
 check(
   "pilot_recognition_profile_candidates",
@@ -128,9 +133,12 @@ check(
   !pilot.includes("attach_global_observation_facts_gsr1_v1"),
 );
 check(
-  "preview_usage_audit",
-  pilot.includes('.from("ai_usage_events")') &&
-    pilot.includes("actual_provider_cost_usd"),
+  "preview_gateway_usage_audit",
+  pilot.includes("runBillableAiJson") &&
+    pilot.includes("analysisExecutionId: input.analysisExecutionId") &&
+    pilot.includes("contextManifestId") &&
+    pilot.includes('billingPolicy: "explicit_user_id"') &&
+    !pilot.includes('.from("ai_usage_events")'),
 );
 check(
   "route_uses_active_actor_context",

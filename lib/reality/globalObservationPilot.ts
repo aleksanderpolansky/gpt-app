@@ -1,9 +1,13 @@
 import { Buffer } from "node:buffer";
 
 import {
-  runAiJsonWithUsageMetadata,
-  type RunAiJsonUsageMetadata,
-} from "../ai/openaiClient";
+  runBillableAiJson,
+  type BillableAiJsonResult,
+} from "../../src/lib/ai-billing/gateway.server";
+import {
+  readActiveModelPriceSnapshot,
+  type AiPriceSnapshot,
+} from "../../src/lib/ai-billing/runtime";
 import { supabase } from "../supabase";
 import {
   completeAiAnalysisExecution,
@@ -152,22 +156,15 @@ type SelectionOutput = {
   selections: SelectionRow[];
 };
 
-type BudgetPreflight = {
-  allowed: boolean;
-  reason: string;
-  operationId?: string;
-  reservationId?: string;
-  priceSnapshotId?: string;
-  requestedCallMaxCostUsd?: number;
-  operationReservedMaxCostUsd?: number;
-  hardCapUsd?: number;
-  callIndex?: number;
+type PilotBudgetState = {
+  providerCallsUsed: number;
+  operationReservedMaxCostUsd: number;
 };
 
 type BudgetedCallResult<T> = {
   parsed: T;
   outputText: string;
-  usage: RunAiJsonUsageMetadata;
+  usage: BillableAiJsonResult<T>["usage"];
   contextManifestId: string;
   reservedMaxCostUsd: number;
   operationReservedMaxCostUsd: number;
@@ -1320,223 +1317,143 @@ async function buildCandidateGroups(
   });
 }
 
-async function reserveBudget(input: {
-  appUserId: string;
-  operationId: string;
-  model: string;
-  estimatedInputTokens: number;
-  maxOutputTokens: number;
-}): Promise<BudgetPreflight> {
-  const { data, error } = await supabase.rpc(
-    "preflight_ai_pilot_call_budget_v1",
-    {
-      p_app_user_id: input.appUserId,
-      p_operation_id: input.operationId,
-      p_tier_code: PILOT_MODEL_TIER,
-      p_model_name: input.model,
-      p_input_tokens: input.estimatedInputTokens,
-      p_cached_input_tokens: 0,
-      p_max_output_tokens: input.maxOutputTokens,
-    },
-  );
-
-  if (error) {
-    throw new GlobalObservationPilotError(
-      500,
-      "AI_BUDGET_PREFLIGHT_FAILED",
-      error.message,
-    );
-  }
-
-  const row = asRecord(data);
-
-  if (!row) {
-    throw new GlobalObservationPilotError(
-      500,
-      "AI_BUDGET_PREFLIGHT_SHAPE_INVALID",
-      "AI budget preflight returned an invalid response.",
-    );
-  }
-
-  const result: BudgetPreflight = {
-    allowed: row.allowed === true,
-    reason: asText(row.reason),
-    operationId: asNullableText(row.operationId) ?? undefined,
-    reservationId: asNullableText(row.reservationId) ?? undefined,
-    priceSnapshotId: asNullableText(row.priceSnapshotId) ?? undefined,
-    requestedCallMaxCostUsd:
-      asFiniteNumber(row.requestedCallMaxCostUsd) ?? undefined,
-    operationReservedMaxCostUsd:
-      asFiniteNumber(row.operationReservedMaxCostUsd) ?? undefined,
-    hardCapUsd: asFiniteNumber(row.hardCapUsd) ?? undefined,
-    callIndex: asFiniteNumber(row.callIndex) ?? undefined,
-  };
-
-  if (!result.allowed) {
-    const freshConfirmation =
-      row.requiresFreshExplicitConfirmation === true;
-
-    throw new GlobalObservationPilotError(
-      result.reason === "HARD_COST_CAP_EXCEEDED" ? 409 : 422,
-      `AI_BUDGET_BLOCKED_${result.reason || "UNKNOWN"}`,
-      freshConfirmation
-        ? "The requested test could exceed the USD 0.10 operation cap and requires fresh explicit confirmation."
-        : "The OpenAI pilot budget guard blocked this provider call.",
-      row,
-    );
-  }
-
-  if (!result.reservationId || !result.priceSnapshotId) {
-    throw new GlobalObservationPilotError(
-      500,
-      "AI_BUDGET_RESERVATION_INVALID",
-      "Allowed AI budget preflight returned no reservation.",
-    );
-  }
-
-  return result;
-}
-
-async function createUsageEvent(input: {
-  appUserId: string;
-  analysisExecutionId: string;
-  operationId: string;
-  stage: string;
-  model: string;
-  reservation: BudgetPreflight;
-  estimatedInputTokens: number;
-  maxOutputTokens: number;
+function calculateProviderCostUsd(input: {
+  price: AiPriceSnapshot;
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
 }) {
-  const { data, error } = await supabase
-    .from("ai_usage_events")
-    .insert({
-      app_user_id: input.appUserId,
-      analysis_execution_id: input.analysisExecutionId,
-      selected_tier_code: PILOT_MODEL_TIER,
-      model_name: input.model,
-      provider: "openai",
-      route_path: ROUTE_PATH,
-      operation_kind: "semantic_intake",
-      input_tokens: input.estimatedInputTokens,
-      cached_input_tokens: 0,
-      output_tokens: 0,
-      total_tokens: input.estimatedInputTokens,
-      status: "preflight_allowed",
-      request_metadata: {
-        contract: "GSR1F_GLOBAL_OBSERVATION_PREVIEW_V1",
-        stage: input.stage,
-        previewOnly: true,
-        walletDebited: false,
-        conservativeInputTokenUpperBound: input.estimatedInputTokens,
+  if (input.price.pricingCurrency.toUpperCase() !== "USD") {
+    throw new GlobalObservationPilotError(
+      500,
+      "AI_PILOT_HARD_CAP_PRICE_CURRENCY_INVALID",
+      "The Global Observation Pilot USD hard cap requires a USD model price snapshot.",
+      {
+        pricingCurrency: input.price.pricingCurrency,
+        priceSnapshotId: input.price.id,
       },
-      response_metadata: {},
-      pilot_operation_id: input.operationId,
-      pilot_budget_reservation_id: input.reservation.reservationId,
-      estimated_provider_cost_usd:
-        input.reservation.requestedCallMaxCostUsd ?? null,
-      max_output_tokens: input.maxOutputTokens,
-    })
-    .select("id")
-    .single();
-
-  if (error || !data?.id) {
-    throw new GlobalObservationPilotError(
-      500,
-      "AI_USAGE_PREFLIGHT_LOG_FAILED",
-      error?.message ?? "Failed to create AI usage event.",
     );
   }
 
-  return data.id as string;
-}
-
-async function calculateActualProviderCostUsd(input: {
-  priceSnapshotId: string;
-  usage: RunAiJsonUsageMetadata;
-}) {
-  const { data, error } = await supabase
-    .from("ai_model_price_snapshots")
-    .select(
-      "input_cost_per_1m_tokens, cached_input_cost_per_1m_tokens, output_cost_per_1m_tokens",
-    )
-    .eq("id", input.priceSnapshotId)
-    .maybeSingle();
-
-  if (error || !data) {
-    return null;
-  }
-
-  const inputPrice = asFiniteNumber(data.input_cost_per_1m_tokens);
-  const cachedPrice =
-    asFiniteNumber(data.cached_input_cost_per_1m_tokens) ?? inputPrice;
-  const outputPrice = asFiniteNumber(data.output_cost_per_1m_tokens);
-
-  if (inputPrice === null || cachedPrice === null || outputPrice === null) {
-    return null;
-  }
-
-  const cachedInput = Math.min(
-    input.usage.inputTokens,
-    input.usage.cachedInputTokens,
+  const inputTokens = Math.max(0, Math.trunc(input.inputTokens));
+  const cachedInputTokens = Math.min(
+    inputTokens,
+    Math.max(0, Math.trunc(input.cachedInputTokens)),
   );
-  const uncachedInput = Math.max(0, input.usage.inputTokens - cachedInput);
+  const uncachedInputTokens = Math.max(
+    0,
+    inputTokens - cachedInputTokens,
+  );
+  const outputTokens = Math.max(0, Math.trunc(input.outputTokens));
+
+  const cachedPrice =
+    input.price.cachedInputCostPer1mTokens ??
+    input.price.inputCostPer1mTokens;
 
   return (
-    (uncachedInput * inputPrice +
-      cachedInput * cachedPrice +
-      input.usage.outputTokens * outputPrice) /
+    (uncachedInputTokens * input.price.inputCostPer1mTokens +
+      cachedInputTokens * cachedPrice +
+      outputTokens * input.price.outputCostPer1mTokens) /
     1_000_000
   );
 }
 
-async function finalizeUsageEvent(input: {
-  usageEventId: string;
-  usage: RunAiJsonUsageMetadata;
-  priceSnapshotId: string;
+async function preparePilotGatewayBudget(input: {
+  model: string;
+  estimatedInputTokens: number;
+  maxOutputTokens: number;
+  budgetState: PilotBudgetState;
 }) {
-  const actualProviderCostUsd = await calculateActualProviderCostUsd({
-    priceSnapshotId: input.priceSnapshotId,
-    usage: input.usage,
+  if (input.budgetState.providerCallsUsed >= MAX_PROVIDER_CALLS) {
+    throw new GlobalObservationPilotError(
+      409,
+      "AI_BUDGET_BLOCKED_MAX_PROVIDER_CALLS",
+      "The Global Observation Pilot provider-call limit has been reached.",
+      {
+        maxProviderCalls: MAX_PROVIDER_CALLS,
+        providerCallsUsed: input.budgetState.providerCallsUsed,
+      },
+    );
+  }
+
+  const priceSnapshot = await readActiveModelPriceSnapshot({
+    modelName: input.model,
+    tierCode: PILOT_MODEL_TIER,
   });
 
-  const { error } = await supabase
-    .from("ai_usage_events")
-    .update({
-      input_tokens: input.usage.inputTokens,
-      cached_input_tokens: input.usage.cachedInputTokens,
-      output_tokens: input.usage.outputTokens,
-      total_tokens: input.usage.totalTokens,
-      actual_provider_cost_usd: actualProviderCostUsd,
-      status: "openai_completed",
-      openai_response_id: input.usage.responseId,
-      response_metadata: {
-        contract: "GSR1F_GLOBAL_OBSERVATION_PREVIEW_V1",
-        rawUsage: input.usage.rawUsage,
+  const requestedCallMaxCostUsd = calculateProviderCostUsd({
+    price: priceSnapshot,
+    inputTokens: input.estimatedInputTokens,
+    cachedInputTokens: 0,
+    outputTokens: input.maxOutputTokens,
+  });
+
+  const operationReservedMaxCostUsd =
+    input.budgetState.operationReservedMaxCostUsd +
+    requestedCallMaxCostUsd;
+
+  if (operationReservedMaxCostUsd > HARD_CAP_USD) {
+    throw new GlobalObservationPilotError(
+      409,
+      "AI_BUDGET_BLOCKED_HARD_COST_CAP_EXCEEDED",
+      "The requested test could exceed the USD 0.10 operation cap and requires fresh explicit confirmation.",
+      {
+        requestedCallMaxCostUsd,
+        operationReservedMaxCostUsd,
+        hardCapUsd: HARD_CAP_USD,
+        callIndex: input.budgetState.providerCallsUsed + 1,
+        requiresFreshExplicitConfirmation: true,
+        priceSnapshotId: priceSnapshot.id,
       },
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", input.usageEventId);
+    );
+  }
 
   return {
-    actualProviderCostUsd,
-    warning: error ? `AI usage finalization failed: ${error.message}` : null,
+    priceSnapshot,
+    requestedCallMaxCostUsd,
+    operationReservedMaxCostUsd,
   };
 }
 
-async function markUsageFailed(input: {
-  usageEventId: string;
+function remapGatewayBillingError(input: {
   error: unknown;
+  stage: string;
+  operationId: string;
 }) {
-  await supabase
-    .from("ai_usage_events")
-    .update({
-      status: "openai_failed",
-      error_code:
-        input.error instanceof Error ? input.error.name : "OPENAI_CALL_FAILED",
-      error_message: "OpenAI provider call failed; raw provider output is not stored in this field.",
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", input.usageEventId);
+  const message =
+    input.error instanceof Error
+      ? input.error.message
+      : String(input.error);
+
+  if (
+    message.includes("AI_BILLING_INSUFFICIENT_BALANCE") ||
+    message.includes("AI_CREDIT_WALLET_INSUFFICIENT") ||
+    message.includes("AI_BILLING_WALLET_NOT_ACTIVE")
+  ) {
+    return new GlobalObservationPilotError(
+      429,
+      "AI_BILLING_INSUFFICIENT_BALANCE",
+      "The AI EUR balance is insufficient for this Global Observation Pilot call.",
+      {
+        stage: input.stage,
+        operationId: input.operationId,
+      },
+    );
+  }
+
+  if (message.includes("AI_BILLING_REQUEST_ALREADY_ACQUIRED")) {
+    return new GlobalObservationPilotError(
+      409,
+      "AI_BILLING_REQUEST_ALREADY_ACQUIRED",
+      "This Global Observation Pilot stage has already acquired its billing request.",
+      {
+        stage: input.stage,
+        operationId: input.operationId,
+      },
+    );
+  }
+
+  return input.error;
 }
 
 async function runBudgetedJsonCall<T>(input: {
@@ -1560,6 +1477,7 @@ async function runBudgetedJsonCall<T>(input: {
   instructionRefs: unknown[];
   contextMetadata?: JsonRecord;
   signal: AbortSignal;
+  budgetState: PilotBudgetState;
 }): Promise<BudgetedCallResult<T>> {
   const compiledContext = await compileRuntimeContextPackV1({
     appUserId: input.appUserId,
@@ -1611,89 +1529,113 @@ async function runBudgetedJsonCall<T>(input: {
     );
   }
 
-  const reservation = await reserveBudget({
-    appUserId: input.appUserId,
-    operationId: input.operationId,
+  const budget = await preparePilotGatewayBudget({
     model: input.model,
     estimatedInputTokens,
     maxOutputTokens: input.maxOutputTokens,
+    budgetState: input.budgetState,
   });
 
-  const usageEventId = await createUsageEvent({
-    appUserId: input.appUserId,
+  const contextManifestId = await createAiContextManifest({
     analysisExecutionId: input.analysisExecutionId,
-    operationId: input.operationId,
-    stage: input.stage,
-    model: input.model,
-    reservation,
-    estimatedInputTokens,
+    stageCode: input.stage,
+    stageSequence: input.stageSequence,
+    aiUsageEventId: null,
+    protocolCode: input.protocolCode,
+    protocolVersion: input.protocolVersion,
+    schemaName: input.schemaName,
+    schemaVersion: "v2",
+    schema: input.schema,
+    systemPrompt: compiledContext.systemPrompt,
+    requestPayload: compiledContext.requestPayload,
+    provider: "openai",
+    modelName: input.model,
+    modelTier: PILOT_MODEL_TIER,
+    storeProviderState: false,
+    maxRetries: 0,
     maxOutputTokens: input.maxOutputTokens,
+    instructionRefs: compiledContext.instructionRefs,
+    retrievalSnapshot: compiledContext.retrievalSnapshot,
+    toolPermissions: compiledContext.toolPermissions,
+    modelConfig: {
+      reasoningEffort: "none",
+      requestTimeoutMs: PROVIDER_CALL_TIMEOUT_MS,
+      outputTokenCeiling: PILOT_OUTPUT_TOKEN_CEILING,
+    },
+    contextMetadata: compiledContext.contextMetadata,
   });
 
-  let contextManifestId: string;
-
   try {
-    contextManifestId = await createAiContextManifest({
-      analysisExecutionId: input.analysisExecutionId,
-      stageCode: input.stage,
-      stageSequence: input.stageSequence,
-      aiUsageEventId: usageEventId,
-      protocolCode: input.protocolCode,
-      protocolVersion: input.protocolVersion,
-      schemaName: input.schemaName,
-      schemaVersion: "v2",
-      schema: input.schema,
-      systemPrompt: compiledContext.systemPrompt,
-      requestPayload: compiledContext.requestPayload,
-      provider: "openai",
+    const result = await runBillableAiJson<T>({
+      billingUserId: input.appUserId,
+      requestIdempotencyKey:
+        `global-observation:${input.operationId}:${input.stageSequence}:${input.stage}`,
+      routePath: ROUTE_PATH,
+      operationKind: "semantic_intake",
       modelName: input.model,
-      modelTier: PILOT_MODEL_TIER,
-      storeProviderState: false,
-      maxRetries: 0,
-      maxOutputTokens: input.maxOutputTokens,
-      instructionRefs: compiledContext.instructionRefs,
-      retrievalSnapshot: compiledContext.retrievalSnapshot,
-      toolPermissions: compiledContext.toolPermissions,
-      modelConfig: {
-        reasoningEffort: "none",
-        requestTimeoutMs: PROVIDER_CALL_TIMEOUT_MS,
+      tierCode: PILOT_MODEL_TIER,
+      estimatedInputTokens,
+      estimatedOutputTokens: input.maxOutputTokens,
+      preflightSafetyMultiplier: 1.25,
+      providerRequest: {
+        system: compiledContext.systemPrompt,
+        user: compiledContext.requestPayload,
+        maxOutputTokens: input.maxOutputTokens,
         outputTokenCeiling: PILOT_OUTPUT_TOKEN_CEILING,
+        structuredOutput: {
+          name: input.schemaName,
+          schema: input.schema,
+          strict: true,
+        },
+        requestTimeoutMs: PROVIDER_CALL_TIMEOUT_MS,
+        maxRetries: 0,
+        signal: input.signal,
+        store: false,
+        reasoningEffort: "none",
       },
-      contextMetadata: compiledContext.contextMetadata,
+      analysisExecutionId: input.analysisExecutionId,
+      contextManifestId,
+      reason: "ARCTor Global Observation Pilot",
+      requestMetadata: {
+        contract: "GSR1F_GLOBAL_OBSERVATION_PREVIEW_V1",
+        stage: input.stage,
+        stageSequence: input.stageSequence,
+        operationId: input.operationId,
+        previewOnly: true,
+        billingPolicy: "explicit_user_id",
+        billingUserId: input.appUserId,
+        conservativeInputTokenUpperBound: estimatedInputTokens,
+        pilotHardCapUsd: HARD_CAP_USD,
+        pilotRequestedCallMaxCostUsd:
+          budget.requestedCallMaxCostUsd,
+        pilotOperationReservedMaxCostUsd:
+          budget.operationReservedMaxCostUsd,
+        pilotHardCapPriceSnapshotId: budget.priceSnapshot.id,
+      },
+      settlementMetadata: {
+        contract: "GSR1F_GLOBAL_OBSERVATION_PREVIEW_V1",
+        stage: input.stage,
+        stageSequence: input.stageSequence,
+        operationId: input.operationId,
+        previewOnly: true,
+        pilotHardCapUsd: HARD_CAP_USD,
+      },
     });
-  } catch (error) {
-    await markUsageFailed({ usageEventId, error });
-    throw error;
-  }
 
-  try {
-    const result = await runAiJsonWithUsageMetadata<T>({
-      system: compiledContext.systemPrompt,
-      user: compiledContext.requestPayload,
-      model: input.model,
-      maxOutputTokens: input.maxOutputTokens,
-      outputTokenCeiling: PILOT_OUTPUT_TOKEN_CEILING,
-      structuredOutput: {
-        name: input.schemaName,
-        schema: input.schema,
-        strict: true,
-      },
-      requestTimeoutMs: PROVIDER_CALL_TIMEOUT_MS,
-      maxRetries: 0,
-      signal: input.signal,
-      store: false,
-      reasoningEffort: "none",
-    });
+    input.budgetState.providerCallsUsed += 1;
+    input.budgetState.operationReservedMaxCostUsd =
+      budget.operationReservedMaxCostUsd;
 
     await markAiContextManifestProviderCompleted(
       contextManifestId,
       result.outputText,
     );
 
-    const finalized = await finalizeUsageEvent({
-      usageEventId,
-      usage: result.usage,
-      priceSnapshotId: reservation.priceSnapshotId!,
+    const actualProviderCostUsd = calculateProviderCostUsd({
+      price: budget.priceSnapshot,
+      inputTokens: result.usage.inputTokens,
+      cachedInputTokens: result.usage.cachedInputTokens,
+      outputTokens: result.usage.outputTokens,
     });
 
     return {
@@ -1701,16 +1643,19 @@ async function runBudgetedJsonCall<T>(input: {
       outputText: result.outputText,
       usage: result.usage,
       contextManifestId,
-      reservedMaxCostUsd: reservation.requestedCallMaxCostUsd ?? 0,
+      reservedMaxCostUsd: budget.requestedCallMaxCostUsd,
       operationReservedMaxCostUsd:
-        reservation.operationReservedMaxCostUsd ?? 0,
-      actualProviderCostUsd: finalized.actualProviderCostUsd,
-      usageLogWarning: finalized.warning,
+        budget.operationReservedMaxCostUsd,
+      actualProviderCostUsd,
+      usageLogWarning: null,
     };
   } catch (error) {
     await markAiContextManifestFailed(contextManifestId, error);
-    await markUsageFailed({ usageEventId, error });
-    throw error;
+    throw remapGatewayBillingError({
+      error,
+      stage: input.stage,
+      operationId: input.operationId,
+    });
   }
 }
 
@@ -2132,6 +2077,11 @@ export async function runGlobalObservationPreview(
     },
   });
 
+  const budgetState: PilotBudgetState = {
+    providerCallsUsed: 0,
+    operationReservedMaxCostUsd: 0,
+  };
+
   const controller = new AbortController();
   const deadlineTimer = setTimeout(
     () => controller.abort(new Error("GSR1 operation deadline exceeded.")),
@@ -2208,6 +2158,7 @@ export async function runGlobalObservationPreview(
         rawInputPersistedInManifest: false,
       },
       signal: controller.signal,
+      budgetState,
     });
 
     let aiSegments: RoutingSegment[];
@@ -2324,6 +2275,7 @@ export async function runGlobalObservationPreview(
         rawInputPersistedInManifest: false,
       },
       signal: controller.signal,
+      budgetState,
     });
 
     const factValidationWarnings: string[] = [];
@@ -2392,10 +2344,8 @@ export async function runGlobalObservationPreview(
 
     await completeAiAnalysisExecution(analysisExecutionId);
 
-    const reservedMaxUsd = Math.max(
-      routingCall.operationReservedMaxCostUsd,
-      selectionCall.operationReservedMaxCostUsd,
-    );
+    const reservedMaxUsd =
+      budgetState.operationReservedMaxCostUsd;
     const actualKnownCosts = [
       routingCall.actualProviderCostUsd,
       selectionCall.actualProviderCostUsd,
@@ -2458,7 +2408,7 @@ export async function runGlobalObservationPreview(
       safety: {
         hardCapUsd: HARD_CAP_USD,
         maxProviderCallsConfigured: MAX_PROVIDER_CALLS,
-        providerCallsUsed: 2,
+        providerCallsUsed: budgetState.providerCallsUsed,
         automaticProviderRetries: 0,
         operationDeadlineMs: OPERATION_DEADLINE_MS,
         providerCallTimeoutMs: PROVIDER_CALL_TIMEOUT_MS,
