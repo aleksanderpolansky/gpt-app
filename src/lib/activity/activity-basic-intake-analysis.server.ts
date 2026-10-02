@@ -11,15 +11,8 @@ import {
 import { safeCreateActivityProcessingLog } from "../../../lib/activity/activityProcessingLogs";
 import { loadSystemTypicalActivityCatalogV1 } from "@/lib/activity/typical-activity-catalog.server";
 
-import {
-  runAiJsonWithUsageMetadata,
-  type RunAiJsonUsageMetadata,
-} from "../../../lib/ai/openaiClient";
-import {
-  getNavigatorModelDefinition,
-  NAVIGATOR_MODEL_AUTO_SEED_EXPIRES_AT,
-  NAVIGATOR_MODEL_CATALOG_VERIFIED_AT,
-} from "../../../lib/ai/navigatorModelCatalog";
+import { runBillableAiJson } from "@/lib/ai-billing/gateway.server";
+import { getNavigatorModelDefinition } from "../../../lib/ai/navigatorModelCatalog";
 import { ensureNavigatorPriceSnapshotV1 } from "../../../lib/ai/navigatorPriceSnapshot.server";
 import { AI_ENABLED } from "../../../lib/ai/openaiConfig";
 import {
@@ -132,17 +125,10 @@ type NormalizedMeasurement = {
   approximate?: boolean;
 };
 
-type BudgetReservation = {
-  reservationId: string;
-  priceSnapshotId: string;
-  requestedCallMaxCostUsd: number | null;
-};
-
 type BasicIntakeFailureStage =
   | "model_catalog"
   | "analysis_execution"
-  | "budget_preflight"
-  | "usage_event"
+  | "billing_gateway"
   | "context_manifest"
   | "provider_config"
   | "provider_call"
@@ -1065,366 +1051,6 @@ async function resolveNanoModel() {
   };
 }
 
-const RECOVERABLE_PRICE_SNAPSHOT_REASONS = new Set([
-  "PRICE_SNAPSHOT_STALE",
-  "PRICE_SNAPSHOT_MISSING",
-  "PRICE_SNAPSHOT_NOT_FOUND",
-  "NO_ACTIVE_PRICE_SNAPSHOT",
-]);
-
-function modelSourceUrl(modelName: string, sourceUrl: string) {
-  const base = sourceUrl.replace(/\/+$/, "");
-  return base.endsWith("/models") ? `${base}/${modelName}` : base;
-}
-
-async function refreshNanoPriceSnapshotWithinVerifiedLease(input: {
-  tierCode: string;
-  modelName: string;
-}) {
-  const definition = getNavigatorModelDefinition("nano");
-  if (
-    input.tierCode !== "nano" ||
-    input.modelName !== "gpt-5.6-luna" ||
-    !definition ||
-    definition.tierCode !== input.tierCode ||
-    definition.modelName !== input.modelName ||
-    Date.now() > Date.parse(NAVIGATOR_MODEL_AUTO_SEED_EXPIRES_AT)
-  ) {
-    return false;
-  }
-
-  const { data: current, error: currentError } = await supabase
-    .from("ai_model_price_snapshots")
-    .select(
-      "id,input_cost_per_1m_tokens,cached_input_cost_per_1m_tokens,output_cost_per_1m_tokens,usd_to_eur_rate,eur_markup_multiplier",
-    )
-    .eq("provider", "openai")
-    .eq("tier_code", input.tierCode)
-    .eq("model_name", input.modelName)
-    .eq("pricing_currency", "USD")
-    .eq("is_active", true)
-    .order("valid_from", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (currentError) {
-    throw new Error(
-      `BASIC_INTAKE_PRICE_REFRESH_BASELINE_READ_FAILED:${currentError.message}`,
-    );
-  }
-
-  if (current) {
-    const inputPrice = finiteNumber(current.input_cost_per_1m_tokens);
-    const cachedPrice = finiteNumber(current.cached_input_cost_per_1m_tokens);
-    const outputPrice = finiteNumber(current.output_cost_per_1m_tokens);
-    if (
-      inputPrice !== definition.inputUsdPer1m ||
-      cachedPrice !== definition.cachedInputUsdPer1m ||
-      outputPrice !== definition.outputUsdPer1m
-    ) {
-      throw new Error(
-        "BASIC_INTAKE_PRICE_REFRESH_BASELINE_MISMATCH_FAIL_CLOSED",
-      );
-    }
-  }
-
-  let usdToEurRate = current
-    ? finiteNumber(current.usd_to_eur_rate)
-    : null;
-  let eurMarkupMultiplier = current
-    ? finiteNumber(current.eur_markup_multiplier)
-    : null;
-
-  if (usdToEurRate === null || eurMarkupMultiplier === null) {
-    const { data: fxRows, error: fxError } = await supabase
-      .from("ai_model_price_snapshots")
-      .select("usd_to_eur_rate,eur_markup_multiplier")
-      .eq("provider", "openai")
-      .eq("pricing_currency", "USD")
-      .not("usd_to_eur_rate", "is", null)
-      .order("valid_from", { ascending: false })
-      .limit(1);
-
-    if (fxError) {
-      throw new Error(`BASIC_INTAKE_PRICE_REFRESH_FX_READ_FAILED:${fxError.message}`);
-    }
-
-    const fxRow = fxRows?.[0] ?? null;
-    usdToEurRate =
-      usdToEurRate ?? finiteNumber(fxRow?.usd_to_eur_rate);
-    eurMarkupMultiplier =
-      eurMarkupMultiplier ?? finiteNumber(fxRow?.eur_markup_multiplier);
-  }
-
-  const now = new Date().toISOString();
-  const { data: inserted, error: insertError } = await supabase
-    .from("ai_model_price_snapshots")
-    .insert({
-      tier_code: input.tierCode,
-      model_name: input.modelName,
-      provider: "openai",
-      pricing_currency: "USD",
-      display_currency: "EUR",
-      input_cost_per_1m_tokens: definition.inputUsdPer1m,
-      cached_input_cost_per_1m_tokens: definition.cachedInputUsdPer1m,
-      output_cost_per_1m_tokens: definition.outputUsdPer1m,
-      usd_to_eur_rate: usdToEurRate,
-      eur_markup_multiplier: eurMarkupMultiplier ?? 1,
-      valid_from: now,
-      valid_to: null,
-      is_active: true,
-      source_url: modelSourceUrl(definition.modelName, definition.sourceUrl),
-      source_note:
-        "ARCTor runtime price refresh from OpenAI model documentation re-verified 2026-09-04; bounded by the server verification lease.",
-      metadata: {
-        verification_contract:
-          "ARCTOR_BASIC_INTAKE_NANO_PRICE_REFRESH_V1",
-        verified_at: NAVIGATOR_MODEL_CATALOG_VERIFIED_AT,
-        verification_expires_at: NAVIGATOR_MODEL_AUTO_SEED_EXPIRES_AT,
-        budget_currency: "USD",
-        source: "official_openai_model_documentation",
-        model_id: definition.modelName,
-        input_usd_per_1m_tokens: definition.inputUsdPer1m,
-        cached_input_usd_per_1m_tokens: definition.cachedInputUsdPer1m,
-        output_usd_per_1m_tokens: definition.outputUsdPer1m,
-      },
-    })
-    .select("id")
-    .single();
-
-  if (insertError || !inserted?.id) {
-    throw new Error(
-      `BASIC_INTAKE_PRICE_REFRESH_INSERT_FAILED:${insertError?.message ?? "missing inserted id"}`,
-    );
-  }
-
-  const { error: closeError } = await supabase
-    .from("ai_model_price_snapshots")
-    .update({ is_active: false, valid_to: now })
-    .eq("provider", "openai")
-    .eq("tier_code", input.tierCode)
-    .eq("model_name", input.modelName)
-    .eq("pricing_currency", "USD")
-    .eq("is_active", true)
-    .neq("id", inserted.id);
-
-  if (closeError) {
-    console.error(
-      "BASIC_INTAKE_PRICE_REFRESH_OLD_SNAPSHOT_CLOSE_FAILED",
-      closeError.message,
-    );
-  }
-
-  return true;
-}
-
-async function reserveBudget(input: {
-  userId: string;
-  operationId: string;
-  tierCode: string;
-  modelName: string;
-  estimatedInputTokens: number;
-}): Promise<BudgetReservation> {
-  const budgetArgs = {
-    p_app_user_id: input.userId,
-    p_operation_id: input.operationId,
-    p_tier_code: input.tierCode,
-    p_model_name: input.modelName,
-    p_input_tokens: input.estimatedInputTokens,
-    p_cached_input_tokens: 0,
-    p_max_output_tokens: MAX_OUTPUT_TOKENS,
-  };
-
-  await ensureNavigatorPriceSnapshotV1({
-    tierCode: input.tierCode,
-    modelName: input.modelName,
-    maxAgeHours: 72,
-  });
-
-  let { data, error } = await supabase.rpc(
-    "preflight_ai_pilot_call_budget_v1",
-    budgetArgs,
-  );
-
-  if (error) {
-    throw new Error(`BASIC_INTAKE_BUDGET_PREFLIGHT_FAILED:${error.message}`);
-  }
-
-  let row = asRecord(data);
-  const initialReason = text(row.reason);
-  if (
-    row.allowed !== true &&
-    RECOVERABLE_PRICE_SNAPSHOT_REASONS.has(initialReason)
-  ) {
-    const refreshed = await refreshNanoPriceSnapshotWithinVerifiedLease({
-      tierCode: input.tierCode,
-      modelName: input.modelName,
-    });
-
-    if (refreshed) {
-      const retry = await supabase.rpc(
-        "preflight_ai_pilot_call_budget_v1",
-        budgetArgs,
-      );
-      data = retry.data;
-      error = retry.error;
-
-      if (error) {
-        throw new Error(
-          `BASIC_INTAKE_BUDGET_PREFLIGHT_RETRY_FAILED:${error.message}`,
-        );
-      }
-
-      row = asRecord(data);
-    }
-  }
-
-  if (row.allowed !== true) {
-    throw new Error(
-      `BASIC_INTAKE_BUDGET_BLOCKED:${text(row.reason) || "UNKNOWN"}`,
-    );
-  }
-
-  const reservationId = text(row.reservationId);
-  const priceSnapshotId = text(row.priceSnapshotId);
-  if (!reservationId || !priceSnapshotId) {
-    throw new Error("BASIC_INTAKE_BUDGET_RESERVATION_INVALID");
-  }
-
-  return {
-    reservationId,
-    priceSnapshotId,
-    requestedCallMaxCostUsd: finiteNumber(row.requestedCallMaxCostUsd),
-  };
-}
-
-async function createUsageEvent(input: {
-  userId: string;
-  analysisExecutionId: string;
-  operationId: string;
-  modelName: string;
-  reservation: BudgetReservation;
-  estimatedInputTokens: number;
-}) {
-  const { data, error } = await supabase
-    .from("ai_usage_events")
-    .insert({
-      app_user_id: input.userId,
-      analysis_execution_id: input.analysisExecutionId,
-      selected_tier_code: MODEL_TIER,
-      model_name: input.modelName,
-      provider: "openai",
-      route_path: ROUTE_PATH,
-      operation_kind: "semantic_intake",
-      input_tokens: input.estimatedInputTokens,
-      cached_input_tokens: 0,
-      output_tokens: 0,
-      total_tokens: input.estimatedInputTokens,
-      status: "preflight_allowed",
-      request_metadata: {
-        contract: ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1,
-        stage: "basic_activity_intake_analysis",
-        walletDebited: false,
-        observationObjectCatalogSent: false,
-        impactProfilesSent: false,
-        candidateTemplateNamesOnly: true,
-      },
-      response_metadata: {},
-      pilot_operation_id: input.operationId,
-      pilot_budget_reservation_id: input.reservation.reservationId,
-      estimated_provider_cost_usd: input.reservation.requestedCallMaxCostUsd,
-      max_output_tokens: MAX_OUTPUT_TOKENS,
-    })
-    .select("id")
-    .single();
-
-  if (error || !data?.id) {
-    throw new Error(
-      `BASIC_INTAKE_USAGE_CREATE_FAILED:${error?.message ?? "missing id"}`,
-    );
-  }
-
-  return String(data.id);
-}
-
-async function actualProviderCost(input: {
-  priceSnapshotId: string;
-  usage: RunAiJsonUsageMetadata;
-}) {
-  const { data, error } = await supabase
-    .from("ai_model_price_snapshots")
-    .select(
-      "input_cost_per_1m_tokens,cached_input_cost_per_1m_tokens,output_cost_per_1m_tokens",
-    )
-    .eq("id", input.priceSnapshotId)
-    .maybeSingle();
-
-  if (error || !data) return null;
-
-  const inputPrice = finiteNumber(data.input_cost_per_1m_tokens);
-  const cachedPrice =
-    finiteNumber(data.cached_input_cost_per_1m_tokens) ?? inputPrice;
-  const outputPrice = finiteNumber(data.output_cost_per_1m_tokens);
-  if (inputPrice === null || cachedPrice === null || outputPrice === null) {
-    return null;
-  }
-
-  const cached = Math.min(input.usage.inputTokens, input.usage.cachedInputTokens);
-  const uncached = Math.max(0, input.usage.inputTokens - cached);
-
-  return (
-    uncached * inputPrice +
-    cached * cachedPrice +
-    input.usage.outputTokens * outputPrice
-  ) / 1_000_000;
-}
-
-async function finalizeUsage(input: {
-  usageEventId: string;
-  priceSnapshotId: string;
-  usage: RunAiJsonUsageMetadata;
-}) {
-  const cost = await actualProviderCost({
-    priceSnapshotId: input.priceSnapshotId,
-    usage: input.usage,
-  });
-
-  const { error } = await supabase
-    .from("ai_usage_events")
-    .update({
-      input_tokens: input.usage.inputTokens,
-      cached_input_tokens: input.usage.cachedInputTokens,
-      output_tokens: input.usage.outputTokens,
-      total_tokens: input.usage.totalTokens,
-      actual_provider_cost_usd: cost,
-      status: "openai_completed",
-      openai_response_id: input.usage.responseId,
-      response_metadata: {
-        contract: ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1,
-        rawUsage: input.usage.rawUsage,
-      },
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", input.usageEventId);
-
-  if (error) {
-    throw new Error(`BASIC_INTAKE_USAGE_FINALIZE_FAILED:${error.message}`);
-  }
-}
-
-async function markUsageFailed(usageEventId: string) {
-  await supabase
-    .from("ai_usage_events")
-    .update({
-      status: "openai_failed",
-      error_code: "BASIC_INTAKE_AI_STAGE_FAILED",
-      error_message:
-        "Basic activity intake analysis failed; provider output is not stored here.",
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", usageEventId);
-}
-
 async function writeAnalysisState(input: {
   signalId: string;
   appUserId: string;
@@ -1788,7 +1414,6 @@ Hard rules:
 
   const operationId = crypto.randomUUID();
   let analysisExecutionId: string | null = null;
-  let usageEventId: string | null = null;
   let manifestId: string | null = null;
 
   try {
@@ -1818,23 +1443,11 @@ Hard rules:
     });
 
     const estimatedInputTokens = estimateBudgetInputTokens({ system, user, schema });
-    failureStage = "budget_preflight";
-    const reservation = await reserveBudget({
-      userId: input.appUserId,
-      operationId,
+    failureStage = "billing_gateway";
+    await ensureNavigatorPriceSnapshotV1({
       tierCode: model.tierCode,
       modelName: model.modelName,
-      estimatedInputTokens,
-    });
-
-    failureStage = "usage_event";
-    usageEventId = await createUsageEvent({
-      userId: input.appUserId,
-      analysisExecutionId,
-      operationId,
-      modelName: model.modelName,
-      reservation,
-      estimatedInputTokens,
+      maxAgeHours: 72,
     });
 
     failureStage = "context_manifest";
@@ -1842,7 +1455,7 @@ Hard rules:
       analysisExecutionId,
       stageCode: "basic_activity_intake_analysis",
       stageSequence: 1,
-      aiUsageEventId: usageEventId,
+      aiUsageEventId: null,
       protocolCode: ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1,
       protocolVersion: "1",
       schemaName: "basic_activity_intake_analysis_v1",
@@ -1881,33 +1494,62 @@ Hard rules:
       throw new Error("BASIC_INTAKE_PROVIDER_DISABLED");
     }
 
-    failureStage = "provider_call";
+    failureStage = "billing_gateway";
     providerCallStarted = true;
-    const response = await runAiJsonWithUsageMetadata<ModelOutput>({
-      system,
-      user,
-      model: model.modelName,
-      maxOutputTokens: MAX_OUTPUT_TOKENS,
-      structuredOutput: {
-        name: "basic_activity_intake_analysis_v1",
-        schema,
-        strict: true,
+    const response = await runBillableAiJson<ModelOutput>({
+      billingUserId: input.appUserId,
+      requestIdempotencyKey: `basic-activity-intake:${operationId}`,
+      routePath: ROUTE_PATH,
+      operationKind: "semantic_intake",
+      modelName: model.modelName,
+      tierCode: model.tierCode,
+      estimatedInputTokens,
+      estimatedOutputTokens: MAX_OUTPUT_TOKENS,
+      preflightSafetyMultiplier: 1.25,
+      providerRequest: {
+        system,
+        user,
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
+        structuredOutput: {
+          name: "basic_activity_intake_analysis_v1",
+          schema,
+          strict: true,
+        },
+        requestTimeoutMs: REQUEST_TIMEOUT_MS,
+        maxRetries: MAX_RETRIES,
+        store: false,
+        reasoningEffort: "low",
+        outputTokenCeiling: MAX_OUTPUT_TOKENS,
       },
-      requestTimeoutMs: REQUEST_TIMEOUT_MS,
-      maxRetries: MAX_RETRIES,
-      store: false,
-      reasoningEffort: "low",
-      outputTokenCeiling: MAX_OUTPUT_TOKENS,
+      analysisExecutionId,
+      contextManifestId: manifestId,
+      reason: "ARCTor basic activity intake analysis",
+      requestMetadata: {
+        contract: ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1,
+        stage: "basic_activity_intake_analysis",
+        actorId: input.actorId,
+        operationId,
+        billingPolicy: "explicit_user_id",
+        billingUserId: input.appUserId,
+        activityEventId: activity.id,
+        signalId: input.signalId,
+        observationObjectCatalogSent: false,
+        impactProfilesSent: false,
+        candidateTemplateNamesOnly: true,
+      },
+      settlementMetadata: {
+        contract: ARCTOR_BASIC_ACTIVITY_INTAKE_ANALYSIS_V1,
+        stage: "basic_activity_intake_analysis",
+        actorId: input.actorId,
+        operationId,
+        activityEventId: activity.id,
+        signalId: input.signalId,
+      },
     });
     providerCallCompleted = true;
     failureStage = "post_provider";
 
     await markAiContextManifestProviderCompleted(manifestId, response.outputText);
-    await finalizeUsage({
-      usageEventId,
-      priceSnapshotId: reservation.priceSnapshotId,
-      usage: response.usage,
-    });
 
     const measurements = mergeMeasurements(
       validateMeasurements(response.parsed.measurements, sourceText, input.locale),
@@ -1984,13 +1626,46 @@ Hard rules:
 
     return analysis;
   } catch (error) {
-    if (usageEventId) await markUsageFailed(usageEventId);
+    const gatewayFailureCode = (
+      error instanceof Error ? error.message : String(error)
+    ).split(":", 1)[0];
+
+    const postProviderBillingFailure = new Set([
+      "AI_BILLING_GATEWAY_PROVIDER_INPUT_USAGE_INVALID",
+      "AI_BILLING_GATEWAY_PROVIDER_CACHED_USAGE_INVALID",
+      "AI_BILLING_GATEWAY_PROVIDER_OUTPUT_USAGE_INVALID",
+      "AI_BILLING_GATEWAY_PROVIDER_TOTAL_USAGE_INVALID",
+      "AI_BILLING_GATEWAY_PROVIDER_USAGE_EMPTY",
+      "AI_BILLING_GATEWAY_PROVIDER_USAGE_WRITE_FAILED",
+      "AI_BILLING_GATEWAY_ACTUAL_COST_NOT_POSITIVE",
+      "AI_BILLING_PROVIDER_COST_INVALID",
+      "AI_BILLING_USD_TO_EUR_RATE_REQUIRED",
+      "AI_BILLING_RESERVED_SETTLEMENT_FAILED",
+    ]).has(gatewayFailureCode);
+
+    const providerAttemptedBillingFailure =
+      postProviderBillingFailure ||
+      gatewayFailureCode ===
+        "AI_BILLING_GATEWAY_PROVIDER_FAILED_AND_RESERVATION_RELEASE_FAILED";
+
+    if (gatewayFailureCode.startsWith("AI_BILLING_")) {
+      providerCallStarted = providerAttemptedBillingFailure;
+      providerCallCompleted = postProviderBillingFailure;
+    }
+
     if (manifestId) await markAiContextManifestFailed(manifestId, error);
     if (analysisExecutionId) await failAiAnalysisExecution(analysisExecutionId, error);
+
+    const resolvedFailureStage: BasicIntakeFailureStage = providerCallCompleted
+      ? "post_provider"
+      : providerCallStarted
+        ? "provider_call"
+        : failureStage;
+
     return fallbackAnalysis(
       error,
       providerCallStarted ? "failed" : "not_run",
-      failureStage,
+      resolvedFailureStage,
     );
   }
 }
