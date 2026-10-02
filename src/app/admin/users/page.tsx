@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import ExternalServiceLimitsPanel from "./ExternalServiceLimitsPanel";
+import OpenAiTreasuryCard from "./OpenAiTreasuryCard";
 
 type TierProjection = {
   tierCode: string;
@@ -395,10 +396,57 @@ export default function AdminUsersPage() {
       });
   }, [onlyAdmins, onlyOnline, rows, searchText, sortMode]);
 
-  const totalAiAvailable = useMemo(
-    () => rows.reduce((sum, row) => sum + row.aiAvailableEur, 0),
+  const allocatedUserAiEur = useMemo(
+    () =>
+      Math.round(
+        rows.reduce(
+          (sum, row) =>
+            row.isProtectedOwnerAccount
+              ? sum
+              : sum + Math.max(0, row.aiBalanceEur),
+          0,
+        ) * 1_000_000,
+      ) / 1_000_000,
     [rows],
   );
+
+  const forecastAllocatedUserAiEur = useMemo(() => {
+    if (!editingAiUserId) {
+      return allocatedUserAiEur;
+    }
+
+    const row = rows.find((candidate) => candidate.userId === editingAiUserId);
+
+    if (!row || row.isProtectedOwnerAccount) {
+      return allocatedUserAiEur;
+    }
+
+    const parsed = Number(editingAiValue.replace(",", "."));
+
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100000) {
+      return allocatedUserAiEur;
+    }
+
+    const plannedBalanceEur =
+      Math.round(
+        (parsed + Math.max(0, row.aiReservedEur)) * 1_000_000,
+      ) / 1_000_000;
+
+    return (
+      Math.round(
+        (
+          allocatedUserAiEur -
+          Math.max(0, row.aiBalanceEur) +
+          plannedBalanceEur
+        ) * 1_000_000,
+      ) / 1_000_000
+    );
+  }, [
+    allocatedUserAiEur,
+    editingAiUserId,
+    editingAiValue,
+    rows,
+  ]);
 
   const totalPoints = useMemo(
     () => rows.reduce((sum, row) => sum + row.pointsBalance, 0),
@@ -466,12 +514,10 @@ export default function AdminUsersPage() {
               {blockedUsersCount}
             </p>
           </article>
-          <article className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-            <p className="text-sm text-slate-400">AI EUR доступно</p>
-            <p className="mt-2 text-2xl font-semibold text-white">
-              {formatEur(totalAiAvailable)}
-            </p>
-          </article>
+          <OpenAiTreasuryCard
+            allocatedAiEur={allocatedUserAiEur}
+            forecastAllocatedAiEur={forecastAllocatedUserAiEur}
+          />
           <article className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
             <p className="text-sm text-slate-400">Points total</p>
             <p className="mt-2 text-2xl font-semibold text-white">
