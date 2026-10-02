@@ -20,11 +20,6 @@
       "nextStage": "B3.4_EXISTING_WRAPPER_MIGRATION"
     },
     {
-      "path": "src/lib/ai/activitySemanticReviewA31.server.ts",
-      "reason": "Existing activity semantic review wrapper caller.",
-      "nextStage": "B3.4_EXISTING_WRAPPER_MIGRATION"
-    },
-    {
       "path": "src/lib/goal-world/intake/goalIntakeRuntime.server.ts",
       "reason": "Existing goal-world intake wrapper caller.",
       "nextStage": "B3.4_EXISTING_WRAPPER_MIGRATION"

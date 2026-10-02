@@ -69,8 +69,11 @@ export async function POST(request: Request) {
     const status =
       message.includes("NOT_FOUND_OR_NOT_OWNED") ? 404 :
       message.includes("NOT_REVIEW_FIRST_PENDING") ? 409 :
-      message.includes("BUDGET_BLOCKED") ? 429 :
-      500;
+      message.includes("BUDGET_BLOCKED") ||
+      message.includes("AI_CREDIT_WALLET_INSUFFICIENT") ||
+      message.includes("AI_BILLING_INSUFFICIENT_BALANCE")
+        ? 429 :
+        500;
 
     return NextResponse.json(
       {

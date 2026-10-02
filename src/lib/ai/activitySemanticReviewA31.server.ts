@@ -1,10 +1,7 @@
 import { Buffer } from "node:buffer";
 import crypto from "node:crypto";
 
-import {
-  runAiJsonWithUsageMetadata,
-  type RunAiJsonUsageMetadata,
-} from "../../../lib/ai/openaiClient";
+import { runBillableAiJson } from "@/lib/ai-billing/gateway.server";
 import { getNavigatorModelDefinition } from "../../../lib/ai/navigatorModelCatalog";
 import { ensureNavigatorPriceSnapshotV1 } from "../../../lib/ai/navigatorPriceSnapshot.server";
 import {
@@ -37,11 +34,6 @@ const ALLOWED_ACTIVITY_IMAGE_MIME_TYPES = new Set([
   "image/png",
   "image/webp",
 ]);
-const STANDARD_PRICE_REFRESH_VERIFIED_AT = "2026-08-19T00:00:00.000Z";
-const STANDARD_PRICE_REFRESH_EXPIRES_AT = "2026-08-26T23:59:59.999Z";
-const STANDARD_PRICE_SOURCE_URL =
-  "https://developers.openai.com/api/docs/models/gpt-5.4-mini";
-
 const SUPPORTED_LOCALES = new Set([
   "ru",
   "en",
@@ -204,13 +196,6 @@ type NormalizedProposal = {
   interpretationText: string;
 };
 
-type BudgetReservation = {
-  reservationId: string;
-  priceSnapshotId: string;
-  requestedCallMaxCostUsd: number | null;
-};
-
-
 function asRecord(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as JsonRecord)
@@ -268,99 +253,6 @@ async function loadActivityImageDataUrl(input: {
   }
 
   return `data:${input.evidence.mimeType};base64,${bytes.toString("base64")}`;
-}
-
-async function refreshStandardPriceSnapshotWithinVerifiedLease(input: {
-  tierCode: string;
-  modelName: string;
-}) {
-  if (
-    input.tierCode !== "standard" ||
-    input.modelName !== "gpt-5.4-mini" ||
-    Date.now() > Date.parse(STANDARD_PRICE_REFRESH_EXPIRES_AT)
-  ) {
-    return false;
-  }
-
-  const { data: current, error: currentError } = await supabase
-    .from("ai_model_price_snapshots")
-    .select(
-      "id,input_cost_per_1m_tokens,cached_input_cost_per_1m_tokens,output_cost_per_1m_tokens,usd_to_eur_rate,eur_markup_multiplier",
-    )
-    .eq("provider", "openai")
-    .eq("tier_code", "standard")
-    .eq("model_name", "gpt-5.4-mini")
-    .eq("pricing_currency", "USD")
-    .eq("is_active", true)
-    .order("valid_from", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (currentError || !current) {
-    throw new Error(
-      `AI_A3_1_PRICE_REFRESH_BASELINE_READ_FAILED:${currentError?.message ?? "missing snapshot"}`,
-    );
-  }
-
-  const inputPrice = asFiniteNumber(current.input_cost_per_1m_tokens);
-  const cachedPrice = asFiniteNumber(current.cached_input_cost_per_1m_tokens);
-  const outputPrice = asFiniteNumber(current.output_cost_per_1m_tokens);
-
-  if (inputPrice !== 0.75 || cachedPrice !== 0.075 || outputPrice !== 4.5) {
-    throw new Error("AI_A3_1_PRICE_REFRESH_BASELINE_MISMATCH_FAIL_CLOSED");
-  }
-
-  const now = new Date().toISOString();
-  const { data: inserted, error: insertError } = await supabase
-    .from("ai_model_price_snapshots")
-    .insert({
-      tier_code: "standard",
-      model_name: "gpt-5.4-mini",
-      provider: "openai",
-      pricing_currency: "USD",
-      display_currency: "EUR",
-      input_cost_per_1m_tokens: 0.75,
-      cached_input_cost_per_1m_tokens: 0.075,
-      output_cost_per_1m_tokens: 4.5,
-      usd_to_eur_rate: current.usd_to_eur_rate ?? null,
-      eur_markup_multiplier: current.eur_markup_multiplier ?? 1,
-      valid_from: now,
-      valid_to: null,
-      is_active: true,
-      source_url: STANDARD_PRICE_SOURCE_URL,
-      source_note:
-        "Runtime self-heal refresh from server-shipped price catalog verified 2026-08-19; fail-closed after verification lease expiry.",
-      metadata: {
-        verification_contract: "ARCTOR_A3_1_STANDARD_PRICE_REFRESH_V1",
-        verified_at: STANDARD_PRICE_REFRESH_VERIFIED_AT,
-        verification_expires_at: STANDARD_PRICE_REFRESH_EXPIRES_AT,
-        budget_currency: "USD",
-        source: "official_openai_model_documentation",
-      },
-    })
-    .select("id")
-    .single();
-
-  if (insertError || !inserted?.id) {
-    throw new Error(
-      `AI_A3_1_PRICE_REFRESH_INSERT_FAILED:${insertError?.message ?? "missing inserted id"}`,
-    );
-  }
-
-  const { error: closeError } = await supabase
-    .from("ai_model_price_snapshots")
-    .update({ is_active: false, valid_to: now })
-    .eq("provider", "openai")
-    .eq("tier_code", "standard")
-    .eq("model_name", "gpt-5.4-mini")
-    .eq("is_active", true)
-    .neq("id", inserted.id);
-
-  if (closeError) {
-    // The newly inserted, newest snapshot remains authoritative. Cleanup can be retried later.
-  }
-
-  return true;
 }
 
 function asText(value: unknown): string {
@@ -424,8 +316,8 @@ function estimateInputTokensForBudgetUpperBound(input: {
 }) {
   const serialized = serializeProviderInput(input);
 
-  // Budget reservation intentionally remains more conservative than the
-  // context guard so the existing monetary hard cap is never relaxed here.
+  // Billing reservation remains more conservative than the context guard so
+  // the unified gateway reserves enough EUR for the bounded provider request.
   return Buffer.byteLength(serialized, "utf8") + 1_024;
 }
 
@@ -436,228 +328,6 @@ async function resolveModel() {
     throw new Error("AI_A3_1_SEMANTIC_REVIEW_STANDARD_MODEL_UNAVAILABLE");
   }
   return { tierCode: "standard", modelName };
-}
-
-async function reserveBudget(input: {
-  userId: string;
-  operationId: string;
-  tierCode: string;
-  modelName: string;
-  estimatedInputTokens: number;
-}) {
-  const budgetArgs = {
-    p_app_user_id: input.userId,
-    p_operation_id: input.operationId,
-    p_tier_code: input.tierCode,
-    p_model_name: input.modelName,
-    p_input_tokens: input.estimatedInputTokens,
-    p_cached_input_tokens: 0,
-    p_max_output_tokens: MAX_OUTPUT_TOKENS,
-  };
-
-  await ensureNavigatorPriceSnapshotV1({
-    tierCode: input.tierCode,
-    modelName: input.modelName,
-    maxAgeHours: 72,
-  });
-
-  let { data, error } = await supabase.rpc(
-    "preflight_ai_pilot_call_budget_v1",
-    budgetArgs,
-  );
-
-  if (error) {
-    throw new Error(
-      `AI_A3_1_SEMANTIC_REVIEW_BUDGET_PREFLIGHT_FAILED:${error.message}`,
-    );
-  }
-
-  let row = asRecord(data);
-
-  if (row.allowed !== true && asText(row.reason) === "PRICE_SNAPSHOT_STALE") {
-    const refreshed = await refreshStandardPriceSnapshotWithinVerifiedLease({
-      tierCode: input.tierCode,
-      modelName: input.modelName,
-    });
-
-    if (refreshed) {
-      const retry = await supabase.rpc(
-        "preflight_ai_pilot_call_budget_v1",
-        budgetArgs,
-      );
-      data = retry.data;
-      error = retry.error;
-
-      if (error) {
-        throw new Error(
-          `AI_A3_1_SEMANTIC_REVIEW_BUDGET_PREFLIGHT_RETRY_FAILED:${error.message}`,
-        );
-      }
-
-      row = asRecord(data);
-    }
-  }
-
-  if (row.allowed !== true) {
-    throw new Error(
-      `AI_A3_1_SEMANTIC_REVIEW_BUDGET_BLOCKED:${asText(row.reason) || "UNKNOWN"}`,
-    );
-  }
-
-  const reservationId = asText(row.reservationId);
-  const priceSnapshotId = asText(row.priceSnapshotId);
-
-  if (!reservationId || !priceSnapshotId) {
-    throw new Error(
-      "AI_A3_1_SEMANTIC_REVIEW_BUDGET_RESERVATION_INVALID",
-    );
-  }
-
-  return {
-    reservationId,
-    priceSnapshotId,
-    requestedCallMaxCostUsd: asFiniteNumber(
-      row.requestedCallMaxCostUsd,
-    ),
-  } satisfies BudgetReservation;
-}
-
-async function createUsageEvent(input: {
-  userId: string;
-  analysisExecutionId: string;
-  operationId: string;
-  tierCode: string;
-  modelName: string;
-  reservation: BudgetReservation;
-  estimatedInputTokens: number;
-}) {
-  const { data, error } = await supabase
-    .from("ai_usage_events")
-    .insert({
-      app_user_id: input.userId,
-      analysis_execution_id: input.analysisExecutionId,
-      selected_tier_code: input.tierCode,
-      model_name: input.modelName,
-      provider: "openai",
-      route_path: ROUTE_PATH,
-      operation_kind: "semantic_intake",
-      input_tokens: input.estimatedInputTokens,
-      cached_input_tokens: 0,
-      output_tokens: 0,
-      total_tokens: input.estimatedInputTokens,
-      status: "preflight_allowed",
-      request_metadata: {
-        contract: AI_A3_1_SEMANTIC_REVIEW_CONTRACT,
-        stage: "creative_semantic_review",
-        walletDebited: false,
-        conservativeInputTokenUpperBound: input.estimatedInputTokens,
-      },
-      response_metadata: {},
-      pilot_operation_id: input.operationId,
-      pilot_budget_reservation_id: input.reservation.reservationId,
-      estimated_provider_cost_usd:
-        input.reservation.requestedCallMaxCostUsd,
-      max_output_tokens: MAX_OUTPUT_TOKENS,
-    })
-    .select("id")
-    .single();
-
-  if (error || !data?.id) {
-    throw new Error(
-      `AI_A3_1_SEMANTIC_REVIEW_USAGE_CREATE_FAILED:${error?.message ?? "missing id"}`,
-    );
-  }
-
-  return String(data.id);
-}
-
-async function actualProviderCost(input: {
-  priceSnapshotId: string;
-  usage: RunAiJsonUsageMetadata;
-}) {
-  const { data, error } = await supabase
-    .from("ai_model_price_snapshots")
-    .select(
-      "input_cost_per_1m_tokens,cached_input_cost_per_1m_tokens,output_cost_per_1m_tokens",
-    )
-    .eq("id", input.priceSnapshotId)
-    .maybeSingle();
-
-  if (error || !data) return null;
-
-  const inputPrice = asFiniteNumber(data.input_cost_per_1m_tokens);
-  const cachedPrice =
-    asFiniteNumber(data.cached_input_cost_per_1m_tokens) ??
-    inputPrice;
-  const outputPrice = asFiniteNumber(data.output_cost_per_1m_tokens);
-
-  if (
-    inputPrice === null ||
-    cachedPrice === null ||
-    outputPrice === null
-  ) {
-    return null;
-  }
-
-  const cached = Math.min(
-    input.usage.inputTokens,
-    input.usage.cachedInputTokens,
-  );
-  const uncached = Math.max(0, input.usage.inputTokens - cached);
-
-  return (
-    uncached * inputPrice +
-    cached * cachedPrice +
-    input.usage.outputTokens * outputPrice
-  ) / 1_000_000;
-}
-
-async function finalizeUsage(input: {
-  usageEventId: string;
-  priceSnapshotId: string;
-  usage: RunAiJsonUsageMetadata;
-}) {
-  const cost = await actualProviderCost({
-    priceSnapshotId: input.priceSnapshotId,
-    usage: input.usage,
-  });
-
-  const { error } = await supabase
-    .from("ai_usage_events")
-    .update({
-      input_tokens: input.usage.inputTokens,
-      cached_input_tokens: input.usage.cachedInputTokens,
-      output_tokens: input.usage.outputTokens,
-      total_tokens: input.usage.totalTokens,
-      actual_provider_cost_usd: cost,
-      status: "openai_completed",
-      openai_response_id: input.usage.responseId,
-      response_metadata: {
-        contract: AI_A3_1_SEMANTIC_REVIEW_CONTRACT,
-        rawUsage: input.usage.rawUsage,
-      },
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", input.usageEventId);
-
-  if (error) {
-    throw new Error(
-      `AI_A3_1_SEMANTIC_REVIEW_USAGE_FINALIZE_FAILED:${error.message}`,
-    );
-  }
-}
-
-async function markUsageFailed(usageEventId: string) {
-  await supabase
-    .from("ai_usage_events")
-    .update({
-      status: "openai_failed",
-      error_code: "AI_A3_1_SEMANTIC_REVIEW_STAGE_FAILED",
-      error_message:
-        "Semantic review AI stage failed; provider output is not stored here.",
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", usageEventId);
 }
 
 function semanticReviewSchema(input: { residualMode: boolean }) {
@@ -1300,7 +970,6 @@ Hard rules:
     },
   });
 
-  let usageEventId: string | null = null;
   let manifestId: string | null = null;
 
   try {
@@ -1369,29 +1038,17 @@ Hard rules:
         schema,
       });
 
-    const reservation = await reserveBudget({
-      userId: input.appUserId,
-      operationId,
+    await ensureNavigatorPriceSnapshotV1({
       tierCode: model.tierCode,
       modelName: model.modelName,
-      estimatedInputTokens: budgetInputTokenUpperBound,
-    });
-
-    usageEventId = await createUsageEvent({
-      userId: input.appUserId,
-      analysisExecutionId,
-      operationId,
-      tierCode: model.tierCode,
-      modelName: model.modelName,
-      reservation,
-      estimatedInputTokens: budgetInputTokenUpperBound,
+      maxAgeHours: 72,
     });
 
     manifestId = await createAiContextManifest({
       analysisExecutionId,
       stageCode: "creative_semantic_review",
       stageSequence: 1,
-      aiUsageEventId: usageEventId,
+      aiUsageEventId: null,
       protocolCode: AI_A3_1_SEMANTIC_REVIEW_CONTRACT,
       protocolVersion: "1",
       schemaName: "activity_semantic_review_a31",
@@ -1415,34 +1072,66 @@ Hard rules:
       contextMetadata: compiled.contextMetadata,
     });
 
-    const response = await runAiJsonWithUsageMetadata<ModelOutput>({
-      system: compiled.systemPrompt,
-      user: compiled.requestPayload,
-      model: model.modelName,
-      maxOutputTokens: MAX_OUTPUT_TOKENS,
-      structuredOutput: {
-        name: "activity_semantic_review_a31",
-        schema,
-        strict: true,
+    const response = await runBillableAiJson<ModelOutput>({
+      billingUserId: input.appUserId,
+      requestIdempotencyKey: `activity-semantic-review:${operationId}`,
+      routePath: ROUTE_PATH,
+      operationKind: "semantic_intake",
+      modelName: model.modelName,
+      tierCode: model.tierCode,
+      estimatedInputTokens: budgetInputTokenUpperBound,
+      estimatedOutputTokens: MAX_OUTPUT_TOKENS,
+      preflightSafetyMultiplier: 1.25,
+      providerRequest: {
+        system: compiled.systemPrompt,
+        user: compiled.requestPayload,
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
+        structuredOutput: {
+          name: "activity_semantic_review_a31",
+          schema,
+          strict: true,
+        },
+        requestTimeoutMs: REQUEST_TIMEOUT_MS,
+        maxRetries: MAX_RETRIES,
+        store: false,
+        reasoningEffort: "low",
+        outputTokenCeiling: MAX_OUTPUT_TOKENS,
+        userImageDataUrl,
       },
-      requestTimeoutMs: REQUEST_TIMEOUT_MS,
-      maxRetries: MAX_RETRIES,
-      store: false,
-      reasoningEffort: "low",
-      outputTokenCeiling: MAX_OUTPUT_TOKENS,
-      userImageDataUrl,
+      analysisExecutionId,
+      contextManifestId: manifestId,
+      reason: "ARCTor activity semantic review",
+      requestMetadata: {
+        contract: AI_A3_1_SEMANTIC_REVIEW_CONTRACT,
+        stage: "creative_semantic_review",
+        actorId: input.actorId,
+        operationId,
+        billingPolicy: "explicit_user_id",
+        billingUserId: input.appUserId,
+        activityEventId: activity.id,
+        reviewMode: residualMode
+          ? "template_residual_facts"
+          : "full_activity_review",
+        recognizedTypicalActivityId: residualMode
+          ? matchedTemplateId
+          : null,
+        providerCatalogSent: false,
+        serverLeafResolutionRequired: true,
+        imageEvidencePresent: Boolean(imageEvidence),
+      },
+      settlementMetadata: {
+        contract: AI_A3_1_SEMANTIC_REVIEW_CONTRACT,
+        stage: "creative_semantic_review",
+        actorId: input.actorId,
+        operationId,
+        activityEventId: activity.id,
+      },
     });
 
     await markAiContextManifestProviderCompleted(
       manifestId,
       response.outputText,
     );
-
-    await finalizeUsage({
-      usageEventId,
-      priceSnapshotId: reservation.priceSnapshotId,
-      usage: response.usage,
-    });
 
     const validatedModelMeasurements = validateModelMeasurements(
       response.parsed.measurements,
@@ -1535,9 +1224,6 @@ Hard rules:
   } catch (error) {
     if (manifestId) {
       await markAiContextManifestFailed(manifestId, error);
-    }
-    if (usageEventId) {
-      await markUsageFailed(usageEventId);
     }
     await failAiAnalysisExecution(analysisExecutionId, error);
     throw error;
