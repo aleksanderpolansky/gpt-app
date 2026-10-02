@@ -10,7 +10,7 @@ if (!fs.existsSync(policyPath)) {
 
 const policy = JSON.parse(fs.readFileSync(policyPath, "utf8"));
 
-if (policy.contract !== "ARCTOR_AI_PROVIDER_BOUNDARY_B2_4_V1_2") {
+if (policy.contract !== "ARCTOR_AI_PROVIDER_BOUNDARY_B2_4_V1_3") {
   throw new Error("AI_PROVIDER_BOUNDARY_POLICY_CONTRACT_INVALID");
 }
 
@@ -44,6 +44,11 @@ const files = [
   ...walk(path.join(root, "src")),
 ].sort();
 
+const fileByRelativePath = new Map(
+  files.map((file) => [normalizePath(file), file]),
+);
+const codeFileSet = new Set(fileByRelativePath.keys());
+
 const transportFiles = new Set(policy.transportFiles ?? []);
 const directLegacy = new Map(
   (policy.legacyDirectProviderExceptions ?? []).map((item) => [
@@ -54,6 +59,9 @@ const directLegacy = new Map(
 const gatewayWrapperAllowed = new Set(
   policy.gatewayWrapperAllowedFiles ?? [],
 );
+const backgroundProviderWrapperAllowed = new Set(
+  policy.backgroundProviderWrapperAllowedFiles ?? [],
+);
 const wrapperLegacy = new Map(
   (policy.legacyWrapperExceptions ?? []).map((item) => [
     item.path,
@@ -63,6 +71,7 @@ const wrapperLegacy = new Map(
 
 const directProviderFiles = new Set();
 const wrapperFiles = new Set();
+const backgroundProviderWrapperFiles = new Set();
 const findings = [];
 
 const runtimeImportRe =
@@ -73,11 +82,17 @@ const newOpenAiRe = /\bnew\s+OpenAI\s*\(/;
 const responsesRuntimeRe =
   /\.\s*responses\s*\.\s*(?:create|retrieve|cancel|delete)\s*\(/;
 
-// Existing wrapper topology is also frozen. This catches both the usage-aware
-// wrapper and the older runAiJson wrapper because both ultimately reach the
-// provider transport.
+// Existing synchronous wrapper topology is frozen.
 const wrapperUseRe =
   /\brunAiJson(?:WithUsageMetadata)?(?:<[^>\n]+>)?\s*\(/;
+
+// Background provider transport is intentionally separate from the synchronous
+// JSON wrapper. Only the central background billing gateway may call these
+// provider transport helpers.
+const openAiClientImportRe =
+  /\bfrom\s+["'][^"']*openaiClient["']/;
+const backgroundProviderSymbolRe =
+  /\b(?:createAiBackgroundResponse|retrieveAiBackgroundResponse|cancelAiBackgroundResponse)\b/;
 
 for (const file of files) {
   const rel = normalizePath(file);
@@ -106,6 +121,22 @@ for (const file of files) {
     if (!gatewayWrapperAllowed.has(rel) && !wrapperLegacy.has(rel)) {
       findings.push({
         kind: "UNAPPROVED_PROVIDER_WRAPPER_CALL",
+        path: rel,
+      });
+    }
+  }
+
+  const hasBackgroundProviderWrapper =
+    !transportFiles.has(rel) &&
+    openAiClientImportRe.test(source) &&
+    backgroundProviderSymbolRe.test(source);
+
+  if (hasBackgroundProviderWrapper) {
+    backgroundProviderWrapperFiles.add(rel);
+
+    if (!backgroundProviderWrapperAllowed.has(rel)) {
+      findings.push({
+        kind: "UNAPPROVED_BACKGROUND_PROVIDER_WRAPPER_CALL",
         path: rel,
       });
     }
@@ -157,6 +188,184 @@ for (const actual of wrapperFiles) {
     });
   }
 }
+
+for (const expected of backgroundProviderWrapperAllowed) {
+  if (!backgroundProviderWrapperFiles.has(expected)) {
+    findings.push({
+      kind: "EXPECTED_BACKGROUND_PROVIDER_WRAPPER_FILE_NOT_DETECTED",
+      path: expected,
+    });
+  }
+}
+
+for (const actual of backgroundProviderWrapperFiles) {
+  if (!backgroundProviderWrapperAllowed.has(actual)) {
+    findings.push({
+      kind: "BACKGROUND_PROVIDER_WRAPPER_FILE_NOT_IN_POLICY",
+      path: actual,
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// API route reachability gate.
+//
+// Dormant legacy wrappers may remain in source temporarily, but no active API
+// route may import/reach them. This converts "dormant/deferred" from a comment
+// into an enforced invariant.
+// ---------------------------------------------------------------------------
+
+function importSpecs(source) {
+  const specs = new Set();
+
+  for (const match of source.matchAll(
+    /\bimport\s+(?:[\s\S]*?\sfrom\s+)?["']([^"']+)["']/g,
+  )) {
+    specs.add(match[1]);
+  }
+
+  for (const match of source.matchAll(
+    /\brequire\s*\(\s*["']([^"']+)["']\s*\)/g,
+  )) {
+    specs.add(match[1]);
+  }
+
+  for (const match of source.matchAll(
+    /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g,
+  )) {
+    specs.add(match[1]);
+  }
+
+  return [...specs];
+}
+
+function resolveInternalImport(fromRel, spec) {
+  if (!spec) return null;
+
+  let baseRel = null;
+
+  if (spec.startsWith("@/")) {
+    baseRel = `src/${spec.slice(2)}`;
+  } else if (spec.startsWith(".")) {
+    baseRel = path
+      .relative(
+        root,
+        path.resolve(
+          path.dirname(path.join(root, fromRel)),
+          spec,
+        ),
+      )
+      .replaceAll("\\", "/");
+  } else {
+    return null;
+  }
+
+  const candidates = [
+    baseRel,
+    `${baseRel}.ts`,
+    `${baseRel}.tsx`,
+    `${baseRel}.js`,
+    `${baseRel}.jsx`,
+    `${baseRel}.mjs`,
+    `${baseRel}.cjs`,
+    `${baseRel}/index.ts`,
+    `${baseRel}/index.tsx`,
+    `${baseRel}/index.js`,
+    `${baseRel}/index.jsx`,
+    `${baseRel}/index.mjs`,
+    `${baseRel}/index.cjs`,
+  ];
+
+  return candidates.find((candidate) => codeFileSet.has(candidate)) ?? null;
+}
+
+const importGraph = new Map();
+
+for (const [rel, file] of fileByRelativePath.entries()) {
+  const source = fs.readFileSync(file, "utf8");
+  const deps = new Set();
+
+  for (const spec of importSpecs(source)) {
+    const resolved = resolveInternalImport(rel, spec);
+    if (resolved) deps.add(resolved);
+  }
+
+  importGraph.set(rel, [...deps]);
+}
+
+function reachableFrom(start) {
+  const seen = new Set();
+  const stack = [start];
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+
+    if (!current || seen.has(current)) continue;
+
+    seen.add(current);
+
+    for (const dep of importGraph.get(current) ?? []) {
+      if (!seen.has(dep)) stack.push(dep);
+    }
+  }
+
+  return seen;
+}
+
+const apiRoutes = [...codeFileSet]
+  .filter(
+    (rel) =>
+      rel.startsWith("src/app/api/") &&
+      /\/route\.(?:ts|tsx|js|jsx)$/.test(rel),
+  )
+  .sort();
+
+const legacyRouteReachability = [];
+
+for (const route of apiRoutes) {
+  const reachable = reachableFrom(route);
+
+  for (const [legacyPath, exception] of wrapperLegacy.entries()) {
+    if (!reachable.has(legacyPath)) continue;
+
+    legacyRouteReachability.push({
+      route,
+      legacyPath,
+      exception,
+    });
+
+    findings.push({
+      kind: "API_ROUTE_REACHES_LEGACY_WRAPPER_EXCEPTION",
+      path: route,
+      legacyPath,
+    });
+  }
+}
+
+for (const [legacyPath, exception] of wrapperLegacy.entries()) {
+  if (exception?.status !== "dormant_deferred") {
+    findings.push({
+      kind: "LEGACY_WRAPPER_EXCEPTION_NOT_MARKED_DORMANT",
+      path: legacyPath,
+    });
+  }
+
+  const activeRouteCallers = legacyRouteReachability.filter(
+    (row) => row.legacyPath === legacyPath,
+  );
+
+  if (activeRouteCallers.length > 0) {
+    findings.push({
+      kind: "DORMANT_LEGACY_WRAPPER_HAS_ACTIVE_API_CALLER",
+      path: legacyPath,
+      callers: activeRouteCallers.map((row) => row.route),
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Existing /api/test anti-regression checks.
+// ---------------------------------------------------------------------------
 
 const apiTestPath = path.join(root, "src/app/api/test/route.ts");
 const apiTest = fs.readFileSync(apiTestPath, "utf8");
@@ -251,9 +460,31 @@ for (const file of [...wrapperFiles].sort()) {
   } else {
     const exception = wrapperLegacy.get(file);
     console.log(
-      `LEGACY_WRAPPER_EXCEPTION=${file}|NEXT=${exception?.nextStage ?? "UNKNOWN"}`,
+      `LEGACY_WRAPPER_EXCEPTION=${file}|STATUS=${exception?.status ?? "UNKNOWN"}|NEXT=${exception?.nextStage ?? "UNKNOWN"}`,
     );
   }
+}
+
+console.log(
+  `BACKGROUND_PROVIDER_WRAPPER_FILES=${backgroundProviderWrapperFiles.size}`,
+);
+for (const file of [...backgroundProviderWrapperFiles].sort()) {
+  console.log(`BACKGROUND_PROVIDER_GATEWAY_ALLOWED=${file}`);
+}
+
+console.log(`API_ROUTE_COUNT=${apiRoutes.length}`);
+console.log(
+  `API_ROUTES_REACHING_LEGACY_EXCEPTION=${legacyRouteReachability.length}`,
+);
+
+for (const [legacyPath] of wrapperLegacy.entries()) {
+  const callers = legacyRouteReachability
+    .filter((row) => row.legacyPath === legacyPath)
+    .map((row) => row.route);
+
+  console.log(
+    `DORMANT_EXCEPTION=${legacyPath}|ACTIVE_API_ROUTE_CALLERS=${callers.length}|CALLERS=${callers.join(",") || "NONE"}`,
+  );
 }
 
 console.log(`UNAPPROVED_BYPASS_FINDINGS=${findings.length}`);
@@ -269,5 +500,7 @@ if (findings.length > 0) {
 
 console.log("API_TEST_LEGACY_SETTLEMENT=0");
 console.log("DIRECT_PROVIDER_TOPOLOGY_FROZEN=TRUE");
-console.log("WRAPPER_TOPOLOGY_FROZEN=TRUE");
+console.log("SYNC_WRAPPER_TOPOLOGY_FROZEN=TRUE");
+console.log("BACKGROUND_PROVIDER_TOPOLOGY_FROZEN=TRUE");
+console.log("DORMANT_LEGACY_WRAPPERS_HAVE_ACTIVE_API_CALLERS=FALSE");
 console.log("AI_GATEWAY_BOUNDARY_VALIDATOR=PASS");

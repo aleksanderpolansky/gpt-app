@@ -1,5 +1,5 @@
 {
-  "contract": "ARCTOR_AI_PROVIDER_BOUNDARY_B2_4_V1_2",
+  "contract": "ARCTOR_AI_PROVIDER_BOUNDARY_B2_4_V1_3",
   "transportFiles": [
     "lib/ai/openaiClient.ts"
   ],
@@ -8,16 +8,21 @@
     "lib/ai/openaiClient.ts",
     "src/lib/ai-billing/gateway.server.ts"
   ],
+  "backgroundProviderWrapperAllowedFiles": [
+    "src/lib/ai-billing/backgroundGateway.server.ts"
+  ],
   "legacyWrapperExceptions": [
     {
       "path": "src/lib/activity/typical-activity-template-matcher.server.ts",
-      "reason": "Existing typical-activity matcher wrapper caller.",
-      "nextStage": "B3.4_EXISTING_WRAPPER_MIGRATION"
+      "status": "dormant_deferred",
+      "reason": "Dormant/deferred legacy wrapper. Final runtime audit found no active API route caller. Activation through an API route is forbidden by the provider-boundary validator.",
+      "nextStage": "DORMANT_DEFERRED_NO_ACTIVE_API_ROUTE_CALLER"
     },
     {
       "path": "src/lib/goal-world/intake/goalIntakeRuntime.server.ts",
-      "reason": "Existing goal-world intake wrapper caller.",
-      "nextStage": "B3.4_EXISTING_WRAPPER_MIGRATION"
+      "status": "dormant_deferred",
+      "reason": "Dormant/deferred legacy wrapper. Final runtime audit found no active API route caller. Activation through an API route is forbidden by the provider-boundary validator.",
+      "nextStage": "DORMANT_DEFERRED_NO_ACTIVE_API_ROUTE_CALLER"
     }
   ]
 }
