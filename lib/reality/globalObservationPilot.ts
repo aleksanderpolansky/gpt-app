@@ -40,6 +40,12 @@ import {
 const ROUTE_PATH = "/api/ai/reality/global-observation-preview";
 const PILOT_MODEL_TIER = "nano";
 
+// Current canonical ontology uses the three top-level semantic roots:
+// Actions and Processes / States and Needs / Systems and Structures.
+// The previous GSR-1 pilot expected 12 navigation DOMAIN roots, which no
+// longer exist in the live canonical registry.
+const EXPECTED_GLOBAL_DOMAIN_ROOT_COUNT = 3;
+
 const HARD_CAP_USD = 0.1;
 const MAX_PROVIDER_CALLS = 2;
 const OPERATION_DEADLINE_MS = 55_000;
@@ -793,11 +799,11 @@ async function loadDomainFacetCatalog(): Promise<DomainFacetOption[]> {
     title: string;
   }>;
 
-  if (rootRows.length !== 12) {
+  if (rootRows.length !== EXPECTED_GLOBAL_DOMAIN_ROOT_COUNT) {
     throw new GlobalObservationPilotError(
       409,
       "GLOBAL_DOMAIN_COUNT_INVALID",
-      `Expected 12 global DOMAIN roots, received ${rootRows.length}.`,
+      `Expected ${EXPECTED_GLOBAL_DOMAIN_ROOT_COUNT} active global top-level ontology roots, received ${rootRows.length}.`,
     );
   }
 
