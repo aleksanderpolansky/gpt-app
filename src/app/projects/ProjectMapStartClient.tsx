@@ -48,6 +48,17 @@ type ProjectActivityItem = {
   startedAt: string | null;
   endedAt: string | null;
   durationMinutes: number | null;
+  recurrence: {
+    id: string;
+    frequencyCode: "daily" | "weekly" | "monthly";
+    intervalCount: number;
+    anchorDate: string;
+    recurrenceBasisCode: string;
+    endModeCode: string;
+    untilDate: string | null;
+    countLimit: number | null;
+    statusCode: string;
+  } | null;
 };
 
 type ProjectItem = {
@@ -354,34 +365,112 @@ function rootDisplay(option: RootOption | null | undefined) {
   return parent ? `${parent} → ${title}` : title;
 }
 
+function projectActivityRecurrenceLabel(
+  activity: ProjectActivityItem,
+  locale: LocaleCode,
+) {
+  const recurrence = activity.recurrence;
+  if (!recurrence) return null;
+
+  if (recurrence.intervalCount === 1) {
+    const single: Record<
+      LocaleCode,
+      Record<"daily" | "weekly" | "monthly", string>
+    > = {
+      ru: {
+        daily: "Каждый день",
+        weekly: "Каждую неделю",
+        monthly: "Каждый месяц",
+      },
+      uk: {
+        daily: "Щодня",
+        weekly: "Щотижня",
+        monthly: "Щомісяця",
+      },
+      pl: {
+        daily: "Codziennie",
+        weekly: "Co tydzień",
+        monthly: "Co miesiąc",
+      },
+      en: {
+        daily: "Every day",
+        weekly: "Every week",
+        monthly: "Every month",
+      },
+      de: {
+        daily: "Jeden Tag",
+        weekly: "Jede Woche",
+        monthly: "Jeden Monat",
+      },
+      es: {
+        daily: "Cada día",
+        weekly: "Cada semana",
+        monthly: "Cada mes",
+      },
+      cs: {
+        daily: "Každý den",
+        weekly: "Každý týden",
+        monthly: "Každý měsíc",
+      },
+    };
+
+    return single[locale][recurrence.frequencyCode];
+  }
+
+  const units: Record<
+    LocaleCode,
+    Record<"daily" | "weekly" | "monthly", string>
+  > = {
+    ru: { daily: "дн.", weekly: "нед.", monthly: "мес." },
+    uk: { daily: "дн.", weekly: "тиж.", monthly: "міс." },
+    pl: { daily: "dni", weekly: "tyg.", monthly: "mies." },
+    en: { daily: "days", weekly: "weeks", monthly: "months" },
+    de: { daily: "Tage", weekly: "Wochen", monthly: "Monate" },
+    es: { daily: "días", weekly: "sem.", monthly: "meses" },
+    cs: { daily: "dní", weekly: "týd.", monthly: "měs." },
+  };
+
+  return locale === "en"
+    ? `Every ${recurrence.intervalCount} ${units[locale][recurrence.frequencyCode]}`
+    : `${recurrence.intervalCount} × ${units[locale][recurrence.frequencyCode]}`;
+}
+
 function projectActivityTimingLabel(
   activity: ProjectActivityItem,
   copy: Copy,
+  locale: LocaleCode,
 ) {
+  const recurrenceLabel = projectActivityRecurrenceLabel(activity, locale);
+  let scheduleLabel: string | null = null;
+
   if (
     activity.scheduleModeCode === "date_only" &&
     activity.scheduledDate
   ) {
-    return activity.scheduledDate;
-  }
-
-  if (
+    scheduleLabel = activity.scheduledDate;
+  } else if (
     activity.scheduleModeCode === "date_range" &&
     activity.scheduleStartDate &&
     activity.scheduleEndDate
   ) {
-    return `${activity.scheduleStartDate} → ${activity.scheduleEndDate}`;
+    scheduleLabel = `${activity.scheduleStartDate} → ${activity.scheduleEndDate}`;
+  } else if (
+    activity.scheduleModeCode === "deadline" &&
+    activity.deadlineAt
+  ) {
+    scheduleLabel = `≤ ${new Date(activity.deadlineAt).toLocaleString()}`;
+  } else if (
+    activity.scheduleModeCode === "exact" &&
+    activity.startedAt
+  ) {
+    scheduleLabel = new Date(activity.startedAt).toLocaleString();
   }
 
-  if (activity.scheduleModeCode === "deadline" && activity.deadlineAt) {
-    return `≤ ${new Date(activity.deadlineAt).toLocaleString()}`;
+  if (recurrenceLabel && scheduleLabel) {
+    return `${recurrenceLabel} · ${scheduleLabel}`;
   }
 
-  if (activity.scheduleModeCode === "exact" && activity.startedAt) {
-    return new Date(activity.startedAt).toLocaleString();
-  }
-
-  return copy.unscheduledLabel;
+  return recurrenceLabel ?? scheduleLabel ?? copy.unscheduledLabel;
 }
 
 type ProjectCenterData = Record<string, unknown> & {
@@ -407,6 +496,7 @@ type ProjectCenterNode = Node<ProjectCenterData, "project-center">;
 
 type ProjectActivityNodeData = Record<string, unknown> & {
   copy: Copy;
+  locale: LocaleCode;
   activity: ProjectActivityItem;
 };
 
@@ -438,7 +528,7 @@ function ProjectActivityCard({
       </div>
 
       <div className="mt-2 text-[10px] font-medium text-[#7b849d]">
-        {projectActivityTimingLabel(data.activity, data.copy)}
+        {projectActivityTimingLabel(data.activity, data.copy, data.locale)}
       </div>
     </div>
   );
@@ -1023,6 +1113,7 @@ export default function ProjectMapStartClient({
           selectable: false,
           data: {
             copy,
+            locale,
             activity,
           },
         }) as ProjectActivityNode,
@@ -1039,7 +1130,7 @@ export default function ProjectMapStartClient({
       } as ProjectCenterNode,
       ...activityNodes,
     ];
-  }, [copy, nodeData, selectedProject]);
+  }, [copy, locale, nodeData, selectedProject]);
 
   const edges = useMemo<Edge[]>(
     () =>

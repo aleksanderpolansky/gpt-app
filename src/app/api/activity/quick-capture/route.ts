@@ -20,6 +20,10 @@ import {
   deriveAiLabActivityTitle,
 } from "@/lib/activity/aiLabDirectSave";
 import type { ActivityTimingLocalePp1 } from "@/lib/activity/pp1/activityTiming";
+import {
+  inferActivityRecurrenceDraftPp3,
+  type ActivityRecurrenceDraftPp3,
+} from "@/lib/activity/pp3/activityRecurrence";
 import { normalizeQuickCaptureTemporalMode } from "@/lib/activity/quickCaptureTemporalMode";
 import {
   analyzeBasicActivityIntakeV1,
@@ -461,6 +465,99 @@ function scheduleBackgroundBasicIntakeAnalysis(input: {
   });
 }
 
+type PersistedActivityRecurrenceRulePp3 = {
+  id: string;
+  sourceActivityEventId: string;
+  frequencyCode: ActivityRecurrenceDraftPp3["frequencyCode"];
+  intervalCount: number;
+  anchorDate: string;
+  recurrenceBasisCode: string;
+  endModeCode: string;
+  statusCode: string;
+};
+
+type ActivityRecurrenceRulePersistenceRowPp3 = {
+  id: string;
+  source_activity_event_id: string;
+  frequency_code: ActivityRecurrenceDraftPp3["frequencyCode"];
+  interval_count: number;
+  anchor_date: string;
+  recurrence_basis_code: string;
+  end_mode_code: string;
+  status_code: string;
+};
+
+async function persistActivityRecurrenceRulePp3(input: {
+  appUserId: string;
+  actorId: string;
+  activityEventId: string;
+  sourceText: string;
+  timeZone: string;
+  draft: ActivityRecurrenceDraftPp3;
+}): Promise<PersistedActivityRecurrenceRulePp3> {
+  const { data, error } = await supabase
+    .from("activity_recurrence_rules")
+    .upsert(
+      {
+        owner_user_id: input.appUserId,
+        owner_actor_id: input.actorId,
+        source_activity_event_id: input.activityEventId,
+        frequency_code: input.draft.frequencyCode,
+        interval_count: input.draft.intervalCount,
+        anchor_date: input.draft.anchorDate,
+        timezone: input.timeZone,
+        recurrence_basis_code: input.draft.recurrenceBasisCode,
+        end_mode_code: input.draft.endModeCode,
+        until_date: input.draft.untilDate,
+        count_limit: input.draft.countLimit,
+        status_code: "active",
+        source_text: input.sourceText,
+        source_pattern_code: input.draft.sourcePatternCode,
+        metadata_json: {
+          contract: "ARCTOR_ACTIVITY_RECURRENCE_RULE_PP3B1_V1",
+          sourceSurface: "ai_navigator_quick_capture",
+          materializationPolicy: "deferred_bounded_executor",
+        },
+      },
+      {
+        onConflict: "source_activity_event_id",
+      },
+    )
+    .select(
+      [
+        "id",
+        "source_activity_event_id",
+        "frequency_code",
+        "interval_count",
+        "anchor_date",
+        "recurrence_basis_code",
+        "end_mode_code",
+        "status_code",
+      ].join(","),
+    )
+    .single();
+
+  if (error || !data) {
+    throw new Error(
+      `PP3B1_RECURRENCE_RULE_PERSIST_FAILED:${error?.message ?? "missing row"}`,
+    );
+  }
+
+  const persisted =
+    data as unknown as ActivityRecurrenceRulePersistenceRowPp3;
+
+  return {
+    id: persisted.id,
+    sourceActivityEventId: persisted.source_activity_event_id,
+    frequencyCode: persisted.frequency_code,
+    intervalCount: persisted.interval_count,
+    anchorDate: persisted.anchor_date,
+    recurrenceBasisCode: persisted.recurrence_basis_code,
+    endModeCode: persisted.end_mode_code,
+    statusCode: persisted.status_code,
+  };
+}
+
 export async function POST(request: Request) {
   const { appUser, personActor, errorResponse } = await getActivityUserContext();
   if (errorResponse) return errorResponse;
@@ -690,6 +787,17 @@ export async function POST(request: Request) {
       temporalDirectionOverride: temporalDirection,
     });
 
+    const recurrenceDraft =
+      temporalDirection === "future"
+        ? inferActivityRecurrenceDraftPp3({
+            sourceText,
+            locale,
+            reportedAtIso: reportedAt,
+            timeZone,
+            anchorDateCandidate: timing.focusDate,
+          })
+        : null;
+
     const baseRequest = buildAiLabDirectActivityRequest({
       idempotencyKey: deriveAiLabQuickCaptureIdempotencyKey({
         operationId: signal.id,
@@ -748,6 +856,17 @@ export async function POST(request: Request) {
       body: requestBody,
     });
 
+    const recurrenceRule = recurrenceDraft
+      ? await persistActivityRecurrenceRulePp3({
+          appUserId: appUser.id,
+          actorId: personActor.id,
+          activityEventId: createdEvent.activityEventId,
+          sourceText,
+          timeZone,
+          draft: recurrenceDraft,
+        })
+      : null;
+
     const result = await markReceiptProcessed({
       signalId: signal.id,
       userId: appUser.id,
@@ -774,8 +893,11 @@ export async function POST(request: Request) {
       processingStatus: "processed",
       backgroundBasicIntakeAnalysis: "scheduled",
       result,
+      recurrenceRule,
       calendarEventId: createdEvent.calendarEventId,
-      note: "Activity is saved. Basic intake analysis is scheduled in the background. No template or facts are applied automatically.",
+      note: recurrenceRule
+        ? "Recurring planned activity is saved. Basic intake analysis is scheduled in the background. Future recurrence occurrences are not materialized yet."
+        : "Activity is saved. Basic intake analysis is scheduled in the background. No template or facts are applied automatically.",
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

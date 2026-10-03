@@ -1,0 +1,82 @@
+ARCTor Project Planning PP3B1 Recurrence Rule Foundation V1.0.2
+Generated: 2026-10-03T16:42:08.9824964+02:00
+
+BASELINE
+branch=main
+head=2291b2849e769aefbef68f261811ed66f8d2fb95
+origin_main=2291b2849e769aefbef68f261811ed66f8d2fb95
+
+RESUME
+v1_patch_apply=PASS
+v1_validator=PASS_15_15
+v1_typescript_failed=YES
+v1_typescript_failure=Supabase GenericStringError row inference for new recurrence table
+v1_0_1_resume_failed=worktree scope collapsed untracked directory src/lib/activity/pp3/
+v1_0_2_scope_fix=allow exact expected untracked PP3 directory
+v1_0_2_typescript_fix=explicit persistence row boundary cast
+
+ARCHITECTURE
+recurrence_is_schedule_mode=NO
+canonical_activity_entity=public.activity_events
+recurrence_rule_table=public.activity_recurrence_rules
+project_task_entity=NO
+occurrence_materialization=DEFERRED
+
+VALIDATION
+validator=PASS_15_15
+eslint=PASS
+typescript=PASS
+production_build=PASS
+git_diff_check=PASS
+
+DATABASE
+migration_file=supabase/migrations/20261003160000_activity_recurrence_rules_pp3b1.sql
+migration_applied=NO
+migration_apply_required_before_production_smoke=YES
+
+COMMIT_PUSH_DEPLOY
+commit=NO
+push=NO
+deploy=NO
+
+
+============================================================
+PP3B1 RECURRENCE RULE FOUNDATION
+FINAL ACCEPTANCE
+============================================================
+
+BASELINE_HEAD=2291b2849e769aefbef68f261811ed66f8d2fb95
+BASELINE_ORIGIN_MAIN=2291b2849e769aefbef68f261811ed66f8d2fb95
+
+DATABASE
+migration_applied=YES
+schema_verification=PASS_CONFIRMED_BY_OPERATOR
+recurrence_rule_rows_before_smoke=0
+table_exists=YES
+rls_enabled=YES
+guard_trigger_exists=YES
+guard_function_exists=YES
+source_unique_exists=YES
+deny_public_policy_exists=YES
+service_role_policy_exists=YES
+
+ARCHITECTURE
+recurrence_is_schedule_mode=NO
+canonical_activity_entity=public.activity_events
+recurrence_rule_table=public.activity_recurrence_rules
+project_task_entity=NO
+occurrence_materialization=DEFERRED_TO_PP3B2
+
+CURRENT_CHANNEL
+capture=/api/activity/quick-capture
+future_only_recurrence_detection=YES
+project_context_preserved=YES
+
+VALIDATION
+validator=PASS_15_15
+eslint=PASS
+typescript=PASS
+production_build=PASS
+git_diff_check=PASS
+
+READY_FOR_COMMIT=YES

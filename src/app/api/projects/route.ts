@@ -56,6 +56,19 @@ type ProjectActivityRow = {
   readonly duration_minutes: number | null;
 };
 
+type ActivityRecurrenceRuleRow = {
+  readonly id: string;
+  readonly source_activity_event_id: string;
+  readonly frequency_code: "daily" | "weekly" | "monthly";
+  readonly interval_count: number;
+  readonly anchor_date: string;
+  readonly recurrence_basis_code: string;
+  readonly end_mode_code: string;
+  readonly until_date: string | null;
+  readonly count_limit: number | null;
+  readonly status_code: string;
+};
+
 type ProjectContextRow = {
   readonly id: string;
   readonly title: string;
@@ -294,6 +307,8 @@ export async function GET() {
 
   const projectActivityLinksByProject = new Map<string, string[]>();
   const projectActivitiesById = new Map<string, ProjectActivityRow>();
+  const projectRecurrenceByActivityId =
+    new Map<string, ActivityRecurrenceRuleRow>();
 
   if (projectIds.length > 0) {
     const { data: linksData, error: linksError } = await supabase
@@ -351,6 +366,39 @@ export async function GET() {
 
       for (const activity of (activitiesData ?? []) as unknown as ProjectActivityRow[]) {
         projectActivitiesById.set(activity.id, activity);
+      }
+
+      const { data: recurrenceData, error: recurrenceError } = await supabase
+        .from("activity_recurrence_rules")
+        .select(
+          [
+            "id",
+            "source_activity_event_id",
+            "frequency_code",
+            "interval_count",
+            "anchor_date",
+            "recurrence_basis_code",
+            "end_mode_code",
+            "until_date",
+            "count_limit",
+            "status_code",
+          ].join(","),
+        )
+        .in("source_activity_event_id", activityIds)
+        .in("status_code", ["active", "paused"]);
+
+      if (recurrenceError) {
+        return NextResponse.json(
+          { ok: false, error: recurrenceError.message },
+          { status: 500 },
+        );
+      }
+
+      for (const recurrence of (recurrenceData ?? []) as unknown as ActivityRecurrenceRuleRow[]) {
+        projectRecurrenceByActivityId.set(
+          recurrence.source_activity_event_id,
+          recurrence,
+        );
       }
     }
   }
@@ -421,6 +469,24 @@ export async function GET() {
             startedAt: activity.started_at,
             endedAt: activity.ended_at,
             durationMinutes: activity.duration_minutes,
+            recurrence: projectRecurrenceByActivityId.has(activity.id)
+              ? (() => {
+                  const recurrence =
+                    projectRecurrenceByActivityId.get(activity.id)!;
+
+                  return {
+                    id: recurrence.id,
+                    frequencyCode: recurrence.frequency_code,
+                    intervalCount: recurrence.interval_count,
+                    anchorDate: recurrence.anchor_date,
+                    recurrenceBasisCode: recurrence.recurrence_basis_code,
+                    endModeCode: recurrence.end_mode_code,
+                    untilDate: recurrence.until_date,
+                    countLimit: recurrence.count_limit,
+                    statusCode: recurrence.status_code,
+                  };
+                })()
+              : null,
           })),
       };
     }),
