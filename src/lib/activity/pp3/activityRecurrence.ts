@@ -87,47 +87,47 @@ function matchNumericRecurrence(normalized: string): RecurrenceMatch | null {
   }> = [
     {
       frequencyCode: "weekly",
-      pattern: /\bкаждые?\s+(\d{1,3})\s+недел(?:ю|и|ь)\b/iu,
+      pattern: /(?:^|\s)каждые?\s+(\d{1,3})\s+недел(?:ю|и|ь)(?=$|\s)/iu,
       sourcePatternCode: "ru_every_n_weeks",
     },
     {
       frequencyCode: "daily",
-      pattern: /\bкаждые?\s+(\d{1,3})\s+(?:дня|дней|день)\b/iu,
+      pattern: /(?:^|\s)каждые?\s+(\d{1,3})\s+(?:дня|дней|день)(?=$|\s)/iu,
       sourcePatternCode: "ru_every_n_days",
     },
     {
       frequencyCode: "monthly",
-      pattern: /\bкаждые?\s+(\d{1,3})\s+месяц(?:а|ев)?\b/iu,
+      pattern: /(?:^|\s)каждые?\s+(\d{1,3})\s+месяц(?:а|ев)?(?=$|\s)/iu,
       sourcePatternCode: "ru_every_n_months",
     },
     {
       frequencyCode: "weekly",
-      pattern: /\bevery\s+(\d{1,3})\s+weeks?\b/iu,
+      pattern: /(?:^|\s)every\s+(\d{1,3})\s+weeks?(?=$|\s)/iu,
       sourcePatternCode: "en_every_n_weeks",
     },
     {
       frequencyCode: "daily",
-      pattern: /\bevery\s+(\d{1,3})\s+days?\b/iu,
+      pattern: /(?:^|\s)every\s+(\d{1,3})\s+days?(?=$|\s)/iu,
       sourcePatternCode: "en_every_n_days",
     },
     {
       frequencyCode: "monthly",
-      pattern: /\bevery\s+(\d{1,3})\s+months?\b/iu,
+      pattern: /(?:^|\s)every\s+(\d{1,3})\s+months?(?=$|\s)/iu,
       sourcePatternCode: "en_every_n_months",
     },
     {
       frequencyCode: "weekly",
-      pattern: /\bco\s+(\d{1,3})\s+tygod(?:nie|ni)\b/iu,
+      pattern: /(?:^|\s)co\s+(\d{1,3})\s+tygod(?:nie|ni)(?=$|\s)/iu,
       sourcePatternCode: "pl_every_n_weeks",
     },
     {
       frequencyCode: "daily",
-      pattern: /\bco\s+(\d{1,3})\s+dni\b/iu,
+      pattern: /(?:^|\s)co\s+(\d{1,3})\s+dni(?=$|\s)/iu,
       sourcePatternCode: "pl_every_n_days",
     },
     {
       frequencyCode: "monthly",
-      pattern: /\bco\s+(\d{1,3})\s+miesi(?:ące|ace|ęcy|ecy)\b/iu,
+      pattern: /(?:^|\s)co\s+(\d{1,3})\s+miesi(?:ące|ace|ęcy|ecy)(?=$|\s)/iu,
       sourcePatternCode: "pl_every_n_months",
     },
   ];
@@ -164,119 +164,119 @@ function matchSimpleRecurrence(
     ru: [
       {
         frequencyCode: "weekly",
-        pattern: /\b(?:каждую неделю|каждой неделе|еженедельно|раз в неделю)\b/iu,
+        pattern: /(?:^|\s)(?:каждую неделю|каждой неделе|еженедельно|раз в неделю)(?=$|\s)/iu,
         sourcePatternCode: "ru_weekly",
       },
       {
         frequencyCode: "daily",
-        pattern: /\b(?:каждый день|ежедневно|раз в день)\b/iu,
+        pattern: /(?:^|\s)(?:каждый день|ежедневно|раз в день)(?=$|\s)/iu,
         sourcePatternCode: "ru_daily",
       },
       {
         frequencyCode: "monthly",
-        pattern: /\b(?:каждый месяц|ежемесячно|раз в месяц)\b/iu,
+        pattern: /(?:^|\s)(?:каждый месяц|ежемесячно|раз в месяц)(?=$|\s)/iu,
         sourcePatternCode: "ru_monthly",
       },
     ],
     uk: [
       {
         frequencyCode: "weekly",
-        pattern: /\b(?:щотижня|кожного тижня|раз на тиждень)\b/iu,
+        pattern: /(?:^|\s)(?:щотижня|кожного тижня|раз на тиждень)(?=$|\s)/iu,
         sourcePatternCode: "uk_weekly",
       },
       {
         frequencyCode: "daily",
-        pattern: /\b(?:щодня|кожного дня|раз на день)\b/iu,
+        pattern: /(?:^|\s)(?:щодня|кожного дня|раз на день)(?=$|\s)/iu,
         sourcePatternCode: "uk_daily",
       },
       {
         frequencyCode: "monthly",
-        pattern: /\b(?:щомісяця|кожного місяця|раз на місяць)\b/iu,
+        pattern: /(?:^|\s)(?:щомісяця|кожного місяця|раз на місяць)(?=$|\s)/iu,
         sourcePatternCode: "uk_monthly",
       },
     ],
     pl: [
       {
         frequencyCode: "weekly",
-        pattern: /\b(?:co tydzień|co tydzien|raz w tygodniu|tygodniowo)\b/iu,
+        pattern: /(?:^|\s)(?:co tydzień|co tydzien|raz w tygodniu|tygodniowo)(?=$|\s)/iu,
         sourcePatternCode: "pl_weekly",
       },
       {
         frequencyCode: "daily",
-        pattern: /\b(?:codziennie|co dzień|co dzien|raz dziennie)\b/iu,
+        pattern: /(?:^|\s)(?:codziennie|co dzień|co dzien|raz dziennie)(?=$|\s)/iu,
         sourcePatternCode: "pl_daily",
       },
       {
         frequencyCode: "monthly",
-        pattern: /\b(?:co miesiąc|co miesiac|raz w miesiącu|raz w miesiacu|miesięcznie|miesiecznie)\b/iu,
+        pattern: /(?:^|\s)(?:co miesiąc|co miesiac|raz w miesiącu|raz w miesiacu|miesięcznie|miesiecznie)(?=$|\s)/iu,
         sourcePatternCode: "pl_monthly",
       },
     ],
     en: [
       {
         frequencyCode: "weekly",
-        pattern: /\b(?:every week|once a week|weekly)\b/iu,
+        pattern: /(?:^|\s)(?:every week|once a week|weekly)(?=$|\s)/iu,
         sourcePatternCode: "en_weekly",
       },
       {
         frequencyCode: "daily",
-        pattern: /\b(?:every day|once a day|daily)\b/iu,
+        pattern: /(?:^|\s)(?:every day|once a day|daily)(?=$|\s)/iu,
         sourcePatternCode: "en_daily",
       },
       {
         frequencyCode: "monthly",
-        pattern: /\b(?:every month|once a month|monthly)\b/iu,
+        pattern: /(?:^|\s)(?:every month|once a month|monthly)(?=$|\s)/iu,
         sourcePatternCode: "en_monthly",
       },
     ],
     de: [
       {
         frequencyCode: "weekly",
-        pattern: /\b(?:jede woche|wöchentlich|woechentlich)\b/iu,
+        pattern: /(?:^|\s)(?:jede woche|wöchentlich|woechentlich)(?=$|\s)/iu,
         sourcePatternCode: "de_weekly",
       },
       {
         frequencyCode: "daily",
-        pattern: /\b(?:jeden tag|täglich|taeglich)\b/iu,
+        pattern: /(?:^|\s)(?:jeden tag|täglich|taeglich)(?=$|\s)/iu,
         sourcePatternCode: "de_daily",
       },
       {
         frequencyCode: "monthly",
-        pattern: /\b(?:jeden monat|monatlich)\b/iu,
+        pattern: /(?:^|\s)(?:jeden monat|monatlich)(?=$|\s)/iu,
         sourcePatternCode: "de_monthly",
       },
     ],
     es: [
       {
         frequencyCode: "weekly",
-        pattern: /\b(?:cada semana|semanalmente|una vez por semana)\b/iu,
+        pattern: /(?:^|\s)(?:cada semana|semanalmente|una vez por semana)(?=$|\s)/iu,
         sourcePatternCode: "es_weekly",
       },
       {
         frequencyCode: "daily",
-        pattern: /\b(?:cada día|cada dia|diariamente|una vez al día|una vez al dia)\b/iu,
+        pattern: /(?:^|\s)(?:cada día|cada dia|diariamente|una vez al día|una vez al dia)(?=$|\s)/iu,
         sourcePatternCode: "es_daily",
       },
       {
         frequencyCode: "monthly",
-        pattern: /\b(?:cada mes|mensualmente|una vez al mes)\b/iu,
+        pattern: /(?:^|\s)(?:cada mes|mensualmente|una vez al mes)(?=$|\s)/iu,
         sourcePatternCode: "es_monthly",
       },
     ],
     cs: [
       {
         frequencyCode: "weekly",
-        pattern: /\b(?:každý týden|kazdy tyden|týdně|tydne)\b/iu,
+        pattern: /(?:^|\s)(?:každý týden|kazdy tyden|týdně|tydne)(?=$|\s)/iu,
         sourcePatternCode: "cs_weekly",
       },
       {
         frequencyCode: "daily",
-        pattern: /\b(?:každý den|kazdy den|denně|denne)\b/iu,
+        pattern: /(?:^|\s)(?:každý den|kazdy den|denně|denne)(?=$|\s)/iu,
         sourcePatternCode: "cs_daily",
       },
       {
         frequencyCode: "monthly",
-        pattern: /\b(?:každý měsíc|kazdy mesic|měsíčně|mesicne)\b/iu,
+        pattern: /(?:^|\s)(?:každý měsíc|kazdy mesic|měsíčně|mesicne)(?=$|\s)/iu,
         sourcePatternCode: "cs_monthly",
       },
     ],

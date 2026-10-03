@@ -41,7 +41,7 @@ type Copy = {
   status: string;
   source: string;
   privacy: string;
-  activityContainer: string;
+  analysis: string;
   edit: string;
   cancel: string;
   save: string;
@@ -72,7 +72,7 @@ const COPY: Record<UiLocale, Copy> = {
     status: "Status",
     source: "Source",
     privacy: "Privacy",
-    activityContainer: "Activity Container",
+    analysis: "Analysis",
     edit: "Edit",
     cancel: "Cancel activity",
     save: "Save",
@@ -107,7 +107,7 @@ const COPY: Record<UiLocale, Copy> = {
     status: "Status",
     source: "Źródło",
     privacy: "Prywatność",
-    activityContainer: "Kontener aktywności",
+    analysis: "Analiza",
     edit: "Edytuj",
     cancel: "Anuluj aktywność",
     save: "Zapisz",
@@ -142,7 +142,7 @@ const COPY: Record<UiLocale, Copy> = {
     status: "Статус",
     source: "Источник",
     privacy: "Приватность",
-    activityContainer: "Контейнер активности",
+    analysis: "Анализ",
     edit: "Редактировать",
     cancel: "Отменить активность",
     save: "Сохранить",
@@ -177,7 +177,7 @@ const COPY: Record<UiLocale, Copy> = {
     status: "Статус",
     source: "Джерело",
     privacy: "Приватність",
-    activityContainer: "Контейнер активності",
+    analysis: "Аналіз",
     edit: "Редагувати",
     cancel: "Скасувати активність",
     save: "Зберегти",
@@ -212,7 +212,7 @@ const COPY: Record<UiLocale, Copy> = {
     status: "Status",
     source: "Quelle",
     privacy: "Privatsphäre",
-    activityContainer: "Aktivitätscontainer",
+    analysis: "Analyse",
     edit: "Bearbeiten",
     cancel: "Aktivität stornieren",
     save: "Speichern",
@@ -247,7 +247,7 @@ const COPY: Record<UiLocale, Copy> = {
     status: "Estado",
     source: "Fuente",
     privacy: "Privacidad",
-    activityContainer: "Contenedor de actividad",
+    analysis: "Análisis",
     edit: "Editar",
     cancel: "Cancelar actividad",
     save: "Guardar",
@@ -282,7 +282,7 @@ const COPY: Record<UiLocale, Copy> = {
     status: "Stav",
     source: "Zdroj",
     privacy: "Soukromí",
-    activityContainer: "Kontejner aktivity",
+    analysis: "Analýza",
     edit: "Upravit",
     cancel: "Zrušit aktivitu",
     save: "Uložit",
@@ -398,19 +398,16 @@ function scheduleSummary(
   return [start, end].filter(Boolean).join(" – ");
 }
 
-function buildContainerHref(
+function buildAnalysisHref(
   item: Cux6ShelfItem,
   locale: UiLocale,
-  returnToTarget: "calendar" | "calendar-rebuild",
 ) {
   const params = new URLSearchParams({
     locale,
-    returnTo: returnToTarget,
-    temporalDirection: "future",
     activityEventId: item.id,
   });
 
-  return `/calendar/activity-review?${params.toString()}`;
+  return `/activity-ai-lab?${params.toString()}`;
 }
 
 function parsePositiveInteger(value: string) {
@@ -422,7 +419,6 @@ function parsePositiveInteger(value: string) {
 export function Cux6TaskDetailModal({
   item,
   locale,
-  returnToTarget,
   onClose,
   onChanged,
 }: Cux6TaskDetailModalProps) {
@@ -859,14 +855,10 @@ export function Cux6TaskDetailModal({
 
               <div className="flex flex-wrap gap-2">
                 <Link
-                  href={buildContainerHref(
-                    item,
-                    locale,
-                    returnToTarget,
-                  )}
+                  href={buildAnalysisHref(item, locale)}
                   className="rounded-xl border border-[#d8deef] bg-white px-4 py-2 text-sm font-bold text-[#667091] shadow-sm hover:border-[#3b6ef8] hover:text-[#3b6ef8]"
                 >
-                  {copy.activityContainer}
+                  {copy.analysis}
                 </Link>
                 <button
                   type="button"

@@ -751,8 +751,13 @@ export default function ProjectMapStartClient({
   async function loadProjects(
     preferredProjectId?: string,
     draftTitle?: string,
+    options?: { background?: boolean },
   ) {
-    setLoading(true);
+    const background = options?.background === true;
+
+    if (!background) {
+      setLoading(true);
+    }
     setLoadError(null);
 
     try {
@@ -856,7 +861,9 @@ export default function ProjectMapStartClient({
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : copy.loadError);
     } finally {
-      setLoading(false);
+      if (!background) {
+        setLoading(false);
+      }
     }
   }
 
@@ -911,7 +918,11 @@ export default function ProjectMapStartClient({
         return;
       }
 
-      void loadProjects(selectedProjectId);
+      void loadProjects(
+        selectedProjectId,
+        undefined,
+        { background: true },
+      );
     }
 
     window.addEventListener(
@@ -1147,6 +1158,17 @@ export default function ProjectMapStartClient({
     [selectedProject],
   );
 
+  const flowKey = useMemo(
+    () =>
+      [
+        selectedProjectId ?? "draft",
+        ...(selectedProject?.activities ?? []).map(
+          (activity) => activity.id,
+        ),
+      ].join(":"),
+    [selectedProject, selectedProjectId],
+  );
+
   if (loading) {
     return (
       <div className="min-h-full px-3 py-4 sm:px-5">
@@ -1236,6 +1258,7 @@ export default function ProjectMapStartClient({
         <section className="h-[720px] min-h-[600px] overflow-hidden rounded-[26px] border border-[#dfe4ef] bg-[#f8fafc] shadow-inner">
           <ReactFlowProvider>
             <ReactFlow
+              key={flowKey}
               nodes={nodes}
               edges={edges}
               nodeTypes={NODE_TYPES}
