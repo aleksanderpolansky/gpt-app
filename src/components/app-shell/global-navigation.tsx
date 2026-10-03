@@ -796,6 +796,7 @@ export function GlobalSidebar({
     isFormulaRationalesActive ||
     isActivityTemplatesActive;
   const isCalendarActive = currentPathname.startsWith("/calendar");
+  const isProjectsActive = currentPathname.startsWith("/projects");
   const isObservationObjectsActive = currentPathname.startsWith("/value-objects");
   const isActivityJournalCurrent =
     currentPathname === "/activity-today" ||
@@ -998,6 +999,11 @@ export function GlobalSidebar({
           href={localeHref("/calendar")}
         />
         <SidebarMainItem
+          icon={ClipboardList}
+          label={t("navigation.projects")}
+          active={isProjectsActive}
+          href={localeHref("/projects")}
+        />        <SidebarMainItem
           icon={Eye}
           label={t("navigation.observationObjects")}
           active={isObservationObjectsActive}
