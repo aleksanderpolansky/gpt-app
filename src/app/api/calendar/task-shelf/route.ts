@@ -7,10 +7,25 @@ export const dynamic = "force-dynamic";
 
 type JsonRecord = Record<string, unknown>;
 
-type ShelfGroupKey = "unscheduled" | "dueSoon" | "needsClarification";
+type TaskViewKey =
+  | "today"
+  | "week"
+  | "overdue"
+  | "unscheduled"
+  | "completed";
+
+type RecurrenceInfo = {
+  ruleId: string;
+  frequencyCode: string;
+  intervalCount: number;
+  occurrenceOrdinal: number | null;
+};
 
 type ShelfItem = {
+  kind: "planned" | "completed";
   id: string;
+  plannedActivityEventId: string | null;
+  actualActivityEventId: string | null;
   title: string;
   inputText: string | null;
   description: string | null;
@@ -29,23 +44,17 @@ type ShelfItem = {
   enrichmentStatus: string | null;
   enrichmentUpdatedAt: string | null;
   updatedAt: string | null;
+  completedAt: string | null;
+  needsClarification: boolean;
+  recurrence: RecurrenceInfo | null;
 };
 
 const ACTIVE_PLANNED_STATUSES = ["draft", "planned", "confirmed"] as const;
-const MAX_PREVIEW_LIMIT = 20;
-const DEFAULT_PREVIEW_LIMIT = 12;
-const MAX_SCAN_LIMIT = 500;
-const DEFAULT_SCAN_LIMIT = 300;
-const DEFAULT_DUE_DAYS = 7;
-const MAX_DUE_DAYS = 31;
-
-function asRecord(value: unknown): JsonRecord {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return {};
-  }
-
-  return value as JsonRecord;
-}
+const DEFAULT_LIMIT = 60;
+const MAX_LIMIT = 100;
+const DEFAULT_SCAN_LIMIT = 500;
+const MAX_SCAN_LIMIT = 800;
+const COMPLETED_HISTORY_LIMIT = 80;
 
 function asRecords(value: unknown): JsonRecord[] {
   return Array.isArray(value)
@@ -76,18 +85,62 @@ function parseIntegerParam(
   maximum: number,
 ) {
   const raw = searchParams.get(name);
-
-  if (!raw) {
-    return fallback;
-  }
+  if (!raw) return fallback;
 
   const parsed = Number.parseInt(raw, 10);
-
-  if (!Number.isFinite(parsed)) {
-    return fallback;
-  }
+  if (!Number.isFinite(parsed)) return fallback;
 
   return Math.min(maximum, Math.max(minimum, parsed));
+}
+
+function isDateKey(value: string | null): value is string {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+}
+
+function normalizeTimeZone(value: string | null) {
+  const candidate = value?.trim() || "UTC";
+
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: candidate }).format(new Date());
+    return candidate;
+  } catch {
+    return "UTC";
+  }
+}
+
+function dateKeyInTimeZone(value: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(value);
+
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+
+  return year && month && day
+    ? `${year}-${month}-${day}`
+    : value.toISOString().slice(0, 10);
+}
+
+function addDays(dateKey: string, delta: number) {
+  const date = new Date(`${dateKey}T12:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + delta);
+  return date.toISOString().slice(0, 10);
+}
+
+function weekBounds(focusDate: string) {
+  const date = new Date(`${focusDate}T12:00:00.000Z`);
+  const day = date.getUTCDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  const start = addDays(focusDate, mondayOffset);
+
+  return {
+    start,
+    end: addDays(start, 6),
+  };
 }
 
 function titleForActivity(row: JsonRecord) {
@@ -95,65 +148,100 @@ function titleForActivity(row: JsonRecord) {
     asString(row.title) ??
     asString(row.description) ??
     asString(row.input_text) ??
-    "Untitled planned activity"
+    "Untitled activity"
   );
 }
 
-function parseDateOnlyAtEndOfDay(value: string | null) {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return null;
+function dueTimestamp(row: JsonRecord) {
+  const mode = asString(row.schedule_mode_code);
+
+  if (mode === "deadline") {
+    const value = asString(row.deadline_at);
+    if (!value) return null;
+    const timestamp = Date.parse(value);
+    return Number.isFinite(timestamp) ? timestamp : null;
   }
 
-  const timestamp = Date.parse(`${value}T23:59:59.999Z`);
+  if (mode === "exact") {
+    const value = asString(row.started_at);
+    if (!value) return null;
+    const timestamp = Date.parse(value);
+    return Number.isFinite(timestamp) ? timestamp : null;
+  }
 
-  return Number.isFinite(timestamp) ? timestamp : null;
+  const dateKey =
+    mode === "date_only"
+      ? asString(row.scheduled_date)
+      : mode === "date_range"
+        ? asString(row.schedule_end_date) ?? asString(row.schedule_start_date)
+        : null;
+
+  if (!isDateKey(dateKey)) return null;
+
+  return Date.parse(`${dateKey}T23:59:59.999Z`);
 }
 
-function parseTimestamp(value: string | null) {
-  if (!value) {
-    return null;
+function scheduleBounds(row: JsonRecord, timeZone: string) {
+  const mode = asString(row.schedule_mode_code);
+
+  if (mode === "date_only") {
+    const date = asString(row.scheduled_date);
+    return isDateKey(date) ? { start: date, end: date } : null;
   }
 
-  const timestamp = Date.parse(value);
+  if (mode === "date_range") {
+    const start = asString(row.schedule_start_date);
+    const end = asString(row.schedule_end_date) ?? start;
 
-  return Number.isFinite(timestamp) ? timestamp : null;
-}
-
-function effectiveDueTimestamp(row: JsonRecord) {
-  const scheduleModeCode = asString(row.schedule_mode_code);
-
-  if (scheduleModeCode === "deadline") {
-    return parseTimestamp(asString(row.deadline_at));
+    return isDateKey(start) && isDateKey(end)
+      ? { start, end }
+      : null;
   }
 
-  if (scheduleModeCode === "date_only") {
-    return parseDateOnlyAtEndOfDay(asString(row.scheduled_date));
+  if (mode === "deadline") {
+    const deadline = asString(row.deadline_at);
+    if (!deadline) return null;
+
+    const parsed = new Date(deadline);
+    if (Number.isNaN(parsed.getTime())) return null;
+
+    const date = dateKeyInTimeZone(parsed, timeZone);
+    return { start: date, end: date };
   }
 
-  if (scheduleModeCode === "date_range") {
-    return parseDateOnlyAtEndOfDay(
-      asString(row.schedule_end_date) ??
-        asString(row.schedule_start_date),
-    );
+  if (mode === "exact") {
+    const startedAt = asString(row.started_at);
+    if (!startedAt) return null;
+
+    const parsed = new Date(startedAt);
+    if (Number.isNaN(parsed.getTime())) return null;
+
+    const date = dateKeyInTimeZone(parsed, timeZone);
+    return { start: date, end: date };
   }
 
   return null;
 }
 
-function toShelfItem(
+function toPlannedShelfItem(
   row: JsonRecord,
   latestRun: JsonRecord | null,
+  recurrence: RecurrenceInfo | null,
 ): ShelfItem | null {
   const id = asString(row.id);
+  if (!id) return null;
 
-  if (!id) {
-    return null;
-  }
+  const enrichmentStatus = latestRun
+    ? asString(latestRun.status)
+    : null;
 
-  const dueTimestamp = effectiveDueTimestamp(row);
+  const due = dueTimestamp(row);
 
   return {
+    kind: "planned",
     id,
+    plannedActivityEventId: id,
+    actualActivityEventId: null,
     title: titleForActivity(row),
     inputText: asString(row.input_text),
     description: asString(row.description),
@@ -168,44 +256,93 @@ function toShelfItem(
     startedAt: asString(row.started_at),
     endedAt: asString(row.ended_at),
     durationMinutes: asNumber(row.duration_minutes),
-    dueAt: dueTimestamp === null
-      ? null
-      : new Date(dueTimestamp).toISOString(),
-    enrichmentStatus: latestRun
-      ? asString(latestRun.status)
-      : null,
+    dueAt: due === null ? null : new Date(due).toISOString(),
+    enrichmentStatus,
     enrichmentUpdatedAt: latestRun
       ? asString(latestRun.updated_at) ?? asString(latestRun.created_at)
       : null,
     updatedAt: asString(row.updated_at) ?? asString(row.created_at),
+    completedAt: null,
+    needsClarification: enrichmentStatus === "needs_clarification",
+    recurrence,
   };
 }
 
-function compareNullableDatesAscending(
-  left: string | null,
-  right: string | null,
-) {
-  const leftTimestamp = parseTimestamp(left) ?? Number.MAX_SAFE_INTEGER;
-  const rightTimestamp = parseTimestamp(right) ?? Number.MAX_SAFE_INTEGER;
+function toCompletedShelfItem(params: {
+  actual: JsonRecord;
+  planned: JsonRecord | null;
+  recurrence: RecurrenceInfo | null;
+}): ShelfItem | null {
+  const actualId = asString(params.actual.id);
+  const plannedId = asString(params.actual.fulfills_planned_activity_event_id);
 
-  return leftTimestamp - rightTimestamp;
+  if (!actualId || !plannedId) return null;
+
+  const planned = params.planned ?? {};
+
+  return {
+    kind: "completed",
+    id: actualId,
+    plannedActivityEventId: plannedId,
+    actualActivityEventId: actualId,
+    title:
+      titleForActivity(params.actual) ||
+      titleForActivity(planned),
+    inputText:
+      asString(params.actual.input_text) ??
+      asString(planned.input_text),
+    description:
+      asString(params.actual.description) ??
+      asString(planned.description),
+    source: asString(params.actual.source),
+    privacyScope:
+      asString(params.actual.privacy_scope) ??
+      asString(planned.privacy_scope),
+    status: asString(params.actual.status),
+    scheduleModeCode: asString(planned.schedule_mode_code),
+    scheduledDate: asString(planned.scheduled_date),
+    scheduleStartDate: asString(planned.schedule_start_date),
+    scheduleEndDate: asString(planned.schedule_end_date),
+    deadlineAt: asString(planned.deadline_at),
+    startedAt: asString(planned.started_at),
+    endedAt: asString(planned.ended_at),
+    durationMinutes: asNumber(planned.duration_minutes),
+    dueAt: dueTimestamp(planned) === null
+      ? null
+      : new Date(dueTimestamp(planned)!).toISOString(),
+    enrichmentStatus: null,
+    enrichmentUpdatedAt: null,
+    updatedAt:
+      asString(params.actual.updated_at) ??
+      asString(params.actual.created_at),
+    completedAt:
+      asString(params.actual.ended_at) ??
+      asString(params.actual.updated_at) ??
+      asString(params.actual.created_at),
+    needsClarification: false,
+    recurrence: params.recurrence,
+  };
 }
 
-function compareNullableDatesDescending(
-  left: string | null,
-  right: string | null,
-) {
-  const leftTimestamp = parseTimestamp(left) ?? 0;
-  const rightTimestamp = parseTimestamp(right) ?? 0;
-
-  return rightTimestamp - leftTimestamp;
+function compareDueAscending(left: ShelfItem, right: ShelfItem) {
+  const leftValue = left.dueAt ? Date.parse(left.dueAt) : Number.MAX_SAFE_INTEGER;
+  const rightValue = right.dueAt ? Date.parse(right.dueAt) : Number.MAX_SAFE_INTEGER;
+  return leftValue - rightValue;
 }
 
-function buildGroup(
-  key: ShelfGroupKey,
-  items: ShelfItem[],
-  limit: number,
-) {
+function compareUpdatedDescending(left: ShelfItem, right: ShelfItem) {
+  const leftValue = left.updatedAt ? Date.parse(left.updatedAt) : 0;
+  const rightValue = right.updatedAt ? Date.parse(right.updatedAt) : 0;
+  return rightValue - leftValue;
+}
+
+function compareCompletedDescending(left: ShelfItem, right: ShelfItem) {
+  const leftValue = left.completedAt ? Date.parse(left.completedAt) : 0;
+  const rightValue = right.completedAt ? Date.parse(right.completedAt) : 0;
+  return rightValue - leftValue;
+}
+
+function buildGroup(key: TaskViewKey, items: ShelfItem[], limit: number) {
   return {
     key,
     totalCount: items.length,
@@ -217,27 +354,22 @@ export async function GET(request: Request) {
   const { appUser, personActor, errorResponse } =
     await getActivityUserContext();
 
-  if (errorResponse) {
-    return errorResponse;
-  }
+  if (errorResponse) return errorResponse;
 
   if (!appUser || !personActor) {
     return NextResponse.json(
-      {
-        ok: false,
-        error: "User context not found",
-      },
+      { ok: false, error: "User context not found" },
       { status: 500 },
     );
   }
 
   const url = new URL(request.url);
-  const previewLimit = parseIntegerParam(
+  const limit = parseIntegerParam(
     url.searchParams,
     "limit",
-    DEFAULT_PREVIEW_LIMIT,
-    3,
-    MAX_PREVIEW_LIMIT,
+    DEFAULT_LIMIT,
+    5,
+    MAX_LIMIT,
   );
   const scanLimit = parseIntegerParam(
     url.searchParams,
@@ -246,15 +378,15 @@ export async function GET(request: Request) {
     50,
     MAX_SCAN_LIMIT,
   );
-  const dueDays = parseIntegerParam(
-    url.searchParams,
-    "dueDays",
-    DEFAULT_DUE_DAYS,
-    1,
-    MAX_DUE_DAYS,
-  );
+  const timeZone = normalizeTimeZone(url.searchParams.get("timeZone"));
+  const todayDate = dateKeyInTimeZone(new Date(), timeZone);
+  const requestedFocusDate = url.searchParams.get("focusDate");
+  const focusDate = isDateKey(requestedFocusDate)
+    ? requestedFocusDate
+    : todayDate;
+  const week = weekBounds(focusDate);
 
-  const activitySelect = [
+  const plannedSelect = [
     "id",
     "title",
     "description",
@@ -275,10 +407,10 @@ export async function GET(request: Request) {
     "updated_at",
   ].join(",");
 
-  const { data: activityRowsRaw, error: activityError } =
+  const { data: plannedRowsRaw, error: plannedError } =
     await supabase
       .from("activity_events")
-      .select(activitySelect)
+      .select(plannedSelect)
       .eq("user_id", appUser.id)
       .eq("acting_as_actor_id", personActor.id)
       .eq("activity_role_code", "planned")
@@ -286,53 +418,143 @@ export async function GET(request: Request) {
       .order("updated_at", { ascending: false })
       .limit(scanLimit);
 
-  if (activityError) {
+  if (plannedError) {
     return NextResponse.json(
-      {
-        ok: false,
-        error: activityError.message,
-      },
+      { ok: false, error: plannedError.message },
       { status: 500 },
     );
   }
 
-  const activityRows = asRecords(activityRowsRaw);
-  const activityIds = activityRows
-    .map((row) => asString(row.id))
-    .filter((id): id is string => Boolean(id));
+  const plannedRows = asRecords(plannedRowsRaw);
+  const plannedById = new Map<string, JsonRecord>();
+  const plannedIds: string[] = [];
+
+  for (const row of plannedRows) {
+    const id = asString(row.id);
+    if (!id) continue;
+    plannedById.set(id, row);
+    plannedIds.push(id);
+  }
 
   const recurrenceSourceIds = new Set<string>();
 
-  if (activityIds.length > 0) {
-    const { data: recurrenceRowsRaw, error: recurrenceError } =
-      await supabase
-        .from("activity_recurrence_rules")
-        .select("source_activity_event_id,status_code")
-        .in("source_activity_event_id", activityIds)
-        .in("status_code", ["active", "paused"]);
+  if (plannedIds.length > 0) {
+    const { data, error } = await supabase
+      .from("activity_recurrence_rules")
+      .select("source_activity_event_id,status_code")
+      .in("source_activity_event_id", plannedIds)
+      .in("status_code", ["active", "paused"]);
 
-    if (recurrenceError) {
+    if (error) {
       return NextResponse.json(
-        { ok: false, error: recurrenceError.message },
+        { ok: false, error: error.message },
         { status: 500 },
       );
     }
 
-    for (const recurrenceRow of asRecords(recurrenceRowsRaw)) {
-      const sourceActivityEventId = asString(
-        recurrenceRow.source_activity_event_id,
-      );
-      if (sourceActivityEventId) {
-        recurrenceSourceIds.add(sourceActivityEventId);
-      }
+    for (const row of asRecords(data)) {
+      const id = asString(row.source_activity_event_id);
+      if (id) recurrenceSourceIds.add(id);
     }
   }
 
-  let runRows: JsonRecord[] = [];
+  const fulfilledPlannedIds = new Set<string>();
 
-  if (activityIds.length > 0) {
-    const runLimit = Math.min(MAX_SCAN_LIMIT, activityIds.length * 4);
+  if (plannedIds.length > 0) {
+    const { data, error } = await supabase
+      .from("activity_events")
+      .select("fulfills_planned_activity_event_id")
+      .eq("user_id", appUser.id)
+      .eq("acting_as_actor_id", personActor.id)
+      .eq("activity_role_code", "actual")
+      .eq("status", "completed")
+      .in("fulfills_planned_activity_event_id", plannedIds)
+      .limit(MAX_SCAN_LIMIT);
 
+    if (error) {
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: 500 },
+      );
+    }
+
+    for (const row of asRecords(data)) {
+      const plannedId = asString(row.fulfills_planned_activity_event_id);
+      if (plannedId) fulfilledPlannedIds.add(plannedId);
+    }
+  }
+
+  const recurrenceByActivityId = new Map<string, RecurrenceInfo>();
+
+  if (plannedIds.length > 0) {
+    const { data: occurrenceRowsRaw, error: occurrenceError } =
+      await supabase
+        .from("activity_recurrence_occurrences")
+        .select(
+          "materialized_activity_event_id,recurrence_rule_id,occurrence_ordinal,status_code",
+        )
+        .in("materialized_activity_event_id", plannedIds)
+        .in("status_code", ["active", "rescheduled"]);
+
+    if (occurrenceError) {
+      return NextResponse.json(
+        { ok: false, error: occurrenceError.message },
+        { status: 500 },
+      );
+    }
+
+    const occurrenceRows = asRecords(occurrenceRowsRaw);
+    const ruleIds = [
+      ...new Set(
+        occurrenceRows
+          .map((row) => asString(row.recurrence_rule_id))
+          .filter((value): value is string => Boolean(value)),
+      ),
+    ];
+
+    const rulesById = new Map<string, JsonRecord>();
+
+    if (ruleIds.length > 0) {
+      const { data: ruleRowsRaw, error: rulesError } =
+        await supabase
+          .from("activity_recurrence_rules")
+          .select("id,frequency_code,interval_count,status_code")
+          .in("id", ruleIds);
+
+      if (rulesError) {
+        return NextResponse.json(
+          { ok: false, error: rulesError.message },
+          { status: 500 },
+        );
+      }
+
+      for (const row of asRecords(ruleRowsRaw)) {
+        const id = asString(row.id);
+        if (id) rulesById.set(id, row);
+      }
+    }
+
+    for (const occurrence of occurrenceRows) {
+      const activityId = asString(
+        occurrence.materialized_activity_event_id,
+      );
+      const ruleId = asString(occurrence.recurrence_rule_id);
+      const rule = ruleId ? rulesById.get(ruleId) : null;
+
+      if (!activityId || !ruleId || !rule) continue;
+
+      recurrenceByActivityId.set(activityId, {
+        ruleId,
+        frequencyCode: asString(rule.frequency_code) ?? "unknown",
+        intervalCount: Math.max(1, asNumber(rule.interval_count) ?? 1),
+        occurrenceOrdinal: asNumber(occurrence.occurrence_ordinal),
+      });
+    }
+  }
+
+  const latestRunByActivityId = new Map<string, JsonRecord>();
+
+  if (plannedIds.length > 0) {
     const { data: runRowsRaw, error: runError } =
       await supabase
         .from("activity_semantic_enrichment_runs_cux4")
@@ -341,119 +563,148 @@ export async function GET(request: Request) {
         )
         .eq("owner_user_id", appUser.id)
         .eq("owner_actor_id", personActor.id)
-        .in("activity_event_id", activityIds)
+        .in("activity_event_id", plannedIds)
         .order("updated_at", { ascending: false })
-        .limit(runLimit);
+        .limit(MAX_SCAN_LIMIT);
 
     if (runError) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: runError.message,
-        },
+        { ok: false, error: runError.message },
         { status: 500 },
       );
     }
 
-    runRows = asRecords(runRowsRaw);
-  }
-
-  const latestRunByActivityId = new Map<string, JsonRecord>();
-
-  for (const runRow of runRows) {
-    const activityEventId = asString(runRow.activity_event_id);
-
-    if (
-      activityEventId &&
-      !latestRunByActivityId.has(activityEventId)
-    ) {
-      latestRunByActivityId.set(activityEventId, runRow);
+    for (const row of asRecords(runRowsRaw)) {
+      const activityId = asString(row.activity_event_id);
+      if (activityId && !latestRunByActivityId.has(activityId)) {
+        latestRunByActivityId.set(activityId, row);
+      }
     }
   }
 
-  const now = Date.now();
-  const dueWindowEnd = now + dueDays * 24 * 60 * 60 * 1000;
-
+  const today: ShelfItem[] = [];
+  const weekItems: ShelfItem[] = [];
+  const overdue: ShelfItem[] = [];
   const unscheduled: ShelfItem[] = [];
-  const dueSoon: ShelfItem[] = [];
-  const needsClarification: ShelfItem[] = [];
 
-  for (const activityRow of activityRows) {
-    const activityId = asString(activityRow.id);
-
-    if (!activityId) {
-      continue;
-    }
-
-    const latestRun =
-      latestRunByActivityId.get(activityId) ?? null;
-    const item = toShelfItem(activityRow, latestRun);
-
-    if (!item) {
-      continue;
-    }
+  for (const row of plannedRows) {
+    const activityId = asString(row.id);
+    if (!activityId) continue;
 
     if (
-      item.scheduleModeCode === "unscheduled" &&
-      !recurrenceSourceIds.has(activityId)
+      recurrenceSourceIds.has(activityId) ||
+      fulfilledPlannedIds.has(activityId)
     ) {
+      continue;
+    }
+
+    const item = toPlannedShelfItem(
+      row,
+      latestRunByActivityId.get(activityId) ?? null,
+      recurrenceByActivityId.get(activityId) ?? null,
+    );
+
+    if (!item) continue;
+
+    if (item.scheduleModeCode === "unscheduled") {
       unscheduled.push(item);
+      continue;
     }
 
-    const dueTimestamp = effectiveDueTimestamp(activityRow);
+    const bounds = scheduleBounds(row, timeZone);
+    if (!bounds) continue;
 
-    if (
-      dueTimestamp !== null &&
-      dueTimestamp >= now &&
-      dueTimestamp <= dueWindowEnd
-    ) {
-      dueSoon.push(item);
+    if (bounds.end < todayDate) {
+      overdue.push(item);
     }
 
     if (
-      latestRun &&
-      asString(latestRun.status) === "needs_clarification"
+      bounds.start <= todayDate &&
+      bounds.end >= todayDate
     ) {
-      needsClarification.push(item);
+      today.push(item);
+    }
+
+    if (
+      bounds.start <= week.end &&
+      bounds.end >= week.start
+    ) {
+      weekItems.push(item);
     }
   }
 
-  unscheduled.sort((left, right) =>
-    compareNullableDatesDescending(left.updatedAt, right.updatedAt),
-  );
-  dueSoon.sort((left, right) =>
-    compareNullableDatesAscending(left.dueAt, right.dueAt),
-  );
-  needsClarification.sort((left, right) =>
-    compareNullableDatesDescending(
-      left.enrichmentUpdatedAt,
-      right.enrichmentUpdatedAt,
-    ),
-  );
+  const { data: completedRowsRaw, error: completedError } =
+    await supabase
+      .from("activity_events")
+      .select(
+        [
+          "id",
+          "title",
+          "description",
+          "input_text",
+          "source",
+          "privacy_scope",
+          "status",
+          "ended_at",
+          "created_at",
+          "updated_at",
+          "fulfills_planned_activity_event_id",
+        ].join(","),
+      )
+      .eq("user_id", appUser.id)
+      .eq("acting_as_actor_id", personActor.id)
+      .eq("activity_role_code", "actual")
+      .eq("status", "completed")
+      .not("fulfills_planned_activity_event_id", "is", null)
+      .order("updated_at", { ascending: false })
+      .limit(COMPLETED_HISTORY_LIMIT);
+
+  if (completedError) {
+    return NextResponse.json(
+      { ok: false, error: completedError.message },
+      { status: 500 },
+    );
+  }
+
+  const completed = asRecords(completedRowsRaw)
+    .map((actual) => {
+      const plannedId = asString(
+        actual.fulfills_planned_activity_event_id,
+      );
+
+      return toCompletedShelfItem({
+        actual,
+        planned: plannedId ? plannedById.get(plannedId) ?? null : null,
+        recurrence: plannedId
+          ? recurrenceByActivityId.get(plannedId) ?? null
+          : null,
+      });
+    })
+    .filter((item): item is ShelfItem => Boolean(item));
+
+  today.sort(compareDueAscending);
+  weekItems.sort(compareDueAscending);
+  overdue.sort(compareDueAscending);
+  unscheduled.sort(compareUpdatedDescending);
+  completed.sort(compareCompletedDescending);
 
   return NextResponse.json({
     ok: true,
-    generatedAt: new Date(now).toISOString(),
-    dueDays,
-    previewLimit,
-    scannedActivities: activityRows.length,
-    recurrenceSourcesExcludedFromUnscheduled: recurrenceSourceIds.size,
+    generatedAt: new Date().toISOString(),
+    focusDate,
+    todayDate,
+    weekStartDate: week.start,
+    weekEndDate: week.end,
+    timeZone,
+    scannedPlannedActivities: plannedRows.length,
+    recurrenceSourcesExcluded: recurrenceSourceIds.size,
+    fulfilledPlansExcluded: fulfilledPlannedIds.size,
     groups: {
-      unscheduled: buildGroup(
-        "unscheduled",
-        unscheduled,
-        previewLimit,
-      ),
-      dueSoon: buildGroup(
-        "dueSoon",
-        dueSoon,
-        previewLimit,
-      ),
-      needsClarification: buildGroup(
-        "needsClarification",
-        needsClarification,
-        previewLimit,
-      ),
+      today: buildGroup("today", today, limit),
+      week: buildGroup("week", weekItems, limit),
+      overdue: buildGroup("overdue", overdue, limit),
+      unscheduled: buildGroup("unscheduled", unscheduled, limit),
+      completed: buildGroup("completed", completed, limit),
     },
   });
 }

@@ -843,9 +843,45 @@ export async function GET(request: Request) {
   const activeCalendarRows = (calendarRows ?? []).filter(isActiveCalendarRow);
   const activeTimeBlockRows = (timeBlockRows ?? []).filter(isActiveCalendarRow);
   const plannedActivityRecords = (plannedActivityRows ?? []) as Record<string, any>[];
+  const plannedActivityIds = uniqueTextValues(
+    plannedActivityRecords.map((row) => asText(row.id)),
+  );
+  const fulfilledPlannedActivityIds = new Set<string>();
+
+  if (plannedActivityIds.length > 0) {
+    const { data: fulfillmentRows, error: fulfillmentError } = await supabase
+      .from("activity_events")
+      .select("fulfills_planned_activity_event_id")
+      .eq("user_id", appUser.id)
+      .eq("acting_as_actor_id", personActor.id)
+      .eq("activity_role_code", "actual")
+      .eq("status", "completed")
+      .in("fulfills_planned_activity_event_id", plannedActivityIds);
+
+    if (fulfillmentError) {
+      return NextResponse.json({ error: fulfillmentError.message }, { status: 500 });
+    }
+
+    for (const row of (fulfillmentRows ?? []) as Record<string, unknown>[]) {
+      const plannedActivityEventId = asText(row.fulfills_planned_activity_event_id);
+
+      if (plannedActivityEventId) {
+        fulfilledPlannedActivityIds.add(plannedActivityEventId);
+      }
+    }
+  }
+
+  const visiblePlannedActivityRecords = plannedActivityRecords.filter((row) => {
+    const activityEventId = asText(row.id);
+    return !activityEventId || !fulfilledPlannedActivityIds.has(activityEventId);
+  });
+  const visibleCalendarRows = activeCalendarRows.filter((row) => {
+    const activityEventId = asText(row.related_activity_event_id);
+    return !activityEventId || !fulfilledPlannedActivityIds.has(activityEventId);
+  });
   const activityEventIds = uniqueTextValues([
-    ...plannedActivityRecords.map((row) => asText(row.id)),
-    ...activeCalendarRows.map((row) => asText(row.related_activity_event_id)),
+    ...visiblePlannedActivityRecords.map((row) => asText(row.id)),
+    ...visibleCalendarRows.map((row) => asText(row.related_activity_event_id)),
   ]);
 
   let plannedTargetValueObjectsByActivityEventId: Map<
@@ -872,7 +908,7 @@ export async function GET(request: Request) {
   }
 
   const events = [
-    ...(activeCalendarRows
+    ...(visibleCalendarRows
       .map((row) => {
         const activityEventId = asText(row.related_activity_event_id);
         const valueObjects = activityEventId
@@ -885,7 +921,7 @@ export async function GET(request: Request) {
     ...(activeTimeBlockRows.map(mapTimeBlock).filter(Boolean) as CalendarEvent[]),
   ].sort((left, right) => new Date(left.startAt).getTime() - new Date(right.startAt).getTime());
 
-  const allDayItems = plannedActivityRecords
+  const allDayItems = visiblePlannedActivityRecords
     .map((row) =>
       mapPlannedActivityAllDayItem(
         row,
@@ -914,7 +950,7 @@ export async function GET(request: Request) {
     allDayItems,
     logs,
     sources: {
-      calendarEvents: activeCalendarRows.length,
+      calendarEvents: visibleCalendarRows.length,
       timeBlocks: activeTimeBlockRows.length,
       plannedActivities: allDayItems.length,
       plannedTargetLinks: Array.from(

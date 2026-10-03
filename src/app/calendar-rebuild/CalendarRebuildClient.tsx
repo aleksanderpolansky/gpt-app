@@ -905,7 +905,10 @@ function getAllDayListSortTime(item: CalendarAllDayItem, visibleStartDateKey: st
 
 function allDayItemToShelfItem(item: CalendarAllDayItem): Cux6ShelfItem {
   return {
+    kind: "planned",
     id: item.activityEventId,
+    plannedActivityEventId: item.activityEventId,
+    actualActivityEventId: null,
     title: item.title,
     inputText: item.inputText,
     description: item.description,
@@ -924,6 +927,9 @@ function allDayItemToShelfItem(item: CalendarAllDayItem): Cux6ShelfItem {
     enrichmentStatus: null,
     enrichmentUpdatedAt: null,
     updatedAt: item.updatedAt,
+    completedAt: null,
+    needsClarification: false,
+    recurrence: null,
   };
 }
 
@@ -2724,6 +2730,10 @@ export default function CalendarRebuildClient({
         <Cux6TaskShelf
           locale={locale}
           refreshKey={eventsRefreshKey}
+          focusDateKey={dateKey(focusDate)}
+          onTaskChanged={() => {
+            setEventsRefreshKey((value) => value + 1);
+          }}
           onOpenDetails={(item) => {
             setSelectedEventId(null);
             setSelectedShelfItem(item);

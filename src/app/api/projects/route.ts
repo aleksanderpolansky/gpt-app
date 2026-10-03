@@ -46,6 +46,7 @@ type ProjectActivityRow = {
   readonly id: string;
   readonly title: string | null;
   readonly status: string | null;
+  readonly activity_role_code: string | null;
   readonly schedule_mode_code: string | null;
   readonly scheduled_date: string | null;
   readonly schedule_start_date: string | null;
@@ -324,6 +325,7 @@ export async function GET() {
   const projectOccurrencesByRuleId =
     new Map<string, ActivityRecurrenceOccurrenceRow[]>();
   const projectOccurrenceActivityEventIds = new Set<string>();
+  const fulfilledPlannedActivityIds = new Set<string>();
 
   if (projectIds.length > 0) {
     const { data: linksData, error: linksError } = await supabase
@@ -360,6 +362,7 @@ export async function GET() {
             "id",
             "title",
             "status",
+            "activity_role_code",
             "schedule_mode_code",
             "scheduled_date",
             "schedule_start_date",
@@ -381,6 +384,32 @@ export async function GET() {
 
       for (const activity of (activitiesData ?? []) as unknown as ProjectActivityRow[]) {
         projectActivitiesById.set(activity.id, activity);
+      }
+
+      const { data: fulfillmentData, error: fulfillmentError } = await supabase
+        .from("activity_events")
+        .select("fulfills_planned_activity_event_id")
+        .eq("user_id", appUserId)
+        .eq("acting_as_actor_id", actorId)
+        .eq("activity_role_code", "actual")
+        .eq("status", "completed")
+        .in("fulfills_planned_activity_event_id", activityIds);
+
+      if (fulfillmentError) {
+        return NextResponse.json(
+          { ok: false, error: fulfillmentError.message },
+          { status: 500 },
+        );
+      }
+
+      for (const row of (fulfillmentData ?? []) as unknown as Array<{
+        fulfills_planned_activity_event_id: string | null;
+      }>) {
+        if (row.fulfills_planned_activity_event_id) {
+          fulfilledPlannedActivityIds.add(
+            row.fulfills_planned_activity_event_id,
+          );
+        }
       }
 
       const { data: recurrenceData, error: recurrenceError } = await supabase
@@ -517,7 +546,8 @@ export async function GET() {
           .map((activityId) => projectActivitiesById.get(activityId))
           .filter(
             (activity): activity is ProjectActivityRow =>
-              Boolean(activity),
+              activity !== undefined &&
+              activity.activity_role_code === "planned",
           )
           .map((activity) => ({
             id: activity.id,
@@ -556,10 +586,14 @@ export async function GET() {
                     upcomingOccurrences: (
                       projectOccurrencesByRuleId.get(recurrence.id) ?? []
                     )
-                      .filter((occurrence) =>
-                        linkedActivityIdSet.has(
-                          occurrence.materialized_activity_event_id,
-                        ),
+                      .filter(
+                        (occurrence) =>
+                          linkedActivityIdSet.has(
+                            occurrence.materialized_activity_event_id,
+                          ) &&
+                          !fulfilledPlannedActivityIds.has(
+                            occurrence.materialized_activity_event_id,
+                          ),
                       )
                       .slice(0, 12)
                       .map((occurrence) => ({
