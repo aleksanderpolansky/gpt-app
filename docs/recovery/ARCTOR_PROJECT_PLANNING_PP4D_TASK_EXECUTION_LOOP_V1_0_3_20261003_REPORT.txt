@@ -1,0 +1,160 @@
+﻿ARCTOR PROJECT PLANNING
+PP4D TASK EXECUTION LOOP V1.0.3
+2026-10-03
+
+STATUS
+------
+LOCAL_VALIDATION=PASS
+CODE_COMMIT=508d2600ae7695fc75fd0b45c0197dd07243b39e
+PRODUCTION_DEPLOY=PENDING
+PRODUCTION_SMOKE=PENDING
+
+BASELINE
+--------
+branch=main
+baseline=f04ecf1d218fd120123d25c332a7c9e009a2c193
+result_zip_sha256=544E5C7CDE7314DC6CA6CA1DF3F22C8E46D3D3853CA34058A9F938450CAA0DEC
+
+PURPOSE
+-------
+Close the first daily-use execution loop:
+planned activity
+-> actionable Tasks list
+-> Complete
+-> canonical actual activity_event
+-> Completed history
+-> next recurrence occurrence remains independent.
+
+SEMANTIC CONTRACT
+-----------------
+activity_events remains the canonical activity entity.
+No project_tasks or todo_tasks entity was introduced.
+
+Planned work:
+activity_role_code=planned
+
+Completion:
+creates a separate activity_event with
+activity_role_code=actual
+status=completed
+
+Plan -> Actual:
+fulfills_planned_activity_event_id
+
+Undo:
+does not delete the actual event.
+The completion actual event is changed to status=cancelled.
+
+PROJECT MEMBERSHIP
+------------------
+Completed actual activity inherits active project_activity_links
+from the planned activity.
+
+Project API displays only planned top-level project cards,
+so inherited actual membership does not create a duplicate task card.
+
+RECURRENCE
+----------
+Recurrence definition remains unchanged.
+Materialized occurrence is the actionable planned activity.
+Completed occurrence disappears from the active task list.
+Completed occurrence disappears from project upcomingOccurrences.
+Future recurrence occurrences remain independent.
+
+TASK UI
+-------
+Old diagnostic three-column shelf replaced by compact task list.
+
+Views:
+- Today
+- Week
+- Overdue
+- No date
+- Completed
+
+needs_clarification is an independent badge/property,
+not a mutually exclusive task bucket.
+
+CALENDAR
+--------
+Fulfilled planned date/date-range/deadline activities are excluded
+from the active Calendar view.
+
+Exact calendar projection is cancelled when completed.
+Undo restores the exact projection.
+
+FILES
+-----
+scripts/validate-pp4d-task-execution-loop-v1.mjs
+src/app/api/calendar/task-shelf/route.ts
+src/app/api/calendar/task-shelf/[activityEventId]/complete/route.ts
+src/app/api/calendar-rebuild/events/route.ts
+src/app/api/projects/route.ts
+src/app/calendar-rebuild/CalendarRebuildClient.tsx
+src/components/calendar/cux6-task-shelf.tsx
+
+DATABASE
+--------
+migration=NO
+schema_change=NO
+db_push=NO
+
+VALIDATION
+----------
+PP4D_VALIDATOR=PASS_18/18
+NO_SECRETS=PASS
+ESLINT_STRICT_PP4D=PASS
+ESLINT_BASELINE_DEBT_NO_REGRESSION=PASS
+TYPESCRIPT=PASS
+BUILD=PASS
+GIT_DIFF_CHECK=PASS
+
+EXISTING BASELINE DEBT
+----------------------
+calendar-rebuild contains pre-existing ESLint / React Compiler debt.
+PP4D V1.0.3 introduced no increase in the baseline error/warning count.
+This debt is not silently treated as fixed.
+
+OPERATIONAL RISK TO VERIFY IN PRODUCTION
+----------------------------------------
+Completion creates the canonical actual activity first.
+Project membership inheritance and exact-calendar projection update
+are follow-up operations.
+Their failures are surfaced as warnings rather than rolling back the
+created actual activity.
+
+Production smoke MUST therefore verify:
+1. actual fulfillment row exists;
+2. inherited project membership exists;
+3. completed occurrence disappears from active Week;
+4. completed occurrence appears in Completed;
+5. project upcomingOccurrences no longer contains that occurrence;
+6. next recurrence occurrence remains available;
+7. Undo restores the planned occurrence to the active list.
+
+KNOWN DEFERRED
+--------------
+per-occurrence reschedule
+per-occurrence skip
+automatic recurrence horizon top-up
+full Calendar project filter
+semantic planned_target from project intake
+bulk task actions
+advanced completed-history filters
+atomic completion + membership + projection transaction
+
+ROLLBACK
+--------
+Code rollback:
+git revert 508d2600ae7695fc75fd0b45c0197dd07243b39e
+
+No database migration rollback is required.
+
+NEXT
+----
+1. Push code and this recovery record.
+2. Wait for Vercel Ready.
+3. Production smoke using the existing weekly PP3B2 test occurrence.
+4. Verify DB plan->actual and project membership.
+5. Test Undo.
+6. Close recovery with production evidence.
