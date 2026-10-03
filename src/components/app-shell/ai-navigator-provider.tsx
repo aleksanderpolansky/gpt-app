@@ -24,6 +24,16 @@ export type AiNavigatorMessageRole =
 
 export type AiNavigatorMode = "past" | "future" | "chat";
 
+export type AiNavigatorProjectActivityContext = {
+  id: string;
+  title: string;
+};
+
+export type AiNavigatorPrepareActivityCaptureInput = {
+  mode: Exclude<AiNavigatorMode, "chat">;
+  projectContext?: AiNavigatorProjectActivityContext | null;
+};
+
 export type AiNavigatorImageAttachment = {
   kind: "image";
   name: string;
@@ -97,9 +107,14 @@ type AiNavigatorContextValue = {
   navigatorMode: AiNavigatorMode;
   selectedTier: "nano" | "standard" | "pro" | "max";
   modelOptions: AiNavigatorModelOption[];
+  activityProjectContext: AiNavigatorProjectActivityContext | null;
   setNavigatorMode: (value: AiNavigatorMode) => void;
   setSelectedTier: (value: "nano" | "standard" | "pro" | "max") => void;
   setInput: (value: string) => void;
+  prepareActivityCapture: (
+    input: AiNavigatorPrepareActivityCaptureInput,
+  ) => void;
+  clearActivityProjectContext: () => void;
   sendMessage: (message?: string, options?: AiNavigatorSendOptions) => Promise<void>;
   addActivityPreview: (text: string) => void;
   clearHistory: () => void;
@@ -2856,6 +2871,7 @@ async function submitAiRailActivity(
   mode: Exclude<AiNavigatorMode, "chat">,
   clientRequestId: string,
   image: AiNavigatorImageAttachment | null,
+  projectContextId: string | null,
 ) {
   const locale = getNavigatorLocale();
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -2877,6 +2893,9 @@ async function submitAiRailActivity(
     formData.set("timeZone", timeZone);
     formData.set("temporalDirection", temporalDirection);
     formData.set("clientRequestId", clientRequestId);
+    if (projectContextId) {
+      formData.set("projectContextId", projectContextId);
+    }
     formData.set(
       "image",
       new File([imageBlob], image.name || "activity-image", {
@@ -2892,6 +2911,7 @@ async function submitAiRailActivity(
       timeZone,
       temporalDirection,
       clientRequestId,
+      projectContextId,
     });
     headers = {
       "Content-Type": "application/json",
@@ -2938,6 +2958,8 @@ export function AiNavigatorProvider({
   const [navigatorMode, setNavigatorMode] = useState<AiNavigatorMode>("chat");
   const [selectedTier, setSelectedTier] = useState<"nano" | "standard" | "pro" | "max">("standard");
   const [modelOptions, setModelOptions] = useState<AiNavigatorModelOption[]>(DEFAULT_MODEL_OPTIONS);
+  const [activityProjectContext, setActivityProjectContext] =
+    useState<AiNavigatorProjectActivityContext | null>(null);
 
   useEffect(() => {
     if (session.isLoading) {
@@ -3009,6 +3031,23 @@ export function AiNavigatorProvider({
     }
   }, [messages, storageKey]);
 
+  const clearActivityProjectContext = useCallback(() => {
+    setActivityProjectContext(null);
+  }, []);
+
+  const prepareActivityCapture = useCallback(
+    (capture: AiNavigatorPrepareActivityCaptureInput) => {
+      setNavigatorMode(capture.mode);
+      setActivityProjectContext(
+        capture.mode === "future"
+          ? capture.projectContext ?? null
+          : null,
+      );
+      setInput("");
+    },
+    [],
+  );
+
   const addActivityPreview = useCallback((text: string) => {
     const trimmedText = text.trim();
 
@@ -3041,6 +3080,8 @@ export function AiNavigatorProvider({
       const trimmedInput = (message ?? input).trim();
       const image = options?.image ?? null;
       const activityRequestId = options?.clientRequestId ?? createNavigatorRequestId();
+      const projectContextAtSubmit =
+        navigatorMode === "future" ? activityProjectContext : null;
 
       if ((!trimmedInput && !image) || isSending) {
         return;
@@ -3073,12 +3114,30 @@ export function AiNavigatorProvider({
 
       try {
         if (navigatorMode === "past" || navigatorMode === "future") {
-          await submitAiRailActivity(
+          const submission = await submitAiRailActivity(
             trimmedInput,
             navigatorMode,
             activityRequestId,
             image,
+            projectContextAtSubmit?.id ?? null,
           );
+
+          if (projectContextAtSubmit) {
+            const activityEventId =
+              submission.payload.result?.activityEventIds?.[0] ?? null;
+
+            window.dispatchEvent(
+              new CustomEvent("arctor:project-activity-created", {
+                detail: {
+                  projectContextId: projectContextAtSubmit.id,
+                  activityEventId,
+                },
+              }),
+            );
+
+            setActivityProjectContext(null);
+          }
+
           const savedCopy = getActivitySavedCopy();
 
           setMessages((previousMessages) =>
@@ -3140,7 +3199,13 @@ export function AiNavigatorProvider({
         setIsSending(false);
       }
     },
-    [input, isSending, navigatorMode, selectedTier],
+    [
+      activityProjectContext,
+      input,
+      isSending,
+      navigatorMode,
+      selectedTier,
+    ],
   );
 
   useEffect(() => {
@@ -3197,15 +3262,20 @@ export function AiNavigatorProvider({
       navigatorMode,
       selectedTier,
       modelOptions,
+      activityProjectContext,
       setNavigatorMode,
       setSelectedTier,
       setInput,
+      prepareActivityCapture,
+      clearActivityProjectContext,
       sendMessage,
       addActivityPreview,
       clearHistory,
     }),
     [
+      activityProjectContext,
       addActivityPreview,
+      clearActivityProjectContext,
       clearHistory,
       input,
       isSending,
@@ -3213,6 +3283,7 @@ export function AiNavigatorProvider({
       selectedTier,
       modelOptions,
       messages,
+      prepareActivityCapture,
       sendMessage,
       setInput,
     ],

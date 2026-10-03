@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useAiNavigator } from "@/components/app-shell/ai-navigator-provider";
 
 import {
   addDays,
@@ -60,43 +61,43 @@ const CUX4_CAPTURE_NOTICE_UI: Record<
 > = {
   en: {
     saved: "Activity added.",
-    analyzing: "Analysis continues in the Activity Container.",
+    analyzing: "Background analysis continues in the Activity Journal.",
     details: "Details",
     dismiss: "Dismiss",
   },
   pl: {
     saved: "Aktywność została dodana.",
-    analyzing: "Analiza trwa w kontenerze aktywności.",
+    analyzing: "Analiza w tle trwa w Dzienniku aktywności.",
     details: "Szczegóły",
     dismiss: "Ukryj",
   },
   ru: {
     saved: "Активность добавлена.",
-    analyzing: "Анализ продолжается в контейнере активности.",
+    analyzing: "Фоновый анализ продолжается в Журнале активностей.",
     details: "Подробнее",
     dismiss: "Скрыть",
   },
   uk: {
     saved: "Активність додано.",
-    analyzing: "Аналіз триває в контейнері активності.",
+    analyzing: "Фоновий аналіз триває в Журналі активностей.",
     details: "Докладніше",
     dismiss: "Сховати",
   },
   de: {
     saved: "Aktivität hinzugefügt.",
-    analyzing: "Die Analyse läuft im Aktivitätscontainer weiter.",
+    analyzing: "Die Hintergrundanalyse läuft im Aktivitätsjournal weiter.",
     details: "Details",
     dismiss: "Ausblenden",
   },
   es: {
     saved: "Actividad añadida.",
-    analyzing: "El análisis continúa en el contenedor de actividad.",
+    analyzing: "El análisis en segundo plano continúa en el diario de actividades.",
     details: "Detalles",
     dismiss: "Ocultar",
   },
   cs: {
     saved: "Aktivita byla přidána.",
-    analyzing: "Analýza pokračuje v kontejneru aktivity.",
+    analyzing: "Analýza na pozadí pokračuje v deníku aktivit.",
     details: "Podrobnosti",
     dismiss: "Skrýt",
   },
@@ -1471,6 +1472,7 @@ export default function CalendarRebuildClient({
 }: CalendarRebuildClientProps) {
   const locale = normalizeLocale(initialLocale);
   const ui = UI[locale];
+  const { prepareActivityCapture } = useAiNavigator();
   const cux4NoticeUi = CUX4_CAPTURE_NOTICE_UI[locale];
   const detailUi = DETAIL_UI[locale];
   const analyticsUi = ANALYTICS_PLACEHOLDER_UI[locale];
@@ -2533,36 +2535,20 @@ export default function CalendarRebuildClient({
   }, [locale]);
 
   const activityContainerButtonLabel = useMemo(() => {
-    if (locale === "pl") {
-      return "Kontener";
-    }
-
-    if (locale === "ru" || locale === "uk") {
-      return "Контейнер";
-    }
-
-    if (locale === "de") {
-      return "Container";
-    }
-
-    if (locale === "es") {
-      return "Contenedor";
-    }
-
-    if (locale === "cs") {
-      return "Kontejner";
-    }
-
-    return "Container";
+    if (locale === "pl") return "Analiza";
+    if (locale === "ru" || locale === "uk") return "Анализ";
+    if (locale === "de") return "Analyse";
+    if (locale === "es") return "Análisis";
+    if (locale === "cs") return "Analýza";
+    return "Analysis";
   }, [locale]);
 
   function buildFutureActivityContainerHref(event: CalendarEvent) {
-    return `/calendar/activity-review?${new URLSearchParams({
+    if (!event.activityEventId) return "";
+
+    return `/activity-ai-lab?${new URLSearchParams({
       locale,
-      text: getEventDisplayTitle(event) || event.title,
-      returnTo: returnToTarget,
-      focusDate: dateKey(eventStartDate(event)),
-      temporalDirection: "future",
+      activityEventId: event.activityEventId,
     }).toString()}`;
   }
 
@@ -2673,9 +2659,7 @@ export default function CalendarRebuildClient({
 
             <button
               type="button"
-              aria-expanded={composerOpen}
-              aria-controls="calendar-inline-composer"
-              onClick={() => setComposerOpen((value) => !value)}
+              onClick={() => prepareActivityCapture({ mode: "future" })}
               className="rounded-xl bg-[#3b6ef8] px-4 py-2 text-sm font-bold text-white shadow"
             >
               {ui.add}
@@ -2714,15 +2698,10 @@ export default function CalendarRebuildClient({
               <div className="flex flex-wrap gap-2">
                 <Link
                   href={{
-                    pathname: "/calendar/activity-review",
+                    pathname: "/activity-ai-lab",
                     query: {
                       locale,
-                      returnTo: returnToTarget,
-                      temporalDirection: "future",
                       activityEventId: lastQuickCapture.activityEventId,
-                      ...(lastQuickCapture.focusDateKey
-                        ? { focusDate: lastQuickCapture.focusDateKey }
-                        : {}),
                     },
                   }}
                   className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-bold text-white shadow-sm"
@@ -3815,12 +3794,14 @@ export default function CalendarRebuildClient({
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      <Link
-                        href={buildFutureActivityContainerHref(selectedEvent)}
-                        className="rounded-xl border border-[#d8deef] bg-white px-4 py-2 text-sm font-bold text-[#667091] shadow-sm hover:border-[#3b6ef8] hover:text-[#3b6ef8]"
-                      >
-                        {activityContainerButtonLabel}
-                      </Link>
+                      {selectedEvent.activityEventId ? (
+                        <Link
+                          href={buildFutureActivityContainerHref(selectedEvent)}
+                          className="rounded-xl border border-[#d8deef] bg-white px-4 py-2 text-sm font-bold text-[#667091] shadow-sm hover:border-[#3b6ef8] hover:text-[#3b6ef8]"
+                        >
+                          {activityContainerButtonLabel}
+                        </Link>
+                      ) : null}
 
                       {isEditableCalendarEvent(selectedEvent) ? (
                         <>

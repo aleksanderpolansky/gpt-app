@@ -638,9 +638,11 @@ export function GlobalAiNavigator({
     navigatorMode,
     selectedTier,
     modelOptions,
+    activityProjectContext,
     setNavigatorMode,
     setSelectedTier,
     setInput,
+    clearActivityProjectContext,
     sendMessage,
   } = useAiNavigator();
 
@@ -748,6 +750,9 @@ export function GlobalAiNavigator({
 
   function changeNavigatorMode(mode: AiNavigatorMode) {
     setComposerNotice(null);
+    if (mode !== "future") {
+      clearActivityProjectContext();
+    }
     setNavigatorMode(mode);
   }
 
@@ -911,6 +916,23 @@ export function GlobalAiNavigator({
       ) : null}
 
       <div className="border-t border-[rgba(0,0,0,0.05)] bg-white px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
+        {navigatorMode === "future" && activityProjectContext ? (
+          <div className="mb-2 flex items-center gap-2 rounded-xl border border-[#b9c8ff] bg-[#eef2ff] px-2.5 py-2 text-[10.5px] font-semibold text-[#315ee7]">
+            <Target size={13} className="flex-shrink-0" />
+            <span className="min-w-0 flex-1 truncate">
+              {navigationT("navigation.projects")}: {activityProjectContext.title}
+            </span>
+            <button
+              type="button"
+              onClick={clearActivityProjectContext}
+              aria-label="Clear project context"
+              className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg text-[#6f7fb8] hover:bg-white hover:text-[#315ee7]"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        ) : null}
+
         {selectedImage?.dataUrl ? (
           <div className="mb-2 flex items-center gap-2 rounded-xl border border-[#3b6ef8]/15 bg-[#f7f9ff] p-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}

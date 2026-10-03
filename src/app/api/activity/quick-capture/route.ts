@@ -35,6 +35,8 @@ export const ARCTOR_AI_RIGHT_RAIL_BACKGROUND_REVIEW_V1 =
 
 const CONTRACT = "ARCTOR_AI_A3_1_REVIEW_FIRST_CAPTURE_V1";
 const REQUEST_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{7,179}$/;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const IANA_TIME_ZONE_RE = /^[A-Za-z0-9_+\-/]{1,80}$/;
 const MAX_INPUT_CHARS = 12_000;
 const ACTIVITY_EVIDENCE_BUCKET = "activity-evidence-media-v1";
@@ -90,6 +92,7 @@ type SubmitBody = {
   timeZone?: unknown;
   clientRequestId?: unknown;
   temporalDirection?: unknown;
+  projectContextId?: unknown;
 };
 
 type ParsedSubmitBody = {
@@ -136,6 +139,7 @@ async function parseSubmitBody(request: Request): Promise<ParsedSubmitBody> {
         timeZone: formData.get("timeZone"),
         clientRequestId: formData.get("clientRequestId"),
         temporalDirection: formData.get("temporalDirection"),
+        projectContextId: formData.get("projectContextId"),
       },
       imageFile: imageCandidate instanceof File ? imageCandidate : null,
     };
@@ -483,6 +487,7 @@ export async function POST(request: Request) {
   const locale = normalizeLocale(body.locale);
   const timeZone = text(body.timeZone) || "UTC";
   const clientRequestId = text(body.clientRequestId);
+  const projectContextId = text(body.projectContextId);
   const temporalDirection = normalizeQuickCaptureTemporalMode(
     body.temporalDirection,
   );
@@ -522,6 +527,23 @@ export async function POST(request: Request) {
   if (!temporalDirection) {
     return NextResponse.json(
       { ok: false, error: "temporalDirection must be past or future" },
+      { status: 400 },
+    );
+  }
+
+  if (projectContextId && !UUID_RE.test(projectContextId)) {
+    return NextResponse.json(
+      { ok: false, error: "projectContextId must be a valid UUID" },
+      { status: 400 },
+    );
+  }
+
+  if (projectContextId && temporalDirection !== "future") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "projectContextId is only supported for planned activity capture",
+      },
       { status: 400 },
     );
   }
@@ -697,6 +719,7 @@ export async function POST(request: Request) {
 
     const requestBody = {
       ...baseRequest,
+      ...(projectContextId ? { projectContextId } : {}),
       metadata: {
         ...baseMetadata,
         sourceSurface: "activity_ai_lab",
@@ -713,6 +736,7 @@ export async function POST(request: Request) {
         locale,
         timeZone,
         temporalDirection,
+        ...(projectContextId ? { projectContextId } : {}),
         factsWrittenAtCapture: 0,
         aiCallsAtCapture: 0,
         factMaterializationPolicy: "after_semantic_review_only",

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useAiNavigator } from "@/components/app-shell/ai-navigator-provider";
 import {
   Background,
   BackgroundVariant,
@@ -603,6 +604,7 @@ export default function ProjectMapStartClient({
   const copy = COPY[locale];
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { prepareActivityCapture } = useAiNavigator();
   const requestedProjectId = searchParams.get("project");
   const resumeProjectDraft =
     searchParams.get("resumeProjectDraft") === "1";
@@ -803,6 +805,41 @@ export default function ProjectMapStartClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locale, requestedProjectId, resumeProjectDraft]);
 
+  useEffect(() => {
+    function handleProjectActivityCreated(event: Event) {
+      const detail = (
+        event as CustomEvent<{
+          projectContextId?: string;
+          activityEventId?: string | null;
+        }>
+      ).detail;
+
+      if (
+        !selectedProjectId ||
+        detail?.projectContextId !== selectedProjectId
+      ) {
+        return;
+      }
+
+      void loadProjects(selectedProjectId);
+    }
+
+    window.addEventListener(
+      "arctor:project-activity-created",
+      handleProjectActivityCreated,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "arctor:project-activity-created",
+        handleProjectActivityCreated,
+      );
+    };
+
+    // This listener must always reload the currently selected project.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProjectId]);
+
   function beginNewProject() {
     clearProjectDraft();
     setCreating(true);
@@ -872,16 +909,15 @@ export default function ProjectMapStartClient({
   }
 
   function addProjectActivity() {
-    if (!selectedProjectId) return;
+    if (!selectedProject) return;
 
-    router.push(
-      localeHref(
-        `/calendar/add?returnTo=project&projectId=${encodeURIComponent(
-          selectedProjectId,
-        )}&temporalDirection=future`,
-        locale,
-      ),
-    );
+    prepareActivityCapture({
+      mode: "future",
+      projectContext: {
+        id: selectedProject.id,
+        title: selectedProject.title,
+      },
+    });
   }
 
   async function saveProject() {

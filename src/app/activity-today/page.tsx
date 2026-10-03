@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { LayoutGrid, Table2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useAiNavigator } from "@/components/app-shell/ai-navigator-provider";
 
 import {
   ArctorTabulator,
@@ -674,12 +675,12 @@ function mapActivityEvent(event: ActivityEventSummary, index: number, locale: Lo
     canEdit: Boolean(sourceId) && editableActual && !inactive,
     canCancel: Boolean(sourceId) && editableActual && !inactive,
     canRestore: Boolean(sourceId) && editableActual && inactive,
-    containerHref: `/calendar/activity-review?${new URLSearchParams({
-      locale,
-      text: title,
-      returnTo: role === "planned" ? "calendar" : "activity-journal",
-      temporalDirection: role === "planned" ? "future" : "past",
-    }).toString()}`,
+    containerHref: sourceId
+      ? `/activity-ai-lab?${new URLSearchParams({
+          locale,
+          activityEventId: sourceId,
+        }).toString()}`
+      : "",
     raw: event,
   };
 }
@@ -705,12 +706,7 @@ function mapCalendarLog(log: CalendarLogSummary, index: number, locale: Locale):
     canEdit: Boolean(log.eventId && log.canEdit),
     canCancel: Boolean(log.eventId && log.canCancel),
     canRestore: Boolean(log.eventId && log.canRestore),
-    containerHref: `/calendar/activity-review?${new URLSearchParams({
-      locale,
-      text: title,
-      returnTo: "calendar",
-      temporalDirection: "future",
-    }).toString()}`,
+    containerHref: "",
     raw: log,
   };
 }
@@ -795,6 +791,7 @@ function ActivityMutualPreview({
 }
 
 export default function ActivityTodayPage() {
+  const { prepareActivityCapture } = useAiNavigator();
   const [locale, setLocale] = useState<Locale>("en");
   const [viewMode, setViewMode] = useState<JournalViewMode>("cards");
   const [activityEvents, setActivityEvents] = useState<ActivityEventSummary[]>([]);
@@ -956,11 +953,9 @@ export default function ActivityTodayPage() {
 
   const ui = UI[locale];
 
-  const addHref = `/calendar/add?${new URLSearchParams({
-    locale,
-    returnTo: "activity-journal",
-    temporalDirection: "past",
-  }).toString()}`;
+  function addActivityViaNavigator() {
+    prepareActivityCapture({ mode: "past" });
+  }
 
   const journalItems = useMemo(
     () => [
@@ -1266,12 +1261,13 @@ export default function ActivityTodayPage() {
               </p>
             </div>
 
-            <Link
-              href={addHref}
+            <button
+              type="button"
+              onClick={addActivityViaNavigator}
               className="rounded-xl bg-[#3b6ef8] px-4 py-2 text-sm font-bold text-white shadow"
             >
               + {ui.add}
-            </Link>
+            </button>
           </div>
         </section>
 
@@ -1564,12 +1560,16 @@ export default function ActivityTodayPage() {
                     ) : null}
 
                     <div className="flex flex-wrap gap-2">
-                      <Link
-                        href={selectedItem.containerHref}
-                        className="rounded-xl border border-[#d8deef] bg-white px-4 py-2 text-sm font-bold text-[#667091] shadow-sm hover:border-[#3b6ef8] hover:text-[#3b6ef8]"
-                      >
-                        {ui.container}
-                      </Link>
+                      {selectedItem.kind === "activity" &&
+                      selectedItem.sourceId &&
+                      selectedItem.containerHref ? (
+                        <Link
+                          href={selectedItem.containerHref}
+                          className="rounded-xl border border-[#d8deef] bg-white px-4 py-2 text-sm font-bold text-[#667091] shadow-sm hover:border-[#3b6ef8] hover:text-[#3b6ef8]"
+                        >
+                          {ui.analysis}
+                        </Link>
+                      ) : null}
 
                       {selectedItem.canEdit ? (
                         <button
