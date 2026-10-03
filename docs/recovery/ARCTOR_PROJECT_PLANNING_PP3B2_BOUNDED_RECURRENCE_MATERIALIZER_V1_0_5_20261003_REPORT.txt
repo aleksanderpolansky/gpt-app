@@ -1,0 +1,150 @@
+﻿ARCTOR PROJECT PLANNING
+PP3B2 BOUNDED RECURRENCE MATERIALIZER V1.0.5
+2026-10-03
+
+STATUS
+------
+PP3B2_CODE=PASS
+DATABASE_MIGRATION=MANUAL_SQL_APPLIED_AND_VERIFIED
+PRODUCTION_DEPLOY=PASS_READY
+PRODUCTION_SMOKE=PASS
+
+GIT
+---
+baseline=01e38ebbab26d0c966623810010ece4ab86b759a
+code_commit=3db9df2993c61ee8abc718825a105569b41b9eb4
+branch=main
+
+SEMANTIC LOCK
+-------------
+activity_events remains the canonical planned activity entity.
+activity_recurrence_rules stores recurrence definitions.
+activity_recurrence_occurrences stores technical occurrence lineage and exception identity.
+project_activity_links remains the canonical many-to-many project membership contract.
+Occurrence activity_events inherit active project_activity_links from the recurrence source.
+No project_tasks entity was introduced.
+No recurring schedule mode was introduced.
+
+RECURRENCE V1
+-------------
+daily -> date_only occurrence
+generic weekly -> full-week date_range
+generic monthly -> full-month date_range
+bounded horizon=56 calendar dates
+idempotent occurrence materialization
+planned_target links copied
+generic recurrence does not invent weekday or exact time
+
+DATABASE
+--------
+migration=supabase/migrations/20261003190000_activity_recurrence_occurrences_pp3b2.sql
+migration_sha256=B303CE1BA90099770801228D35BCC4465F928AA1F4C084D624BD1E67D275644F
+apply_method=Supabase SQL Editor / manual production apply
+
+POST-MIGRATION READBACK
+-----------------------
+occurrence_table_exists=true
+occurrence_rls_enabled=true
+occurrence_policy_count=2
+materializer_function_count=1
+occurrence_rows=0
+active_recurrence_rules=1
+migration_history_table=null
+
+IMPORTANT MIGRATION GOVERNANCE
+------------------------------
+Production does not currently contain supabase_migrations.schema_migrations.
+The repository contains substantial historical migration files predating PP3B2.
+Therefore PP3B2 migration history was NOT repaired independently.
+supabase migration repair was NOT executed.
+supabase db push was NOT executed.
+Migration-history bootstrap/normalization is deferred to a separate controlled infrastructure package.
+Do not run db push until that baseline is explicitly established.
+
+VALIDATION
+----------
+PP3B2_DATE_SEMANTICS_SELFTEST=PASS_9/9
+PP3B1_BASE_VALIDATOR=PASS_15/15
+PP3B1_HOTFIX_RUNTIME_VALIDATOR=PASS_18/18
+PP3B2_VALIDATOR=PASS_21/21
+NO_SECRETS=PASS
+ESLINT=PASS
+TYPESCRIPT=PASS
+BUILD=PASS
+GIT_DIFF_CHECK=PASS
+
+KNOWN DEFERRED
+--------------
+Existing PP3B1 recurrence rule was not automatically backfilled.
+Automatic bounded-horizon top-up is not implemented yet.
+Per-occurrence skip/reschedule mutation UI/API is deferred.
+Specific weekday/time recurrence is deferred.
+after_completion recurrence basis is deferred.
+
+ROLLBACK
+--------
+Code rollback:
+git revert 3db9df2993c61ee8abc718825a105569b41b9eb4
+
+Database rollback must be performed only by a dedicated reviewed SQL rollback.
+Do not delete materialized activity_events manually after production use begins without lineage analysis.
+
+NEXT
+----
+1. Push code + recovery commits.
+2. Wait for Vercel Ready.
+3. Production smoke using a NEW recurring activity.
+4. Verify occurrence rows and inherited project membership.
+5. Verify source recurrence is not shown as an unscheduled task.
+6. Next recurrence package: bounded horizon top-up + controlled existing-rule materialization/retry.
+7. Separate infrastructure package: establish verified Supabase migration-history baseline.
+
+PRODUCTION SMOKE
+----------------
+date=2026-10-03
+production_code_commit=3db9df2993c61ee8abc718825a105569b41b9eb4
+vercel_status=READY
+test_marker=PP3B2-SMOKE-20261003
+
+source_activity_event_id=f13b070c-410f-4014-96f2-1473cd117ce9
+recurrence_rule_id=6986c495-b026-4fcd-871b-186ef64770df
+
+frequency_code=weekly
+interval_count=1
+anchor_date=2026-10-03
+timezone=Europe/Berlin
+recurrence_status=active
+
+occurrence_rows=8
+source_project_links=1
+occurrence_project_links=8
+project_membership_ok=true
+
+occurrence_1=2026-10-05..2026-10-11
+occurrence_2=2026-10-12..2026-10-18
+occurrence_3=2026-10-19..2026-10-25
+occurrence_4=2026-10-26..2026-11-01
+occurrence_5=2026-11-02..2026-11-08
+occurrence_6=2026-11-09..2026-11-15
+occurrence_7=2026-11-16..2026-11-22
+occurrence_8=2026-11-23..2026-11-29
+
+project_ui_single_source_card=PASS
+project_ui_upcoming_occurrences=PASS
+source_recurrence_unscheduled_exclusion=PASS
+nominal_vs_materialized_schedule=PASS_8_8
+production_smoke=PASS
+
+FINAL PP3B2 STATUS
+------------------
+PP3B2=PRODUCTION_PASS
+
+DEFERRED TO NEXT RECURRENCE PACKAGE
+-----------------------------------
+automatic horizon top-up
+controlled materialization/retry for existing PP3B1 rules
+per-occurrence skip/reschedule operations
+weekday-specific recurrence
+exact-time recurrence
+after_completion recurrence basis
+
