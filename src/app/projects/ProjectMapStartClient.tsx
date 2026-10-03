@@ -269,7 +269,7 @@ function ProjectCenterCard({ data }: NodeProps<ProjectCenterNode>) {
           readOnly={data.readonlyMode}
           maxLength={240}
           placeholder={data.copy.titlePlaceholder}
-          className="w-full rounded-[18px] border border-[#dbe1ed] bg-[#fbfcff] px-4 py-3 text-[13px] font-medium text-[#26304a] shadow-inner outline-none transition placeholder:text-[#aeb6c9] focus:border-[#8ba2ff] focus:bg-white read-only:cursor-default read-only:bg-[#f8fafc]"
+          className="nodrag nopan nowheel w-full rounded-[18px] border border-[#dbe1ed] bg-[#fbfcff] px-4 py-3 text-[13px] font-medium text-[#26304a] shadow-inner outline-none transition placeholder:text-[#aeb6c9] focus:border-[#8ba2ff] focus:bg-white read-only:cursor-default read-only:bg-[#f8fafc]"
         />
 
         <div className="relative">
@@ -292,14 +292,14 @@ function ProjectCenterCard({ data }: NodeProps<ProjectCenterNode>) {
               onFocus={data.onRootFocus}
               readOnly={data.readonlyMode}
               placeholder={data.copy.leafPlaceholder}
-              className="min-w-0 flex-1 bg-transparent text-[13px] font-medium text-[#26304a] outline-none placeholder:text-[#aeb6c9] read-only:cursor-default"
+              className="nodrag nopan nowheel min-w-0 flex-1 bg-transparent text-[13px] font-medium text-[#26304a] outline-none placeholder:text-[#aeb6c9] read-only:cursor-default"
             />
 
             {!data.readonlyMode ? (
               <button
                 type="button"
                 onClick={data.onRootToggle}
-                className="flex h-6 w-6 items-center justify-center rounded-full text-[#7d88a2] hover:bg-[#eef2fb]"
+                className="nodrag nopan flex h-6 w-6 items-center justify-center rounded-full text-[#7d88a2] hover:bg-[#eef2fb]"
                 aria-label={data.copy.leafPlaceholder}
               >
                 <ChevronDown
@@ -323,7 +323,7 @@ function ProjectCenterCard({ data }: NodeProps<ProjectCenterNode>) {
                       event.preventDefault();
                       data.onRootSelect(option);
                     }}
-                    className="flex w-full items-start gap-2 rounded-[13px] px-3 py-2.5 text-left transition hover:bg-[#f2f5ff]"
+                    className="nodrag nopan flex w-full items-start gap-2 rounded-[13px] px-3 py-2.5 text-left transition hover:bg-[#f2f5ff]"
                   >
                     <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#6f8fff]" />
                     <span className="min-w-0">
@@ -744,6 +744,7 @@ export default function ProjectMapStartClient({
               nodesConnectable={false}
               nodesDraggable={false}
               elementsSelectable={false}
+              onNodeClick={() => undefined}
               proOptions={{ hideAttribution: true }}
             >
               <Background
