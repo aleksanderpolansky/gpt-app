@@ -407,14 +407,15 @@ export const navigationMessages: Record<NavigationMessageKey, Record<LocaleCode,
     cs: "Kalendář",
   },
   "navigation.projects": {
-    ru: "ÐŸÑ€Ð¾ÐµÐºÑ‚Ñ‹",
+    ru: "\u041f\u0440\u043e\u0435\u043a\u0442\u044b",
     pl: "Projekty",
     en: "Projects",
     es: "Proyectos",
-    uk: "ÐŸÑ€Ð¾Ñ”ÐºÑ‚Ð¸",
+    uk: "\u041f\u0440\u043e\u0454\u043a\u0442\u0438",
     de: "Projekte",
     cs: "Projekty",
-  },  "navigation.myValueObjects": {
+  },
+  "navigation.myValueObjects": {
     ru: "Мои объекты наблюдения",
     pl: "Moje obiekty obserwacji",
     en: "My observation objects",
