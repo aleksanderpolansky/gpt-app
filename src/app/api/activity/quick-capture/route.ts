@@ -24,6 +24,9 @@ import {
   inferActivityRecurrenceDraftPp3,
   type ActivityRecurrenceDraftPp3,
 } from "@/lib/activity/pp3/activityRecurrence";
+import {
+  materializeActivityRecurrenceRulePp3b2,
+} from "@/lib/activity/pp3/activityRecurrenceMaterializer.server";
 import { normalizeQuickCaptureTemporalMode } from "@/lib/activity/quickCaptureTemporalMode";
 import {
   analyzeBasicActivityIntakeV1,
@@ -867,6 +870,39 @@ export async function POST(request: Request) {
         })
       : null;
 
+    let recurrenceMaterialization:
+      | ({ status: "ok" } & Awaited<
+          ReturnType<typeof materializeActivityRecurrenceRulePp3b2>
+        >)
+      | { status: "failed"; error: string }
+      | null = null;
+
+    if (recurrenceRule) {
+      try {
+        recurrenceMaterialization = {
+          status: "ok",
+          ...(await materializeActivityRecurrenceRulePp3b2({
+            ownerUserId: appUser.id,
+            ownerActorId: personActor.id,
+            ruleId: recurrenceRule.id,
+          })),
+        };
+      } catch (error) {
+        recurrenceMaterialization = {
+          status: "failed",
+          error:
+            error instanceof Error
+              ? error.message
+              : "PP3B2 recurrence materialization failed",
+        };
+        console.error(
+          "PP3B2_RECURRENCE_MATERIALIZATION_FAILED",
+          recurrenceRule.id,
+          error,
+        );
+      }
+    }
+
     const result = await markReceiptProcessed({
       signalId: signal.id,
       userId: appUser.id,
@@ -894,9 +930,12 @@ export async function POST(request: Request) {
       backgroundBasicIntakeAnalysis: "scheduled",
       result,
       recurrenceRule,
+      recurrenceMaterialization,
       calendarEventId: createdEvent.calendarEventId,
       note: recurrenceRule
-        ? "Recurring planned activity is saved. Basic intake analysis is scheduled in the background. Future recurrence occurrences are not materialized yet."
+        ? recurrenceMaterialization?.status === "ok"
+          ? "Recurring planned activity is saved and bounded future occurrences were materialized. Basic intake analysis is scheduled in the background."
+          : "Recurring planned activity is saved, but bounded occurrence materialization failed. The recurrence definition remains durable for retry."
         : "Activity is saved. Basic intake analysis is scheduled in the background. No template or facts are applied automatically.",
     });
   } catch (error) {

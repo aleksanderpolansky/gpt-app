@@ -58,6 +58,17 @@ type ProjectActivityItem = {
     untilDate: string | null;
     countLimit: number | null;
     statusCode: string;
+    materializedOccurrenceCount: number;
+    upcomingOccurrences: Array<{
+      occurrenceOrdinal: number;
+      occurrenceKey: string;
+      scheduleModeCode: "date_only" | "date_range";
+      scheduledDate: string | null;
+      scheduleStartDate: string | null;
+      scheduleEndDate: string | null;
+      activityEventId: string;
+      statusCode: string;
+    }>;
   } | null;
 };
 
@@ -473,6 +484,18 @@ function projectActivityTimingLabel(
   return recurrenceLabel ?? scheduleLabel ?? copy.unscheduledLabel;
 }
 
+function projectActivityOccurrenceLabel(
+  occurrence: NonNullable<ProjectActivityItem["recurrence"]>["upcomingOccurrences"][number],
+) {
+  if (occurrence.scheduleModeCode === "date_only") {
+    return occurrence.scheduledDate ?? "—";
+  }
+
+  return [occurrence.scheduleStartDate, occurrence.scheduleEndDate]
+    .filter(Boolean)
+    .join(" → ");
+}
+
 type ProjectCenterData = Record<string, unknown> & {
   copy: Copy;
   title: string;
@@ -530,6 +553,21 @@ function ProjectActivityCard({
       <div className="mt-2 text-[10px] font-medium text-[#7b849d]">
         {projectActivityTimingLabel(data.activity, data.copy, data.locale)}
       </div>
+
+      {data.activity.recurrence?.upcomingOccurrences?.length ? (
+        <div className="mt-2 space-y-1 rounded-xl border border-[#edf0f7] bg-[#fafbff] px-2.5 py-2">
+          {data.activity.recurrence.upcomingOccurrences
+            .slice(0, 3)
+            .map((occurrence) => (
+              <div
+                key={occurrence.occurrenceKey}
+                className="text-[9px] font-semibold text-[#7b849d]"
+              >
+                #{occurrence.occurrenceOrdinal} · {projectActivityOccurrenceLabel(occurrence)}
+              </div>
+            ))}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -122,7 +122,7 @@ check(
 check(
   "NO_OCCURRENCE_MATERIALIZATION_YET",
   !s.migration.includes("activity_recurrence_occurrences") &&
-    s.quickCapture.includes("Future recurrence occurrences are not materialized yet."),
+    !s.migration.includes("materialize_activity_recurrence_rule_pp3b2"),
 );
 
 console.log(`VALIDATOR=PASS_${passed}/${passed}`);

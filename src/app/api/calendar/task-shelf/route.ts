@@ -301,6 +301,33 @@ export async function GET(request: Request) {
     .map((row) => asString(row.id))
     .filter((id): id is string => Boolean(id));
 
+  const recurrenceSourceIds = new Set<string>();
+
+  if (activityIds.length > 0) {
+    const { data: recurrenceRowsRaw, error: recurrenceError } =
+      await supabase
+        .from("activity_recurrence_rules")
+        .select("source_activity_event_id,status_code")
+        .in("source_activity_event_id", activityIds)
+        .in("status_code", ["active", "paused"]);
+
+    if (recurrenceError) {
+      return NextResponse.json(
+        { ok: false, error: recurrenceError.message },
+        { status: 500 },
+      );
+    }
+
+    for (const recurrenceRow of asRecords(recurrenceRowsRaw)) {
+      const sourceActivityEventId = asString(
+        recurrenceRow.source_activity_event_id,
+      );
+      if (sourceActivityEventId) {
+        recurrenceSourceIds.add(sourceActivityEventId);
+      }
+    }
+  }
+
   let runRows: JsonRecord[] = [];
 
   if (activityIds.length > 0) {
@@ -366,7 +393,10 @@ export async function GET(request: Request) {
       continue;
     }
 
-    if (item.scheduleModeCode === "unscheduled") {
+    if (
+      item.scheduleModeCode === "unscheduled" &&
+      !recurrenceSourceIds.has(activityId)
+    ) {
       unscheduled.push(item);
     }
 
@@ -407,6 +437,7 @@ export async function GET(request: Request) {
     dueDays,
     previewLimit,
     scannedActivities: activityRows.length,
+    recurrenceSourcesExcludedFromUnscheduled: recurrenceSourceIds.size,
     groups: {
       unscheduled: buildGroup(
         "unscheduled",

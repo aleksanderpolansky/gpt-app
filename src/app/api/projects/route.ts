@@ -69,6 +69,18 @@ type ActivityRecurrenceRuleRow = {
   readonly status_code: string;
 };
 
+type ActivityRecurrenceOccurrenceRow = {
+  readonly recurrence_rule_id: string;
+  readonly occurrence_ordinal: number;
+  readonly occurrence_key: string;
+  readonly nominal_schedule_mode_code: "date_only" | "date_range";
+  readonly nominal_scheduled_date: string | null;
+  readonly nominal_schedule_start_date: string | null;
+  readonly nominal_schedule_end_date: string | null;
+  readonly materialized_activity_event_id: string;
+  readonly status_code: string;
+};
+
 type ProjectContextRow = {
   readonly id: string;
   readonly title: string;
@@ -309,6 +321,9 @@ export async function GET() {
   const projectActivitiesById = new Map<string, ProjectActivityRow>();
   const projectRecurrenceByActivityId =
     new Map<string, ActivityRecurrenceRuleRow>();
+  const projectOccurrencesByRuleId =
+    new Map<string, ActivityRecurrenceOccurrenceRow[]>();
+  const projectOccurrenceActivityEventIds = new Set<string>();
 
   if (projectIds.length > 0) {
     const { data: linksData, error: linksError } = await supabase
@@ -400,6 +415,48 @@ export async function GET() {
           recurrence,
         );
       }
+
+      const recurrenceRuleIds = (recurrenceData ?? [])
+        .map((row) => (row as unknown as ActivityRecurrenceRuleRow).id)
+        .filter(Boolean);
+
+      if (recurrenceRuleIds.length > 0) {
+        const { data: occurrenceData, error: occurrenceError } = await supabase
+          .from("activity_recurrence_occurrences")
+          .select(
+            [
+              "recurrence_rule_id",
+              "occurrence_ordinal",
+              "occurrence_key",
+              "nominal_schedule_mode_code",
+              "nominal_scheduled_date",
+              "nominal_schedule_start_date",
+              "nominal_schedule_end_date",
+              "materialized_activity_event_id",
+              "status_code",
+            ].join(","),
+          )
+          .in("recurrence_rule_id", recurrenceRuleIds)
+          .in("status_code", ["active", "rescheduled"])
+          .order("occurrence_ordinal", { ascending: true });
+
+        if (occurrenceError) {
+          return NextResponse.json(
+            { ok: false, error: occurrenceError.message },
+            { status: 500 },
+          );
+        }
+
+        for (const occurrence of (occurrenceData ?? []) as unknown as ActivityRecurrenceOccurrenceRow[]) {
+          const rows =
+            projectOccurrencesByRuleId.get(occurrence.recurrence_rule_id) ?? [];
+          rows.push(occurrence);
+          projectOccurrencesByRuleId.set(occurrence.recurrence_rule_id, rows);
+          projectOccurrenceActivityEventIds.add(
+            occurrence.materialized_activity_event_id,
+          );
+        }
+      }
     }
   }
 
@@ -427,6 +484,9 @@ export async function GET() {
     ok: true,
     projects: projects.map((project) => {
       const root = relatedObjects.get(project.root_value_object_id);
+      const linkedActivityIds =
+        projectActivityLinksByProject.get(project.id) ?? [];
+      const linkedActivityIdSet = new Set(linkedActivityIds);
 
       return {
         id: project.id,
@@ -449,9 +509,11 @@ export async function GET() {
               title: null,
               parentValueObjectId: null,
             },
-        activities: (
-          projectActivityLinksByProject.get(project.id) ?? []
-        )
+        activities: linkedActivityIds
+          .filter(
+            (activityId) =>
+              !projectOccurrenceActivityEventIds.has(activityId),
+          )
           .map((activityId) => projectActivitiesById.get(activityId))
           .filter(
             (activity): activity is ProjectActivityRow =>
@@ -484,6 +546,32 @@ export async function GET() {
                     untilDate: recurrence.until_date,
                     countLimit: recurrence.count_limit,
                     statusCode: recurrence.status_code,
+                    materializedOccurrenceCount: (
+                      projectOccurrencesByRuleId.get(recurrence.id) ?? []
+                    ).filter((occurrence) =>
+                      linkedActivityIdSet.has(
+                        occurrence.materialized_activity_event_id,
+                      ),
+                    ).length,
+                    upcomingOccurrences: (
+                      projectOccurrencesByRuleId.get(recurrence.id) ?? []
+                    )
+                      .filter((occurrence) =>
+                        linkedActivityIdSet.has(
+                          occurrence.materialized_activity_event_id,
+                        ),
+                      )
+                      .slice(0, 12)
+                      .map((occurrence) => ({
+                      occurrenceOrdinal: occurrence.occurrence_ordinal,
+                      occurrenceKey: occurrence.occurrence_key,
+                      scheduleModeCode: occurrence.nominal_schedule_mode_code,
+                      scheduledDate: occurrence.nominal_scheduled_date,
+                      scheduleStartDate: occurrence.nominal_schedule_start_date,
+                      scheduleEndDate: occurrence.nominal_schedule_end_date,
+                      activityEventId: occurrence.materialized_activity_event_id,
+                      statusCode: occurrence.status_code,
+                    })),
                   };
                 })()
               : null,
