@@ -365,7 +365,10 @@ export function PersonalLeafCreateForm({
     }
   }
 
-  const projectHref = localeHref("/projects", locale);
+  const projectHref = localeHref(
+    "/projects?resumeProjectDraft=1",
+    locale,
+  );
 
   return (
     <main className="min-h-full bg-[#f5f6fb] p-5 text-[#1a1d2e]">

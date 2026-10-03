@@ -10,7 +10,7 @@ import {
   Search,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Background,
   BackgroundVariant,
@@ -254,6 +254,52 @@ function isPersonalLeaf(row: ValueObjectCatalogRow) {
   );
 }
 
+const PROJECT_DRAFT_STORAGE_KEY =
+  "arctor.project-planning.central-draft.v1";
+const PROJECTS_CHANGED_EVENT = "arctor:projects-changed";
+
+function writeProjectDraft(title: string) {
+  try {
+    window.sessionStorage.setItem(
+      PROJECT_DRAFT_STORAGE_KEY,
+      JSON.stringify({
+        title,
+        savedAt: Date.now(),
+      }),
+    );
+  } catch {
+    // The project still works when transient browser storage is unavailable.
+  }
+}
+
+function readProjectDraftTitle(): string | null {
+  try {
+    const raw = window.sessionStorage.getItem(PROJECT_DRAFT_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as {
+      title?: unknown;
+      savedAt?: unknown;
+    };
+
+    if (typeof parsed.title !== "string") {
+      return null;
+    }
+
+    return parsed.title;
+  } catch {
+    return null;
+  }
+}
+
+function clearProjectDraft() {
+  try {
+    window.sessionStorage.removeItem(PROJECT_DRAFT_STORAGE_KEY);
+  } catch {
+    // No-op when browser storage is unavailable.
+  }
+}
+
 function normalizedText(value: string | null | undefined) {
   return (value ?? "").trim().toLocaleLowerCase();
 }
@@ -445,6 +491,10 @@ export default function ProjectMapStartClient({
   const locale = normalizeLocale(initialLocale);
   const copy = COPY[locale];
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedProjectId = searchParams.get("project");
+  const resumeProjectDraft =
+    searchParams.get("resumeProjectDraft") === "1";
   const blurTimerRef = useRef<number | null>(null);
 
   const [projects, setProjects] = useState<ProjectItem[]>([]);
@@ -495,7 +545,10 @@ export default function ProjectMapStartClient({
       .slice(0, 40);
   }, [eligibleRoots, rootQuery]);
 
-  async function loadProjects(preferredProjectId?: string) {
+  async function loadProjects(
+    preferredProjectId?: string,
+    draftTitle?: string,
+  ) {
     setLoading(true);
     setLoadError(null);
 
@@ -559,31 +612,43 @@ export default function ProjectMapStartClient({
       setProjects(nextProjects);
       setEligibleRoots(nextRoots);
 
-      const nextSelectedId =
-        preferredProjectId && nextProjects.some((item) => item.id === preferredProjectId)
-          ? preferredProjectId
-          : nextProjects[0]?.id ?? null;
-
-      setSelectedProjectId(nextSelectedId);
-
-      if (nextSelectedId) {
-        const project = nextProjects.find((item) => item.id === nextSelectedId) ?? null;
-
-        if (project) {
-          setCreating(false);
-          setSaved(true);
-          setTitle(project.title);
-          setSelectedRootId(project.rootValueObject.id);
-          const localizedRoot = nextRoots.find(
-            (option) => option.id === project.rootValueObject.id,
-          );
-          setRootQuery(
-            localizedRoot?.title ?? project.rootValueObject.title ?? "",
-          );
-        }
-      } else {
+      if (draftTitle !== undefined) {
+        setSelectedProjectId(null);
         setCreating(true);
         setSaved(false);
+        setTitle(draftTitle);
+        setSelectedRootId("");
+        setRootQuery("");
+        setRootDropdownOpen(false);
+      } else {
+        const nextSelectedId =
+          preferredProjectId &&
+          nextProjects.some((item) => item.id === preferredProjectId)
+            ? preferredProjectId
+            : nextProjects[0]?.id ?? null;
+
+        setSelectedProjectId(nextSelectedId);
+
+        if (nextSelectedId) {
+          const project =
+            nextProjects.find((item) => item.id === nextSelectedId) ?? null;
+
+          if (project) {
+            setCreating(false);
+            setSaved(true);
+            setTitle(project.title);
+            setSelectedRootId(project.rootValueObject.id);
+            const localizedRoot = nextRoots.find(
+              (option) => option.id === project.rootValueObject.id,
+            );
+            setRootQuery(
+              localizedRoot?.title ?? project.rootValueObject.title ?? "",
+            );
+          }
+        } else {
+          setCreating(true);
+          setSaved(false);
+        }
       }
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : copy.loadError);
@@ -605,7 +670,14 @@ export default function ProjectMapStartClient({
         // UTC is the safe fallback.
       }
 
-      void loadProjects();
+      const draftTitle = resumeProjectDraft
+        ? readProjectDraftTitle()
+        : null;
+
+      void loadProjects(
+        requestedProjectId ?? undefined,
+        draftTitle ?? undefined,
+      );
     }, 0);
 
     return () => {
@@ -618,9 +690,10 @@ export default function ProjectMapStartClient({
 
     // Initial load is intentionally tied to the route locale.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [locale]);
+  }, [locale, requestedProjectId, resumeProjectDraft]);
 
   function beginNewProject() {
+    clearProjectDraft();
     setCreating(true);
     setSaved(false);
     setSaveError(null);
@@ -632,6 +705,7 @@ export default function ProjectMapStartClient({
   }
 
   function showProject(projectId: string) {
+    clearProjectDraft();
     const project = projects.find((item) => item.id === projectId);
     if (!project) return;
 
@@ -676,8 +750,14 @@ export default function ProjectMapStartClient({
   }
 
   function addObservationObject() {
+    writeProjectDraft(title);
     setRootDropdownOpen(false);
-    router.push(localeHref("/value-objects/new/personal-leaf", locale));
+    router.push(
+      localeHref(
+        "/value-objects/new/personal-leaf?resumeProjectDraft=1",
+        locale,
+      ),
+    );
   }
 
   async function saveProject() {
@@ -715,9 +795,18 @@ export default function ProjectMapStartClient({
         throw new Error(payload?.error || copy.createError);
       }
 
+      clearProjectDraft();
       setSaved(true);
       setCreating(false);
       await loadProjects(payload.project.id);
+
+      window.dispatchEvent(new Event(PROJECTS_CHANGED_EVENT));
+      router.replace(
+        localeHref(
+          `/projects?project=${encodeURIComponent(payload.project.id)}`,
+          locale,
+        ),
+      );
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : copy.createError);
     } finally {

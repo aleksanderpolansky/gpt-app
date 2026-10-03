@@ -52,6 +52,19 @@ type AdminNavigationResponse = {
   canEdit?: boolean;
 };
 
+type SidebarProjectLink = {
+  id: string;
+  title: string;
+};
+
+type ProjectNavigationResponse = {
+  ok?: boolean;
+  projects?: Array<{
+    id?: unknown;
+    title?: unknown;
+  }>;
+};
+
 type NavigationTranslate = (
   key: NavigationMessageKey,
   params?: MessageParams,
@@ -630,6 +643,7 @@ export function GlobalSidebar({
   const [adminCanEdit, setAdminCanEdit] = useState(false);
   const [pendingLocalizationCount, setPendingLocalizationCount] = useState(0);
   const [pendingConsequenceCount, setPendingConsequenceCount] = useState(0);
+  const [projectLinks, setProjectLinks] = useState<SidebarProjectLink[]>([]);
 
   const t = useNavigationTranslator();
   const locale = useInterfaceLocale();
@@ -752,6 +766,76 @@ export function GlobalSidebar({
     };
   }, []);
 
+  useEffect(() => {
+    let disposed = false;
+    let controller: AbortController | null = null;
+
+    async function loadProjectLinks() {
+      controller?.abort();
+      controller = new AbortController();
+
+      try {
+        const response = await fetch(
+          `/api/projects?locale=${encodeURIComponent(locale)}`,
+          {
+            cache: "no-store",
+            signal: controller.signal,
+          },
+        );
+
+        const payload = (await response.json().catch(() => null)) as
+          | ProjectNavigationResponse
+          | null;
+
+        if (!response.ok || payload?.ok !== true || disposed) {
+          return;
+        }
+
+        const nextProjects = (payload.projects ?? [])
+          .flatMap((project) => {
+            if (
+              typeof project.id !== "string" ||
+              typeof project.title !== "string"
+            ) {
+              return [];
+            }
+
+            const title = project.title.trim();
+
+            return title
+              ? [
+                  {
+                    id: project.id,
+                    title,
+                  } satisfies SidebarProjectLink,
+                ]
+              : [];
+          })
+          .sort((left, right) => left.title.localeCompare(right.title, locale));
+
+        setProjectLinks(nextProjects);
+      } catch {
+        // Navigation remains usable even if the project summary cannot load.
+      }
+    }
+
+    const handleProjectsChanged = () => {
+      void loadProjectLinks();
+    };
+
+    void loadProjectLinks();
+    window.addEventListener("arctor:projects-changed", handleProjectsChanged);
+
+    return () => {
+      disposed = true;
+      controller?.abort();
+      window.removeEventListener(
+        "arctor:projects-changed",
+        handleProjectsChanged,
+      );
+    };
+  }, [locale]);
+
   const certificateSearch = useMemo(
     () => new URLSearchParams(currentSearch),
     [currentSearch],
@@ -797,6 +881,9 @@ export function GlobalSidebar({
     isActivityTemplatesActive;
   const isCalendarActive = currentPathname.startsWith("/calendar");
   const isProjectsActive = currentPathname.startsWith("/projects");
+  const currentProjectId = isProjectsActive
+    ? certificateSearch.get("project")
+    : null;
   const isObservationObjectsActive = currentPathname.startsWith("/value-objects");
   const isActivityJournalCurrent =
     currentPathname === "/activity-today" ||
@@ -998,12 +1085,29 @@ export function GlobalSidebar({
           active={isCalendarActive}
           href={localeHref("/calendar")}
         />
-        <SidebarMainItem
+        <ExpandableSidebarLinkItem
           icon={ClipboardList}
           label={t("navigation.projects")}
-          active={isProjectsActive}
           href={localeHref("/projects")}
-        />        <SidebarMainItem
+          active={isProjectsActive}
+          current={isProjectsActive && currentProjectId === null}
+          defaultOpen
+        >
+          {projectLinks.map((project) => (
+            <TreeItem
+              key={project.id}
+              label={project.title}
+              depth={1}
+              href={localeHref(
+                `/projects?project=${encodeURIComponent(project.id)}`,
+              )}
+              active={
+                isProjectsActive && currentProjectId === project.id
+              }
+            />
+          ))}
+        </ExpandableSidebarLinkItem>
+        <SidebarMainItem
           icon={Eye}
           label={t("navigation.observationObjects")}
           active={isObservationObjectsActive}
