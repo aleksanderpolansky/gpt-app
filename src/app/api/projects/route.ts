@@ -37,6 +37,25 @@ type ValueObjectRow = {
   readonly status: string | null;
 };
 
+type ProjectActivityLinkRow = {
+  readonly project_context_id: string;
+  readonly activity_event_id: string;
+};
+
+type ProjectActivityRow = {
+  readonly id: string;
+  readonly title: string | null;
+  readonly status: string | null;
+  readonly schedule_mode_code: string | null;
+  readonly scheduled_date: string | null;
+  readonly schedule_start_date: string | null;
+  readonly schedule_end_date: string | null;
+  readonly deadline_at: string | null;
+  readonly started_at: string | null;
+  readonly ended_at: string | null;
+  readonly duration_minutes: number | null;
+};
+
 type ProjectContextRow = {
   readonly id: string;
   readonly title: string;
@@ -271,6 +290,70 @@ export async function GET() {
     .filter((id): id is string => Boolean(id));
 
   const projectRootIds = projects.map((row) => row.root_value_object_id);
+  const projectIds = projects.map((row) => row.id);
+
+  const projectActivityLinksByProject = new Map<string, string[]>();
+  const projectActivitiesById = new Map<string, ProjectActivityRow>();
+
+  if (projectIds.length > 0) {
+    const { data: linksData, error: linksError } = await supabase
+      .from("project_activity_links")
+      .select("project_context_id,activity_event_id")
+      .in("project_context_id", projectIds)
+      .eq("status_code", "active");
+
+    if (linksError) {
+      return NextResponse.json(
+        { ok: false, error: linksError.message },
+        { status: 500 },
+      );
+    }
+
+    const links = (linksData ?? []) as unknown as ProjectActivityLinkRow[];
+
+    for (const link of links) {
+      const current =
+        projectActivityLinksByProject.get(link.project_context_id) ?? [];
+      current.push(link.activity_event_id);
+      projectActivityLinksByProject.set(link.project_context_id, current);
+    }
+
+    const activityIds = [
+      ...new Set(links.map((link) => link.activity_event_id)),
+    ];
+
+    if (activityIds.length > 0) {
+      const { data: activitiesData, error: activitiesError } = await supabase
+        .from("activity_events")
+        .select(
+          [
+            "id",
+            "title",
+            "status",
+            "schedule_mode_code",
+            "scheduled_date",
+            "schedule_start_date",
+            "schedule_end_date",
+            "deadline_at",
+            "started_at",
+            "ended_at",
+            "duration_minutes",
+          ].join(","),
+        )
+        .in("id", activityIds);
+
+      if (activitiesError) {
+        return NextResponse.json(
+          { ok: false, error: activitiesError.message },
+          { status: 500 },
+        );
+      }
+
+      for (const activity of (activitiesData ?? []) as unknown as ProjectActivityRow[]) {
+        projectActivitiesById.set(activity.id, activity);
+      }
+    }
+  }
 
   let relatedObjects: Map<string, ValueObjectRow>;
 
@@ -318,6 +401,27 @@ export async function GET() {
               title: null,
               parentValueObjectId: null,
             },
+        activities: (
+          projectActivityLinksByProject.get(project.id) ?? []
+        )
+          .map((activityId) => projectActivitiesById.get(activityId))
+          .filter(
+            (activity): activity is ProjectActivityRow =>
+              Boolean(activity),
+          )
+          .map((activity) => ({
+            id: activity.id,
+            title: activity.title ?? activity.id,
+            statusCode: activity.status,
+            scheduleModeCode: activity.schedule_mode_code,
+            scheduledDate: activity.scheduled_date,
+            scheduleStartDate: activity.schedule_start_date,
+            scheduleEndDate: activity.schedule_end_date,
+            deadlineAt: activity.deadline_at,
+            startedAt: activity.started_at,
+            endedAt: activity.ended_at,
+            durationMinutes: activity.duration_minutes,
+          })),
       };
     }),
     eligibleRoots: eligibleRoots.map((root) => ({

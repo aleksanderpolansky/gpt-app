@@ -9,7 +9,11 @@ import { FormEvent, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 type Locale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
-type CalendarReturnTarget = "calendar" | "calendar-rebuild" | "activity-journal";
+type CalendarReturnTarget =
+  | "calendar"
+  | "calendar-rebuild"
+  | "activity-journal"
+  | "project";
 type TemporalDirection = "future" | "past";
 
 const LOCALES: Locale[] = ["en", "pl", "ru", "uk", "de", "es", "cs"];
@@ -145,6 +149,10 @@ function normalizeReturnTo(value: string | null): CalendarReturnTarget {
     return "activity-journal";
   }
 
+  if (value === "project") {
+    return "project";
+  }
+
   return "calendar";
 }
 
@@ -163,11 +171,21 @@ function normalizeFocusDate(value: string | null): string | null {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
 }
 
+function normalizeUuid(value: string | null): string | null {
+  return value &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    )
+    ? value
+    : null;
+}
+
 export default function AddActivityClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const locale = normalizeLocale(searchParams.get("locale"));
   const returnTo = normalizeReturnTo(searchParams.get("returnTo"));
+  const projectId = normalizeUuid(searchParams.get("projectId"));
   const sourceFocusDate = normalizeFocusDate(searchParams.get("focusDate"));
   const temporalDirection = normalizeTemporalDirection(searchParams.get("temporalDirection"), returnTo);
   const t = UI[locale];
@@ -176,15 +194,25 @@ export default function AddActivityClient() {
   const canSubmit = text.trim().length > 0;
   const charCountLabel = useMemo(() => `${text.trim().length}`, [text]);
   const backHref =
-    returnTo === "activity-journal"
+    returnTo === "project" && projectId
       ? {
-          pathname: "/activity-today",
-          query: { locale },
+          pathname: "/projects",
+          query: { locale, project: projectId },
         }
-      : {
-          pathname: returnTo === "calendar-rebuild" ? "/calendar-rebuild" : "/calendar",
-          query: sourceFocusDate ? { locale, focusDate: sourceFocusDate } : { locale },
-        };
+      : returnTo === "activity-journal"
+        ? {
+            pathname: "/activity-today",
+            query: { locale },
+          }
+        : {
+            pathname:
+              returnTo === "calendar-rebuild"
+                ? "/calendar-rebuild"
+                : "/calendar",
+            query: sourceFocusDate
+              ? { locale, focusDate: sourceFocusDate }
+              : { locale },
+          };
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -199,6 +227,10 @@ export default function AddActivityClient() {
 
     if (sourceFocusDate) {
       params.set("focusDate", sourceFocusDate);
+    }
+
+    if (projectId) {
+      params.set("projectId", projectId);
     }
 
     router.push(`/calendar/activity-review?${params.toString()}`);

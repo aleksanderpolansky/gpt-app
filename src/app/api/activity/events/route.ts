@@ -305,6 +305,7 @@ type ActivityCanonicalCreateBody = {
   plannedTargetValueObjectIds?: unknown;
   temporalDirection?: unknown;
   metadata?: unknown;
+  projectContextId?: unknown;
 };
 
 function parseIsoDate(value: unknown): string | null {
@@ -860,6 +861,43 @@ export async function POST(request: Request) {
         )
       : requestedEndedAt;
   const normalizedMetadata = normalizeMetadata(body.metadata);
+  const projectContextId = parseUuid(body.projectContextId);
+
+  if (body.projectContextId && !projectContextId) {
+    return NextResponse.json(
+      { ok: false, error: "projectContextId must be a valid UUID" },
+      { status: 400 },
+    );
+  }
+
+  if (projectContextId) {
+    const { data: projectData, error: projectError } = await supabase
+      .from("project_contexts")
+      .select("id,status_code")
+      .eq("id", projectContextId)
+      .eq("owner_user_id", appUser.id)
+      .eq("owner_actor_id", personActor.id)
+      .maybeSingle();
+
+    if (projectError) {
+      return NextResponse.json(
+        { ok: false, error: projectError.message },
+        { status: 500 },
+      );
+    }
+
+    if (!projectData || projectData.status_code === "archived") {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Project context not found or unavailable",
+          errorCode: "PROJECT_ACTIVITY_CONTEXT_NOT_AVAILABLE",
+        },
+        { status: 404 },
+      );
+    }
+  }
+
   const common = {
     activityRoleCode,
     title,
@@ -871,6 +909,7 @@ export async function POST(request: Request) {
     metadata: {
       ...normalizedMetadata,
       pp1bWritePath: "/api/activity/events",
+      ...(projectContextId ? { projectContextId } : {}),
     },
   } as const;
 
@@ -956,6 +995,52 @@ export async function POST(request: Request) {
 
   const activityEvent = result.data.activityEvent as Row;
   const activityEventId = asString(activityEvent.id);
+
+  if (projectContextId && activityEventId) {
+    const { data: existingLink, error: existingLinkError } =
+      await supabase
+        .from("project_activity_links")
+        .select("id")
+        .eq("project_context_id", projectContextId)
+        .eq("activity_event_id", activityEventId)
+        .eq("status_code", "active")
+        .maybeSingle();
+
+    if (existingLinkError) {
+      return NextResponse.json(
+        { ok: false, error: existingLinkError.message },
+        { status: 500 },
+      );
+    }
+
+    if (!existingLink) {
+      const { error: projectLinkError } = await supabase
+        .from("project_activity_links")
+        .insert({
+          project_context_id: projectContextId,
+          activity_event_id: activityEventId,
+          status_code: "active",
+          provenance_code: "manual",
+          metadata_json: {
+            ui_origin: "project_activity_intake_v1",
+          },
+          created_by_actor_id: personActor.id,
+        });
+
+      if (projectLinkError) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: projectLinkError.message,
+            errorCode:
+              projectLinkError.code ?? "PROJECT_ACTIVITY_LINK_FAILED",
+          },
+          { status: 500 },
+        );
+      }
+    }
+  }
+
   const cux4Metadata = asRecord(normalizedMetadata.cux4);
   const backgroundAnalysisRequested =
     activityRoleCode === "planned" &&
@@ -1052,6 +1137,7 @@ export async function POST(request: Request) {
     calendarEvent: result.data.calendarEvent,
     plannedTargetValueObjectIds: result.data.plannedTargetValueObjectIds,
     semanticEnrichment,
+    projectContextId,
     container: {
       activityRoleCode,
       persistenceTarget: "activity_events",

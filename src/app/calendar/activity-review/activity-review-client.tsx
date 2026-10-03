@@ -22,7 +22,11 @@ import {
 } from "@/lib/activity/pp1/activityTiming";
 
 type Locale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
-type CalendarReturnTarget = "calendar" | "calendar-rebuild" | "activity-journal";
+type CalendarReturnTarget =
+  | "calendar"
+  | "calendar-rebuild"
+  | "activity-journal"
+  | "project";
 type TemporalDirection = "future" | "past";
 type FieldStatus = "ready" | "candidate" | "missing";
 
@@ -405,6 +409,10 @@ function normalizeReturnTo(value: string | null): CalendarReturnTarget {
     return "activity-journal";
   }
 
+  if (value === "project") {
+    return "project";
+  }
+
   return "calendar";
 }
 
@@ -447,9 +455,21 @@ function normalizeFeedbackIds(value: string | null): string[] {
   ).slice(0, 24);
 }
 
-function buildReturnUrl(target: CalendarReturnTarget, locale: Locale, focusDate: string) {
+function buildReturnUrl(
+  target: CalendarReturnTarget,
+  locale: Locale,
+  focusDate: string,
+  projectId: string | null,
+) {
   if (target === "activity-journal") {
     return `/activity-today?${new URLSearchParams({ locale }).toString()}`;
+  }
+
+  if (target === "project" && projectId) {
+    return `/projects?${new URLSearchParams({
+      locale,
+      project: projectId,
+    }).toString()}`;
   }
 
   const params = new URLSearchParams({
@@ -1054,6 +1074,7 @@ export default function ActivityReviewClient() {
   const searchParams = useSearchParams();
   const locale = normalizeLocale(searchParams.get("locale"));
   const returnTo = normalizeReturnTo(searchParams.get("returnTo"));
+  const projectId = searchParams.get("projectId");
   const sourceFocusDate = normalizeFocusDate(searchParams.get("focusDate"));
   const temporalDirection = normalizeTemporalDirection(searchParams.get("temporalDirection"), returnTo);
   const t = UI[locale];
@@ -1066,20 +1087,34 @@ export default function ActivityReviewClient() {
     searchParams.get("manualFeedbackIds"),
   );
   const calendarHref =
-    returnTo === "activity-journal"
+    returnTo === "project" && projectId
       ? {
-          pathname: "/activity-today",
-          query: { locale },
+          pathname: "/projects",
+          query: { locale, project: projectId },
         }
-      : {
-          pathname: returnTo === "calendar-rebuild" ? "/calendar-rebuild" : "/calendar",
-          query: sourceFocusDate ? { locale, focusDate: sourceFocusDate } : { locale },
-        };
+      : returnTo === "activity-journal"
+        ? {
+            pathname: "/activity-today",
+            query: { locale },
+          }
+        : {
+            pathname:
+              returnTo === "calendar-rebuild"
+                ? "/calendar-rebuild"
+                : "/calendar",
+            query: sourceFocusDate
+              ? { locale, focusDate: sourceFocusDate }
+              : { locale },
+          };
   const addHref = {
     pathname: "/calendar/add",
-    query: sourceFocusDate
-      ? { locale, returnTo, focusDate: sourceFocusDate, temporalDirection }
-      : { locale, returnTo, temporalDirection },
+    query: {
+      locale,
+      returnTo,
+      temporalDirection,
+      ...(sourceFocusDate ? { focusDate: sourceFocusDate } : {}),
+      ...(projectId ? { projectId } : {}),
+    },
   };
 
   const [review, setReview] = useState<ReviewPayload | null>(null);
@@ -1268,7 +1303,9 @@ export default function ActivityReviewClient() {
           previewSummary: review.summary,
           aiAnalysisOperationId: analysisOperationId,
           manualLeafFeedbackIntentCount: manualFeedbackIds.length,
+          ...(projectId ? { projectContextId: projectId } : {}),
         },
+        ...(projectId ? { projectContextId: projectId } : {}),
       };
 
       if (temporalDirection === "future") {
@@ -1381,6 +1418,7 @@ export default function ActivityReviewClient() {
           temporalDirection === "past" ? "activity-journal" : returnTo,
           locale,
           timingFocusDate ?? fallbackFocusDate,
+          projectId,
         ),
       );
     } catch (error) {

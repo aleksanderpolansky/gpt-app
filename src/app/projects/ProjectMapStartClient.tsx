@@ -3,6 +3,7 @@
 import {
   Check,
   ChevronDown,
+  ListChecks,
   Maximize2,
   Network,
   Plus,
@@ -19,6 +20,7 @@ import {
   Position,
   ReactFlow,
   ReactFlowProvider,
+  type Edge,
   type Node,
   type NodeProps,
 } from "@xyflow/react";
@@ -31,6 +33,20 @@ type RootOption = {
   description: string | null;
   parentValueObjectId: string | null;
   parentTitle: string | null;
+};
+
+type ProjectActivityItem = {
+  id: string;
+  title: string;
+  statusCode: string | null;
+  scheduleModeCode: string | null;
+  scheduledDate: string | null;
+  scheduleStartDate: string | null;
+  scheduleEndDate: string | null;
+  deadlineAt: string | null;
+  startedAt: string | null;
+  endedAt: string | null;
+  durationMinutes: number | null;
 };
 
 type ProjectItem = {
@@ -48,6 +64,7 @@ type ProjectItem = {
     title: string | null;
     parentValueObjectId: string | null;
   };
+  activities: ProjectActivityItem[];
 };
 
 type ProjectsPayload = {
@@ -94,6 +111,9 @@ type Copy = {
   leafNoMatches: string;
   leafRequired: string;
   addObservationObject: string;
+  addTask: string;
+  taskLabel: string;
+  unscheduledLabel: string;
   save: string;
   saving: string;
   saved: string;
@@ -114,6 +134,9 @@ const EN: Copy = {
   leafNoMatches: "No matching leaf objects",
   leafRequired: "Choose a linked leaf observation object",
   addObservationObject: "Add new observation object",
+  addTask: "Add task",
+  taskLabel: "TASK",
+  unscheduledLabel: "No exact time",
   save: "Save",
   saving: "Saving…",
   saved: "Saved",
@@ -137,6 +160,9 @@ const COPY: Record<LocaleCode, Copy> = {
     leafNoMatches: "Подходящие листовые ОН не найдены",
     leafRequired: "Выберите связанный листовой ОН",
     addObservationObject: "Добавить новый объект наблюдения",
+    addTask: "Добавить задачу",
+    taskLabel: "ЗАДАЧА",
+    unscheduledLabel: "Без точного времени",
     save: "Сохранить",
     saving: "Сохраняю…",
     saved: "Сохранено",
@@ -157,6 +183,9 @@ const COPY: Record<LocaleCode, Copy> = {
     leafNoMatches: "Відповідні листові ОН не знайдено",
     leafRequired: "Оберіть пов’язаний листовий ОН",
     addObservationObject: "Додати новий об’єкт спостереження",
+    addTask: "Додати завдання",
+    taskLabel: "ЗАВДАННЯ",
+    unscheduledLabel: "Без точного часу",
     save: "Зберегти",
     saving: "Зберігаю…",
     saved: "Збережено",
@@ -177,6 +206,9 @@ const COPY: Record<LocaleCode, Copy> = {
     leafNoMatches: "Brak pasujących obiektów liściowych",
     leafRequired: "Wybierz powiązany obiekt liściowy",
     addObservationObject: "Dodaj nowy obiekt obserwacji",
+    addTask: "Dodaj zadanie",
+    taskLabel: "ZADANIE",
+    unscheduledLabel: "Bez dokładnej godziny",
     save: "Zapisz",
     saving: "Zapisywanie…",
     saved: "Zapisano",
@@ -191,6 +223,9 @@ const COPY: Record<LocaleCode, Copy> = {
     titlePlaceholder: "Projektname",
     leafPlaceholder: "Verknüpftes Blatt-Beobachtungsobjekt wählen",
     addObservationObject: "Neues Beobachtungsobjekt hinzufügen",
+    addTask: "Aufgabe hinzufügen",
+    taskLabel: "AUFGABE",
+    unscheduledLabel: "Ohne genaue Zeit",
     save: "Speichern",
     saving: "Speichern…",
     saved: "Gespeichert",
@@ -204,6 +239,9 @@ const COPY: Record<LocaleCode, Copy> = {
     titlePlaceholder: "Nombre del proyecto",
     leafPlaceholder: "Elegir objeto de observación hoja vinculado",
     addObservationObject: "Añadir nuevo objeto de observación",
+    addTask: "Añadir tarea",
+    taskLabel: "TAREA",
+    unscheduledLabel: "Sin hora exacta",
     save: "Guardar",
     saving: "Guardando…",
     saved: "Guardado",
@@ -217,6 +255,9 @@ const COPY: Record<LocaleCode, Copy> = {
     titlePlaceholder: "Název projektu",
     leafPlaceholder: "Vyberte propojený listový objekt pozorování",
     addObservationObject: "Přidat nový objekt pozorování",
+    addTask: "Přidat úkol",
+    taskLabel: "ÚKOL",
+    unscheduledLabel: "Bez přesného času",
     save: "Uložit",
     saving: "Ukládání…",
     saved: "Uloženo",
@@ -312,6 +353,36 @@ function rootDisplay(option: RootOption | null | undefined) {
   return parent ? `${parent} → ${title}` : title;
 }
 
+function projectActivityTimingLabel(
+  activity: ProjectActivityItem,
+  copy: Copy,
+) {
+  if (
+    activity.scheduleModeCode === "date_only" &&
+    activity.scheduledDate
+  ) {
+    return activity.scheduledDate;
+  }
+
+  if (
+    activity.scheduleModeCode === "date_range" &&
+    activity.scheduleStartDate &&
+    activity.scheduleEndDate
+  ) {
+    return `${activity.scheduleStartDate} → ${activity.scheduleEndDate}`;
+  }
+
+  if (activity.scheduleModeCode === "deadline" && activity.deadlineAt) {
+    return `≤ ${new Date(activity.deadlineAt).toLocaleString()}`;
+  }
+
+  if (activity.scheduleModeCode === "exact" && activity.startedAt) {
+    return new Date(activity.startedAt).toLocaleString();
+  }
+
+  return copy.unscheduledLabel;
+}
+
 type ProjectCenterData = Record<string, unknown> & {
   copy: Copy;
   title: string;
@@ -332,6 +403,45 @@ type ProjectCenterData = Record<string, unknown> & {
 };
 
 type ProjectCenterNode = Node<ProjectCenterData, "project-center">;
+
+type ProjectActivityNodeData = Record<string, unknown> & {
+  copy: Copy;
+  activity: ProjectActivityItem;
+};
+
+type ProjectActivityNode = Node<
+  ProjectActivityNodeData,
+  "project-activity"
+>;
+
+function ProjectActivityCard({
+  data,
+}: NodeProps<ProjectActivityNode>) {
+  return (
+    <div className="relative w-[300px] rounded-[22px] border border-[#cfd8f7] bg-white px-4 py-3.5 shadow-[0_14px_34px_rgba(63,91,170,0.12)]">
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!h-2 !w-2 !border-0 !bg-[#9baadc]"
+      />
+
+      <div className="flex items-center gap-2 text-[#5174ef]">
+        <ListChecks size={15} />
+        <span className="text-[10px] font-extrabold uppercase tracking-[0.15em]">
+          {data.copy.taskLabel}
+        </span>
+      </div>
+
+      <div className="mt-2.5 text-[12px] font-bold leading-5 text-[#29324a]">
+        {data.activity.title}
+      </div>
+
+      <div className="mt-2 text-[10px] font-medium text-[#7b849d]">
+        {projectActivityTimingLabel(data.activity, data.copy)}
+      </div>
+    </div>
+  );
+}
 
 function ProjectCenterCard({ data }: NodeProps<ProjectCenterNode>) {
   return (
@@ -481,6 +591,7 @@ function ProjectCenterCard({ data }: NodeProps<ProjectCenterNode>) {
 
 const NODE_TYPES = {
   "project-center": ProjectCenterCard,
+  "project-activity": ProjectActivityCard,
 };
 
 export default function ProjectMapStartClient({
@@ -760,6 +871,19 @@ export default function ProjectMapStartClient({
     );
   }
 
+  function addProjectActivity() {
+    if (!selectedProjectId) return;
+
+    router.push(
+      localeHref(
+        `/calendar/add?returnTo=project&projectId=${encodeURIComponent(
+          selectedProjectId,
+        )}&temporalDirection=future`,
+        locale,
+      ),
+    );
+  }
+
   async function saveProject() {
     const normalizedTitle = title.trim();
 
@@ -849,18 +973,51 @@ export default function ProjectMapStartClient({
     onAddObservationObject: addObservationObject,
   };
 
-  const nodes = useMemo<Node[]>(
-    () => [
+  const nodes = useMemo<Node[]>(() => {
+    const activityNodes = (selectedProject?.activities ?? []).map(
+      (activity, index) =>
+        ({
+          id: `project-activity:${activity.id}`,
+          type: "project-activity",
+          position: {
+            x: 145 + (index % 3) * 335,
+            y: 525 + Math.floor(index / 3) * 145,
+          },
+          draggable: false,
+          selectable: false,
+          data: {
+            copy,
+            activity,
+          },
+        }) as ProjectActivityNode,
+    );
+
+    return [
       {
         id: "__project_center__",
         type: "project-center",
-        position: { x: 420, y: 250 },
+        position: { x: 390, y: 220 },
         draggable: false,
         selectable: false,
         data: nodeData,
       } as ProjectCenterNode,
-    ],
-    [nodeData],
+      ...activityNodes,
+    ];
+  }, [copy, nodeData, selectedProject]);
+
+  const edges = useMemo<Edge[]>(
+    () =>
+      (selectedProject?.activities ?? []).map((activity) => ({
+        id: `project-to-activity:${activity.id}`,
+        source: "__project_center__",
+        target: `project-activity:${activity.id}`,
+        type: "smoothstep",
+        style: {
+          stroke: "#c8d3f2",
+          strokeWidth: 1.5,
+        },
+      })),
+    [selectedProject],
   );
 
   if (loading) {
@@ -909,6 +1066,17 @@ export default function ProjectMapStartClient({
               {!creating ? (
                 <button
                   type="button"
+                  onClick={addProjectActivity}
+                  className="inline-flex items-center gap-1.5 rounded-[14px] border border-[#b9c8ff] bg-[#eef2ff] px-3.5 py-2.5 text-[11px] font-bold text-[#315ee7] transition hover:bg-[#e4eaff]"
+                >
+                  <ListChecks size={14} />
+                  {copy.addTask}
+                </button>
+              ) : null}
+
+              {!creating ? (
+                <button
+                  type="button"
                   onClick={beginNewProject}
                   className="inline-flex items-center gap-1.5 rounded-[14px] border border-emerald-300 bg-emerald-50 px-3.5 py-2.5 text-[11px] font-bold text-emerald-700 transition hover:bg-emerald-100"
                 >
@@ -942,7 +1110,7 @@ export default function ProjectMapStartClient({
           <ReactFlowProvider>
             <ReactFlow
               nodes={nodes}
-              edges={[]}
+              edges={edges}
               nodeTypes={NODE_TYPES}
               fitView
               fitViewOptions={{
