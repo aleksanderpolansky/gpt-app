@@ -10,6 +10,7 @@ import {
   Search,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Background,
   BackgroundVariant,
@@ -56,6 +57,24 @@ type ProjectsPayload = {
   error?: string;
 };
 
+type ValueObjectCatalogRow = {
+  id?: unknown;
+  title?: unknown;
+  description?: unknown;
+  parent_value_object_id?: unknown;
+  scope_code?: unknown;
+  ontology_node_role_code?: unknown;
+  visibility_code?: unknown;
+  visibility?: unknown;
+  status?: unknown;
+};
+
+type ValueObjectCatalogPayload = {
+  ok?: boolean;
+  valueObjects?: ValueObjectCatalogRow[];
+  error?: string;
+};
+
 type ProjectCreatePayload = {
   ok?: boolean;
   project?: ProjectItem;
@@ -74,6 +93,7 @@ type Copy = {
   leafPlaceholder: string;
   leafNoMatches: string;
   leafRequired: string;
+  addObservationObject: string;
   save: string;
   saving: string;
   saved: string;
@@ -93,6 +113,7 @@ const EN: Copy = {
   leafPlaceholder: "Choose linked leaf observation object",
   leafNoMatches: "No matching leaf objects",
   leafRequired: "Choose a linked leaf observation object",
+  addObservationObject: "Add new observation object",
   save: "Save",
   saving: "Saving…",
   saved: "Saved",
@@ -115,6 +136,7 @@ const COPY: Record<LocaleCode, Copy> = {
     leafPlaceholder: "Выберите связанный листовой ОН",
     leafNoMatches: "Подходящие листовые ОН не найдены",
     leafRequired: "Выберите связанный листовой ОН",
+    addObservationObject: "Добавить новый объект наблюдения",
     save: "Сохранить",
     saving: "Сохраняю…",
     saved: "Сохранено",
@@ -134,6 +156,7 @@ const COPY: Record<LocaleCode, Copy> = {
     leafPlaceholder: "Оберіть пов’язаний листовий ОН",
     leafNoMatches: "Відповідні листові ОН не знайдено",
     leafRequired: "Оберіть пов’язаний листовий ОН",
+    addObservationObject: "Додати новий об’єкт спостереження",
     save: "Зберегти",
     saving: "Зберігаю…",
     saved: "Збережено",
@@ -153,6 +176,7 @@ const COPY: Record<LocaleCode, Copy> = {
     leafPlaceholder: "Wybierz powiązany liściowy obiekt obserwacji",
     leafNoMatches: "Brak pasujących obiektów liściowych",
     leafRequired: "Wybierz powiązany obiekt liściowy",
+    addObservationObject: "Dodaj nowy obiekt obserwacji",
     save: "Zapisz",
     saving: "Zapisywanie…",
     saved: "Zapisano",
@@ -166,6 +190,7 @@ const COPY: Record<LocaleCode, Copy> = {
     projectLabel: "PROJEKT",
     titlePlaceholder: "Projektname",
     leafPlaceholder: "Verknüpftes Blatt-Beobachtungsobjekt wählen",
+    addObservationObject: "Neues Beobachtungsobjekt hinzufügen",
     save: "Speichern",
     saving: "Speichern…",
     saved: "Gespeichert",
@@ -178,6 +203,7 @@ const COPY: Record<LocaleCode, Copy> = {
     projectLabel: "PROYECTO",
     titlePlaceholder: "Nombre del proyecto",
     leafPlaceholder: "Elegir objeto de observación hoja vinculado",
+    addObservationObject: "Añadir nuevo objeto de observación",
     save: "Guardar",
     saving: "Guardando…",
     saved: "Guardado",
@@ -190,6 +216,7 @@ const COPY: Record<LocaleCode, Copy> = {
     projectLabel: "PROJEKT",
     titlePlaceholder: "Název projektu",
     leafPlaceholder: "Vyberte propojený listový objekt pozorování",
+    addObservationObject: "Přidat nový objekt pozorování",
     save: "Uložit",
     saving: "Ukládání…",
     saved: "Uloženo",
@@ -201,6 +228,30 @@ function normalizeLocale(value: string): LocaleCode {
   return ["ru", "pl", "en", "es", "uk", "de", "cs"].includes(locale)
     ? (locale as LocaleCode)
     : "en";
+}
+
+function localeHref(pathname: string, locale: LocaleCode) {
+  if (locale === "en") return pathname;
+  return `${pathname}${pathname.includes("?") ? "&" : "?"}locale=${encodeURIComponent(locale)}`;
+}
+
+function textValue(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  return normalized ? normalized : null;
+}
+
+function isPersonalLeaf(row: ValueObjectCatalogRow) {
+  const visibility =
+    textValue(row.visibility_code) ?? textValue(row.visibility) ?? "private";
+
+  return (
+    textValue(row.id) !== null &&
+    textValue(row.scope_code) === "actor" &&
+    textValue(row.ontology_node_role_code) === "leaf" &&
+    textValue(row.status) === "active" &&
+    visibility === "private"
+  );
 }
 
 function normalizedText(value: string | null | undefined) {
@@ -231,6 +282,7 @@ type ProjectCenterData = Record<string, unknown> & {
   onRootFocus: () => void;
   onRootToggle: () => void;
   onRootSelect: (option: RootOption) => void;
+  onAddObservationObject: () => void;
 };
 
 type ProjectCenterNode = Node<ProjectCenterData, "project-center">;
@@ -313,7 +365,25 @@ function ProjectCenterCard({ data }: NodeProps<ProjectCenterNode>) {
           </div>
 
           {!data.readonlyMode && data.rootDropdownOpen ? (
-            <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 max-h-[260px] overflow-y-auto rounded-[18px] border border-[#dde3ef] bg-white p-1.5 shadow-[0_18px_46px_rgba(51,65,105,0.18)]">
+            <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 max-h-[300px] overflow-y-auto rounded-[18px] border border-[#dde3ef] bg-white p-1.5 shadow-[0_18px_46px_rgba(51,65,105,0.18)]">
+              <button
+                type="button"
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  data.onAddObservationObject();
+                }}
+                className="nodrag nopan mb-1 flex w-full items-center gap-2 rounded-[13px] border border-[#dce4ff] bg-[#f4f7ff] px-3 py-2.5 text-left transition hover:bg-[#eaf0ff]"
+              >
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#4a73ff] text-white">
+                  <Plus size={13} />
+                </span>
+                <span className="text-[12px] font-extrabold text-[#3f5fca]">
+                  {data.copy.addObservationObject}
+                </span>
+              </button>
+
+              <div className="my-1 h-px bg-[#edf0f6]" />
+
               {data.filteredRoots.length > 0 ? (
                 data.filteredRoots.map((option) => (
                   <button
@@ -374,6 +444,7 @@ export default function ProjectMapStartClient({
 }) {
   const locale = normalizeLocale(initialLocale);
   const copy = COPY[locale];
+  const router = useRouter();
   const blurTimerRef = useRef<number | null>(null);
 
   const [projects, setProjects] = useState<ProjectItem[]>([]);
@@ -429,21 +500,61 @@ export default function ProjectMapStartClient({
     setLoadError(null);
 
     try {
-      const response = await fetch(
-        `/api/projects?locale=${encodeURIComponent(locale)}`,
-        { cache: "no-store" },
-      );
+      const [projectsResponse, valueObjectsResponse] = await Promise.all([
+        fetch(`/api/projects?locale=${encodeURIComponent(locale)}`, {
+          cache: "no-store",
+        }),
+        fetch(`/api/value-objects?locale=${encodeURIComponent(locale)}`, {
+          cache: "no-store",
+        }),
+      ]);
 
-      const payload = (await response.json().catch(() => null)) as
+      const payload = (await projectsResponse.json().catch(() => null)) as
         | ProjectsPayload
         | null;
+      const valueObjectsPayload = (await valueObjectsResponse
+        .json()
+        .catch(() => null)) as ValueObjectCatalogPayload | null;
 
-      if (!response.ok || payload?.ok !== true) {
+      if (!projectsResponse.ok || payload?.ok !== true) {
         throw new Error(payload?.error || copy.loadError);
       }
 
+      if (!valueObjectsResponse.ok || valueObjectsPayload?.ok !== true) {
+        throw new Error(valueObjectsPayload?.error || copy.loadError);
+      }
+
       const nextProjects = payload.projects ?? [];
-      const nextRoots = payload.eligibleRoots ?? [];
+      const catalog = valueObjectsPayload.valueObjects ?? [];
+      const byId = new Map(
+        catalog
+          .map((row) => [textValue(row.id), row] as const)
+          .filter(
+            (entry): entry is readonly [string, ValueObjectCatalogRow] =>
+              Boolean(entry[0]),
+          ),
+      );
+
+      const nextRoots = catalog
+        .filter(isPersonalLeaf)
+        .map((row): RootOption => {
+          const id = textValue(row.id) as string;
+          const parentValueObjectId = textValue(row.parent_value_object_id);
+          const parent = parentValueObjectId
+            ? byId.get(parentValueObjectId)
+            : undefined;
+
+          return {
+            id,
+            title: textValue(row.title),
+            description: textValue(row.description),
+            parentValueObjectId,
+            parentTitle: textValue(parent?.title),
+          };
+        })
+        .sort((left, right) =>
+          rootDisplay(left).localeCompare(rootDisplay(right), locale),
+        );
 
       setProjects(nextProjects);
       setEligibleRoots(nextRoots);
@@ -463,7 +574,12 @@ export default function ProjectMapStartClient({
           setSaved(true);
           setTitle(project.title);
           setSelectedRootId(project.rootValueObject.id);
-          setRootQuery(project.rootValueObject.title ?? "");
+          const localizedRoot = nextRoots.find(
+            (option) => option.id === project.rootValueObject.id,
+          );
+          setRootQuery(
+            localizedRoot?.title ?? project.rootValueObject.title ?? "",
+          );
         }
       } else {
         setCreating(true);
@@ -559,6 +675,11 @@ export default function ProjectMapStartClient({
     setSaved(false);
   }
 
+  function addObservationObject() {
+    setRootDropdownOpen(false);
+    router.push(localeHref("/value-objects/new/personal-leaf", locale));
+  }
+
   async function saveProject() {
     const normalizedTitle = title.trim();
 
@@ -636,6 +757,7 @@ export default function ProjectMapStartClient({
     onRootFocus: handleRootFocus,
     onRootToggle: handleRootToggle,
     onRootSelect: handleRootSelect,
+    onAddObservationObject: addObservationObject,
   };
 
   const nodes = useMemo<Node[]>(

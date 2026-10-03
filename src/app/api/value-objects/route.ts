@@ -190,6 +190,10 @@ function normalizeLeafBranchActiveCreationMode(value: unknown): boolean {
   return normalizeOptionalString(value) === "leaf_branch_active_v4";
 }
 
+function normalizeLeafSystemParentActiveCreationMode(value: unknown): boolean {
+  return normalizeOptionalString(value) === "leaf_system_parent_active_v1";
+}
+
 function normalizeIntermediateDraftCreationMode(value: unknown): boolean {
   return normalizeOptionalString(value) === "intermediate_draft_v3";
 }
@@ -620,6 +624,8 @@ type OntologyParent = {
   readonly ontologyNodeRoleCode: "root" | "intermediate";
   readonly rootValueObjectId: string;
   readonly branchTypeCode: string;
+  readonly scopeCode: "actor" | "global";
+  readonly originTypeCode: string | null;
 };
 
 const GENERIC_KIND_BY_FACET: Readonly<Record<OntologyFacetCode, string>> = {
@@ -927,6 +933,9 @@ async function getOwnedStructuralParent(
   parentValueObjectId: string,
   appUser: AppUserRow,
   personActor: ActorRow,
+  options?: {
+    allowGlobalSystemIntermediate?: boolean;
+  },
 ) {
   const { data: parentData, error: parentError } = await supabase
     .from("value_objects")
@@ -944,12 +953,13 @@ async function getOwnedStructuralParent(
       facet_code,
       object_kind_code,
       ontology_node_role_code,
-      scope_code
+      scope_code,
+      origin_type_code,
+      owner_user_id,
+      owner_actor_id
     `,
     )
     .eq("id", parentValueObjectId)
-    .eq("owner_user_id", appUser.id)
-    .eq("owner_actor_id", personActor.id)
     .maybeSingle();
 
   if (parentError) {
@@ -977,15 +987,30 @@ async function getOwnedStructuralParent(
   const facetCode =
     typeof parentData.facet_code === "string" ? parentData.facet_code : null;
   const ontologyNodeRoleCode = parentData.ontology_node_role_code;
-  const parentIsEligible =
+
+  const ownedParentIsEligible =
     parentData.scope_code === "actor" &&
+    parentData.owner_user_id === appUser.id &&
+    parentData.owner_actor_id === personActor.id &&
+    (ontologyNodeRoleCode === "root" || ontologyNodeRoleCode === "intermediate") &&
+    (parentData.status === "draft" || parentData.status === "active");
+
+  const globalSystemIntermediateIsEligible =
+    options?.allowGlobalSystemIntermediate === true &&
+    parentData.scope_code === "global" &&
+    parentData.origin_type_code === "system_model" &&
+    parentData.owner_user_id === null &&
+    parentData.owner_actor_id === null &&
+    ontologyNodeRoleCode === "intermediate" &&
+    parentData.status === "active";
+
+  const parentIsEligible =
+    (ownedParentIsEligible || globalSystemIntermediateIsEligible) &&
     typeof parentData.canonical_key === "string" &&
     parentData.canonical_key.length > 0 &&
     typeof facetCode === "string" &&
-    (ontologyNodeRoleCode === "root" || ontologyNodeRoleCode === "intermediate") &&
     rootValueObjectId !== null &&
-    branchTypeCode !== null &&
-    (parentData.status === "draft" || parentData.status === "active");
+    branchTypeCode !== null;
 
   if (!parentIsEligible || !facetCode || !rootValueObjectId || !branchTypeCode) {
     return {
@@ -993,7 +1018,7 @@ async function getOwnedStructuralParent(
       errorResponse: NextResponse.json(
         {
           error:
-            "Children can be created only under an ontology-ready owned root or intermediate observation object",
+            "Parent must be an eligible owned structural object or an allowed active system intermediate object",
           errorCode: "VO_AUTHORING_PARENT_NOT_ONTOLOGY_READY",
         },
         { status: 409 },
@@ -1008,6 +1033,11 @@ async function getOwnedStructuralParent(
     ontologyNodeRoleCode,
     rootValueObjectId,
     branchTypeCode,
+    scopeCode: parentData.scope_code === "global" ? "global" : "actor",
+    originTypeCode:
+      typeof parentData.origin_type_code === "string"
+        ? parentData.origin_type_code
+        : null,
   };
 
   return {
@@ -1162,9 +1192,11 @@ async function createLeafDraftValueObject(
   const parentValueObjectId = normalizeUuid(body.parentValueObjectId);
   const title = normalizeRequiredString(body.title);
   const description = normalizeOptionalString(body.description);
-  const branchActiveRequested = normalizeLeafBranchActiveCreationMode(
-    body.creationMode,
-  );
+  const systemParentOnlyRequested =
+    normalizeLeafSystemParentActiveCreationMode(body.creationMode);
+  const branchActiveRequested =
+    normalizeLeafBranchActiveCreationMode(body.creationMode) ||
+    systemParentOnlyRequested;
   const objectKind = branchActiveRequested
     ? null
     : normalizeLeafObjectKind(body.objectKind);
@@ -1205,6 +1237,9 @@ async function createLeafDraftValueObject(
     parentValueObjectId,
     appUser,
     personActor,
+    {
+      allowGlobalSystemIntermediate: systemParentOnlyRequested,
+    },
   );
 
   if (parentResult.errorResponse || !parentResult.parent) {
@@ -1218,6 +1253,24 @@ async function createLeafDraftValueObject(
   }
 
   const parent = parentResult.parent;
+
+  if (
+    systemParentOnlyRequested &&
+    !(
+      parent.scopeCode === "global" &&
+      parent.originTypeCode === "system_model" &&
+      parent.ontologyNodeRoleCode === "intermediate"
+    )
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Personal project leaves must use an active system intermediate observation object as parent",
+        errorCode: "VO_AUTHORING_LEAF_SYSTEM_INTERMEDIATE_REQUIRED",
+      },
+      { status: 409 },
+    );
+  }
 
   if (
     branchActiveRequested &&
@@ -1270,9 +1323,11 @@ async function createLeafDraftValueObject(
     nodeRoleCode: "leaf",
     parentValueObjectId: parent.id,
     hierarchyRelationCode: branchActiveRequested ? "part_of" : "is_a",
+    allowGlobalSystemParent: systemParentOnlyRequested,
     visibilityCode: "private",
     privacyClassCode: "standard",
   };
+
   const created = await createOntologyValueObject({
     appUser,
     personActor,
@@ -1302,7 +1357,11 @@ async function createLeafDraftValueObject(
 
   return NextResponse.json({
     ok: true,
-    mode: branchActiveRequested ? "leaf_branch_active_v4" : "leaf_draft_v3",
+    mode: systemParentOnlyRequested
+      ? "leaf_system_parent_active_v1"
+      : branchActiveRequested
+        ? "leaf_branch_active_v4"
+        : "leaf_draft_v3",
     valueObject: created.card.valueObject,
     ontologyCard: created.card,
     contentLocalization,
@@ -1550,6 +1609,7 @@ export async function POST(request: Request) {
 
   const leafRequested =
     normalizeLeafBranchActiveCreationMode(body.creationMode) ||
+    normalizeLeafSystemParentActiveCreationMode(body.creationMode) ||
     normalizeLeafDraftCreationMode(body.creationMode);
 
   if (leafRequested) {
