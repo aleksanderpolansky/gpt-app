@@ -1,0 +1,134 @@
+﻿ARCTOR PROJECT PLANNING
+PP4E1 OUTCOME + SHARED CARD + FAST CALENDAR
+FINAL LOCAL GATE V1.0.7
+2026-10-04
+
+STATUS
+------
+LOCAL_VALIDATION=PASS
+CODE_COMMIT=0be1ec0fde03a3da65b0c03b4f87a4bde2478e2d
+PRODUCTION_DEPLOY=PENDING
+PRODUCTION_SMOKE=PENDING
+
+BASELINE
+--------
+baseline=149559ea6daf74a7e8010692c4917243a9b6fb2c
+
+PURPOSE
+-------
+1. Quick activity result choices.
+2. Same planned-activity card from Calendar and Projects.
+3. Faster Calendar first paint when changing week.
+4. Recurrence definition remains editable but not executable.
+
+OUTCOME CONTRACT
+----------------
+Canonical entity remains activity_events.
+
+Planned result options:
+metadata_json.taskOutcomeV1.options
+
+Actual selected result:
+metadata_json.taskOutcomeV1.selectedOutcome
+
+Result label is independent from execution status.
+
+Examples:
+- Completed / Not completed
+- Information found / Information not found
+- Not needed this week
+
+PLAN -> ACTUAL
+--------------
+fulfills_planned_activity_event_id remains canonical.
+
+Completion creates an actual activity_event.
+Selected outcome is stored on the actual activity.
+
+RECURRENCE
+----------
+The recurrence source/definition is a pattern and cannot be completed.
+
+Project source card:
+editable=YES
+completable=NO
+
+Materialized occurrence:
+editable=YES
+completable=YES
+
+Server API rejects completion of an active/paused recurrence definition
+with RECURRENCE_DEFINITION_NOT_EXECUTABLE.
+
+Editing result options on the recurrence source propagates those options
+to active/rescheduled already-materialized occurrences.
+
+Future occurrences inherit source metadata through the existing
+recurrence materializer.
+
+SHARED ACTIVITY CARD
+--------------------
+Calendar opens Cux6TaskDetailModal.
+
+Projects now opens the same Cux6TaskDetailModal.
+
+Project recurring source card opens the definition.
+Project occurrence row opens that concrete occurrence.
+
+CALENDAR PERFORMANCE
+--------------------
+Calendar no longer waits for mutual-link enrichment before showing the
+primary events/all-day payload.
+
+Primary schedule is rendered first.
+Mutual-link enrichment continues afterward.
+
+DATABASE
+--------
+migration=NO
+schema_change=NO
+db_push=NO
+
+VALIDATION
+----------
+BASE_PP4E1_VALIDATOR=PASS_14/14
+V107_GUARD_VALIDATOR=PASS_7/7
+ESLINT_DELTA_NO_REGRESSION=PASS
+TYPESCRIPT=PASS
+BUILD=PASS
+GIT_DIFF_CHECK=PASS
+
+RESULT
+------
+result_sha256=D33906D6E59131D95FF53E60E21BC66288A001B1A1C812392C658DDA3BEE9171
+
+PRODUCTION SMOKE REQUIRED
+-------------------------
+1. Vercel deployment READY.
+2. Open planned activity from Calendar.
+3. Edit result options and verify persistence.
+4. Complete with one configured result.
+5. Verify actual activity stores selectedOutcome.
+6. Undo and verify existing PP4D behavior remains intact.
+7. Open the same planned activity from Project.
+8. Open recurrence SOURCE and verify no completion action exists.
+9. Open concrete occurrence and verify completion actions exist.
+10. Change result options on recurrence source and verify active occurrences receive them.
+11. Switch Calendar weeks repeatedly and verify planned date-range item appears
+    with the primary calendar payload rather than after mutual-link enrichment.
+
+KNOWN DEFERRED
+--------------
+- semantic classification of outcome labels
+- special outcome semantics such as skip vs actual completion
+- per-occurrence reschedule
+- per-occurrence skip
+- automatic recurrence horizon top-up
+- full Calendar project filter
+- atomic completion transaction
+
+ROLLBACK
+--------
+git revert 0be1ec0fde03a3da65b0c03b4f87a4bde2478e2d
+
+No database migration rollback required.
