@@ -10,9 +10,11 @@ import {
   Save,
   Search,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAiNavigator } from "@/components/app-shell/ai-navigator-provider";
+import { Cux6TaskDetailModal } from "@/components/calendar/cux6-task-detail-modal";
+import type { Cux6ShelfItem } from "@/components/calendar/cux6-task-shelf";
 import {
   Background,
   BackgroundVariant,
@@ -521,6 +523,10 @@ type ProjectActivityNodeData = Record<string, unknown> & {
   copy: Copy;
   locale: LocaleCode;
   activity: ProjectActivityItem;
+  onOpenActivity: (
+    activityEventId: string,
+    isRecurrenceDefinition: boolean,
+  ) => void;
 };
 
 type ProjectActivityNode = Node<
@@ -546,25 +552,50 @@ function ProjectActivityCard({
         </span>
       </div>
 
-      <div className="mt-2.5 text-[12px] font-bold leading-5 text-[#29324a]">
+      <button
+        type="button"
+        onClick={() =>
+          data.onOpenActivity(
+            data.activity.id,
+            Boolean(data.activity.recurrence),
+          )
+        }
+        className="mt-2.5 block w-full text-left text-[12px] font-bold leading-5 text-[#29324a] hover:text-[#315ee7]"
+      >
         {data.activity.title}
-      </div>
+      </button>
 
-      <div className="mt-2 text-[10px] font-medium text-[#7b849d]">
+      <button
+        type="button"
+        onClick={() =>
+          data.onOpenActivity(
+            data.activity.id,
+            Boolean(data.activity.recurrence),
+          )
+        }
+        className="mt-2 block text-left text-[10px] font-medium text-[#7b849d] hover:text-[#315ee7]"
+      >
         {projectActivityTimingLabel(data.activity, data.copy, data.locale)}
-      </div>
+      </button>
 
       {data.activity.recurrence?.upcomingOccurrences?.length ? (
         <div className="mt-2 space-y-1 rounded-xl border border-[#edf0f7] bg-[#fafbff] px-2.5 py-2">
           {data.activity.recurrence.upcomingOccurrences
             .slice(0, 3)
             .map((occurrence) => (
-              <div
+              <button
                 key={occurrence.occurrenceKey}
-                className="text-[9px] font-semibold text-[#7b849d]"
+                type="button"
+                onClick={() =>
+                  data.onOpenActivity(
+                    occurrence.activityEventId,
+                    false,
+                  )
+                }
+                className="block w-full rounded-md px-1 py-0.5 text-left text-[9px] font-semibold text-[#7b849d] hover:bg-[#eef2ff] hover:text-[#315ee7]"
               >
                 #{occurrence.occurrenceOrdinal} · {projectActivityOccurrenceLabel(occurrence)}
-              </div>
+              </button>
             ))}
         </div>
       ) : null}
@@ -744,6 +775,8 @@ export default function ProjectMapStartClient({
   const [creating, setCreating] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [selectedActivityDetail, setSelectedActivityDetail] =
+    useState<Cux6ShelfItem | null>(null);
 
   const [title, setTitle] = useState("");
   const [rootQuery, setRootQuery] = useState("");
@@ -1047,6 +1080,31 @@ export default function ProjectMapStartClient({
     );
   }
 
+  const openProjectActivity = useCallback(async (
+    activityEventId: string,
+    isRecurrenceDefinition: boolean,
+  ) => {
+    setLoadError(null);
+    try {
+      const response = await fetch(
+        `/api/calendar/task-shelf/${encodeURIComponent(activityEventId)}`,
+        { cache: "no-store" },
+      );
+      const payload = (await response.json().catch(() => null)) as
+        | { ok?: boolean; error?: string; activity?: Cux6ShelfItem | null }
+        | null;
+      if (!response.ok || payload?.ok !== true || !payload.activity) {
+        throw new Error(payload?.error || copy.loadError);
+      }
+      setSelectedActivityDetail({
+        ...payload.activity,
+        isRecurrenceDefinition,
+      });
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : copy.loadError);
+    }
+  }, [copy.loadError]);
+
   function addProjectActivity() {
     if (!selectedProject) return;
 
@@ -1164,6 +1222,15 @@ export default function ProjectMapStartClient({
             copy,
             locale,
             activity,
+            onOpenActivity: (
+              activityEventId: string,
+              isRecurrenceDefinition: boolean,
+            ) => {
+              void openProjectActivity(
+                activityEventId,
+                isRecurrenceDefinition,
+              );
+            },
           },
         }) as ProjectActivityNode,
     );
@@ -1179,7 +1246,7 @@ export default function ProjectMapStartClient({
       } as ProjectCenterNode,
       ...activityNodes,
     ];
-  }, [copy, locale, nodeData, selectedProject]);
+  }, [copy, locale, nodeData, openProjectActivity, selectedProject]);
 
   const edges = useMemo<Edge[]>(
     () =>
@@ -1324,6 +1391,22 @@ export default function ProjectMapStartClient({
             </ReactFlow>
           </ReactFlowProvider>
         </section>
+
+        {selectedActivityDetail ? (
+          <Cux6TaskDetailModal
+            item={selectedActivityDetail}
+            locale={locale}
+            returnToTarget="calendar"
+            onClose={() => setSelectedActivityDetail(null)}
+            onChanged={(item, action) => {
+              setSelectedActivityDetail(item);
+              if (action !== "updated" || !item) {
+                setSelectedActivityDetail(null);
+              }
+              void loadProjects(selectedProjectId ?? undefined, undefined, { background: true });
+            }}
+          />
+        ) : null}
       </div>
     </div>
   );

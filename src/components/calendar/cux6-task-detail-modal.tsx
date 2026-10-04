@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import type { Cux6ShelfItem } from "@/components/calendar/cux6-task-shelf";
+import { normalizeTaskOutcomeOptions } from "@/lib/activity/taskOutcomeV1";
 
 type UiLocale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
@@ -28,7 +29,7 @@ type Cux6TaskDetailModalProps = {
   onClose: () => void;
   onChanged: (
     item: Cux6ShelfItem | null,
-    action: "updated" | "cancelled",
+    action: "updated" | "cancelled" | "completed",
   ) => void;
 };
 
@@ -60,6 +61,23 @@ type Copy = {
   saveError: string;
   cancelError: string;
   modes: Record<EditableScheduleMode, string>;
+};
+
+type OutcomeCopy = {
+  outcomes: string;
+  outcomeHint: string;
+  complete: string;
+  completeError: string;
+};
+
+const OUTCOME_COPY: Record<UiLocale, OutcomeCopy> = {
+  en: { outcomes: "Result options", outcomeHint: "One option per line, up to 8.", complete: "Complete with result", completeError: "Could not complete the activity." },
+  pl: { outcomes: "Warianty wyniku", outcomeHint: "Jeden wariant w wierszu, maks. 8.", complete: "Zakończ z wynikiem", completeError: "Nie udało się zakończyć aktywności." },
+  ru: { outcomes: "Варианты результата", outcomeHint: "По одному варианту в строке, до 8.", complete: "Завершить с результатом", completeError: "Не удалось завершить активность." },
+  uk: { outcomes: "Варіанти результату", outcomeHint: "Один варіант у рядку, до 8.", complete: "Завершити з результатом", completeError: "Не вдалося завершити активність." },
+  de: { outcomes: "Ergebnisoptionen", outcomeHint: "Eine Option pro Zeile, maximal 8.", complete: "Mit Ergebnis abschließen", completeError: "Aktivität konnte nicht abgeschlossen werden." },
+  es: { outcomes: "Opciones de resultado", outcomeHint: "Una opción por línea, hasta 8.", complete: "Completar con resultado", completeError: "No se pudo completar la actividad." },
+  cs: { outcomes: "Možnosti výsledku", outcomeHint: "Jedna možnost na řádek, nejvýše 8.", complete: "Dokončit s výsledkem", completeError: "Aktivitu se nepodařilo dokončit." },
 };
 
 const COPY: Record<UiLocale, Copy> = {
@@ -426,6 +444,7 @@ export function Cux6TaskDetailModal({
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const outcomeCopy = OUTCOME_COPY[locale];
 
   const [title, setTitle] = useState(item.title);
   const [description, setDescription] = useState(
@@ -456,6 +475,9 @@ export function Cux6TaskDetailModal({
   const [durationMinutes, setDurationMinutes] = useState(
     item.durationMinutes ? String(item.durationMinutes) : "",
   );
+  const [outcomeOptionsText, setOutcomeOptionsText] = useState(
+    item.outcomeOptions.join("\n"),
+  );
 
   useEffect(() => {
     setTitle(item.title);
@@ -470,6 +492,7 @@ export function Cux6TaskDetailModal({
     setDurationMinutes(
       item.durationMinutes ? String(item.durationMinutes) : "",
     );
+    setOutcomeOptionsText(item.outcomeOptions.join("\n"));
     setError(null);
   }, [item]);
 
@@ -571,6 +594,7 @@ export function Cux6TaskDetailModal({
               scheduleMode === "exact"
                 ? parsePositiveInteger(durationMinutes)
                 : null,
+            outcomeOptions: normalizeTaskOutcomeOptions(outcomeOptionsText),
           }),
         },
       );
@@ -587,6 +611,33 @@ export function Cux6TaskDetailModal({
       setError(
         caught instanceof Error ? caught.message : copy.saveError,
       );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function completeActivity(outcomeLabel?: string | null) {
+    setSaving(true);
+    setError(null);
+
+    try {
+      const operationId = globalThis.crypto.randomUUID();
+      const response = await fetch(
+        `/api/calendar/task-shelf/${encodeURIComponent(item.id)}/complete`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ operationId, outcomeLabel: outcomeLabel ?? null }),
+        },
+      );
+      const payload = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+      if (!response.ok || payload?.ok !== true) {
+        throw new Error(payload?.error ?? outcomeCopy.completeError);
+      }
+      onChanged(null, "completed");
+      onClose();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : outcomeCopy.completeError);
     } finally {
       setSaving(false);
     }
@@ -762,6 +813,18 @@ export function Cux6TaskDetailModal({
                 </label>
               ) : null}
 
+              <label className="grid gap-1 text-sm font-semibold text-[#1a1d2e]">
+                {outcomeCopy.outcomes}
+                <textarea
+                  value={outcomeOptionsText}
+                  onChange={(event) => setOutcomeOptionsText(event.target.value)}
+                  rows={4}
+                  placeholder={"Информация найдена\nИнформация не найдена\nНа этой неделе не нужно"}
+                  className="rounded-xl border border-[#d8deef] bg-white px-3 py-2 text-sm font-medium outline-none focus:border-[#3b6ef8]"
+                />
+                <span className="text-xs font-normal text-[#7c8099]">{outcomeCopy.outcomeHint}</span>
+              </label>
+
               {scheduleMode === "exact" ? (
                 <>
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -845,6 +908,19 @@ export function Cux6TaskDetailModal({
                 </div>
               </div>
 
+              <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-white p-3 text-sm text-[#7c8099]">
+                <div className="font-bold text-[#1a1d2e]">{outcomeCopy.outcomes}</div>
+                {item.outcomeOptions.length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {item.outcomeOptions.map((option) => (
+                      <span key={option} className="rounded-full border border-[#dce5ff] bg-[#f7f9ff] px-2.5 py-1 text-xs font-bold text-[#315ed8]">{option}</span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-2 text-xs">{outcomeCopy.outcomeHint}</div>
+                )}
+              </div>
+
               <div className="rounded-xl border border-[rgba(0,0,0,0.06)] bg-[#fbfcff] p-3 text-xs leading-relaxed text-[#7c8099]">
                 {copy.status}: {item.status ?? "—"}
                 <br />
@@ -852,6 +928,21 @@ export function Cux6TaskDetailModal({
                 <br />
                 {copy.privacy}: {item.privacyScope ?? "—"}
               </div>
+
+              {!item.isRecurrenceDefinition ? (
+                              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                                <div className="text-xs font-extrabold uppercase tracking-[0.12em] text-emerald-800">{outcomeCopy.complete}</div>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {item.outcomeOptions.length > 0 ? (
+                                    item.outcomeOptions.map((option) => (
+                                      <button key={option} type="button" disabled={saving} onClick={() => void completeActivity(option)} className="rounded-xl border border-emerald-300 bg-white px-3 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50">{option}</button>
+                                    ))
+                                  ) : (
+                                    <button type="button" disabled={saving} onClick={() => void completeActivity(null)} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm disabled:opacity-50">{outcomeCopy.complete}</button>
+                                  )}
+                                </div>
+                              </div>
+              ) : null}
 
               <div className="flex flex-wrap gap-2">
                 <Link

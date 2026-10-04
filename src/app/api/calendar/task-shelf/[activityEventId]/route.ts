@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 
 import { getActivityUserContext } from "../../../../../../lib/activity/activityUserContext";
 import { supabase } from "../../../../../../lib/supabase";
+import {
+  normalizeTaskOutcomeOptions,
+  readTaskOutcomeOptions,
+  writeTaskOutcomeOptions,
+} from "@/lib/activity/taskOutcomeV1";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +36,7 @@ type UpdateBody = {
   startedAt?: unknown;
   endedAt?: unknown;
   durationMinutes?: unknown;
+  outcomeOptions?: unknown;
 };
 
 const ACTIVE_PLANNED_STATUSES = ["draft", "planned", "confirmed"] as const;
@@ -52,6 +58,7 @@ const ACTIVITY_SELECT = [
   "started_at",
   "ended_at",
   "duration_minutes",
+  "metadata_json",
   "created_at",
   "updated_at",
 ].join(",");
@@ -162,8 +169,12 @@ function titleForActivity(row: JsonRecord) {
 }
 
 function toActivity(row: JsonRecord) {
+  const id = asString(row.id);
   return {
-    id: asString(row.id),
+    kind: "planned" as const,
+    id,
+    plannedActivityEventId: id,
+    actualActivityEventId: null,
     title: titleForActivity(row),
     inputText: asString(row.input_text),
     description: asString(row.description),
@@ -178,7 +189,15 @@ function toActivity(row: JsonRecord) {
     startedAt: asString(row.started_at),
     endedAt: asString(row.ended_at),
     durationMinutes: asNumber(row.duration_minutes),
+    dueAt: null,
+    enrichmentStatus: null,
+    enrichmentUpdatedAt: null,
     updatedAt: asString(row.updated_at) ?? asString(row.created_at),
+    completedAt: null,
+    needsClarification: false,
+    outcomeOptions: readTaskOutcomeOptions(row.metadata_json),
+    selectedOutcome: null,
+    recurrence: null,
   };
 }
 
@@ -349,6 +368,93 @@ async function syncExactCalendarProjection(params: {
     });
 
   return error?.message ?? null;
+}
+
+async function syncRecurrenceOutcomeOptions(params: {
+  sourceActivityEventId: string;
+  userId: string;
+  actorId: string;
+  outcomeOptions: string[];
+}) {
+  const { data: ruleRows, error: ruleError } = await supabase
+    .from("activity_recurrence_rules")
+    .select("id")
+    .eq("source_activity_event_id", params.sourceActivityEventId)
+    .in("status_code", ["active", "paused"])
+    .limit(2);
+
+  if (ruleError) return ruleError.message;
+  const ruleIds = Array.isArray(ruleRows)
+    ? ruleRows
+        .map((row) =>
+          row && typeof row === "object" && typeof (row as { id?: unknown }).id === "string"
+            ? (row as { id: string }).id
+            : null,
+        )
+        .filter((value): value is string => Boolean(value))
+    : [];
+  if (ruleIds.length === 0) return null;
+
+  const { data: occurrenceRows, error: occurrenceError } = await supabase
+    .from("activity_recurrence_occurrences")
+    .select("materialized_activity_event_id")
+    .in("recurrence_rule_id", ruleIds)
+    .in("status_code", ["active", "rescheduled"]);
+  if (occurrenceError) return occurrenceError.message;
+
+  const occurrenceIds = Array.isArray(occurrenceRows)
+    ? [...new Set(occurrenceRows.map((row) =>
+        row && typeof row === "object" && typeof (row as { materialized_activity_event_id?: unknown }).materialized_activity_event_id === "string"
+          ? (row as { materialized_activity_event_id: string }).materialized_activity_event_id
+          : null,
+      ).filter((value): value is string => Boolean(value)))]
+    : [];
+  if (occurrenceIds.length === 0) return null;
+
+  const { data: activityRows, error: activityError } = await supabase
+    .from("activity_events")
+    .select("id,metadata_json")
+    .eq("user_id", params.userId)
+    .eq("acting_as_actor_id", params.actorId)
+    .eq("activity_role_code", "planned")
+    .in("id", occurrenceIds);
+  if (activityError) return activityError.message;
+
+  const warnings: string[] = [];
+  for (const row of Array.isArray(activityRows) ? activityRows : []) {
+    if (!row || typeof row !== "object") continue;
+    const id = asString((row as JsonRecord).id);
+    if (!id) continue;
+    const { error } = await supabase
+      .from("activity_events")
+      .update({
+        metadata_json: writeTaskOutcomeOptions((row as JsonRecord).metadata_json, params.outcomeOptions),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("user_id", params.userId)
+      .eq("acting_as_actor_id", params.actorId)
+      .eq("activity_role_code", "planned");
+    if (error) warnings.push(id + ": " + error.message);
+  }
+  return warnings.length > 0 ? warnings.join("; ") : null;
+}
+
+export async function GET(
+  _request: Request,
+  context: RouteContext,
+) {
+  const resolved = await resolveContext(context);
+  if (resolved.errorResponse) return resolved.errorResponse;
+  const { appUser, personActor, activityEventId } = resolved;
+  if (!appUser || !personActor || !activityEventId) {
+    return NextResponse.json({ ok: false, error: "Activity context could not be resolved." }, { status: 500 });
+  }
+  const current = await loadOwnedPlannedActivity({ activityEventId, userId: appUser.id, actorId: personActor.id });
+  if (!current.row) {
+    return NextResponse.json({ ok: false, error: current.error }, { status: 404 });
+  }
+  return NextResponse.json({ ok: true, activity: toActivity(current.row) });
 }
 
 export async function PATCH(
@@ -531,6 +637,10 @@ export async function PATCH(
     );
   }
 
+  const outcomeOptions = body.outcomeOptions === undefined
+    ? readTaskOutcomeOptions(current.row.metadata_json)
+    : normalizeTaskOutcomeOptions(body.outcomeOptions);
+
   const nowIso = new Date().toISOString();
   const updates: JsonRecord = {
     title,
@@ -552,6 +662,7 @@ export async function PATCH(
       scheduleModeCode === "exact"
         ? exactDuration
         : asNumber(current.row.duration_minutes),
+    metadata_json: writeTaskOutcomeOptions(current.row.metadata_json, outcomeOptions),
     updated_at: nowIso,
   };
 
@@ -597,6 +708,13 @@ export async function PATCH(
           userId: appUser.id,
         });
 
+  const outcomePropagationWarning = await syncRecurrenceOutcomeOptions({
+    sourceActivityEventId: activityEventId,
+    userId: appUser.id,
+    actorId: personActor.id,
+    outcomeOptions,
+  });
+
   return NextResponse.json({
     ok: true,
     activity: toActivity(asRecord(data)),
@@ -604,7 +722,7 @@ export async function PATCH(
       scheduleModeCode === "exact"
         ? "exact_projection_synchronized"
         : "non_exact_projection_cancelled_if_present",
-    warning: projectionWarning,
+    warning: [projectionWarning, outcomePropagationWarning].filter(Boolean).join("; ") || null,
   });
 }
 

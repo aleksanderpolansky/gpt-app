@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 
 import { getActivityUserContext } from "../../../../../lib/activity/activityUserContext";
 import { supabase } from "../../../../../lib/supabase";
+import {
+  readTaskOutcomeOptions,
+  readTaskOutcomeSelection,
+} from "@/lib/activity/taskOutcomeV1";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +50,8 @@ type ShelfItem = {
   updatedAt: string | null;
   completedAt: string | null;
   needsClarification: boolean;
+  outcomeOptions: string[];
+  selectedOutcome: string | null;
   recurrence: RecurrenceInfo | null;
 };
 
@@ -264,6 +270,8 @@ function toPlannedShelfItem(
     updatedAt: asString(row.updated_at) ?? asString(row.created_at),
     completedAt: null,
     needsClarification: enrichmentStatus === "needs_clarification",
+    outcomeOptions: readTaskOutcomeOptions(row.metadata_json),
+    selectedOutcome: null,
     recurrence,
   };
 }
@@ -320,6 +328,8 @@ function toCompletedShelfItem(params: {
       asString(params.actual.updated_at) ??
       asString(params.actual.created_at),
     needsClarification: false,
+    outcomeOptions: readTaskOutcomeOptions(planned.metadata_json),
+    selectedOutcome: readTaskOutcomeSelection(params.actual.metadata_json),
     recurrence: params.recurrence,
   };
 }
@@ -403,6 +413,7 @@ export async function GET(request: Request) {
     "started_at",
     "ended_at",
     "duration_minutes",
+    "metadata_json",
     "created_at",
     "updated_at",
   ].join(",");
@@ -649,6 +660,7 @@ export async function GET(request: Request) {
           "created_at",
           "updated_at",
           "fulfills_planned_activity_event_id",
+          "metadata_json",
         ].join(","),
       )
       .eq("user_id", appUser.id)

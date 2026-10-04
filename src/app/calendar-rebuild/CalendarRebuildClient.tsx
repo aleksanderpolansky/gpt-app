@@ -929,6 +929,9 @@ function allDayItemToShelfItem(item: CalendarAllDayItem): Cux6ShelfItem {
     updatedAt: item.updatedAt,
     completedAt: null,
     needsClarification: false,
+    outcomeOptions: [],
+    selectedOutcome: null,
+    isRecurrenceDefinition: false,
     recurrence: null,
   };
 }
@@ -1555,6 +1558,20 @@ export default function CalendarRebuildClient({
 
         const loadedEvents = payload.events ?? [];
         const loadedAllDayItems = payload.allDayItems ?? [];
+
+        // PP4E1 fast first paint: render authoritative schedule data before
+        // waiting for secondary mutual-link enrichment.
+        setEvents(loadedEvents);
+        setAllDayItems(loadedAllDayItems);
+        setEventLogs(payload.logs ?? []);
+        setSourceCounts({
+          calendarEvents: payload.sources?.calendarEvents ?? 0,
+          timeBlocks: payload.sources?.timeBlocks ?? 0,
+          plannedActivities: payload.sources?.plannedActivities ?? 0,
+          plannedTargetLinks: payload.sources?.plannedTargetLinks ?? 0,
+        });
+        setIsLoadingEvents(false);
+
         const activityIds = Array.from(
           new Set(
             [

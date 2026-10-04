@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityTimingEditorPp1 } from "@/components/activity/pp1/activity-timing-editor";
 import { PlannedTargetSelectorPp1 } from "@/components/activity/pp1/planned-target-selector";
 import { Cux3AiRulesEditor } from "@/components/calendar/cux3-ai-rules-editor";
+import { normalizeTaskOutcomeOptions } from "@/lib/activity/taskOutcomeV1";
 import {
   applyExactStartOnlyDefaultPp1,
   datetimeLocalToIsoPp1,
@@ -274,6 +275,7 @@ export function Cux2InlineActivityComposer({
     inferActivityTimingDraftPp1("", "future"),
   );
   const [plannedTargetIds, setPlannedTargetIds] = useState<string[]>([]);
+  const [outcomeOptionsText, setOutcomeOptionsText] = useState("");
   const [analysisStatus, setAnalysisStatus] = useState<AnalysisStatus>("idle");
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -380,6 +382,7 @@ export function Cux2InlineActivityComposer({
     setTitle("");
     setTimingDraft(inferActivityTimingDraftPp1("", "future"));
     setPlannedTargetIds([]);
+    setOutcomeOptionsText("");
     setAnalysisStatus("idle");
     setSaveStatus("idle");
     setSaveMessage(null);
@@ -494,6 +497,10 @@ export function Cux2InlineActivityComposer({
           metadata: {
             cux2Composer: "inline_calendar",
             locale,
+            taskOutcomeV1: {
+              version: 1,
+              options: normalizeTaskOutcomeOptions(outcomeOptionsText),
+            },
             sourceFocusDate: focusDateKey,
             semanticAnalysisStatus: analysisStatus,
             cux4: {
@@ -625,6 +632,21 @@ export function Cux2InlineActivityComposer({
         </div>
 
         <div className="space-y-4">
+          <div className="rounded-[18px] border border-[#dfe5f1] bg-[#f8fafc] p-4">
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.15em] text-[#7c8099]">
+              {locale === "ru" ? "Варианты результата" : locale === "pl" ? "Warianty wyniku" : "Result options"}
+            </p>
+            <textarea
+              value={outcomeOptionsText}
+              onChange={(event) => setOutcomeOptionsText(event.target.value)}
+              rows={4}
+              placeholder={locale === "ru" ? "Информация найдена\nИнформация не найдена\nНа этой неделе не нужно" : "One option per line"}
+              className="mt-2 w-full resize-y rounded-xl border border-[#dfe5f1] bg-white px-3 py-2 text-sm font-medium text-[#1a1d2e] outline-none focus:border-[#3b6ef8]"
+            />
+            <p className="mt-2 text-xs font-medium text-[#7c8099]">
+              {locale === "ru" ? "Необязательно. До 8 быстрых вариантов результата." : "Optional. Up to 8 quick outcome choices."}
+            </p>
+          </div>
           <PlannedTargetSelectorPp1 locale={locale} selectedIds={plannedTargetIds} onChange={setPlannedTargetIds} />
           <div className="rounded-[18px] border border-[#dfe5f1] bg-[#f8fafc] p-4">
             <p className="text-[11px] font-extrabold uppercase tracking-[0.15em] text-[#7c8099]">{copy.timingPreview}</p>

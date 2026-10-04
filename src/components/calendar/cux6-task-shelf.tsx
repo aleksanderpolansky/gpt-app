@@ -36,6 +36,9 @@ export type Cux6ShelfItem = {
   updatedAt: string | null;
   completedAt: string | null;
   needsClarification: boolean;
+  outcomeOptions: string[];
+  selectedOutcome: string | null;
+  isRecurrenceDefinition?: boolean;
   recurrence: {
     ruleId: string;
     frequencyCode: string;
@@ -68,6 +71,7 @@ type CompletionResponse = {
   plannedActivityEventId?: string;
   actualActivityEventId?: string;
   completedAt?: string;
+  selectedOutcome?: string | null;
 };
 
 type Cux6TaskShelfProps = {
@@ -401,6 +405,7 @@ export function Cux6TaskShelf({
   const [activeView, setActiveView] = useState<TaskViewKey>("week");
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
+  const [pendingOutcomeId, setPendingOutcomeId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [localRefreshKey, setLocalRefreshKey] = useState(0);
   const [notice, setNotice] = useState<{
@@ -472,7 +477,10 @@ export function Cux6TaskShelf({
 
   const selected = groups[activeView];
 
-  async function completeTask(item: Cux6ShelfItem) {
+  async function completeTask(
+    item: Cux6ShelfItem,
+    outcomeLabel?: string | null,
+  ) {
     if (item.kind !== "planned") return;
 
     setActionId(item.id);
@@ -484,7 +492,10 @@ export function Cux6TaskShelf({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ operationId: createOperationId() }),
+          body: JSON.stringify({
+            operationId: createOperationId(),
+            outcomeLabel: outcomeLabel ?? null,
+          }),
         },
       );
       const result = (await response.json()) as CompletionResponse;
@@ -497,6 +508,7 @@ export function Cux6TaskShelf({
         throw new Error(result.error ?? "Task completion failed.");
       }
 
+      setPendingOutcomeId(null);
       setNotice({
         plannedActivityEventId: item.id,
         actualActivityEventId: result.actualActivityEventId,
@@ -675,7 +687,13 @@ export function Cux6TaskShelf({
                       title={copy.complete}
                       aria-label={`${copy.complete}: ${item.title}`}
                       disabled={actionId === item.id}
-                      onClick={() => void completeTask(item)}
+                      onClick={() => {
+                        if (item.outcomeOptions.length > 0) {
+                          setPendingOutcomeId((current) => current === item.id ? null : item.id);
+                        } else {
+                          void completeTask(item, null);
+                        }
+                      }}
                       className="mt-0.5 h-6 w-6 shrink-0 rounded-full border-2 border-[#9eabd2] bg-white transition hover:border-emerald-500 hover:bg-emerald-50 disabled:opacity-50"
                     />
                   )}
@@ -708,6 +726,28 @@ export function Cux6TaskShelf({
                         </span>
                       ) : null}
                     </div>
+
+                    {item.selectedOutcome ? (
+                      <div className="mt-1 inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
+                        {item.selectedOutcome}
+                      </div>
+                    ) : null}
+
+                    {!completed && pendingOutcomeId === item.id && item.outcomeOptions.length > 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-1.5 rounded-xl border border-[#dce5ff] bg-[#f7f9ff] p-2">
+                        {item.outcomeOptions.map((option) => (
+                          <button
+                            key={option}
+                            type="button"
+                            disabled={actionId === item.id}
+                            onClick={() => void completeTask(item, option)}
+                            className="rounded-lg border border-[#cbd7ff] bg-white px-2.5 py-1 text-[11px] font-bold text-[#315ed8] hover:bg-[#eef2ff] disabled:opacity-50"
+                          >
+                            {option}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="flex shrink-0 items-center gap-2">

@@ -3,6 +3,11 @@ import { NextResponse } from "next/server";
 import { createActivityEventViaPp1Rpc } from "@/lib/activity/pp1/createActivityEventRpc";
 import { getActivityUserContext } from "../../../../../../../lib/activity/activityUserContext";
 import { supabase } from "../../../../../../../lib/supabase";
+import {
+  readTaskOutcomeOptions,
+  readTaskOutcomeSelection,
+  writeTaskOutcomeSelection,
+} from "@/lib/activity/taskOutcomeV1";
 
 export const dynamic = "force-dynamic";
 
@@ -150,7 +155,7 @@ async function findExistingCompletion(params: {
 }) {
   const { data, error } = await supabase
     .from("activity_events")
-    .select("id,ended_at,created_at,updated_at")
+    .select("id,ended_at,created_at,updated_at,metadata_json")
     .eq("user_id", params.userId)
     .eq("acting_as_actor_id", params.actorId)
     .eq("activity_role_code", "actual")
@@ -291,10 +296,10 @@ export async function POST(
     );
   }
 
-  let body: { operationId?: unknown } = {};
+  let body: { operationId?: unknown; outcomeLabel?: unknown } = {};
 
   try {
-    body = (await request.json()) as { operationId?: unknown };
+    body = (await request.json()) as { operationId?: unknown; outcomeLabel?: unknown };
   } catch {
     body = {};
   }
@@ -343,6 +348,46 @@ export async function POST(
     );
   }
 
+  const { data: recurrenceDefinitionRows, error: recurrenceDefinitionError } =
+    await supabase
+      .from("activity_recurrence_rules")
+      .select("id")
+      .eq("source_activity_event_id", activityEventId)
+      .in("status_code", ["active", "paused"])
+      .limit(1);
+
+  if (recurrenceDefinitionError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: recurrenceDefinitionError.message,
+      },
+      { status: 500 },
+    );
+  }
+
+  if (Array.isArray(recurrenceDefinitionRows) && recurrenceDefinitionRows.length > 0) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "A recurrence definition cannot be completed. Complete a specific occurrence instead.",
+        code: "RECURRENCE_DEFINITION_NOT_EXECUTABLE",
+      },
+      { status: 409 },
+    );
+  }
+
+  const configuredOutcomeOptions = readTaskOutcomeOptions(planned.row.metadata_json);
+  const requestedOutcome = asString(body.outcomeLabel);
+  const selectedOutcome = configuredOutcomeOptions.length > 0
+    ? configuredOutcomeOptions.find((option) => option.toLocaleLowerCase() === requestedOutcome?.toLocaleLowerCase()) ?? null
+    : requestedOutcome;
+
+  if (configuredOutcomeOptions.length > 0 && !selectedOutcome) {
+    return NextResponse.json({ ok: false, error: "Select one of the configured activity outcomes.", outcomeOptions: configuredOutcomeOptions }, { status: 400 });
+  }
+
   try {
     const existing = await findExistingCompletion({
       plannedActivityEventId: activityEventId,
@@ -360,6 +405,7 @@ export async function POST(
           asString(existing.ended_at) ??
           asString(existing.updated_at) ??
           asString(existing.created_at),
+        selectedOutcome: readTaskOutcomeSelection(existing.metadata_json),
       });
     }
   } catch (error) {
@@ -392,7 +438,7 @@ export async function POST(
       status: "completed",
       endedAt: completedAt,
       fulfillsPlannedActivityEventId: activityEventId,
-      metadata: {
+      metadata: writeTaskOutcomeSelection({
         contract: "ARCTOR_TASK_EXECUTION_LOOP_PP4D_V1",
         eventSource: "task_completion_pp4d_v1",
         sourcePlannedActivityEventId: activityEventId,
@@ -406,7 +452,7 @@ export async function POST(
           startedAt: asString(planned.row.started_at),
           endedAt: asString(planned.row.ended_at),
         },
-      },
+      }, selectedOutcome, completedAt),
     },
   });
 
@@ -454,6 +500,7 @@ export async function POST(
     plannedActivityEventId: activityEventId,
     actualActivityEventId,
     completedAt,
+    selectedOutcome,
     warnings: [membershipWarning, projectionWarning].filter(Boolean),
   });
 }
