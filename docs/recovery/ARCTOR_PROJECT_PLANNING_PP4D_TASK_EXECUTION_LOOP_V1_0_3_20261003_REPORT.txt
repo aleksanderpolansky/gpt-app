@@ -6,8 +6,8 @@ STATUS
 ------
 LOCAL_VALIDATION=PASS
 CODE_COMMIT=508d2600ae7695fc75fd0b45c0197dd07243b39e
-PRODUCTION_DEPLOY=PENDING
-PRODUCTION_SMOKE=PENDING
+PRODUCTION_DEPLOY=PASS_READY
+PRODUCTION_SMOKE=PASS
 
 BASELINE
 --------
@@ -158,3 +158,56 @@ NEXT
 4. Verify DB plan->actual and project membership.
 5. Test Undo.
 6. Close recovery with production evidence.
+
+PRODUCTION SMOKE
+----------------
+production_commit=508d2600ae7695fc75fd0b45c0197dd07243b39e
+vercel_status=READY
+production_smoke=PASS
+
+SCENARIO
+--------
+weekly recurrence occurrence:
+2026-10-05..2026-10-11
+
+planned_activity_event_id=aa8c5016-e0d7-4f08-8926-e2420d1accfa
+actual_activity_event_id=a620f445-cc58-454a-9bd3-95a0cb714f0c
+
+COMPLETION RESULT
+-----------------
+actual_activity_role=actual
+actual_status_after_completion=completed
+fulfills_planned_activity_event_id=aa8c5016-e0d7-4f08-8926-e2420d1accfa
+
+planned_project_links=1
+actual_project_links=1
+plan_actual_bridge_ok=true
+
+task_removed_from_active_week=PASS
+task_visible_in_completed=PASS
+project_occurrence_1_removed_from_upcoming=PASS
+next_occurrence_preserved=PASS
+
+UNDO RESULT
+-----------
+actual_status_after_undo=cancelled
+undo_history_ok=true
+active_completion_count=0
+planned_project_links_after_undo=1
+cancelled_actual_project_links=1
+
+planned_occurrence_restored_to_week=PASS
+completed_view_removed_undone_completion=PASS
+historical_actual_preserved=PASS
+
+FINAL STATUS
+------------
+PP4D=PRODUCTION_PASS
+
+NEXT USER SCENARIOS
+-------------------
+1. Reschedule one occurrence without changing recurrence definition.
+2. Skip one occurrence.
+3. Add Complete action to planned-activity detail modal.
+4. Improve project/calendar filtering and task context presentation.
+
