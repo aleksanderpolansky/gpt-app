@@ -6,6 +6,7 @@ import {
 } from "../../../../lib/actor-context";
 import { auth0 } from "../../../../lib/auth0";
 import { supabase } from "../../../../lib/supabase";
+import { readProjectPlanningTimeContainerV1 } from "@/lib/activity/projectPlanningContainerV1";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -55,6 +56,13 @@ type ProjectActivityRow = {
   readonly started_at: string | null;
   readonly ended_at: string | null;
   readonly duration_minutes: number | null;
+  readonly metadata_json: unknown;
+};
+
+type ActivityContainmentRelationRow = {
+  readonly project_context_id: string;
+  readonly source_activity_event_id: string;
+  readonly target_activity_event_id: string;
 };
 
 type ActivityRecurrenceRuleRow = {
@@ -320,6 +328,8 @@ export async function GET() {
 
   const projectActivityLinksByProject = new Map<string, string[]>();
   const projectActivitiesById = new Map<string, ProjectActivityRow>();
+  const projectContainmentRelationsByProject =
+    new Map<string, ActivityContainmentRelationRow[]>();
   const projectRecurrenceByActivityId =
     new Map<string, ActivityRecurrenceRuleRow>();
   const projectOccurrencesByRuleId =
@@ -350,6 +360,33 @@ export async function GET() {
       projectActivityLinksByProject.set(link.project_context_id, current);
     }
 
+    const { data: containmentData, error: containmentError } =
+      await supabase
+        .from("activity_event_relations")
+        .select(
+          "project_context_id,source_activity_event_id,target_activity_event_id",
+        )
+        .in("project_context_id", projectIds)
+        .eq("relation_type_code", "contains")
+        .eq("status_code", "active");
+
+    if (containmentError) {
+      return NextResponse.json(
+        { ok: false, error: containmentError.message },
+        { status: 500 },
+      );
+    }
+
+    for (const relation of (containmentData ?? []) as unknown as ActivityContainmentRelationRow[]) {
+      const current =
+        projectContainmentRelationsByProject.get(relation.project_context_id) ?? [];
+      current.push(relation);
+      projectContainmentRelationsByProject.set(
+        relation.project_context_id,
+        current,
+      );
+    }
+
     const activityIds = [
       ...new Set(links.map((link) => link.activity_event_id)),
     ];
@@ -371,6 +408,7 @@ export async function GET() {
             "started_at",
             "ended_at",
             "duration_minutes",
+            "metadata_json",
           ].join(","),
         )
         .in("id", activityIds);
@@ -516,6 +554,22 @@ export async function GET() {
       const linkedActivityIds =
         projectActivityLinksByProject.get(project.id) ?? [];
       const linkedActivityIdSet = new Set(linkedActivityIds);
+      const containmentRelations =
+        projectContainmentRelationsByProject.get(project.id) ?? [];
+      const containsBySource = new Map<string, string[]>();
+      const containedByTarget = new Map<string, string[]>();
+
+      for (const relation of containmentRelations) {
+        const children =
+          containsBySource.get(relation.source_activity_event_id) ?? [];
+        children.push(relation.target_activity_event_id);
+        containsBySource.set(relation.source_activity_event_id, children);
+
+        const parents =
+          containedByTarget.get(relation.target_activity_event_id) ?? [];
+        parents.push(relation.source_activity_event_id);
+        containedByTarget.set(relation.target_activity_event_id, parents);
+      }
 
       return {
         id: project.id,
@@ -561,6 +615,12 @@ export async function GET() {
             startedAt: activity.started_at,
             endedAt: activity.ended_at,
             durationMinutes: activity.duration_minutes,
+            projectPlanning:
+              readProjectPlanningTimeContainerV1(activity.metadata_json),
+            containsActivityIds:
+              containsBySource.get(activity.id) ?? [],
+            containedByActivityIds:
+              containedByTarget.get(activity.id) ?? [],
             recurrence: projectRecurrenceByActivityId.has(activity.id)
               ? (() => {
                   const recurrence =

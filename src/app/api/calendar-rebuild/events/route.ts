@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { readProjectPlanningTimeContainerV1 } from "@/lib/activity/projectPlanningContainerV1";
+
 import type {
   CalendarAllDayItem,
   CalendarAllDayScheduleMode,
@@ -797,6 +799,7 @@ export async function GET(request: Request) {
     "started_at",
     "ended_at",
     "duration_minutes",
+    "metadata_json",
     "created_at",
     "updated_at",
   ].join(",");
@@ -873,7 +876,10 @@ export async function GET(request: Request) {
 
   const visiblePlannedActivityRecords = plannedActivityRecords.filter((row) => {
     const activityEventId = asText(row.id);
-    return !activityEventId || !fulfilledPlannedActivityIds.has(activityEventId);
+    return (
+      (!activityEventId || !fulfilledPlannedActivityIds.has(activityEventId)) &&
+      !readProjectPlanningTimeContainerV1(row.metadata_json)
+    );
   });
   const visibleCalendarRows = activeCalendarRows.filter((row) => {
     const activityEventId = asText(row.related_activity_event_id);

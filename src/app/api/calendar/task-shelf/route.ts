@@ -6,6 +6,7 @@ import {
   readTaskOutcomeOptions,
   readTaskOutcomeSelection,
 } from "@/lib/activity/taskOutcomeV1";
+import { readProjectPlanningTimeContainerV1 } from "@/lib/activity/projectPlanningContainerV1";
 
 export const dynamic = "force-dynamic";
 
@@ -604,7 +605,8 @@ export async function GET(request: Request) {
 
     if (
       recurrenceSourceIds.has(activityId) ||
-      fulfilledPlannedIds.has(activityId)
+      fulfilledPlannedIds.has(activityId) ||
+      readProjectPlanningTimeContainerV1(row.metadata_json)
     ) {
       continue;
     }

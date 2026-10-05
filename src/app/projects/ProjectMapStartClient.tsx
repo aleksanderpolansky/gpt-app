@@ -52,6 +52,15 @@ type ProjectActivityItem = {
   startedAt: string | null;
   endedAt: string | null;
   durationMinutes: number | null;
+  projectPlanning: {
+    nodeKind: "time_container";
+    windowKind: "date_range" | "time_of_day";
+    timeStart: string | null;
+    timeEnd: string | null;
+    timeZone: string | null;
+  } | null;
+  containsActivityIds: string[];
+  containedByActivityIds: string[];
   recurrence: {
     id: string;
     frequencyCode: "daily" | "weekly" | "monthly";
@@ -157,6 +166,12 @@ type Copy = {
   leafRequired: string;
   addObservationObject: string;
   addTask: string;
+  addDateWindow: string;
+  addTimeWindow: string;
+  timeWindowLabel: string;
+  dateWindowDefaultTitle: string;
+  timeWindowDefaultTitle: string;
+  createWindow: string;
   taskLabel: string;
   unscheduledLabel: string;
   save: string;
@@ -180,6 +195,12 @@ const EN: Copy = {
   leafRequired: "Choose a linked leaf observation object",
   addObservationObject: "Add new observation object",
   addTask: "Add task",
+  addDateWindow: "Add date window",
+  addTimeWindow: "Add time-of-day window",
+  timeWindowLabel: "TIME WINDOW",
+  dateWindowDefaultTitle: "Date window",
+  timeWindowDefaultTitle: "Time window",
+  createWindow: "Create window",
   taskLabel: "TASK",
   unscheduledLabel: "No exact time",
   save: "Save",
@@ -265,6 +286,12 @@ const COPY: Record<LocaleCode, Copy> = {
     leafRequired: "Выберите связанный листовой ОН",
     addObservationObject: "Добавить новый объект наблюдения",
     addTask: "Добавить задачу",
+    addDateWindow: "Добавить временное окно по датам",
+    addTimeWindow: "Добавить временное окно по часам",
+    timeWindowLabel: "ВРЕМЕННОЕ ОКНО",
+    dateWindowDefaultTitle: "Период по датам",
+    timeWindowDefaultTitle: "Промежуток по часам",
+    createWindow: "Создать окно",
     taskLabel: "ЗАДАЧА",
     unscheduledLabel: "Без точного времени",
     save: "Сохранить",
@@ -544,6 +571,19 @@ function projectActivityTimingLabel(
   locale: LocaleCode,
 ) {
   const recurrenceLabel = projectActivityRecurrenceLabel(activity, locale);
+  if (
+    activity.projectPlanning?.nodeKind === "time_container" &&
+    activity.projectPlanning.windowKind === "time_of_day"
+  ) {
+    const clockLabel = [
+      activity.projectPlanning.timeStart,
+      activity.projectPlanning.timeEnd,
+    ].filter(Boolean).join(" → ");
+    return recurrenceLabel && clockLabel
+      ? `${recurrenceLabel} · ${clockLabel}`
+      : recurrenceLabel ?? clockLabel ?? copy.unscheduledLabel;
+  }
+
   let scheduleLabel: string | null = null;
 
   if (
@@ -605,6 +645,9 @@ type ProjectCenterData = Record<string, unknown> & {
   onRootToggle: () => void;
   onRootSelect: (option: RootOption) => void;
   onAddObservationObject: () => void;
+  onAddTask: () => void;
+  onAddDateWindow: () => void;
+  onAddTimeWindow: () => void;
 };
 
 type ProjectCenterNode = Node<ProjectCenterData, "project-center">;
@@ -613,10 +656,12 @@ type ProjectActivityNodeData = Record<string, unknown> & {
   copy: Copy;
   locale: LocaleCode;
   activity: ProjectActivityItem;
+  containedActivities: ProjectActivityItem[];
   onOpenActivity: (
     activityEventId: string,
     isRecurrenceDefinition: boolean,
   ) => void;
+  onAddContainedTask: (containerActivityEventId: string) => void;
 };
 
 type ProjectActivityNode = Node<
@@ -627,6 +672,39 @@ type ProjectActivityNode = Node<
 function ProjectActivityCard({
   data,
 }: NodeProps<ProjectActivityNode>) {
+  if (data.activity.projectPlanning?.nodeKind === "time_container") {
+    const planning = data.activity.projectPlanning;
+    const windowLabel =
+      planning.windowKind === "time_of_day"
+        ? [planning.timeStart, planning.timeEnd].filter(Boolean).join(" → ")
+        : projectActivityTimingLabel(data.activity, data.copy, data.locale);
+
+    return (
+      <div className="relative min-h-[210px] w-[610px] rounded-[26px] border-2 border-dashed border-[#8fa5f6] bg-[#f7f9ff] px-5 py-4 shadow-[0_18px_44px_rgba(63,91,170,0.12)]">
+        <Handle type="target" position={Position.Top} className="!h-2 !w-2 !border-0 !bg-[#7895ff]" />
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#5174ef]">{data.copy.timeWindowLabel}</div>
+            <button type="button" onClick={() => data.onOpenActivity(data.activity.id, Boolean(data.activity.recurrence))} className="mt-1 block max-w-[470px] truncate text-left text-[13px] font-extrabold text-[#27324d] hover:text-[#315ee7]">{data.activity.title}</button>
+            <div className="mt-1 text-[10px] font-semibold text-[#7180a2]">{windowLabel || data.copy.unscheduledLabel}</div>
+          </div>
+          <button type="button" onClick={() => data.onAddContainedTask(data.activity.id)} title={data.copy.addTask} aria-label={data.copy.addTask} className="nodrag nopan flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#b9c8ff] bg-white text-lg font-bold text-[#315ee7] shadow-sm hover:bg-[#eef2ff]">+</button>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {data.containedActivities.length > 0 ? data.containedActivities.map((child) => (
+            <button key={child.id} type="button" onClick={() => data.onOpenActivity(child.id, Boolean(child.recurrence))} className="rounded-xl border border-[#dce3f7] bg-white px-3 py-2.5 text-left shadow-sm hover:border-[#aebfff] hover:bg-[#fbfcff]">
+              <div className="truncate text-[11px] font-bold text-[#313a54]">{child.title}</div>
+              <div className="mt-1 truncate text-[9px] font-medium text-[#7b849d]">{projectActivityTimingLabel(child, data.copy, data.locale)}</div>
+            </button>
+          )) : (
+            <div className="col-span-2 rounded-xl border border-dashed border-[#dce3f7] bg-white/70 px-3 py-5 text-center text-[10px] font-semibold text-[#9aa4bf]">{data.copy.addTask}</div>
+          )}
+        </div>
+        <Handle type="source" position={Position.Bottom} className="!h-2 !w-2 !border-0 !bg-[#7895ff]" />
+      </div>
+    );
+  }
+
   return (
     <div className="relative w-[300px] rounded-[22px] border border-[#cfd8f7] bg-white px-4 py-3.5 shadow-[0_14px_34px_rgba(63,91,170,0.12)]">
       <Handle
@@ -830,6 +908,14 @@ function ProjectCenterCard({ data }: NodeProps<ProjectCenterNode>) {
         ) : null}
       </div>
 
+      {data.readonlyMode ? (
+        <div className="nodrag nopan absolute -right-4 top-1/2 flex -translate-y-1/2 flex-col gap-1.5">
+          <button type="button" onClick={data.onAddTask} title={data.copy.addTask} aria-label={data.copy.addTask} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c9d5ff] bg-white text-base font-bold text-[#315ee7] shadow-md hover:bg-[#eef2ff]">+</button>
+          <button type="button" onClick={data.onAddDateWindow} title={data.copy.addDateWindow} aria-label={data.copy.addDateWindow} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c9d5ff] bg-white text-sm font-black text-[#315ee7] shadow-md hover:bg-[#eef2ff]">↔</button>
+          <button type="button" onClick={data.onAddTimeWindow} title={data.copy.addTimeWindow} aria-label={data.copy.addTimeWindow} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c9d5ff] bg-white text-sm font-black text-[#315ee7] shadow-md hover:bg-[#eef2ff]">↕</button>
+        </div>
+      ) : null}
+
       <Handle
         type="source"
         position={Position.Bottom}
@@ -873,6 +959,17 @@ export default function ProjectMapStartClient({
   const [taskCaptureText, setTaskCaptureText] = useState("");
   const [taskCaptureSubmitting, setTaskCaptureSubmitting] = useState(false);
   const [taskCaptureError, setTaskCaptureError] = useState<string | null>(null);
+  const [taskCaptureParentActivityId, setTaskCaptureParentActivityId] =
+    useState<string | null>(null);
+  const [windowCaptureKind, setWindowCaptureKind] =
+    useState<"date_range" | "time_of_day" | null>(null);
+  const [windowCaptureTitle, setWindowCaptureTitle] = useState("");
+  const [windowDateStart, setWindowDateStart] = useState("");
+  const [windowDateEnd, setWindowDateEnd] = useState("");
+  const [windowTimeStart, setWindowTimeStart] = useState("");
+  const [windowTimeEnd, setWindowTimeEnd] = useState("");
+  const [windowCaptureSaving, setWindowCaptureSaving] = useState(false);
+  const [windowCaptureError, setWindowCaptureError] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
   const [rootQuery, setRootQuery] = useState("");
@@ -1202,12 +1299,59 @@ export default function ProjectMapStartClient({
     }
   }, [copy.loadError]);
 
-  function addProjectActivity() {
+  const openTaskCapture = useCallback((parentActivityEventId: string | null = null) => {
     if (!selectedProject) return;
-
+    setTaskCaptureParentActivityId(parentActivityEventId);
     setTaskCaptureText("");
     setTaskCaptureError(null);
     setTaskCaptureOpen(true);
+  }, [selectedProject]);
+
+  function addProjectActivity() {
+    openTaskCapture(null);
+  }
+
+  function openWindowCapture(kind: "date_range" | "time_of_day") {
+    if (!selectedProject) return;
+    setWindowCaptureKind(kind);
+    setWindowCaptureTitle(kind === "date_range" ? copy.dateWindowDefaultTitle : copy.timeWindowDefaultTitle);
+    setWindowDateStart("");
+    setWindowDateEnd("");
+    setWindowTimeStart("");
+    setWindowTimeEnd("");
+    setWindowCaptureError(null);
+  }
+
+  async function submitWindowCapture() {
+    const project = selectedProject;
+    const kind = windowCaptureKind;
+    if (!project || !kind || windowCaptureSaving) return;
+    setWindowCaptureSaving(true);
+    setWindowCaptureError(null);
+    try {
+      const response = await fetch("/api/projects/time-containers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          projectContextId: project.id,
+          title: windowCaptureTitle.trim(),
+          windowKind: kind,
+          dateStart: windowDateStart || null,
+          dateEnd: windowDateEnd || null,
+          timeStart: windowTimeStart || null,
+          timeEnd: windowTimeEnd || null,
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+      if (!response.ok || payload?.ok !== true) throw new Error(payload?.error || copy.createError);
+      setWindowCaptureKind(null);
+      await loadProjects(project.id, undefined, { background: true });
+      window.dispatchEvent(new Event(PROJECTS_CHANGED_EVENT));
+    } catch (error) {
+      setWindowCaptureError(error instanceof Error ? error.message : copy.createError);
+    } finally {
+      setWindowCaptureSaving(false);
+    }
   }
 
   async function submitProjectTaskCapture() {
@@ -1256,6 +1400,22 @@ export default function ProjectMapStartClient({
         throw new Error("Created activity id was not returned.");
       }
 
+      if (taskCaptureParentActivityId) {
+        const containmentResponse = await fetch("/api/projects/activity-containment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({
+            projectContextId: project.id,
+            containerActivityEventId: taskCaptureParentActivityId,
+            childActivityEventId: activityEventId,
+          }),
+        });
+        const containmentPayload = (await containmentResponse.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+        if (!containmentResponse.ok || containmentPayload?.ok !== true) {
+          throw new Error(containmentPayload?.error ?? "Could not place the task inside the time container.");
+        }
+      }
+
       const detailResponse = await fetch(
         `/api/calendar/task-shelf/${encodeURIComponent(activityEventId)}`,
         { cache: "no-store" },
@@ -1279,6 +1439,7 @@ export default function ProjectMapStartClient({
       });
       setTaskCaptureOpen(false);
       setTaskCaptureText("");
+      setTaskCaptureParentActivityId(null);
 
       void loadProjects(project.id, undefined, { background: true });
       window.dispatchEvent(new Event(PROJECTS_CHANGED_EVENT));
@@ -1378,62 +1539,67 @@ export default function ProjectMapStartClient({
     onRootToggle: handleRootToggle,
     onRootSelect: handleRootSelect,
     onAddObservationObject: addObservationObject,
+    onAddTask: addProjectActivity,
+    onAddDateWindow: () => openWindowCapture("date_range"),
+    onAddTimeWindow: () => openWindowCapture("time_of_day"),
   };
 
   const nodes = useMemo<Node[]>(() => {
-    const activityNodes = (selectedProject?.activities ?? []).map(
-      (activity, index) =>
-        ({
-          id: `project-activity:${activity.id}`,
-          type: "project-activity",
-          position: {
-            x: 145 + (index % 3) * 335,
-            y: 525 + Math.floor(index / 3) * 145,
-          },
-          draggable: false,
-          selectable: false,
-          data: {
-            copy,
-            locale,
-            activity,
-            onOpenActivity: (
-              activityEventId: string,
-              isRecurrenceDefinition: boolean,
-            ) => {
-              void openProjectActivity(
-                activityEventId,
-                isRecurrenceDefinition,
-              );
-            },
-          },
-        }) as ProjectActivityNode,
-    );
+    const activities = selectedProject?.activities ?? [];
+    const byId = new Map(activities.map((activity) => [activity.id, activity]));
+    const containedIds = new Set(activities.flatMap((activity) => activity.containsActivityIds ?? []));
+    const containers = activities.filter((activity) => activity.projectPlanning?.nodeKind === "time_container");
+    const standalone = activities.filter((activity) => activity.projectPlanning?.nodeKind !== "time_container" && !containedIds.has(activity.id));
+
+    const containerNodes = containers.map((activity, index) => ({
+      id: `project-activity:${activity.id}`,
+      type: "project-activity",
+      position: { x: 40 + (index % 2) * 650, y: 525 + Math.floor(index / 2) * 285 },
+      draggable: false,
+      selectable: false,
+      data: {
+        copy, locale, activity,
+        containedActivities: (activity.containsActivityIds ?? []).map((id) => byId.get(id)).filter((value): value is ProjectActivityItem => Boolean(value)),
+        onOpenActivity: (activityEventId: string, isRecurrenceDefinition: boolean) => { void openProjectActivity(activityEventId, isRecurrenceDefinition); },
+        onAddContainedTask: (containerActivityEventId: string) => openTaskCapture(containerActivityEventId),
+      },
+    }) as ProjectActivityNode);
+
+    const standaloneBaseY = 525 + Math.ceil(containers.length / 2) * 285;
+    const activityNodes = standalone.map((activity, index) => ({
+      id: `project-activity:${activity.id}`,
+      type: "project-activity",
+      position: { x: 145 + (index % 3) * 335, y: standaloneBaseY + Math.floor(index / 3) * 145 },
+      draggable: false,
+      selectable: false,
+      data: {
+        copy, locale, activity, containedActivities: [],
+        onOpenActivity: (activityEventId: string, isRecurrenceDefinition: boolean) => { void openProjectActivity(activityEventId, isRecurrenceDefinition); },
+        onAddContainedTask: (containerActivityEventId: string) => openTaskCapture(containerActivityEventId),
+      },
+    }) as ProjectActivityNode);
 
     return [
-      {
-        id: "__project_center__",
-        type: "project-center",
-        position: { x: 390, y: 220 },
-        draggable: false,
-        selectable: false,
-        data: nodeData,
-      } as ProjectCenterNode,
+      { id: "__project_center__", type: "project-center", position: { x: 390, y: 220 }, draggable: false, selectable: false, data: nodeData } as ProjectCenterNode,
+      ...containerNodes,
       ...activityNodes,
     ];
-  }, [copy, locale, nodeData, openProjectActivity, selectedProject]);
+  }, [copy, locale, nodeData, openProjectActivity, openTaskCapture, selectedProject]);
 
   const edges = useMemo<Edge[]>(
-    () =>
-      (selectedProject?.activities ?? []).map((activity) => ({
-        id: `project-to-activity:${activity.id}`,
-        source: "__project_center__",
-        target: `project-activity:${activity.id}`,
-        type: "smoothstep",
-        style: {
-          stroke: "#c8d3f2",
-          strokeWidth: 1.5,
-        },
-      })),
+    () => {
+      const activities = selectedProject?.activities ?? [];
+      const containedIds = new Set(activities.flatMap((activity) => activity.containsActivityIds ?? []));
+      return activities
+        .filter((activity) => !containedIds.has(activity.id))
+        .map((activity) => ({
+          id: `project-to-activity:${activity.id}`,
+          source: "__project_center__",
+          target: `project-activity:${activity.id}`,
+          type: "smoothstep",
+          style: { stroke: "#c8d3f2", strokeWidth: 1.5 },
+        }));
+    },
     [selectedProject],
   );
 
@@ -1442,7 +1608,11 @@ export default function ProjectMapStartClient({
       [
         selectedProjectId ?? "draft",
         ...(selectedProject?.activities ?? []).map(
-          (activity) => activity.id,
+          (activity) => [
+            activity.id,
+            ...(activity.containsActivityIds ?? []),
+            ...(activity.containedByActivityIds ?? []),
+          ].join(","),
         ),
       ].join(":"),
     [selectedProject, selectedProjectId],
@@ -1565,6 +1735,37 @@ export default function ProjectMapStartClient({
             </ReactFlow>
           </ReactFlowProvider>
         </section>
+
+        {windowCaptureKind && selectedProject ? (
+          <div role="dialog" aria-modal="true" className="fixed inset-0 z-[96] flex items-center justify-center bg-black/35 px-3 py-4" onClick={() => { if (!windowCaptureSaving) setWindowCaptureKind(null); }}>
+            <div className="w-full max-w-[520px] rounded-2xl border border-[rgba(0,0,0,0.06)] bg-white p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#3b6ef8]">{copy.timeWindowLabel}</div>
+                  <h3 className="mt-2 text-xl font-bold text-[#1a1d2e]">{windowCaptureKind === "date_range" ? copy.addDateWindow : copy.addTimeWindow}</h3>
+                </div>
+                <button type="button" disabled={windowCaptureSaving} onClick={() => setWindowCaptureKind(null)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#e3e6ef] text-[#7c8099] hover:bg-[#f5f6fb]"><X size={16} /></button>
+              </div>
+              <label className="mt-4 block text-[11px] font-bold text-[#667091]">
+                {copy.titlePlaceholder}
+                <input autoFocus value={windowCaptureTitle} onChange={(event) => setWindowCaptureTitle(event.target.value)} className="mt-1 w-full rounded-xl border border-[#dfe5f1] px-3 py-2.5 text-sm outline-none focus:border-[#7895ff]" />
+              </label>
+              {windowCaptureKind === "date_range" ? (
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <input type="date" value={windowDateStart} onChange={(event) => setWindowDateStart(event.target.value)} className="rounded-xl border border-[#dfe5f1] px-3 py-2.5 text-sm outline-none focus:border-[#7895ff]" />
+                  <input type="date" value={windowDateEnd} onChange={(event) => setWindowDateEnd(event.target.value)} className="rounded-xl border border-[#dfe5f1] px-3 py-2.5 text-sm outline-none focus:border-[#7895ff]" />
+                </div>
+              ) : (
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <input type="time" value={windowTimeStart} onChange={(event) => setWindowTimeStart(event.target.value)} className="rounded-xl border border-[#dfe5f1] px-3 py-2.5 text-sm outline-none focus:border-[#7895ff]" />
+                  <input type="time" value={windowTimeEnd} onChange={(event) => setWindowTimeEnd(event.target.value)} className="rounded-xl border border-[#dfe5f1] px-3 py-2.5 text-sm outline-none focus:border-[#7895ff]" />
+                </div>
+              )}
+              {windowCaptureError ? <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">{windowCaptureError}</div> : null}
+              <button type="button" onClick={() => void submitWindowCapture()} disabled={windowCaptureSaving || !windowCaptureTitle.trim() || (windowCaptureKind === "date_range" ? !windowDateStart || !windowDateEnd : !windowTimeStart || !windowTimeEnd)} className="mt-4 w-full rounded-xl bg-[#3b6ef8] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#2c5df0] disabled:cursor-not-allowed disabled:opacity-40">{windowCaptureSaving ? copy.saving : copy.createWindow}</button>
+            </div>
+          </div>
+        ) : null}
 
         {taskCaptureOpen && selectedProject ? (
           <div
