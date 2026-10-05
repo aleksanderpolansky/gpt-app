@@ -9,10 +9,12 @@ import {
   Plus,
   Save,
   Search,
+  Send,
+  Target,
+  X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAiNavigator } from "@/components/app-shell/ai-navigator-provider";
 import { Cux6TaskDetailModal } from "@/components/calendar/cux6-task-detail-modal";
 import type { Cux6ShelfItem } from "@/components/calendar/cux6-task-shelf";
 import {
@@ -123,6 +125,24 @@ type ProjectCreatePayload = {
   error?: string;
 };
 
+type ProjectTaskQuickCaptureResponse = {
+  ok?: boolean;
+  error?: string;
+  recurrenceRule?: unknown;
+  result?: {
+    activityEventIds?: string[];
+  } | null;
+};
+
+type ProjectTaskCaptureCopy = {
+  title: string;
+  placeholder: string;
+  sending: string;
+  send: string;
+  error: string;
+  close: string;
+};
+
 type Copy = {
   pageTitle: string;
   pageSubtitle: string;
@@ -166,6 +186,65 @@ const EN: Copy = {
   saving: "Saving…",
   saved: "Saved",
   createError: "Could not save the project.",
+};
+
+const PROJECT_TASK_CAPTURE_COPY: Record<LocaleCode, ProjectTaskCaptureCopy> = {
+  en: {
+    title: "Add task",
+    placeholder: "What needs to be done?",
+    sending: "Saving activity…",
+    send: "Send",
+    error: "Could not add the task.",
+    close: "Close",
+  },
+  ru: {
+    title: "Добавить задачу",
+    placeholder: "Что нужно сделать?",
+    sending: "Сохраняю активность…",
+    send: "Отправить",
+    error: "Не удалось добавить задачу.",
+    close: "Закрыть",
+  },
+  uk: {
+    title: "Додати завдання",
+    placeholder: "Що потрібно зробити?",
+    sending: "Зберігаю активність…",
+    send: "Надіслати",
+    error: "Не вдалося додати завдання.",
+    close: "Закрити",
+  },
+  pl: {
+    title: "Dodaj zadanie",
+    placeholder: "Co trzeba zrobić?",
+    sending: "Zapisywanie aktywności…",
+    send: "Wyślij",
+    error: "Nie udało się dodać zadania.",
+    close: "Zamknij",
+  },
+  de: {
+    title: "Aufgabe hinzufügen",
+    placeholder: "Was muss erledigt werden?",
+    sending: "Aktivität wird gespeichert…",
+    send: "Senden",
+    error: "Die Aufgabe konnte nicht hinzugefügt werden.",
+    close: "Schließen",
+  },
+  es: {
+    title: "Añadir tarea",
+    placeholder: "¿Qué hay que hacer?",
+    sending: "Guardando actividad…",
+    send: "Enviar",
+    error: "No se pudo añadir la tarea.",
+    close: "Cerrar",
+  },
+  cs: {
+    title: "Přidat úkol",
+    placeholder: "Co je potřeba udělat?",
+    sending: "Ukládání aktivity…",
+    send: "Odeslat",
+    error: "Úkol se nepodařilo přidat.",
+    close: "Zavřít",
+  },
 };
 
 const COPY: Record<LocaleCode, Copy> = {
@@ -323,6 +402,17 @@ function isPersonalLeaf(row: ValueObjectCatalogRow) {
 const PROJECT_DRAFT_STORAGE_KEY =
   "arctor.project-planning.central-draft.v1";
 const PROJECTS_CHANGED_EVENT = "arctor:projects-changed";
+
+function createProjectTaskCaptureRequestId() {
+  if (
+    typeof globalThis.crypto !== "undefined" &&
+    typeof globalThis.crypto.randomUUID === "function"
+  ) {
+    return `project-task-${globalThis.crypto.randomUUID()}`;
+  }
+
+  return `project-task-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+}
 
 function writeProjectDraft(title: string) {
   try {
@@ -761,9 +851,9 @@ export default function ProjectMapStartClient({
 }) {
   const locale = normalizeLocale(initialLocale);
   const copy = COPY[locale];
+  const taskCaptureCopy = PROJECT_TASK_CAPTURE_COPY[locale];
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { prepareActivityCapture } = useAiNavigator();
   const requestedProjectId = searchParams.get("project");
   const resumeProjectDraft =
     searchParams.get("resumeProjectDraft") === "1";
@@ -777,6 +867,12 @@ export default function ProjectMapStartClient({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedActivityDetail, setSelectedActivityDetail] =
     useState<Cux6ShelfItem | null>(null);
+  const [selectedActivityInitialEditing, setSelectedActivityInitialEditing] =
+    useState(false);
+  const [taskCaptureOpen, setTaskCaptureOpen] = useState(false);
+  const [taskCaptureText, setTaskCaptureText] = useState("");
+  const [taskCaptureSubmitting, setTaskCaptureSubmitting] = useState(false);
+  const [taskCaptureError, setTaskCaptureError] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
   const [rootQuery, setRootQuery] = useState("");
@@ -1096,6 +1192,7 @@ export default function ProjectMapStartClient({
       if (!response.ok || payload?.ok !== true || !payload.activity) {
         throw new Error(payload?.error || copy.loadError);
       }
+      setSelectedActivityInitialEditing(false);
       setSelectedActivityDetail({
         ...payload.activity,
         isRecurrenceDefinition,
@@ -1108,13 +1205,90 @@ export default function ProjectMapStartClient({
   function addProjectActivity() {
     if (!selectedProject) return;
 
-    prepareActivityCapture({
-      mode: "future",
-      projectContext: {
-        id: selectedProject.id,
-        title: selectedProject.title,
-      },
-    });
+    setTaskCaptureText("");
+    setTaskCaptureError(null);
+    setTaskCaptureOpen(true);
+  }
+
+  async function submitProjectTaskCapture() {
+    const project = selectedProject;
+    const inputText = taskCaptureText.trim();
+
+    if (!project || !inputText || taskCaptureSubmitting) {
+      return;
+    }
+
+    setTaskCaptureSubmitting(true);
+    setTaskCaptureError(null);
+
+    try {
+      const response = await fetch("/api/activity/quick-capture", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          inputText,
+          locale,
+          timeZone: timezone,
+          temporalDirection: "future",
+          clientRequestId: createProjectTaskCaptureRequestId(),
+          projectContextId: project.id,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | ProjectTaskQuickCaptureResponse
+        | null;
+
+      if (!response.ok || payload?.ok !== true) {
+        throw new Error(payload?.error || taskCaptureCopy.error);
+      }
+
+      const activityEventId =
+        payload.result?.activityEventIds?.find(
+          (value) => typeof value === "string" && value.trim(),
+        ) ?? null;
+
+      if (!activityEventId) {
+        throw new Error("Created activity id was not returned.");
+      }
+
+      const detailResponse = await fetch(
+        `/api/calendar/task-shelf/${encodeURIComponent(activityEventId)}`,
+        { cache: "no-store" },
+      );
+      const detailPayload = (await detailResponse.json().catch(() => null)) as
+        | { ok?: boolean; error?: string; activity?: Cux6ShelfItem | null }
+        | null;
+
+      if (
+        !detailResponse.ok ||
+        detailPayload?.ok !== true ||
+        !detailPayload.activity
+      ) {
+        throw new Error(detailPayload?.error || copy.loadError);
+      }
+
+      setSelectedActivityInitialEditing(true);
+      setSelectedActivityDetail({
+        ...detailPayload.activity,
+        isRecurrenceDefinition: Boolean(payload.recurrenceRule),
+      });
+      setTaskCaptureOpen(false);
+      setTaskCaptureText("");
+
+      void loadProjects(project.id, undefined, { background: true });
+      window.dispatchEvent(new Event(PROJECTS_CHANGED_EVENT));
+    } catch (error) {
+      setTaskCaptureError(
+        error instanceof Error ? error.message : taskCaptureCopy.error,
+      );
+    } finally {
+      setTaskCaptureSubmitting(false);
+    }
   }
 
   async function saveProject() {
@@ -1392,12 +1566,103 @@ export default function ProjectMapStartClient({
           </ReactFlowProvider>
         </section>
 
+        {taskCaptureOpen && selectedProject ? (
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="fixed inset-0 z-[96] flex items-center justify-center bg-black/35 px-3 py-4"
+            onClick={() => {
+              if (!taskCaptureSubmitting) {
+                setTaskCaptureOpen(false);
+              }
+            }}
+          >
+            <div
+              className="w-full max-w-[560px] rounded-2xl border border-[rgba(0,0,0,0.06)] bg-white p-5 shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#3b6ef8]">
+                    {copy.taskLabel}
+                  </div>
+                  <h3 className="mt-2 text-xl font-bold text-[#1a1d2e]">
+                    {taskCaptureCopy.title}
+                  </h3>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={taskCaptureSubmitting}
+                  onClick={() => setTaskCaptureOpen(false)}
+                  aria-label={taskCaptureCopy.close}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-[rgba(0,0,0,0.06)] text-[#7c8099] hover:bg-[#f5f6fb] disabled:opacity-50"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="mt-4 flex items-center gap-2 rounded-xl border border-[#b9c8ff] bg-[#eef2ff] px-2.5 py-2 text-[11px] font-semibold text-[#315ee7]">
+                <Target size={14} className="shrink-0" />
+                <span className="min-w-0 flex-1 truncate">
+                  {copy.projectLabel}: {selectedProject.title}
+                </span>
+              </div>
+
+              <div className="mt-3 flex items-end gap-1.5 rounded-2xl border border-[rgba(0,0,0,0.08)] bg-[#f5f6fb] p-1.5 transition-all focus-within:border-[#3b6ef8]/40 focus-within:bg-white">
+                <textarea
+                  autoFocus
+                  rows={2}
+                  value={taskCaptureText}
+                  disabled={taskCaptureSubmitting}
+                  onChange={(event) => setTaskCaptureText(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault();
+                      void submitProjectTaskCapture();
+                    }
+                  }}
+                  placeholder={taskCaptureCopy.placeholder}
+                  className="max-h-32 min-h-12 flex-1 resize-none bg-transparent px-2 py-2 text-[13px] leading-5 text-[#1a1d2e] placeholder-[#aeb3c3] focus:outline-none disabled:opacity-60"
+                />
+                <button
+                  type="button"
+                  onClick={() => void submitProjectTaskCapture()}
+                  disabled={taskCaptureSubmitting || !taskCaptureText.trim()}
+                  aria-label={taskCaptureCopy.send}
+                  title={taskCaptureCopy.send}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#3b6ef8] text-white shadow-[0_4px_12px_rgba(59,110,248,0.22)] transition-colors hover:bg-[#2c5df0] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Send size={14} />
+                </button>
+              </div>
+
+              {taskCaptureSubmitting ? (
+                <div className="mt-2 text-[11px] font-semibold text-[#667091]">
+                  {taskCaptureCopy.sending}
+                </div>
+              ) : null}
+
+              {taskCaptureError ? (
+                <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-700">
+                  {taskCaptureError}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         {selectedActivityDetail ? (
           <Cux6TaskDetailModal
+            key={selectedActivityDetail.id}
             item={selectedActivityDetail}
             locale={locale}
             returnToTarget="calendar"
-            onClose={() => setSelectedActivityDetail(null)}
+            initialEditing={selectedActivityInitialEditing}
+            onClose={() => {
+              setSelectedActivityInitialEditing(false);
+              setSelectedActivityDetail(null);
+            }}
             onChanged={(item, action) => {
               setSelectedActivityDetail(item);
               if (action !== "updated" || !item) {

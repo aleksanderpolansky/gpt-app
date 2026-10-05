@@ -26,6 +26,7 @@ type Cux6TaskDetailModalProps = {
   item: Cux6ShelfItem;
   locale: UiLocale;
   returnToTarget: "calendar" | "calendar-rebuild";
+  initialEditing?: boolean;
   onClose: () => void;
   onChanged: (
     item: Cux6ShelfItem | null,
@@ -437,11 +438,12 @@ function parsePositiveInteger(value: string) {
 export function Cux6TaskDetailModal({
   item,
   locale,
+  initialEditing = false,
   onClose,
   onChanged,
 }: Cux6TaskDetailModalProps) {
   const copy = COPY[locale];
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(initialEditing);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const outcomeCopy = OUTCOME_COPY[locale];
