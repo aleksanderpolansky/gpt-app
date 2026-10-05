@@ -1,0 +1,99 @@
+﻿ARCTor technical recovery checkpoint
+
+PATCH=ARCTOR_PROJECT_MAP_ELK_HIERARCHICAL_COMPOUND_LAYOUT_V1_0_4_20261005
+TIMESTAMP=20261005_183517
+RESULT=PASS
+FAILURE=
+
+BASE_HEAD=d1e5844f752cb93fd7cc48ff43efc2f7c9cf525c
+HEAD=d1e5844f752cb93fd7cc48ff43efc2f7c9cf525c
+ORIGIN_MAIN=d1e5844f752cb93fd7cc48ff43efc2f7c9cf525c
+
+PURPOSE=
+Replace manual project-map x/y placement with deterministic ELK layout while preserving the existing project/ontology contracts.
+
+LAYOUT_CONTRACT=
+- Top-level project graph: ELK Layered, direction DOWN.
+- Project/subproject/activity siblings share hierarchy levels according to graph edges.
+- Project/subproject becomes the anchor of its own recursive branch.
+- Project decomposition relation remains visually distinct.
+- Time window is a true React Flow parent container.
+- Contained activity placements use parentId + extent=parent.
+- Internal time-window packing uses ELK Rectangle Packing.
+- Top-level ELK layout requests ORTHOGONAL edge routing.
+- Model order is forced to reduce unnecessary branch movement.
+- Deterministic non-ELK fallback exists only for runtime failure.
+
+ONTOLOGY_LOCK=
+- No DB migration.
+- No project API modification.
+- No change to value_objects.parent_value_object_id from project map.
+- New subproject continues to be a private actor leaf.
+- New subproject keeps the same global system intermediate structural parent as parent project.
+- Project hierarchy remains project_composition_relations / decomposes_into.
+- Existing cycle guard remains untouched.
+
+DEPENDENCY=
+elkjs=0.12.0
+
+VALIDATION=
+PROJECT_MAP_ELK_HIERARCHICAL_COMPOUND_VALIDATOR=PASS_28_28 (expected on success)
+ESLINT=PASS (required)
+TYPECHECK=PASS (required)
+PRODUCTION_BUILD=PASS (required)
+GIT_DIFF_CHECK=PASS (required)
+TECHNICAL_LOG_GIT_STDERR_WARNING_HANDLING=PASS (V1.0.4)
+GIT_DIFF_STAT_STDERR=warning: in the working copy of 'package-lock.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'package.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/projects/ProjectMapStartClient.tsx', LF will be replaced by CRLF the next time Git touches it
+
+GIT_DIFF_PATCH_STDERR=warning: in the working copy of 'package-lock.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'package.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/projects/ProjectMapStartClient.tsx', LF will be replaced by CRLF the next time Git touches it
+
+
+HASHES_SHA256=
+PROJECT_MAP=3C20A707CDCFB85DB48AEE213E220688B668B0E8F5DE9A400F245485CDE22C96
+PACKAGE_JSON=A235DA3FA1E5C46A1BFD42FB924771C85A68BE6DCA03D35E0667BD2A127ACAE3
+PACKAGE_LOCK=CBC61DF6C626C23962D99EEEBF3769BF42E7A4A6851F6AF65BD6767D5B6D130B
+VALIDATOR=696932957D2E943F28563E00D74ACD23D25380D4F509F556DEB49211FC2B5BEE
+
+GIT_DIFF_STAT=
+ package-lock.json                          |   7 +
+ package.json                               |   1 +
+ src/app/projects/ProjectMapStartClient.tsx | 821 ++++++++++++++++++++++-------
+ 3 files changed, 643 insertions(+), 186 deletions(-)
+
+
+FILES_EXPECTED=
+src/app/projects/ProjectMapStartClient.tsx
+package.json
+package-lock.json
+scripts/validate-project-map-elk-compound-layout-v1-0-2.mjs
+docs/recovery/ARCTOR_PROJECT_MAP_ELK_HIERARCHICAL_COMPOUND_LAYOUT_V1_0_4_20261005_REPORT.txt (ignored by default; must be force-added when committing recovery log)
+
+NEXT=
+1. Review RESULT package.
+2. Commit code/dependency/validator.
+3. Force-add this single recovery report under docs/recovery and commit it separately.
+4. Push main.
+5. Production smoke on /projects:
+   - root children appear as sibling branches, not one common vertical trunk;
+   - nested subproject displays its own descendants/activities;
+   - time-window tasks are visually inside their window;
+   - recursive local actions still target the correct project;
+   - ontology parent remains the shared system intermediate ON.
+
+COMMIT=false
+PUSH=false
+DEPLOY=false
+
+POST_INSTALL_COMMIT_CHECKPOINT=
+CODE_COMMIT=0f65948335433f9b691ec51da900610f739c186f
+VALIDATED_RESULT_ZIP_SHA256=DFC3C3FCC390A62F94A3CB1DB9375364404E2E9334AE07AFA5E974F2525FC423
+VALIDATED_RESULT_REPORT_SHA256=920FE66326F16809D19D602B5CBCE9FD238DC938B9576E781FF4F20BF056598E
+ONTOLOGY_INTEGRITY=PASS
+PROJECT_DECOMPOSITION=project_composition_relations/decomposes_into
+VALUE_OBJECT_PARENT_MUTATION=NO
+SAME_SYSTEM_INTERMEDIATE_PARENT=GUARDED
+PRODUCTION_SMOKE=PENDING
