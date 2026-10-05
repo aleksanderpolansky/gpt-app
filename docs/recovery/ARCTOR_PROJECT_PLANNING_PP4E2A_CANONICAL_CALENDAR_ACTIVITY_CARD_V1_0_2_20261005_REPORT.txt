@@ -1,0 +1,118 @@
+﻿ARCTOR PROJECT PLANNING
+PP4E2A — CANONICAL CALENDAR ACTIVITY CARD
+V1.0.2
+2026-10-05
+
+STATUS
+------
+LOCAL_VALIDATION=PASS
+PRODUCTION_DEPLOY=PENDING
+PRODUCTION_SMOKE=PENDING
+
+BASELINE
+--------
+810d9a4f698eeb5c743c1b64ee474a83104319ae
+
+CODE_COMMIT
+-----------
+383335363c9bec78aa77d08afb4cc73300f59d2d
+
+PROBLEM
+-------
+Calendar date/date-range items were opening Cux6TaskDetailModal from a
+synthetic locally reconstructed Cux6ShelfItem.
+
+That synthetic object forced:
+
+outcomeOptions=[]
+selectedOutcome=null
+
+Therefore a planned occurrence could have configured outcomes in
+activity_events, while the Calendar card did not see them.
+
+The modal then submitted outcomeLabel=null and the server correctly rejected
+completion with:
+
+Select one of the configured activity outcomes.
+
+FIX
+---
+Calendar no longer constructs an artificial task-detail object from
+CalendarAllDayItem.
+
+All Calendar date/date-range planned activity entry points now load the
+canonical planned activity through:
+
+GET /api/calendar/task-shelf/{activityEventId}
+
+The returned Cux6ShelfItem is passed to the shared Cux6TaskDetailModal.
+
+Calendar occurrence is explicitly marked:
+
+isRecurrenceDefinition=false
+
+The recurrence definition remains non-executable.
+
+A latest-request guard prevents an older slower detail request from replacing
+a newer user selection.
+
+A visible error is shown when canonical detail loading fails.
+
+SEMANTIC LOCK
+-------------
+activity_events remains the canonical activity entity.
+
+planned occurrence = activity_event role planned
+
+completion = new activity_event role actual
+
+fulfills_planned_activity_event_id remains the canonical plan-to-actual bridge.
+
+No separate task entity was introduced.
+
+ACTIVE PROFILE
+--------------
+ACTIVE_PROFILE_SYNC=NO
+
+Active profile remains local to each browser/device intentionally.
+Different devices may work under different profiles.
+
+DATABASE
+--------
+DB_MIGRATION=NO
+SCHEMA_CHANGE=NO
+DB_PUSH=NO
+
+VALIDATION
+----------
+PP4E2A_VALIDATOR=PASS_12/12
+PP4E1_BASE_VALIDATOR=PASS_14/14
+PP4E1_RECURRENCE_GUARD_VALIDATOR=PASS_7/7
+ESLINT_CHANGED_FILE_NO_REGRESSION=PASS
+TYPESCRIPT=PASS
+BUILD=PASS
+GIT_DIFF_CHECK=PASS
+
+RESULT_PACKAGE_SHA256
+---------------------
+544F9890DAD87579BEFDA715E29E4A188330EC294D4A491C2DB4BD24CED32DAA
+
+PRODUCTION SMOKE
+----------------
+1. Open Calendar.
+2. Open the recurring occurrence "проверить акции в магазинах" from week view.
+3. Verify the configured outcome buttons are visible.
+4. Select one configured outcome.
+5. Verify completion succeeds without
+   "Select one of the configured activity outcomes".
+6. Verify planned occurrence leaves the pending list.
+7. Verify completed view contains the created actual activity.
+8. Verify selectedOutcome is shown in completed history.
+9. Verify recurrence source remains non-executable.
+10. Verify next recurrence occurrence remains planned.
+
+ROLLBACK
+--------
+git revert 383335363c9bec78aa77d08afb4cc73300f59d2d
+
+No database rollback required.
