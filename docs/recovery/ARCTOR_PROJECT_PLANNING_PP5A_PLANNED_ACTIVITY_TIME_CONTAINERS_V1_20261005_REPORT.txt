@@ -1,0 +1,181 @@
+﻿ARCTOR PROJECT PLANNING
+PP5A — PLANNED ACTIVITY TIME CONTAINERS
+V1
+2026-10-05
+
+STATUS
+------
+LOCAL_VALIDATION=PASS
+PRODUCTION_DEPLOY=PENDING
+PRODUCTION_SMOKE=PENDING
+
+BASELINE
+--------
+5d3de07309d5578fd6ae87beade2116c067daa8b
+
+CODE_COMMIT
+-----------
+1f2f3ae107caf3d04657d3d2efeea0a4fe4e94c4
+
+ARCHITECTURE LOCK
+-----------------
+No separate Time Window entity was introduced.
+
+TIME_WINDOW_ENTITY=activity_event(planned)
+NEW_ENTITY=NO
+NEW_TABLE=NO
+DB_MIGRATION=NO
+
+A time window remains a canonical planned activity_event.
+
+Its container role is stored in:
+
+metadata_json.projectPlanningV1
+
+with:
+
+nodeKind=time_container
+
+Supported initial window kinds:
+
+date_range
+time_of_day
+
+DATE RANGE
+----------
+A date-range container reuses canonical planned-activity scheduling:
+
+schedule_mode_code=date_range
+schedule_start_date
+schedule_end_date
+
+TIME OF DAY
+-----------
+A time-of-day container without a concrete calendar date remains:
+
+schedule_mode_code=unscheduled
+
+Its local clock bounds are stored in:
+
+metadata_json.projectPlanningV1.timeStart
+metadata_json.projectPlanningV1.timeEnd
+metadata_json.projectPlanningV1.timeZone
+
+This deliberately avoids pretending that a recurring clock window is one
+specific exact calendar occurrence.
+
+CONTAINMENT
+-----------
+No parent_activity_event_id column was introduced.
+
+Existing PP1 table is reused:
+
+activity_event_relations
+
+with:
+
+relation_type_code=contains
+is_hard=true
+
+Both container and child continue to belong to the same project through the
+existing:
+
+project_activity_links
+
+PROJECT MAP
+-----------
+Project center receives compact actions:
+
++  = add task
+horizontal interval = add date window
+vertical interval = add time-of-day window
+
+Time-container planned activity is rendered as a larger rectangular region.
+
+The container has an internal + action.
+
+A task created through that + uses the existing:
+
+POST /api/activity/quick-capture
+
+After canonical activity creation, the existing activity receives a hard
+contains relation from the time-container activity.
+
+Contained task is rendered inside the container instead of being duplicated as
+a separate root-level Project Map card.
+
+CALENDAR / TASK SHELF
+---------------------
+Planning containers are constraints/regions, not executable tasks.
+
+Therefore time-container planned activities are excluded from:
+
+- executable Task Shelf buckets;
+- Calendar all-day planned activity rendering.
+
+Normal child activities remain ordinary canonical activities and continue to
+use existing Calendar and Task Shelf behavior.
+
+UNCHANGED
+---------
+No parallel task system.
+No alternate calendar system.
+No alternate recurrence system.
+No active-profile synchronization.
+No database migration.
+
+NOT YET IMPLEMENTED
+-------------------
+PP5A intentionally establishes only the canonical foundation.
+
+Still pending:
+
+1. boxed + for subprojects;
+2. nested time containers;
+3. Euler-style intersection islands;
+4. hard schedule-bound validation for contained child activities;
+5. recurrence materializer preservation of recurring clock bounds;
+6. "available now" / green task computation;
+7. additional constraint layers.
+
+VALIDATION
+----------
+PP5A_VALIDATOR=PASS_18/18
+PP4E1_BASE_VALIDATOR=PASS_14/14
+PP4E1_RECURRENCE_GUARD_VALIDATOR=PASS_7/7
+ESLINT_CHANGED_FILES_NO_REGRESSION=PASS
+TYPESCRIPT=PASS
+BUILD=PASS
+GIT_DIFF_CHECK=PASS
+
+RESULT_PACKAGE_SHA256
+---------------------
+E6D2CABF83F2A5DA4FAAE151116FA45A272FD54D10CD6FD7B1D85C6A4A48E1EE
+
+PRODUCTION SMOKE
+----------------
+1. Open /projects.
+2. Select an existing project.
+3. Verify compact actions appear on the right edge of the project card.
+4. Create a date window, for example:
+   2026-10-10 -> 2026-10-20.
+5. Verify it appears as a large rectangular time-container on the Project Map.
+6. Create a time-of-day window, for example:
+   12:00 -> 14:00.
+7. Verify it also appears as a time-container.
+8. Verify neither time-container appears as an executable task in Task Shelf.
+9. Verify the date-range container does not appear as a normal all-day task in
+   Calendar.
+10. Click + inside one time-container.
+11. Enter a normal planned task and send it.
+12. Verify the normal existing quick-capture/edit flow still opens.
+13. Save/close it.
+14. Verify the task is visually inside the time-container on the Project Map.
+15. Verify the same task is not duplicated as a separate root-level card.
+16. Verify ordinary tasks outside containers still behave as before.
+
+ROLLBACK
+--------
+git revert 1f2f3ae107caf3d04657d3d2efeea0a4fe4e94c4
+
+No database rollback required.
