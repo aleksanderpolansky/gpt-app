@@ -765,8 +765,13 @@ type ProjectActivityNode = Node<
 type ProjectSubprojectNodeData = Record<string, unknown> & {
   project: ProjectItem;
   copy: ProjectSubprojectCaptureCopy;
+  actionCopy: Copy;
   onOpenProject: (projectId: string) => void;
   onOpenObservationObject: (valueObjectId: string) => void;
+  onAddSubproject: (projectId: string) => void;
+  onAddTask: (projectId: string) => void;
+  onAddDateWindow: (projectId: string) => void;
+  onAddTimeWindow: (projectId: string) => void;
 };
 
 type ProjectSubprojectNode = Node<
@@ -803,6 +808,14 @@ function ProjectSubprojectCard({
       >
         ОН · {data.copy.openObservationObject}
       </button>
+
+      <div className="nodrag nopan absolute -right-4 top-1/2 flex -translate-y-1/2 flex-col gap-1.5">
+        <button type="button" onClick={() => data.onAddSubproject(data.project.id)} title={data.actionCopy.addSubproject} aria-label={data.actionCopy.addSubproject} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c9d5ff] bg-white text-sm font-black text-[#315ee7] shadow-md hover:bg-[#eef2ff]">⊞</button>
+        <button type="button" onClick={() => data.onAddTask(data.project.id)} title={data.actionCopy.addTask} aria-label={data.actionCopy.addTask} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c9d5ff] bg-white text-base font-bold text-[#315ee7] shadow-md hover:bg-[#eef2ff]">+</button>
+        <button type="button" onClick={() => data.onAddDateWindow(data.project.id)} title={data.actionCopy.addDateWindow} aria-label={data.actionCopy.addDateWindow} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c9d5ff] bg-white text-sm font-black text-[#315ee7] shadow-md hover:bg-[#eef2ff]">↔</button>
+        <button type="button" onClick={() => data.onAddTimeWindow(data.project.id)} title={data.actionCopy.addTimeWindow} aria-label={data.actionCopy.addTimeWindow} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c9d5ff] bg-white text-sm font-black text-[#315ee7] shadow-md hover:bg-[#eef2ff]">↕</button>
+      </div>
+
       <Handle
         type="source"
         position={Position.Bottom}
@@ -1102,6 +1115,7 @@ export default function ProjectMapStartClient({
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [eligibleRoots, setEligibleRoots] = useState<RootOption[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [actionProjectId, setActionProjectId] = useState<string | null>(null);
   const [creating, setCreating] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -1146,6 +1160,11 @@ export default function ProjectMapStartClient({
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId) ?? null,
     [projects, selectedProjectId],
+  );
+
+  const actionProject = useMemo(
+    () => projects.find((project) => project.id === actionProjectId) ?? null,
+    [actionProjectId, projects],
   );
 
   const selectedRoot = useMemo(
@@ -1377,6 +1396,7 @@ export default function ProjectMapStartClient({
     setSelectedRootId("");
     setRootDropdownOpen(false);
     setSelectedProjectId(null);
+    setActionProjectId(null);
   }
 
   const showProject = useCallback((projectId: string) => {
@@ -1461,20 +1481,26 @@ export default function ProjectMapStartClient({
     }
   }, [copy.loadError]);
 
-  const openTaskCapture = useCallback((parentActivityEventId: string | null = null) => {
-    if (!selectedProject) return;
+  const openTaskCapture = useCallback((
+    projectId: string,
+    parentActivityEventId: string | null = null,
+  ) => {
+    if (!projectId) return;
+    setActionProjectId(projectId);
     setTaskCaptureParentActivityId(parentActivityEventId);
     setTaskCaptureText("");
     setTaskCaptureError(null);
     setTaskCaptureOpen(true);
-  }, [selectedProject]);
+  }, []);
 
   function addProjectActivity() {
-    openTaskCapture(null);
+    if (!selectedProject) return;
+    openTaskCapture(selectedProject.id, null);
   }
 
-  function openSubprojectCapture() {
-    if (!selectedProject) return;
+  const openSubprojectCapture = useCallback((projectId: string) => {
+    if (!projectId) return;
+    setActionProjectId(projectId);
     setSubprojectCaptureTitle("");
     setSubprojectCaptureError(null);
     setSubprojectCaptureRequestId(
@@ -1483,10 +1509,10 @@ export default function ProjectMapStartClient({
         : `pp5b-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     );
     setSubprojectCaptureOpen(true);
-  }
+  }, []);
 
   async function submitSubprojectCapture() {
-    const parentProject = selectedProject;
+    const parentProject = actionProject;
     const subprojectTitle = subprojectCaptureTitle.trim();
 
     if (
@@ -1533,6 +1559,12 @@ export default function ProjectMapStartClient({
       setSubprojectCaptureTitle("");
       setSubprojectCaptureRequestId("");
       await loadProjects(parentProject.id, undefined, { background: true });
+      router.replace(
+        localeHref(
+          "/projects?project=" + encodeURIComponent(parentProject.id),
+          locale,
+        ),
+      );
       window.dispatchEvent(new Event(PROJECTS_CHANGED_EVENT));
     } catch (error) {
       setSubprojectCaptureError(
@@ -1545,8 +1577,12 @@ export default function ProjectMapStartClient({
     }
   }
 
-  function openWindowCapture(kind: "date_range" | "time_of_day") {
-    if (!selectedProject) return;
+  const openWindowCapture = useCallback((
+    projectId: string,
+    kind: "date_range" | "time_of_day",
+  ) => {
+    if (!projectId) return;
+    setActionProjectId(projectId);
     setWindowCaptureKind(kind);
     setWindowCaptureTitle(kind === "date_range" ? copy.dateWindowDefaultTitle : copy.timeWindowDefaultTitle);
     setWindowDateStart("");
@@ -1554,10 +1590,10 @@ export default function ProjectMapStartClient({
     setWindowTimeStart("");
     setWindowTimeEnd("");
     setWindowCaptureError(null);
-  }
+  }, [copy.dateWindowDefaultTitle, copy.timeWindowDefaultTitle]);
 
   async function submitWindowCapture() {
-    const project = selectedProject;
+    const project = actionProject;
     const kind = windowCaptureKind;
     if (!project || !kind || windowCaptureSaving) return;
     setWindowCaptureSaving(true);
@@ -1580,6 +1616,9 @@ export default function ProjectMapStartClient({
       if (!response.ok || payload?.ok !== true) throw new Error(payload?.error || copy.createError);
       setWindowCaptureKind(null);
       await loadProjects(project.id, undefined, { background: true });
+      router.replace(
+        localeHref("/projects?project=" + encodeURIComponent(project.id), locale),
+      );
       window.dispatchEvent(new Event(PROJECTS_CHANGED_EVENT));
     } catch (error) {
       setWindowCaptureError(error instanceof Error ? error.message : copy.createError);
@@ -1589,7 +1628,7 @@ export default function ProjectMapStartClient({
   }
 
   async function submitProjectTaskCapture() {
-    const project = selectedProject;
+    const project = actionProject;
     const inputText = taskCaptureText.trim();
 
     if (!project || !inputText || taskCaptureSubmitting) {
@@ -1676,6 +1715,9 @@ export default function ProjectMapStartClient({
       setTaskCaptureParentActivityId(null);
 
       void loadProjects(project.id, undefined, { background: true });
+      router.replace(
+        localeHref("/projects?project=" + encodeURIComponent(project.id), locale),
+      );
       window.dispatchEvent(new Event(PROJECTS_CHANGED_EVENT));
     } catch (error) {
       setTaskCaptureError(
@@ -1773,10 +1815,16 @@ export default function ProjectMapStartClient({
     onRootToggle: handleRootToggle,
     onRootSelect: handleRootSelect,
     onAddObservationObject: addObservationObject,
-    onAddSubproject: openSubprojectCapture,
+    onAddSubproject: () => {
+      if (selectedProject) openSubprojectCapture(selectedProject.id);
+    },
     onAddTask: addProjectActivity,
-    onAddDateWindow: () => openWindowCapture("date_range"),
-    onAddTimeWindow: () => openWindowCapture("time_of_day"),
+    onAddDateWindow: () => {
+      if (selectedProject) openWindowCapture(selectedProject.id, "date_range");
+    },
+    onAddTimeWindow: () => {
+      if (selectedProject) openWindowCapture(selectedProject.id, "time_of_day");
+    },
   };
 
   const nodes = useMemo<Node[]>(() => {
@@ -1802,6 +1850,13 @@ export default function ProjectMapStartClient({
       data: {
         project,
         copy: subprojectCaptureCopy,
+        actionCopy: copy,
+        onAddSubproject: openSubprojectCapture,
+        onAddTask: (projectId: string) => openTaskCapture(projectId, null),
+        onAddDateWindow: (projectId: string) =>
+          openWindowCapture(projectId, "date_range"),
+        onAddTimeWindow: (projectId: string) =>
+          openWindowCapture(projectId, "time_of_day"),
         onOpenProject: showProject,
         onOpenObservationObject: (valueObjectId: string) => {
           router.push(
@@ -1827,7 +1882,11 @@ export default function ProjectMapStartClient({
         copy, locale, activity,
         containedActivities: (activity.containsActivityIds ?? []).map((id) => byId.get(id)).filter((value): value is ProjectActivityItem => Boolean(value)),
         onOpenActivity: (activityEventId: string, isRecurrenceDefinition: boolean) => { void openProjectActivity(activityEventId, isRecurrenceDefinition); },
-        onAddContainedTask: (containerActivityEventId: string) => openTaskCapture(containerActivityEventId),
+        onAddContainedTask: (containerActivityEventId: string) => {
+          if (selectedProject) {
+            openTaskCapture(selectedProject.id, containerActivityEventId);
+          }
+        },
       },
     }) as ProjectActivityNode);
 
@@ -1842,7 +1901,11 @@ export default function ProjectMapStartClient({
       data: {
         copy, locale, activity, containedActivities: [],
         onOpenActivity: (activityEventId: string, isRecurrenceDefinition: boolean) => { void openProjectActivity(activityEventId, isRecurrenceDefinition); },
-        onAddContainedTask: (containerActivityEventId: string) => openTaskCapture(containerActivityEventId),
+        onAddContainedTask: (containerActivityEventId: string) => {
+          if (selectedProject) {
+            openTaskCapture(selectedProject.id, containerActivityEventId);
+          }
+        },
       },
     }) as ProjectActivityNode);
 
@@ -1857,7 +1920,9 @@ export default function ProjectMapStartClient({
     locale,
     nodeData,
     openProjectActivity,
+    openSubprojectCapture,
     openTaskCapture,
+    openWindowCapture,
     projects,
     router,
     selectedProject,
@@ -2033,7 +2098,7 @@ export default function ProjectMapStartClient({
           </ReactFlowProvider>
         </section>
 
-        {subprojectCaptureOpen && selectedProject ? (
+        {subprojectCaptureOpen && actionProject ? (
           <div
             role="dialog"
             aria-modal="true"
@@ -2069,7 +2134,7 @@ export default function ProjectMapStartClient({
               </div>
 
               <div className="mt-4 rounded-xl border border-[#dce4ff] bg-[#f4f7ff] px-3 py-2 text-[11px] font-semibold text-[#4563c8]">
-                {copy.projectLabel}: {selectedProject.title}
+                {copy.projectLabel}: {actionProject.title}
               </div>
 
               <label className="mt-3 block text-[11px] font-bold text-[#667091]">
@@ -2115,7 +2180,7 @@ export default function ProjectMapStartClient({
           </div>
         ) : null}
 
-        {windowCaptureKind && selectedProject ? (
+        {windowCaptureKind && actionProject ? (
           <div role="dialog" aria-modal="true" className="fixed inset-0 z-[96] flex items-center justify-center bg-black/35 px-3 py-4" onClick={() => { if (!windowCaptureSaving) setWindowCaptureKind(null); }}>
             <div className="w-full max-w-[520px] rounded-2xl border border-[rgba(0,0,0,0.06)] bg-white p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
               <div className="flex items-start justify-between gap-4">
@@ -2146,7 +2211,7 @@ export default function ProjectMapStartClient({
           </div>
         ) : null}
 
-        {taskCaptureOpen && selectedProject ? (
+        {taskCaptureOpen && actionProject ? (
           <div
             role="dialog"
             aria-modal="true"
@@ -2185,7 +2250,7 @@ export default function ProjectMapStartClient({
               <div className="mt-4 flex items-center gap-2 rounded-xl border border-[#b9c8ff] bg-[#eef2ff] px-2.5 py-2 text-[11px] font-semibold text-[#315ee7]">
                 <Target size={14} className="shrink-0" />
                 <span className="min-w-0 flex-1 truncate">
-                  {copy.projectLabel}: {selectedProject.title}
+                  {copy.projectLabel}: {actionProject.title}
                 </span>
               </div>
 
