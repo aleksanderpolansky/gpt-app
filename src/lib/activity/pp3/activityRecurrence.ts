@@ -79,6 +79,87 @@ function positiveInterval(value: string | undefined) {
     : null;
 }
 
+const RU_INTERVAL_WORDS_PP4E2C: Readonly<Record<string, number>> = {
+  один: 1,
+  одну: 1,
+  одно: 1,
+  два: 2,
+  две: 2,
+  три: 3,
+  четыре: 4,
+  пять: 5,
+  шесть: 6,
+  семь: 7,
+  восемь: 8,
+  девять: 9,
+  десять: 10,
+  одиннадцать: 11,
+  двенадцать: 12,
+};
+
+function russianInterval(value: string | undefined) {
+  if (!value) return null;
+
+  const numeric = positiveInterval(value);
+  if (numeric !== null) return numeric;
+
+  return RU_INTERVAL_WORDS_PP4E2C[value] ?? null;
+}
+
+function matchRussianIntervalRecurrence(
+  normalized: string,
+): RecurrenceMatch | null {
+  const intervalToken =
+    String.raw`(?:\d{1,3}|один|одну|одно|два|две|три|четыре|пять|шесть|семь|восемь|девять|десять|одиннадцать|двенадцать)`;
+
+  const patterns: Array<{
+    frequencyCode: ActivityRecurrenceFrequencyCodePp3;
+    pattern: RegExp;
+    sourcePatternCode: string;
+  }> = [
+    {
+      frequencyCode: "weekly",
+      pattern: new RegExp(
+        String.raw`(?:^|\s)(?:каждые?|раз\s+в)\s+(${intervalToken})\s+недел(?:ю|и|ь)(?=$|\s)`,
+        "iu",
+      ),
+      sourcePatternCode: "ru_interval_weeks_pp4e2c",
+    },
+    {
+      frequencyCode: "daily",
+      pattern: new RegExp(
+        String.raw`(?:^|\s)(?:каждые?|раз\s+в)\s+(${intervalToken})\s+(?:день|дня|дней)(?=$|\s)`,
+        "iu",
+      ),
+      sourcePatternCode: "ru_interval_days_pp4e2c",
+    },
+    {
+      frequencyCode: "monthly",
+      pattern: new RegExp(
+        String.raw`(?:^|\s)(?:каждые?|раз\s+в)\s+(${intervalToken})\s+месяц(?:а|ев)?(?=$|\s)`,
+        "iu",
+      ),
+      sourcePatternCode: "ru_interval_months_pp4e2c",
+    },
+  ];
+
+  for (const candidate of patterns) {
+    const match = normalized.match(candidate.pattern);
+    if (!match) continue;
+
+    const intervalCount = russianInterval(match[1]);
+    if (!intervalCount) return null;
+
+    return {
+      frequencyCode: candidate.frequencyCode,
+      intervalCount,
+      sourcePatternCode: candidate.sourcePatternCode,
+    };
+  }
+
+  return null;
+}
+
 function matchNumericRecurrence(normalized: string): RecurrenceMatch | null {
   const patterns: Array<{
     frequencyCode: ActivityRecurrenceFrequencyCodePp3;
@@ -306,6 +387,7 @@ export function inferActivityRecurrenceDraftPp3(input: {
   if (!normalized) return null;
 
   const matched =
+    matchRussianIntervalRecurrence(normalized) ??
     matchNumericRecurrence(normalized) ??
     matchSimpleRecurrence(normalized, input.locale);
 
