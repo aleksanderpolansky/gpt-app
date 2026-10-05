@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAiNavigator } from "@/components/app-shell/ai-navigator-provider";
 
 import {
@@ -135,6 +135,12 @@ type CalendarEventsResponse = {
     plannedActivities?: number;
     plannedTargetLinks?: number;
   };
+};
+
+type CanonicalActivityDetailResponse = {
+  ok?: boolean;
+  error?: string;
+  activity?: Cux6ShelfItem | null;
 };
 
 type PositionedEvent = {
@@ -903,39 +909,6 @@ function getAllDayListSortTime(item: CalendarAllDayItem, visibleStartDateKey: st
   return parseDateKey(visibleStartDateKey).getTime();
 }
 
-function allDayItemToShelfItem(item: CalendarAllDayItem): Cux6ShelfItem {
-  return {
-    kind: "planned",
-    id: item.activityEventId,
-    plannedActivityEventId: item.activityEventId,
-    actualActivityEventId: null,
-    title: item.title,
-    inputText: item.inputText,
-    description: item.description,
-    source: item.source,
-    privacyScope: item.privacyScope,
-    status: item.status,
-    scheduleModeCode: item.scheduleModeCode,
-    scheduledDate: item.scheduledDate,
-    scheduleStartDate: item.scheduleStartDate,
-    scheduleEndDate: item.scheduleEndDate,
-    deadlineAt: item.deadlineAt,
-    startedAt: item.startedAt,
-    endedAt: item.endedAt,
-    durationMinutes: item.durationMinutes,
-    dueAt: item.dueAt,
-    enrichmentStatus: null,
-    enrichmentUpdatedAt: null,
-    updatedAt: item.updatedAt,
-    completedAt: null,
-    needsClarification: false,
-    outcomeOptions: [],
-    selectedOutcome: null,
-    isRecurrenceDefinition: false,
-    recurrence: null,
-  };
-}
-
 function buildWeekAllDaySegments(
   items: CalendarAllDayItem[],
   weekDates: Date[],
@@ -1506,6 +1479,9 @@ export default function CalendarRebuildClient({
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedShelfItem, setSelectedShelfItem] =
     useState<Cux6ShelfItem | null>(null);
+  const canonicalActivityRequestRef = useRef(0);
+  const [canonicalActivityError, setCanonicalActivityError] =
+    useState<string | null>(null);
   const [isEditingEvent, setIsEditingEvent] = useState(false);
   const [isSavingEvent, setIsSavingEvent] = useState(false);
   const [eventActionError, setEventActionError] = useState<string | null>(null);
@@ -1529,6 +1505,43 @@ export default function CalendarRebuildClient({
   const range = useMemo(() => getRangeForView(view, focusDate), [view, focusDate]);
   const rangeStart = range.start.toISOString();
   const rangeEnd = range.end.toISOString();
+
+  async function openCanonicalActivityDetail(activityEventId: string) {
+    const requestId = canonicalActivityRequestRef.current + 1;
+    canonicalActivityRequestRef.current = requestId;
+
+    setSelectedEventId(null);
+    setSelectedShelfItem(null);
+    setCanonicalActivityError(null);
+
+    try {
+      const response = await fetch(
+        `/api/calendar/task-shelf/${encodeURIComponent(activityEventId)}`,
+        {
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        },
+      );
+      const payload = (await response.json().catch(() => null)) as
+        | CanonicalActivityDetailResponse
+        | null;
+      if (!response.ok || payload?.ok !== true || !payload.activity) {
+        throw new Error(
+          payload?.error ?? `Activity detail request failed: ${response.status}`,
+        );
+      }
+      if (canonicalActivityRequestRef.current !== requestId) return;
+      setSelectedShelfItem({
+        ...payload.activity,
+        isRecurrenceDefinition: false,
+      });
+    } catch (caught) {
+      if (canonicalActivityRequestRef.current !== requestId) return;
+      setCanonicalActivityError(
+        caught instanceof Error ? caught.message : "Could not load activity details.",
+      );
+    }
+  }
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -2312,7 +2325,7 @@ export default function CalendarRebuildClient({
           type="button"
           onClick={() => {
             setSelectedEventId(null);
-            setSelectedShelfItem(allDayItemToShelfItem(item));
+            void openCanonicalActivityDetail(item.activityEventId);
           }}
           className={cn(
             "w-full rounded-xl border p-3 text-left transition hover:brightness-[0.99]",
@@ -2395,7 +2408,7 @@ export default function CalendarRebuildClient({
           onClick={() => {
             if (entry.kind === "all_day") {
               setSelectedEventId(null);
-              setSelectedShelfItem(allDayItemToShelfItem(entry.item));
+              void openCanonicalActivityDetail(entry.item.activityEventId);
               return;
             }
 
@@ -2446,7 +2459,7 @@ export default function CalendarRebuildClient({
                 }
 
                 setSelectedEventId(null);
-                setSelectedShelfItem(allDayItemToShelfItem(entry.item));
+                void openCanonicalActivityDetail(entry.item.activityEventId);
               }}
               className="absolute top-1/2 z-10 h-5 w-5 -translate-y-1/2 rotate-45 rounded-[4px] border-2 border-amber-400 bg-amber-100 shadow-sm transition hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#3b6ef8] focus:ring-offset-2"
               style={{ left: `${position.left}px` }}
@@ -2459,7 +2472,7 @@ export default function CalendarRebuildClient({
               onClick={() => {
                 if (entry.kind === "all_day") {
                   setSelectedEventId(null);
-                  setSelectedShelfItem(allDayItemToShelfItem(entry.item));
+                  void openCanonicalActivityDetail(entry.item.activityEventId);
                   return;
                 }
 
@@ -3330,7 +3343,7 @@ export default function CalendarRebuildClient({
                       type="button"
                       onClick={() => {
                         setSelectedEventId(null);
-                        setSelectedShelfItem(allDayItemToShelfItem(item));
+                        void openCanonicalActivityDetail(item.activityEventId);
                       }}
                       className={cn(
                         "flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left text-xs font-bold shadow-sm",
@@ -3469,7 +3482,7 @@ export default function CalendarRebuildClient({
                           onClick={() => {
                             setSelectedEventId(null);
                             setFocusDate(parseDateKey(item.startDate));
-                            setSelectedShelfItem(allDayItemToShelfItem(item));
+                            void openCanonicalActivityDetail(item.activityEventId);
                           }}
                           className={cn(
                             "z-10 mx-1 truncate rounded-md border px-2 py-1 text-left text-[11px] font-bold shadow-sm",
@@ -3618,7 +3631,7 @@ export default function CalendarRebuildClient({
                         onClick={() => {
                           setSelectedEventId(null);
                           setFocusDate(day);
-                          setSelectedShelfItem(allDayItemToShelfItem(item));
+                          void openCanonicalActivityDetail(item.activityEventId);
                         }}
                         title={`${allDayUi.modes[item.scheduleModeCode]} · ${formatAllDayItemRange(
                           item,
@@ -3666,6 +3679,20 @@ export default function CalendarRebuildClient({
           </div>
         ) : null}
         </section>
+        {canonicalActivityError ? (
+          <div className="fixed bottom-4 left-1/2 z-[96] flex max-w-[min(92vw,720px)] -translate-x-1/2 items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 shadow-xl">
+            <span className="min-w-0 flex-1">{canonicalActivityError}</span>
+            <button
+              type="button"
+              onClick={() => setCanonicalActivityError(null)}
+              className="shrink-0 rounded-lg border border-rose-200 bg-white px-2 py-0.5 text-xs font-bold"
+              aria-label="Close"
+            >
+              x
+            </button>
+          </div>
+        ) : null}
+
         {selectedShelfItem ? (
           <Cux6TaskDetailModal
             item={selectedShelfItem}
