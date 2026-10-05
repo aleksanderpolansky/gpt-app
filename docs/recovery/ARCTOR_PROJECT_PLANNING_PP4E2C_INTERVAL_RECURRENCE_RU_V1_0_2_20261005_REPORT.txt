@@ -1,0 +1,202 @@
+﻿ARCTOR PROJECT PLANNING
+PP4E2C — RUSSIAN INTERVAL RECURRENCE
+V1.0.2
+2026-10-05
+
+STATUS
+------
+LOCAL_VALIDATION=PASS
+PRODUCTION_DEPLOY=PENDING
+PRODUCTION_SMOKE=PENDING
+
+BASELINE
+--------
+b4a8cd52a00f03699a0196f580e4f84c9a78fe13
+
+CODE_COMMIT
+-----------
+b1e42b793be1228f2a3ac4991b4af49320981a95
+
+PROBLEM
+-------
+The existing PP3 recurrence parser recognized forms such as:
+
+каждую неделю
+каждые 2 недели
+
+but did not recognize natural Russian expressions such as:
+
+раз в две недели
+каждые две недели
+раз в три недели
+
+Therefore input such as:
+
+Тестовая задача раз в две недели
+
+was saved through the normal quick-capture contour but no recurrence rule
+was created.
+
+FIX
+---
+Extended the existing PP3 recurrence parser.
+
+No new recurrence model was introduced.
+
+Supported Russian interval forms now include:
+
+раз в 2 недели
+каждые 2 недели
+раз в две недели
+каждые две недели
+раз в три недели
+каждые три недели
+
+The same construction is supported for days and months.
+
+Russian number words 1..12 are supported.
+
+EXPECTED SEMANTICS
+------------------
+раз в две недели
+=> frequency_code=weekly
+=> interval_count=2
+
+каждые три недели
+=> frequency_code=weekly
+=> interval_count=3
+
+раз в два дня
+=> frequency_code=daily
+=> interval_count=2
+
+раз в два месяца
+=> frequency_code=monthly
+=> interval_count=2
+
+ARCHITECTURE
+------------
+The existing contour remains unchanged:
+
+Project popup / AI rail
+        |
+        v
+POST /api/activity/quick-capture
+        |
+        v
+canonical planned activity_event
+        |
+        v
+activity_recurrence_rules
+        |
+        v
+PP3B2 bounded recurrence materializer
+        |
+        v
+canonical materialized planned activity_events
+
+No project_tasks entity.
+No draft entity.
+No alternate recurrence table.
+No alternate materializer.
+
+MATERIALIZATION
+---------------
+Existing PP3B2 semantics remain unchanged.
+
+For weekly recurrence:
+
+interval_count=2
+
+means a 14-day step between materialized weekly occurrences.
+
+The existing bounded horizon remains 56 days by default.
+
+TASK SHELF
+----------
+The current task shelf excludes recurrence definition/source activities before
+all task bucket classification.
+
+Current diagnostic:
+
+recurrenceSourcesExcluded
+
+The old repository PP3B2 validator still expects the older field:
+
+recurrenceSourcesExcludedFromUnscheduled
+
+That legacy static check is stale.
+
+PP4E2C therefore used a current-state compatibility validator preserving all
+other PP3B2 architecture checks.
+
+PP3B2_CURRENT_STATE_VALIDATOR=PASS_21/21
+
+DATABASE
+--------
+DB_MIGRATION=NO
+SCHEMA_CHANGE=NO
+DB_PUSH=NO
+
+ENTITIES
+--------
+NEW_ENTITY=NO
+
+VALIDATION
+----------
+PP4E2C_VALIDATOR=PASS_16/16
+PP3B1_RECURRENCE_VALIDATOR=PASS
+PP3B2_CURRENT_STATE_VALIDATOR=PASS_21/21
+PP4E1_RECURRENCE_GUARD_VALIDATOR=PASS_7/7
+ESLINT_CHANGED_FILE_NO_REGRESSION=PASS
+TYPESCRIPT=PASS
+BUILD=PASS
+GIT_DIFF_CHECK=PASS
+
+RESULT_PACKAGE_SHA256
+---------------------
+3F255DF511D85C377950FE87BBA17CAFC75607187EEBDD47343E8619677C0989
+
+PRODUCTION SMOKE
+----------------
+1. Open /projects.
+2. Select an existing project.
+3. Click "Добавить задачу".
+4. Enter:
+
+   Тестовая задача раз в две недели
+
+5. Press Send.
+6. Verify the existing editor opens immediately.
+7. Close/save the editor.
+8. Verify the project source card has recurrence interval 2 weeks.
+9. Verify materialized occurrences are separated by 14 days.
+10. Verify the recurrence definition/source itself is not shown as an
+    executable task.
+11. Verify materialized occurrences appear in Calendar.
+12. Verify the source recurrence definition cannot be completed directly.
+
+IMPORTANT UI NOTE
+-----------------
+The recurrence definition may still display:
+
+Режим планирования: Без даты
+
+inside the ordinary schedule editor.
+
+This alone is NOT a recurrence failure.
+
+Recurrence is a separate semantic dimension from schedule_mode_code.
+
+The decisive production checks are:
+- recurrence rule exists;
+- interval_count=2;
+- project card shows recurrence;
+- materialized occurrences exist;
+- occurrences are 14 days apart.
+
+ROLLBACK
+--------
+git revert b1e42b793be1228f2a3ac4991b4af49320981a95
+
+No database rollback required.
