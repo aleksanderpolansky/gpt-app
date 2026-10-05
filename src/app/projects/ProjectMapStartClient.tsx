@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import ELK from "elkjs/lib/elk.bundled.js";
 import { Cux6TaskDetailModal } from "@/components/calendar/cux6-task-detail-modal";
 import type { Cux6ShelfItem } from "@/components/calendar/cux6-task-shelf";
 import {
@@ -836,7 +837,7 @@ function ProjectActivityCard({
         : projectActivityTimingLabel(data.activity, data.copy, data.locale);
 
     return (
-      <div className="relative min-h-[210px] w-[610px] rounded-[26px] border-2 border-dashed border-[#8fa5f6] bg-[#f7f9ff] px-5 py-4 shadow-[0_18px_44px_rgba(63,91,170,0.12)]">
+      <div className="relative h-full w-full rounded-[26px] border-2 border-dashed border-[#8fa5f6] bg-[#f7f9ff] px-5 py-4 shadow-[0_18px_44px_rgba(63,91,170,0.12)]">
         <Handle type="target" position={Position.Top} className="!h-2 !w-2 !border-0 !bg-[#7895ff]" />
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -846,16 +847,11 @@ function ProjectActivityCard({
           </div>
           <button type="button" onClick={() => data.onAddContainedTask(data.activity.id)} title={data.copy.addTask} aria-label={data.copy.addTask} className="nodrag nopan flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#b9c8ff] bg-white text-lg font-bold text-[#315ee7] shadow-sm hover:bg-[#eef2ff]">+</button>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          {data.containedActivities.length > 0 ? data.containedActivities.map((child) => (
-            <button key={child.id} type="button" onClick={() => data.onOpenActivity(child.id, Boolean(child.recurrence))} className="rounded-xl border border-[#dce3f7] bg-white px-3 py-2.5 text-left shadow-sm hover:border-[#aebfff] hover:bg-[#fbfcff]">
-              <div className="truncate text-[11px] font-bold text-[#313a54]">{child.title}</div>
-              <div className="mt-1 truncate text-[9px] font-medium text-[#7b849d]">{projectActivityTimingLabel(child, data.copy, data.locale)}</div>
-            </button>
-          )) : (
-            <div className="col-span-2 rounded-xl border border-dashed border-[#dce3f7] bg-white/70 px-3 py-5 text-center text-[10px] font-semibold text-[#9aa4bf]">{data.copy.addTask}</div>
-          )}
-        </div>
+        {data.containedActivities.length === 0 ? (
+          <div className="absolute inset-x-5 top-[88px] rounded-xl border border-dashed border-[#dce3f7] bg-white/70 px-3 py-5 text-center text-[10px] font-semibold text-[#9aa4bf]">
+            {data.copy.addTask}
+          </div>
+        ) : null}
         <Handle type="source" position={Position.Bottom} className="!h-2 !w-2 !border-0 !bg-[#7895ff]" />
       </div>
     );
@@ -1096,6 +1092,306 @@ const NODE_TYPES = {
   "project-subproject": ProjectSubprojectCard,
 };
 
+const PROJECT_MAP_ELK = new ELK();
+const PROJECT_CENTER_WIDTH = 510;
+const PROJECT_CENTER_HEIGHT = 205;
+const PROJECT_SUBPROJECT_WIDTH = 300;
+const PROJECT_SUBPROJECT_HEIGHT = 132;
+const PROJECT_ACTIVITY_WIDTH = 300;
+const PROJECT_ACTIVITY_HEIGHT = 190;
+const PROJECT_TIME_CONTAINER_MIN_WIDTH = 654;
+const PROJECT_TIME_CONTAINER_EMPTY_HEIGHT = 190;
+const PROJECT_TIME_CONTAINER_HEADER_HEIGHT = 88;
+const PROJECT_TIME_CONTAINER_PADDING = 18;
+
+type ProjectMapLayoutEntry = {
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+};
+
+function collectVisibleProjectBranch(
+  rootProject: ProjectItem | null,
+  projects: ProjectItem[],
+) {
+  if (!rootProject) return [] as ProjectItem[];
+
+  const byId = new Map(projects.map((project) => [project.id, project]));
+  const visible: ProjectItem[] = [];
+  const visited = new Set<string>();
+  const queue = [rootProject.id];
+
+  while (queue.length > 0) {
+    const projectId = queue.shift();
+    if (!projectId || visited.has(projectId)) continue;
+
+    const project = byId.get(projectId);
+    if (!project) continue;
+
+    visited.add(projectId);
+    visible.push(project);
+
+    for (const childProjectId of project.subprojectIds ?? []) {
+      if (!visited.has(childProjectId)) {
+        queue.push(childProjectId);
+      }
+    }
+  }
+
+  return visible;
+}
+
+function isTimeContainerNode(node: Node) {
+  if (node.type !== "project-activity") return false;
+
+  const data = node.data as ProjectActivityNodeData;
+  return data.activity.projectPlanning?.nodeKind === "time_container";
+}
+
+function projectMapNodeSize(node: Node) {
+  if (node.type === "project-center") {
+    return {
+      width: PROJECT_CENTER_WIDTH,
+      height: PROJECT_CENTER_HEIGHT,
+    };
+  }
+
+  if (node.type === "project-subproject") {
+    return {
+      width: PROJECT_SUBPROJECT_WIDTH,
+      height: PROJECT_SUBPROJECT_HEIGHT,
+    };
+  }
+
+  return {
+    width: PROJECT_ACTIVITY_WIDTH,
+    height: PROJECT_ACTIVITY_HEIGHT,
+  };
+}
+
+async function layoutProjectMapWithElk(nodes: Node[], edges: Edge[]) {
+  const layout: Record<string, ProjectMapLayoutEntry> = {};
+  const topLevelNodes = nodes.filter((node) => !node.parentId);
+  const topLevelIds = new Set(topLevelNodes.map((node) => node.id));
+  const topLevelSizes = new Map<string, { width: number; height: number }>();
+
+  for (const node of topLevelNodes) {
+    if (!isTimeContainerNode(node)) {
+      topLevelSizes.set(node.id, projectMapNodeSize(node));
+      continue;
+    }
+
+    const childNodes = nodes.filter((candidate) => candidate.parentId === node.id);
+
+    if (childNodes.length === 0) {
+      topLevelSizes.set(node.id, {
+        width: PROJECT_TIME_CONTAINER_MIN_WIDTH,
+        height: PROJECT_TIME_CONTAINER_EMPTY_HEIGHT,
+      });
+      continue;
+    }
+
+    const packed = await PROJECT_MAP_ELK.layout({
+      id: `container-layout:${node.id}`,
+      layoutOptions: {
+        "elk.algorithm": "org.eclipse.elk.rectpacking",
+        "elk.aspectRatio": "2.4",
+        "elk.spacing.nodeNode": "18",
+        "elk.padding": `[top=${PROJECT_TIME_CONTAINER_HEADER_HEIGHT},left=${PROJECT_TIME_CONTAINER_PADDING},bottom=${PROJECT_TIME_CONTAINER_PADDING},right=${PROJECT_TIME_CONTAINER_PADDING}]`,
+        "elk.rectpacking.widthApproximation.optimizationGoal":
+          "ASPECT_RATIO_DRIVEN",
+        "elk.rectpacking.trybox": "true",
+      },
+      children: childNodes.map((childNode) => ({
+        id: childNode.id,
+        width: PROJECT_ACTIVITY_WIDTH,
+        height: PROJECT_ACTIVITY_HEIGHT,
+      })),
+    });
+
+    const packedResult = packed as unknown as {
+      width?: number;
+      height?: number;
+      children?: Array<{
+        id: string;
+        x?: number;
+        y?: number;
+      }>;
+    };
+    const packedWidth = Math.max(
+      PROJECT_TIME_CONTAINER_MIN_WIDTH,
+      packedResult.width ?? PROJECT_TIME_CONTAINER_MIN_WIDTH,
+    );
+    const packedHeight = Math.max(
+      PROJECT_TIME_CONTAINER_EMPTY_HEIGHT,
+      packedResult.height ?? PROJECT_TIME_CONTAINER_EMPTY_HEIGHT,
+    );
+    const horizontalOffset = Math.max(
+      0,
+      (packedWidth - (packedResult.width ?? packedWidth)) / 2,
+    );
+
+    topLevelSizes.set(node.id, {
+      width: packedWidth,
+      height: packedHeight,
+    });
+
+    for (const child of packedResult.children ?? []) {
+      layout[child.id] = {
+        x: (child.x ?? PROJECT_TIME_CONTAINER_PADDING) + horizontalOffset,
+        y: child.y ?? PROJECT_TIME_CONTAINER_HEADER_HEIGHT,
+      };
+    }
+  }
+
+  const topLevelLayout = await PROJECT_MAP_ELK.layout({
+    id: "project-map-layout",
+    layoutOptions: {
+      "elk.algorithm": "org.eclipse.elk.layered",
+      "elk.direction": "DOWN",
+      "elk.edgeRouting": "ORTHOGONAL",
+      "elk.spacing.nodeNode": "76",
+      "elk.layered.spacing.nodeNodeBetweenLayers": "118",
+      "elk.layered.spacing.edgeNodeBetweenLayers": "34",
+      "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
+      "elk.layered.crossingMinimization.forceNodeModelOrder": "true",
+      "elk.separateConnectedComponents": "false",
+      "elk.padding": "[top=36,left=44,bottom=44,right=44]",
+    },
+    children: topLevelNodes.map((node) => {
+      const size = topLevelSizes.get(node.id) ?? projectMapNodeSize(node);
+      return {
+        id: node.id,
+        width: size.width,
+        height: size.height,
+      };
+    }),
+    edges: edges
+      .filter(
+        (edge) => topLevelIds.has(edge.source) && topLevelIds.has(edge.target),
+      )
+      .map((edge) => ({
+        id: edge.id,
+        sources: [edge.source],
+        targets: [edge.target],
+      })),
+  });
+
+  for (const child of topLevelLayout.children ?? []) {
+    const size = topLevelSizes.get(child.id);
+
+    layout[child.id] = {
+      x: child.x ?? 0,
+      y: child.y ?? 0,
+      width: size?.width,
+      height: size?.height,
+    };
+  }
+
+  return layout;
+}
+
+function fallbackProjectMapLayout(nodes: Node[], edges: Edge[]) {
+  const layout: Record<string, ProjectMapLayoutEntry> = {};
+  const topLevelNodes = nodes.filter((node) => !node.parentId);
+  const incoming = new Map<string, number>();
+  const childrenBySource = new Map<string, string[]>();
+
+  for (const node of topLevelNodes) {
+    incoming.set(node.id, 0);
+  }
+
+  for (const edge of edges) {
+    if (!incoming.has(edge.source) || !incoming.has(edge.target)) continue;
+    incoming.set(edge.target, (incoming.get(edge.target) ?? 0) + 1);
+    const children = childrenBySource.get(edge.source) ?? [];
+    children.push(edge.target);
+    childrenBySource.set(edge.source, children);
+  }
+
+  const roots = topLevelNodes
+    .filter((node) => (incoming.get(node.id) ?? 0) === 0)
+    .map((node) => node.id);
+  const levelById = new Map<string, number>();
+  const queue = roots.map((id) => ({ id, level: 0 }));
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current) continue;
+
+    const previous = levelById.get(current.id);
+    if (previous !== undefined && previous >= current.level) continue;
+    levelById.set(current.id, current.level);
+
+    for (const childId of childrenBySource.get(current.id) ?? []) {
+      queue.push({ id: childId, level: current.level + 1 });
+    }
+  }
+
+  const levels = new Map<number, Node[]>();
+
+  for (const node of topLevelNodes) {
+    const level = levelById.get(node.id) ?? 0;
+    const levelNodes = levels.get(level) ?? [];
+    levelNodes.push(node);
+    levels.set(level, levelNodes);
+  }
+
+  for (const [level, levelNodes] of levels) {
+    let cursorX = 0;
+
+    for (const node of levelNodes) {
+      const children = nodes.filter((candidate) => candidate.parentId === node.id);
+      const columns = Math.min(2, Math.max(1, children.length));
+      const rows = Math.ceil(children.length / columns);
+      const containerWidth = isTimeContainerNode(node)
+        ? Math.max(
+            PROJECT_TIME_CONTAINER_MIN_WIDTH,
+            columns * PROJECT_ACTIVITY_WIDTH +
+              Math.max(0, columns - 1) * 18 +
+              PROJECT_TIME_CONTAINER_PADDING * 2,
+          )
+        : undefined;
+      const containerHeight = isTimeContainerNode(node)
+        ? Math.max(
+            PROJECT_TIME_CONTAINER_EMPTY_HEIGHT,
+            PROJECT_TIME_CONTAINER_HEADER_HEIGHT +
+              rows * PROJECT_ACTIVITY_HEIGHT +
+              Math.max(0, rows - 1) * 18 +
+              PROJECT_TIME_CONTAINER_PADDING,
+          )
+        : undefined;
+      const size =
+        containerWidth && containerHeight
+          ? { width: containerWidth, height: containerHeight }
+          : projectMapNodeSize(node);
+
+      layout[node.id] = {
+        x: cursorX,
+        y: level * 330,
+        width: containerWidth,
+        height: containerHeight,
+      };
+
+      children.forEach((child, index) => {
+        layout[child.id] = {
+          x:
+            PROJECT_TIME_CONTAINER_PADDING +
+            (index % columns) * (PROJECT_ACTIVITY_WIDTH + 18),
+          y:
+            PROJECT_TIME_CONTAINER_HEADER_HEIGHT +
+            Math.floor(index / columns) * (PROJECT_ACTIVITY_HEIGHT + 18),
+        };
+      });
+
+      cursorX += size.width + 86;
+    }
+  }
+
+  return layout;
+}
+
 export default function ProjectMapStartClient({
   initialLocale,
 }: {
@@ -1110,7 +1406,6 @@ export default function ProjectMapStartClient({
   const requestedProjectId = searchParams.get("project");
   const resumeProjectDraft =
     searchParams.get("resumeProjectDraft") === "1";
-  const blurTimerRef = useRef<number | null>(null);
 
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [eligibleRoots, setEligibleRoots] = useState<RootOption[]>([]);
@@ -1338,9 +1633,6 @@ export default function ProjectMapStartClient({
     return () => {
       window.clearTimeout(timer);
 
-      if (blurTimerRef.current !== null) {
-        window.clearTimeout(blurTimerRef.current);
-      }
     };
 
     // Initial load is intentionally tied to the route locale.
@@ -1423,11 +1715,6 @@ export default function ProjectMapStartClient({
 
   function handleRootFocus() {
     if (!creating) return;
-
-    if (blurTimerRef.current !== null) {
-      window.clearTimeout(blurTimerRef.current);
-      blurTimerRef.current = null;
-    }
 
     setRootDropdownOpen(true);
   }
@@ -1827,158 +2114,314 @@ export default function ProjectMapStartClient({
     },
   };
 
-  const nodes = useMemo<Node[]>(() => {
-    const activities = selectedProject?.activities ?? [];
-    const subprojects = (selectedProject?.subprojectIds ?? [])
-      .map((projectId) =>
-        projects.find((project) => project.id === projectId),
-      )
-      .filter((project): project is ProjectItem => Boolean(project));
-    const byId = new Map(activities.map((activity) => [activity.id, activity]));
-    const containedIds = new Set(activities.flatMap((activity) => activity.containsActivityIds ?? []));
-    const containers = activities.filter((activity) => activity.projectPlanning?.nodeKind === "time_container");
+  const visibleProjects = useMemo(
+    () => collectVisibleProjectBranch(selectedProject, projects),
+    [projects, selectedProject],
+  );
 
-    const subprojectNodes = subprojects.map((project, index) => ({
-      id: `project-subproject:${project.id}`,
-      type: "project-subproject",
-      position: {
-        x: 145 + (index % 3) * 335,
-        y: 505 + Math.floor(index / 3) * 145,
-      },
-      draggable: false,
-      selectable: false,
-      data: {
-        project,
-        copy: subprojectCaptureCopy,
-        actionCopy: copy,
-        onAddSubproject: openSubprojectCapture,
-        onAddTask: (projectId: string) => openTaskCapture(projectId, null),
-        onAddDateWindow: (projectId: string) =>
-          openWindowCapture(projectId, "date_range"),
-        onAddTimeWindow: (projectId: string) =>
-          openWindowCapture(projectId, "time_of_day"),
-        onOpenProject: showProject,
-        onOpenObservationObject: (valueObjectId: string) => {
-          router.push(
-            localeHref(
-              `/value-objects/${encodeURIComponent(valueObjectId)}`,
-              locale,
-            ),
-          );
-        },
-      },
-    }) as ProjectSubprojectNode);
-    const standalone = activities.filter((activity) => activity.projectPlanning?.nodeKind !== "time_container" && !containedIds.has(activity.id));
-
-    const subprojectRows = Math.ceil(subprojects.length / 3);
-    const containerBaseY = 525 + subprojectRows * 145;
-    const containerNodes = containers.map((activity, index) => ({
-      id: `project-activity:${activity.id}`,
-      type: "project-activity",
-      position: { x: 40 + (index % 2) * 650, y: containerBaseY + Math.floor(index / 2) * 285 },
-      draggable: false,
-      selectable: false,
-      data: {
-        copy, locale, activity,
-        containedActivities: (activity.containsActivityIds ?? []).map((id) => byId.get(id)).filter((value): value is ProjectActivityItem => Boolean(value)),
-        onOpenActivity: (activityEventId: string, isRecurrenceDefinition: boolean) => { void openProjectActivity(activityEventId, isRecurrenceDefinition); },
-        onAddContainedTask: (containerActivityEventId: string) => {
-          if (selectedProject) {
-            openTaskCapture(selectedProject.id, containerActivityEventId);
-          }
-        },
-      },
-    }) as ProjectActivityNode);
-
-    const standaloneBaseY =
-      containerBaseY + Math.ceil(containers.length / 2) * 285;
-    const activityNodes = standalone.map((activity, index) => ({
-      id: `project-activity:${activity.id}`,
-      type: "project-activity",
-      position: { x: 145 + (index % 3) * 335, y: standaloneBaseY + Math.floor(index / 3) * 145 },
-      draggable: false,
-      selectable: false,
-      data: {
-        copy, locale, activity, containedActivities: [],
-        onOpenActivity: (activityEventId: string, isRecurrenceDefinition: boolean) => { void openProjectActivity(activityEventId, isRecurrenceDefinition); },
-        onAddContainedTask: (containerActivityEventId: string) => {
-          if (selectedProject) {
-            openTaskCapture(selectedProject.id, containerActivityEventId);
-          }
-        },
-      },
-    }) as ProjectActivityNode);
-
-    return [
-      { id: "__project_center__", type: "project-center", position: { x: 390, y: 220 }, draggable: false, selectable: false, data: nodeData } as ProjectCenterNode,
-      ...subprojectNodes,
-      ...containerNodes,
-      ...activityNodes,
+  const graphNodes: Node[] = (() => {
+    const result: Node[] = [
+      {
+        id: "__project_center__",
+        type: "project-center",
+        position: { x: 0, y: 0 },
+        draggable: false,
+        selectable: false,
+        data: nodeData,
+      } as ProjectCenterNode,
     ];
-  }, [
-    copy,
-    locale,
-    nodeData,
-    openProjectActivity,
-    openSubprojectCapture,
-    openTaskCapture,
-    openWindowCapture,
-    projects,
-    router,
-    selectedProject,
-    showProject,
-    subprojectCaptureCopy,
-  ]);
 
-  const edges = useMemo<Edge[]>(
-    () => {
-      const activities = selectedProject?.activities ?? [];
-      const containedIds = new Set(activities.flatMap((activity) => activity.containsActivityIds ?? []));
-      const activityEdges = activities
-        .filter((activity) => !containedIds.has(activity.id))
-        .map((activity) => ({
-          id: `project-to-activity:${activity.id}`,
-          source: "__project_center__",
-          target: `project-activity:${activity.id}`,
-          type: "smoothstep",
-          style: { stroke: "#c8d3f2", strokeWidth: 1.5 },
-        }));
+    if (!selectedProject) {
+      return result;
+    }
 
-      const subprojectEdges = (selectedProject?.subprojectIds ?? []).map(
-        (projectId) => ({
-          id: `project-to-subproject:${projectId}`,
-          source: "__project_center__",
-          target: `project-subproject:${projectId}`,
-          type: "smoothstep",
-          style: {
-            stroke: "#9fb2f3",
-            strokeWidth: 1.7,
+    for (const project of visibleProjects) {
+      const isRootProject = project.id === selectedProject.id;
+      const projectNodeId = isRootProject
+        ? "__project_center__"
+        : `project-subproject:${project.id}`;
+
+      if (!isRootProject) {
+        result.push({
+          id: projectNodeId,
+          type: "project-subproject",
+          position: { x: 0, y: 0 },
+          draggable: false,
+          selectable: false,
+          data: {
+            project,
+            copy: subprojectCaptureCopy,
+            actionCopy: copy,
+            onAddSubproject: openSubprojectCapture,
+            onAddTask: (projectId: string) => openTaskCapture(projectId, null),
+            onAddDateWindow: (projectId: string) =>
+              openWindowCapture(projectId, "date_range"),
+            onAddTimeWindow: (projectId: string) =>
+              openWindowCapture(projectId, "time_of_day"),
+            onOpenProject: showProject,
+            onOpenObservationObject: (valueObjectId: string) => {
+              router.push(
+                localeHref(
+                  `/value-objects/${encodeURIComponent(valueObjectId)}`,
+                  locale,
+                ),
+              );
+            },
           },
-        }),
+        } as ProjectSubprojectNode);
+      }
+
+      const activities = project.activities ?? [];
+      const byId = new Map(
+        activities.map((activity) => [activity.id, activity]),
+      );
+      const containedIds = new Set(
+        activities.flatMap((activity) => activity.containsActivityIds ?? []),
+      );
+      const containers = activities.filter(
+        (activity) => activity.projectPlanning?.nodeKind === "time_container",
+      );
+      const standalone = activities.filter(
+        (activity) =>
+          activity.projectPlanning?.nodeKind !== "time_container" &&
+          !containedIds.has(activity.id),
       );
 
-      return [...subprojectEdges, ...activityEdges];
-    },
-    [selectedProject],
-  );
+      for (const container of containers) {
+        const containerNodeId =
+          `project-activity:${project.id}:${container.id}`;
+        const containedActivities = (container.containsActivityIds ?? [])
+          .map((activityId) => byId.get(activityId))
+          .filter(
+            (activity): activity is ProjectActivityItem => Boolean(activity),
+          );
+
+        result.push({
+          id: containerNodeId,
+          type: "project-activity",
+          position: { x: 0, y: 0 },
+          draggable: false,
+          selectable: false,
+          zIndex: 0,
+          data: {
+            copy,
+            locale,
+            activity: container,
+            containedActivities,
+            onOpenActivity: (
+              activityEventId: string,
+              isRecurrenceDefinition: boolean,
+            ) => {
+              void openProjectActivity(
+                activityEventId,
+                isRecurrenceDefinition,
+              );
+            },
+            onAddContainedTask: (containerActivityEventId: string) =>
+              openTaskCapture(project.id, containerActivityEventId),
+          },
+        } as ProjectActivityNode);
+
+        for (const childActivity of containedActivities) {
+          result.push({
+            id:
+              `project-contained-activity:${project.id}:${container.id}:${childActivity.id}`,
+            type: "project-activity",
+            parentId: containerNodeId,
+            extent: "parent",
+            position: { x: 0, y: 0 },
+            draggable: false,
+            selectable: false,
+            zIndex: 2,
+            style: {
+              width: PROJECT_ACTIVITY_WIDTH,
+              minHeight: PROJECT_ACTIVITY_HEIGHT,
+            },
+            data: {
+              copy,
+              locale,
+              activity: childActivity,
+              containedActivities: [],
+              onOpenActivity: (
+                activityEventId: string,
+                isRecurrenceDefinition: boolean,
+              ) => {
+                void openProjectActivity(
+                  activityEventId,
+                  isRecurrenceDefinition,
+                );
+              },
+              onAddContainedTask: (containerActivityEventId: string) =>
+                openTaskCapture(project.id, containerActivityEventId),
+            },
+          } as ProjectActivityNode);
+        }
+      }
+
+      for (const activity of standalone) {
+        result.push({
+          id: `project-activity:${project.id}:${activity.id}`,
+          type: "project-activity",
+          position: { x: 0, y: 0 },
+          draggable: false,
+          selectable: false,
+          data: {
+            copy,
+            locale,
+            activity,
+            containedActivities: [],
+            onOpenActivity: (
+              activityEventId: string,
+              isRecurrenceDefinition: boolean,
+            ) => {
+              void openProjectActivity(
+                activityEventId,
+                isRecurrenceDefinition,
+              );
+            },
+            onAddContainedTask: (containerActivityEventId: string) =>
+              openTaskCapture(project.id, containerActivityEventId),
+          },
+        } as ProjectActivityNode);
+      }
+    }
+
+    return result;
+  })();
+
+  const graphEdges: Edge[] = (() => {
+    if (!selectedProject) return [];
+
+    const visibleProjectIds = new Set(
+      visibleProjects.map((project) => project.id),
+    );
+    const result: Edge[] = [];
+
+    for (const project of visibleProjects) {
+      const sourceNodeId =
+        project.id === selectedProject.id
+          ? "__project_center__"
+          : `project-subproject:${project.id}`;
+      const activities = project.activities ?? [];
+      const containedIds = new Set(
+        activities.flatMap((activity) => activity.containsActivityIds ?? []),
+      );
+
+      for (const childProjectId of project.subprojectIds ?? []) {
+        if (!visibleProjectIds.has(childProjectId)) continue;
+
+        result.push({
+          id: `project-decomposition:${project.id}:${childProjectId}`,
+          source: sourceNodeId,
+          target: `project-subproject:${childProjectId}`,
+          type: "smoothstep",
+          style: {
+            stroke: "#8fa8f2",
+            strokeWidth: 1.8,
+          },
+        });
+      }
+
+      for (const activity of activities) {
+        if (containedIds.has(activity.id)) continue;
+
+        result.push({
+          id: `project-activity-edge:${project.id}:${activity.id}`,
+          source: sourceNodeId,
+          target: `project-activity:${project.id}:${activity.id}`,
+          type: "smoothstep",
+          style: {
+            stroke: "#c8d3f2",
+            strokeWidth: 1.5,
+          },
+        });
+      }
+    }
+
+    return result;
+  })();
 
   const flowKey = useMemo(
     () =>
       [
         selectedProjectId ?? "draft",
-        ...(selectedProject?.subprojectIds ?? []).map(
-          (projectId) => `subproject:${projectId}`,
-        ),
-        ...(selectedProject?.activities ?? []).map(
-          (activity) => [
-            activity.id,
-            ...(activity.containsActivityIds ?? []),
-            ...(activity.containedByActivityIds ?? []),
-          ].join(","),
-        ),
+        ...visibleProjects.flatMap((project) => [
+          `project:${project.id}`,
+          ...(project.subprojectIds ?? []).map(
+            (projectId) => `subproject:${project.id}:${projectId}`,
+          ),
+          ...(project.activities ?? []).map((activity) =>
+            [
+              project.id,
+              activity.id,
+              ...(activity.containsActivityIds ?? []),
+              ...(activity.containedByActivityIds ?? []),
+            ].join(","),
+          ),
+        ]),
       ].join(":"),
-    [selectedProject, selectedProjectId],
+    [selectedProjectId, visibleProjects],
   );
+
+  const graphNodesRef = useRef(graphNodes);
+  const graphEdgesRef = useRef(graphEdges);
+
+  useEffect(() => {
+    graphNodesRef.current = graphNodes;
+    graphEdgesRef.current = graphEdges;
+  }, [graphEdges, graphNodes]);
+
+  const [layoutState, setLayoutState] = useState<{
+    key: string;
+    byNodeId: Record<string, ProjectMapLayoutEntry>;
+  }>({
+    key: "",
+    byNodeId: {},
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    const nodesForLayout = graphNodesRef.current;
+    const edgesForLayout = graphEdgesRef.current;
+
+    void layoutProjectMapWithElk(nodesForLayout, edgesForLayout)
+      .catch(() => fallbackProjectMapLayout(nodesForLayout, edgesForLayout))
+      .then((nextLayout) => {
+        if (cancelled) return;
+
+        setLayoutState({
+          key: flowKey,
+          byNodeId: nextLayout,
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [flowKey]);
+
+  const layoutReady = layoutState.key === flowKey;
+
+  const layoutedNodes = graphNodes.map((node) => {
+    const layout = layoutState.byNodeId[node.id];
+    if (!layout) return node;
+
+    return {
+      ...node,
+      position: {
+        x: layout.x,
+        y: layout.y,
+      },
+      style:
+        layout.width !== undefined && layout.height !== undefined
+          ? {
+              ...node.style,
+              width: layout.width,
+              height: layout.height,
+            }
+          : node.style,
+    };
+  });
 
   if (loading) {
     return (
@@ -2066,35 +2509,41 @@ export default function ProjectMapStartClient({
           ) : null}
         </header>
 
-        <section className="h-[720px] min-h-[600px] overflow-hidden rounded-[26px] border border-[#dfe4ef] bg-[#f8fafc] shadow-inner">
+        <section className="relative h-[720px] min-h-[600px] overflow-hidden rounded-[26px] border border-[#dfe4ef] bg-[#f8fafc] shadow-inner">
           <ReactFlowProvider>
-            <ReactFlow
-              key={flowKey}
-              nodes={nodes}
-              edges={edges}
-              nodeTypes={NODE_TYPES}
-              fitView
-              fitViewOptions={{
-                padding: 0.34,
-                minZoom: 0.55,
-                maxZoom: 1.05,
-              }}
-              minZoom={0.35}
-              maxZoom={1.8}
-              nodesConnectable={false}
-              nodesDraggable={false}
-              elementsSelectable={false}
-              onNodeClick={() => undefined}
-              proOptions={{ hideAttribution: true }}
-            >
-              <Background
-                variant={BackgroundVariant.Dots}
-                gap={18}
-                size={1}
-                color="#cfd7e8"
-              />
-              <Controls showInteractive={false} />
-            </ReactFlow>
+            {layoutReady ? (
+              <ReactFlow
+                key={`${flowKey}:elk`}
+                nodes={layoutedNodes}
+                edges={graphEdges}
+                nodeTypes={NODE_TYPES}
+                fitView
+                fitViewOptions={{
+                  padding: 0.24,
+                  minZoom: 0.42,
+                  maxZoom: 1.05,
+                }}
+                minZoom={0.28}
+                maxZoom={1.8}
+                nodesConnectable={false}
+                nodesDraggable={false}
+                elementsSelectable={false}
+                onNodeClick={() => undefined}
+                proOptions={{ hideAttribution: true }}
+              >
+                <Background
+                  variant={BackgroundVariant.Dots}
+                  gap={18}
+                  size={1}
+                  color="#cfd7e8"
+                />
+                <Controls showInteractive={false} />
+              </ReactFlow>
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-[12px] font-semibold text-[#8b91a7]">
+                {copy.loading}
+              </div>
+            )}
           </ReactFlowProvider>
         </section>
 
