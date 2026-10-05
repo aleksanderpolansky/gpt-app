@@ -1,0 +1,209 @@
+﻿ARCTOR PROJECT PLANNING
+PP5B — SUBPROJECT PERSONAL LEAF
+V1.0.2
+2026-10-05
+
+STATUS
+------
+LOCAL_VALIDATION=PASS
+PRODUCTION_DEPLOY=PENDING
+PRODUCTION_SMOKE=PENDING
+
+BASELINE
+--------
+a55fdce23bcd41990ef805b53695f0f408c0a1b4
+
+CODE_COMMIT
+-----------
+55a9abff26e7a779e68cc6ffb84d2ca7524e384e
+
+ARCHITECTURE
+------------
+No separate subproject entity was introduced.
+
+SUBPROJECT_ENTITY=project_context
+
+A subproject is a normal project_context.
+
+Its root is:
+
+value_object
+scope_code=actor
+ontology_node_role_code=leaf
+visibility=private
+status=active
+
+SUBPROJECT_ROOT=value_object(actor/private/leaf)
+
+OBSERVATION OBJECT PARENT
+-------------------------
+The new subproject root leaf uses the SAME immediate parent_value_object_id
+as the parent project's root leaf.
+
+That immediate parent must be:
+
+scope_code=global
+origin_type_code=system_model
+ontology_node_role_code=intermediate
+status=active
+
+SUBPROJECT_PARENT=shared_global_system_intermediate
+
+OBSERVATION OBJECT CREATION
+---------------------------
+The new personal leaf is created through the existing canonical ontology RPC:
+
+create_value_object_ontology_v1
+
+and activated through:
+
+set_value_object_ontology_lifecycle_v1
+
+Semantics match the existing:
+
+creationMode=leaf_system_parent_active_v1
+
+contract.
+
+No manual shortcut insert into value_objects is used.
+
+The new leaf remains a full canonical observation object and is therefore
+available through the normal Value Object page and leaf settings.
+
+PROJECT COMPOSITION
+-------------------
+The relationship parent project -> subproject reuses:
+
+project_composition_relations
+
+with:
+
+relation_type_code=decomposes_into
+
+No parent_project_id column was added.
+
+No special subprojects table was added.
+
+The child project remains independently addressable as a normal project_context.
+
+MAP UI
+------
+The project card now has the fourth compact edge action:
+
+⊞ = Add subproject
+
+The existing actions remain:
+
++ = Add task
+horizontal interval = Add date window
+vertical interval = Add time-of-day window
+
+After creation the child appears on the parent Project Map as a SUBPROJECT
+card.
+
+The subproject card supports:
+
+- open child Project Map;
+- open canonical Observation Object page.
+
+When the child is selected as the current project, it receives the same normal
+project actions and can itself create further subprojects.
+
+RETRY / IDEMPOTENCY
+-------------------
+The create request carries clientRequestId.
+
+Ontology leaf creation uses an idempotency key derived from the parent project
+and request id.
+
+On retry:
+
+- the canonical leaf can be replayed;
+- an existing project_context rooted at that leaf is reused;
+- an existing active decomposes_into relation is reused.
+
+CYCLE PROTECTION
+----------------
+PP5B checks the current user's project-composition graph before writing a new
+decomposition link.
+
+Project decomposition cycles are rejected.
+
+DATABASE
+--------
+DB_MIGRATION=NO
+NEW_TABLE=NO
+NEW_ENTITY=NO
+
+UNCHANGED
+---------
+No project_tasks entity.
+No parallel task model.
+No alternate Value Object model.
+No alternate project model.
+No profile synchronization.
+No time-window schema changes.
+
+VALIDATION
+----------
+PP5B_VALIDATOR=PASS_23/23
+PP4E1_BASE_VALIDATOR=PASS_14/14
+PP4E1_RECURRENCE_GUARD_VALIDATOR=PASS_7/7
+ESLINT_CHANGED_FILES_NO_REGRESSION=PASS
+TYPESCRIPT=PASS
+BUILD=PASS
+GIT_DIFF_CHECK=PASS
+
+RESULT_PACKAGE_SHA256
+---------------------
+0ECCD36E40756E757E05DF80D16579E82AE5FFEBE6E16A34A7FF728CFE2CE582
+
+PRODUCTION SMOKE
+----------------
+1. Wait for Vercel production deployment to become Ready.
+2. Open /projects.
+3. Select an existing project whose root is a personal leaf under an active
+   global system intermediate observation object.
+4. Verify four compact actions on the right edge:
+   boxed plus, plus, date interval, time interval.
+5. Click boxed plus.
+6. Create a uniquely named subproject, for example:
+   PP5B Тестовый подпроект.
+7. Verify a SUBPROJECT card appears on the parent Project Map.
+8. Open the child project from its title.
+9. Verify the child opens as a normal Project Map.
+10. Verify the child itself has the same project actions.
+11. Return to the parent project.
+12. Click the ОН button on the subproject card.
+13. Verify /value-objects/<child-root-id> opens normally.
+14. Verify that leaf has the same immediate system intermediate parent as the
+    parent project's root leaf.
+15. Verify the new leaf appears in the normal Observation Object branch/list.
+16. Do not create a second leaf by refreshing/retrying the same submitted
+    request.
+
+EXPECTED DATA SEMANTICS
+-----------------------
+Parent project:
+project_context.root_value_object_id = PARENT_LEAF
+
+Parent leaf:
+parent_value_object_id = SYSTEM_INTERMEDIATE
+
+Child subproject:
+project_context.root_value_object_id = CHILD_LEAF
+
+Child leaf:
+parent_value_object_id = SAME SYSTEM_INTERMEDIATE
+
+Composition:
+project_context_id = PARENT_PROJECT
+parent_value_object_id = PARENT_LEAF
+child_value_object_id = CHILD_LEAF
+relation_type_code = decomposes_into
+
+ROLLBACK
+--------
+git revert 55a9abff26e7a779e68cc6ffb84d2ca7524e384e
+
+No database rollback required.
