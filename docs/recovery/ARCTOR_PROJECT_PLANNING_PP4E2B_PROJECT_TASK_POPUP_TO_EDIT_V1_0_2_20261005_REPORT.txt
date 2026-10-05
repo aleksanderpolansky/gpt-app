@@ -1,0 +1,143 @@
+﻿ARCTOR PROJECT PLANNING
+PP4E2B — PROJECT TASK POPUP -> EDIT
+V1.0.2
+2026-10-05
+
+STATUS
+------
+LOCAL_VALIDATION=PASS
+PRODUCTION_DEPLOY=PENDING
+PRODUCTION_SMOKE=PENDING
+
+BASELINE
+--------
+80f88d31344d31a050e7ee3a0968c9c68248740f
+
+CODE_COMMIT
+-----------
+a8e161a84a6ea6dbe33f04edb7ead09825c0c0fd
+
+USER PROBLEM
+------------
+On /projects, clicking "Add task" previously prepared the right AI rail.
+The cursor/focus change in that narrow right column was not obvious enough
+to the user.
+
+REQUIRED UX
+-----------
+1. Click "Add task".
+2. Open a popup over the Project page.
+3. Show the current project context and an activity input.
+4. Use a Send arrow analogous to the AI right rail.
+5. After Send, do not require the user to:
+   - notice the right rail,
+   - return to Projects,
+   - locate the new task,
+   - open the card,
+   - click Edit.
+6. Immediately open the created planned activity in the existing canonical
+   card, already in edit mode.
+
+PROCESSING LOCK
+---------------
+This is only an alternative INPUT UI.
+
+The processing contour is unchanged.
+
+The popup sends to the existing endpoint:
+
+POST /api/activity/quick-capture
+
+with:
+
+temporalDirection=future
+projectContextId=<selected project>
+
+Therefore the existing behavior remains responsible for:
+
+- writing the activity to the existing activity journal;
+- creating the canonical planned activity_event;
+- linking it with project context;
+- background basic intake analysis;
+- recurrence recognition and bounded materialization where applicable.
+
+NO NEW DRAFT
+------------
+NEW_DRAFT_ENTITY=NO
+
+No additional draft record or parallel task entity is created.
+
+CANONICAL DETAIL
+----------------
+After quick-capture returns activityEventId, the UI loads:
+
+GET /api/calendar/task-shelf/{activityEventId}
+
+and opens the existing:
+
+Cux6TaskDetailModal
+
+with:
+
+initialEditing=true
+
+The existing editor itself was not redesigned.
+
+RECURRENCE
+----------
+If quick-capture returns recurrenceRule, the source card is marked:
+
+isRecurrenceDefinition=true
+
+so the existing rule that recurrence definitions are not directly executable
+remains intact.
+
+ACTIVE PROFILE
+--------------
+ACTIVE_PROFILE_SYNC=NO
+
+Profile selection remains local to each browser/device intentionally.
+
+DATABASE
+--------
+DB_MIGRATION=NO
+SCHEMA_CHANGE=NO
+DB_PUSH=NO
+
+VALIDATION
+----------
+PP4E2B_VALIDATOR=PASS_17/17
+PP4E1_BASE_VALIDATOR=PASS_14/14
+PP4E1_RECURRENCE_GUARD_VALIDATOR=PASS_7/7
+ESLINT_CHANGED_FILES_NO_REGRESSION=PASS
+TYPESCRIPT=PASS
+BUILD=PASS
+GIT_DIFF_CHECK=PASS
+
+RESULT_PACKAGE_SHA256
+---------------------
+9ECC1B3EA5FFC5DC22A144A06EF50411461D3919A530F51DD4F642935450C305
+
+PRODUCTION SMOKE
+----------------
+1. Open /projects and select an existing project.
+2. Click "Add task".
+3. Verify a popup opens over the page.
+4. Verify the selected project is shown in the popup.
+5. Enter a planned activity.
+6. Click the Send arrow.
+7. Verify the popup transitions directly to the existing activity editor.
+8. Verify no intermediate return to the project map is required.
+9. Verify the created activity appears in the Activity Journal.
+10. Verify the existing background analysis starts normally.
+11. Save edits and verify the task appears in the selected project.
+12. Verify the activity appears in Calendar according to its schedule.
+13. For a recurring input, verify recurrence materialization still works.
+14. Verify recurrence definition itself cannot be completed directly.
+15. Verify the right AI rail still works independently as before.
+
+ROLLBACK
+--------
+git revert a8e161a84a6ea6dbe33f04edb7ead09825c0c0fd
+
+No database rollback required.
