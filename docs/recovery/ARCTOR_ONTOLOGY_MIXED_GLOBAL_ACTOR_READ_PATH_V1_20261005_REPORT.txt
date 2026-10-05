@@ -1,0 +1,257 @@
+﻿ARCTOR ONTOLOGY
+MIXED GLOBAL / ACTOR READ PATH
+V1
+2026-10-05
+
+STATUS
+------
+LOCAL_VALIDATION=PASS
+PRODUCTION_DEPLOY=PENDING
+PRODUCTION_SMOKE=PENDING
+
+BASELINE
+--------
+bea670414a42e6458d4b1edffdefd073c986646c
+
+CODE_COMMIT
+-----------
+0a5ba2ec1457f60e22625338f98da5af62640d41
+
+PROBLEM
+-------
+Actor-owned leaf Observation Objects may have a global system intermediate
+Observation Object as their direct structural parent.
+
+Example:
+
+Actions and Processes
+  -> Nutrition and consumption
+       -> Organization of nutrition       actor/private leaf
+       -> Restaurant visits               actor/private leaf
+
+The previous actor-owned detail read path obtained the actor tree separately.
+
+Therefore parent_value_object_id could correctly point to:
+
+Nutrition and consumption
+
+while that global system node was absent from the actor-only nodesById map.
+
+Visible symptoms:
+
+Top "Position in structure":
+
+Root:
+Restaurant visits
+
+Structural parent:
+—
+
+Path:
+Restaurant visits
+
+while canonical ontology data below correctly contained:
+
+Structural parent:
+Nutrition and consumption
+
+Root:
+Actions and Processes
+
+A second symptom was mixed localization:
+
+Russian page UI
+but system parent/root titles could appear in canonical English.
+
+DECISION
+--------
+Do not patch only the single actor-leaf -> global-parent case.
+
+Use one mixed read model for the complete branch:
+
+GLOBAL SYSTEM NODES
++
+PRIVATE NODES OF CURRENT ACTIVE USER/ACTOR
+
+This supports:
+
+global root
+ -> global intermediate
+     -> global intermediate
+         -> global leaf
+         -> actor/private leaf
+     -> global leaf
+     -> actor/private leaf
+
+No separate ontology model is introduced.
+
+MIXED TREE READER
+-----------------
+Added:
+
+src/lib/reality-core/mixed-value-object-tree-read.server.ts
+
+The reader loads:
+
+1. global/system_model nodes for the requested root;
+2. actor-scope nodes belonging only to:
+   current appUserId + current actorId.
+
+They are merged by canonical Value Object id.
+
+GLOBAL LOCALIZATION
+-------------------
+Every global/system_model node is localized with the existing:
+
+localizeGlobalSystemValueObject
+
+No new global localization mechanism was introduced.
+
+ACTOR LOCALIZATION
+------------------
+Actor-owned node titles use the existing read-only resolver:
+
+resolveActorValueObjectReadLocalizationsV1
+
+No AI translation generation and no localization write occurs during read.
+
+PRIVACY
+-------
+Actor nodes are explicitly restricted by:
+
+owner_user_id = current app user
+owner_actor_id = current active actor
+
+Private Observation Objects belonging to other users or actors are not merged
+into the mixed tree.
+
+CROSS_USER_PRIVATE_READ=NO
+
+VALUE OBJECT DETAIL
+-------------------
+/value-objects/[id] now uses the mixed reader for tree/path construction.
+
+Therefore the following all use the same mixed graph:
+
+parentNode
+pathNodes
+rootTitle
+parentTitle
+pathText
+directChildren
+siblings
+descendant tree
+
+This is valid for both:
+
+- a global/system Observation Object page;
+- an actor/private Observation Object page.
+
+ONTOLOGY CARD API
+-----------------
+/api/value-objects/ontology/[id]
+
+now localizes a mixed ontology card according to each node's origin:
+
+global/system node
+  -> global system localization
+
+current actor/private node
+  -> actor localization
+
+This fixes the lower semantic card as well as the top structure presentation.
+
+DATABASE
+--------
+DB_MIGRATION=NO
+NEW_TABLE=NO
+NEW_ENTITY=NO
+WRITE_PATH_CHANGE=NO
+
+PP5B
+----
+PP5B creation semantics remain unchanged.
+
+The subproject:
+
+Restaurant visits
+
+remains:
+
+- a normal project_context;
+- an actor/private leaf Observation Object;
+- a sibling of Organization of nutrition under the same global intermediate;
+- project-related through project_composition_relations.decomposes_into.
+
+This patch changes only ontology READ composition/localization.
+
+VALIDATION
+----------
+MIXED_GLOBAL_ACTOR_READ_PATH_VALIDATOR=PASS_21/21
+PP4E1_BASE_VALIDATOR=PASS_14/14
+PP4E1_RECURRENCE_GUARD_VALIDATOR=PASS_7/7
+ESLINT_CHANGED_FILES_NO_REGRESSION=PASS
+TYPESCRIPT=PASS
+BUILD=PASS
+GIT_DIFF_CHECK=PASS
+
+RESULT_PACKAGE_SHA256
+---------------------
+0A7048A985302950A6EB45B3386E9162066D226A040408BB0BB0A7A9A47BB841
+
+PRODUCTION SMOKE
+----------------
+A. ACTOR LEAF WITH GLOBAL PARENT
+
+1. Open:
+   Restaurant visits
+   /value-objects/<id>?locale=ru
+
+2. Verify top "Position in structure":
+
+   Root:
+   Действия и процессы
+
+   Structural parent:
+   Питание и потребление
+
+   Path:
+   Действия и процессы
+   -> Питание и потребление
+   -> Походы в ресторан
+
+3. Verify the lower semantic card uses the same Russian system titles.
+
+B. GLOBAL INTERMEDIATE WITH MIXED CHILDREN
+
+4. Open the system intermediate:
+   Питание и потребление
+
+5. Verify its direct children may contain BOTH:
+   - global/system child nodes;
+   - actor/private child leaves of the active actor.
+
+6. Verify private actor nodes of other users are not visible.
+
+C. DEEPER SYSTEM INTERMEDIATE
+
+7. Open any global intermediate that itself has a global intermediate parent.
+
+8. Verify full root -> intermediate -> intermediate path.
+
+9. If that intermediate has a private actor leaf child, verify that leaf appears
+   under the same parent and its own detail path is complete.
+
+D. LOCALIZATION
+
+10. On locale=ru verify global parent/root/path labels are Russian.
+
+11. Switch locale to another supported locale and verify system titles follow
+    that locale while actor-owned titles use existing actor localization
+    fallback rules.
+
+ROLLBACK
+--------
+git revert 0a5ba2ec1457f60e22625338f98da5af62640d41
+
+No database rollback required.
