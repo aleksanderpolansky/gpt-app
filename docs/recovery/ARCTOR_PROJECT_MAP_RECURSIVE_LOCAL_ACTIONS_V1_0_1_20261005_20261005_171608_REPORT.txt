@@ -1,0 +1,73 @@
+﻿ARCTor technical recovery checkpoint
+
+PATCH=ARCTOR_PROJECT_MAP_RECURSIVE_LOCAL_ACTIONS_V1_0_1_20261005
+RESULT_TIMESTAMP=20261005_171608
+BASE_HEAD=19cb84b51f5793857648712c692318e970bb2d9f
+CODE_COMMIT=09ce79110b2b50bb34cc8fd4013f7d4f35704a85
+
+PURPOSE=Expose the same four local actions on every visible project/subproject card while preserving project and ontology semantics.
+
+UI_ACTIONS=
+- add subproject
+- add task
+- add date-range time container
+- add time-of-day time container
+
+ONTOLOGY_LOCK=
+Each project and subproject remains an independent private actor leaf observation object.
+A newly created subproject uses the same active global system intermediate structural parent as its parent project.
+Project nesting does not mutate value_objects.parent_value_object_id.
+Project nesting is represented only by project_composition_relations with relation_type_code=decomposes_into.
+
+VALIDATION=
+APPLY=PASS
+RECURSIVE_LOCAL_ACTIONS_VALIDATOR=PASS_16_16
+ESLINT=PASS
+TYPECHECK=PASS
+PRODUCTION_BUILD=PASS
+ONTOLOGY_INTEGRITY=PASS
+
+DATA_MODEL=
+DB_MIGRATION=NO
+NEW_TABLE=NO
+NEW_ENTITY=NO
+SUBPROJECT_API_CHANGE=NO
+VALUE_OBJECT_PARENT_MUTATION=NO
+PROJECT_DECOMPOSITION=project_composition_relations/decomposes_into
+SAME_GLOBAL_SYSTEM_INTERMEDIATE_PARENT=GUARDED_BY_EXISTING_PP5B_API
+PROJECT_CYCLE_GUARD=PRESERVED
+
+VALIDATED_HASHES=
+PROJECT_MAP_SHA256=543A5C2970174A2247D3788EF9A66F331E16282991F53648E46EECDD33B8A83D
+VALIDATOR_SHA256=CBB111C9132408BF0A458746FBA729A3CD478CE94B0846F89E52CC523C1BC432
+SUBPROJECT_API_SHA256=169DF5C3F14BE846DF287A67BE65B0E31CFEA86B72676D472A278579132E52AF
+RESULT_ZIP_SHA256=B0FC615458581F3695A0CB4BDE01BBDCB824F03F0DAF4D3150A153FE12D8ACB3
+
+DIFF_STAT=
+src/app/projects/ProjectMapStartClient.tsx | 111 lines changed
+88 insertions
+23 deletions
+
+SOURCE_FILES=
+src/app/projects/ProjectMapStartClient.tsx
+scripts/validate-project-map-recursive-local-actions-v1.mjs
+
+TECHNICAL_LOG=
+docs/recovery/ARCTOR_PROJECT_MAP_RECURSIVE_LOCAL_ACTIONS_V1_0_1_20261005_20261005_171608_REPORT.txt
+
+COMMIT_STRATEGY=
+Code and validator committed first.
+Recovery checkpoint committed separately after exact code commit hash became available.
+Both commits pushed together after staging gates.
+
+NEXT=
+Production smoke:
+1. Root project card exposes four local actions.
+2. Subproject card exposes the same four local actions.
+3. Actions opened from a subproject target that subproject project_context.
+4. Creating a nested subproject preserves the shared global system intermediate ontology parent.
+5. Project parent-child relation remains decomposes_into.
+6. After smoke, proceed to separate ELK hierarchical/compound layout patch.
+
+DEPLOY=AUTOMATIC_PLATFORM_PIPELINE_IF_CONFIGURED
+PRODUCTION_SMOKE=PENDING
