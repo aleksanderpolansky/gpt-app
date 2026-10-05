@@ -11,6 +11,7 @@ import { toMediaDeliveryUrl } from "../../../../lib/media-egress";
 import { supabase } from "../../../../lib/supabase";
 import { resolveActorValueObjectReadLocalizationsV1 } from "@/lib/localization/valueObjectReadLocalization.server";
 import { localizeGlobalSystemValueObject } from "@/lib/reality-core/global-system-value-object-localization";
+import { readMixedValueObjectTreeV1 } from "@/lib/reality-core/mixed-value-object-tree-read.server";
 import { requirePlatformAdmin } from "@/lib/admin/require-platform-admin";
 import {
   ValueObjectProfileTopGrid,
@@ -1266,67 +1267,12 @@ export default async function ValueObjectDetailPage({
     valueObject.root_value_object_id ?? valueObject.id;
 
   async function readTreeNodes(): Promise<TreeNodeRow[]> {
-    if (isGlobalSystemObject) {
-      const { data, error } = await supabase
-        .from("value_objects")
-        .select(
-          `
-          id,
-          title,
-          canonical_key,
-          node_role_code,
-          object_kind,
-          object_kind_code,
-          ontology_node_role_code,
-          branch_type_code,
-          root_value_object_id,
-          parent_value_object_id,
-          status,
-          metadata_json,
-          created_at
-        `,
-        )
-        .eq("root_value_object_id", rootValueObjectId)
-        .eq("scope_code", "global")
-        .order("created_at", { ascending: true });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      return ((data ?? []) as TreeNodeRow[]).map((node) =>
-        localizeGlobalSystemValueObject(node, locale),
-      );
-    }
-
-    const { data, error } = await supabase.rpc(
-      "read_actor_value_object_tree_localized_v1",
-      {
-        p_owner_user_id: actorContext.appUserId,
-        p_owner_actor_id: actorContext.actorId,
-        p_root_value_object_id: rootValueObjectId,
-        p_locale: locale,
-      },
-    );
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    const treeNodes = (data ?? []) as TreeNodeRow[];
-    const treeLocalization =
-      await resolveActorValueObjectReadLocalizationsV1({
-        entities: treeNodes,
-        targetLocale: locale,
-        fieldCodes: ["title"],
-      });
-
-    return treeNodes.map((node) => ({
-      ...node,
-      title:
-        treeLocalization.fieldsById.get(node.id)?.title ??
-        node.title,
-    }));
+    return readMixedValueObjectTreeV1({
+      rootValueObjectId,
+      appUserId: actorContext.appUserId,
+      actorId: actorContext.actorId,
+      locale,
+    });
   }
 
   async function readCriteria(): Promise<CriterionRow[]> {

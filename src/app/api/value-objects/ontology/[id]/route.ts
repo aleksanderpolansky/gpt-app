@@ -4,6 +4,7 @@ import {
   localizeGlobalSystemValueObject,
   normalizeGlobalSystemValueObjectLocale,
 } from "@/lib/reality-core/global-system-value-object-localization";
+import { resolveActorValueObjectReadLocalizationsV1 } from "@/lib/localization/valueObjectReadLocalization.server";
 import type { ValueObjectOntologyCardV1 } from "@/types/reality-core/value-object-ontology-runtime-v1";
 
 import {
@@ -45,6 +46,8 @@ type OntologyNodeRow = {
   created_by_actor_id: string | null;
   created_at: string;
   updated_at: string;
+  metadata_json: Record<string, unknown> | null;
+  owner_user_id: string | null;
 };
 
 type FacetRow = {
@@ -100,6 +103,8 @@ const ONTOLOGY_NODE_SELECT = [
   "created_by_actor_id",
   "created_at",
   "updated_at",
+  "metadata_json",
+  "owner_user_id",
 ].join(",");
 
 function isGlobalSystemObject(
@@ -153,6 +158,102 @@ function toCardNode(row: OntologyNodeRow, locale: string) {
     createdByActorId: projected.created_by_actor_id,
     createdAt: projected.created_at,
     updatedAt: projected.updated_at,
+  };
+}
+
+async function localizeMixedOntologyCardV1(input: {
+  card: ValueObjectOntologyCardV1;
+  appUserId: string;
+  actorId: string;
+  locale: string;
+}): Promise<ValueObjectOntologyCardV1> {
+  const ids = Array.from(
+    new Set(
+      [
+        input.card.valueObject.id,
+        input.card.parent?.id ?? null,
+        input.card.root.id,
+      ].filter((value): value is string => Boolean(value)),
+    ),
+  );
+
+  if (ids.length === 0) {
+    return input.card;
+  }
+
+  const { data, error } = await supabase
+    .from("value_objects")
+    .select(ONTOLOGY_NODE_SELECT)
+    .in("id", ids);
+
+  if (error) {
+    return input.card;
+  }
+
+  const rows = (data ?? []) as unknown as OntologyNodeRow[];
+  const rowById = new Map(rows.map((row) => [row.id, row] as const));
+  const actorRows = rows.filter(
+    (row) =>
+      row.scope_code === "actor" &&
+      row.owner_user_id === input.appUserId &&
+      row.owner_actor_id === input.actorId,
+  );
+
+  const actorLocalization =
+    actorRows.length > 0
+      ? await resolveActorValueObjectReadLocalizationsV1({
+          entities: actorRows,
+          targetLocale: input.locale,
+          fieldCodes: ["title", "description"],
+        })
+      : null;
+
+  function projectNode(
+    node: ValueObjectOntologyCardV1["valueObject"] | null,
+  ): ValueObjectOntologyCardV1["valueObject"] | null {
+    if (!node) {
+      return null;
+    }
+
+    const row = rowById.get(node.id);
+
+    if (!row) {
+      return node;
+    }
+
+    if (
+      row.scope_code === "global" &&
+      row.origin_type_code === "system_model"
+    ) {
+      return toCardNode(
+        row,
+        input.locale,
+      ) as ValueObjectOntologyCardV1["valueObject"];
+    }
+
+    if (
+      row.scope_code === "actor" &&
+      row.owner_user_id === input.appUserId &&
+      row.owner_actor_id === input.actorId
+    ) {
+      const fields = actorLocalization?.fieldsById.get(row.id);
+
+      return {
+        ...node,
+        title: fields?.title ?? node.title,
+        description: fields?.description ?? node.description,
+      };
+    }
+
+    return node;
+  }
+
+  return {
+    ...input.card,
+    valueObject:
+      projectNode(input.card.valueObject) ?? input.card.valueObject,
+    parent: projectNode(input.card.parent),
+    root: projectNode(input.card.root) ?? input.card.root,
   };
 }
 
@@ -428,8 +529,15 @@ export async function GET(request: Request, context: RouteContext) {
     );
   }
 
+  const localizedCard = await localizeMixedOntologyCardV1({
+    card: data as ValueObjectOntologyCardV1,
+    appUserId: actorContext.appUserId,
+    actorId: actorContext.actorId,
+    locale,
+  });
+
   return NextResponse.json({
     ok: true,
-    card: data as ValueObjectOntologyCardV1,
+    card: localizedCard,
   });
 }
