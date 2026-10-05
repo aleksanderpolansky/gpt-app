@@ -65,6 +65,12 @@ type ActivityContainmentRelationRow = {
   readonly target_activity_event_id: string;
 };
 
+type ProjectCompositionRelationRow = {
+  readonly project_context_id: string;
+  readonly parent_value_object_id: string;
+  readonly child_value_object_id: string;
+};
+
 type ActivityRecurrenceRuleRow = {
   readonly id: string;
   readonly source_activity_event_id: string;
@@ -330,6 +336,9 @@ export async function GET() {
   const projectActivitiesById = new Map<string, ProjectActivityRow>();
   const projectContainmentRelationsByProject =
     new Map<string, ActivityContainmentRelationRow[]>();
+  const projectCompositionRelationsByProject =
+    new Map<string, ProjectCompositionRelationRow[]>();
+  const parentProjectIdsByChildRoot = new Map<string, string[]>();
   const projectRecurrenceByActivityId =
     new Map<string, ActivityRecurrenceRuleRow>();
   const projectOccurrencesByRuleId =
@@ -338,6 +347,43 @@ export async function GET() {
   const fulfilledPlannedActivityIds = new Set<string>();
 
   if (projectIds.length > 0) {
+    const { data: compositionData, error: compositionError } =
+      await supabase
+        .from("project_composition_relations")
+        .select(
+          "project_context_id,parent_value_object_id,child_value_object_id",
+        )
+        .in("project_context_id", projectIds)
+        .eq("relation_type_code", "decomposes_into")
+        .eq("status_code", "active");
+
+    if (compositionError) {
+      return NextResponse.json(
+        { ok: false, error: compositionError.message },
+        { status: 500 },
+      );
+    }
+
+    for (const relation of (compositionData ?? []) as unknown as ProjectCompositionRelationRow[]) {
+      const current =
+        projectCompositionRelationsByProject.get(
+          relation.project_context_id,
+        ) ?? [];
+      current.push(relation);
+      projectCompositionRelationsByProject.set(
+        relation.project_context_id,
+        current,
+      );
+
+      const parents =
+        parentProjectIdsByChildRoot.get(relation.child_value_object_id) ?? [];
+      parents.push(relation.project_context_id);
+      parentProjectIdsByChildRoot.set(
+        relation.child_value_object_id,
+        parents,
+      );
+    }
+
     const { data: linksData, error: linksError } = await supabase
       .from("project_activity_links")
       .select("project_context_id,activity_event_id")
@@ -547,6 +593,13 @@ export async function GET() {
     );
   }
 
+  const projectIdByRootValueObjectId = new Map(
+    projects.map((project) => [
+      project.root_value_object_id,
+      project.id,
+    ] as const),
+  );
+
   return NextResponse.json({
     ok: true,
     projects: projects.map((project) => {
@@ -556,6 +609,21 @@ export async function GET() {
       const linkedActivityIdSet = new Set(linkedActivityIds);
       const containmentRelations =
         projectContainmentRelationsByProject.get(project.id) ?? [];
+      const compositionRelations =
+        projectCompositionRelationsByProject.get(project.id) ?? [];
+      const subprojectIds = compositionRelations
+        .filter(
+          (relation) =>
+            relation.parent_value_object_id === project.root_value_object_id,
+        )
+        .map((relation) =>
+          projectIdByRootValueObjectId.get(
+            relation.child_value_object_id,
+          ),
+        )
+        .filter((value): value is string => Boolean(value));
+      const parentProjectIds =
+        parentProjectIdsByChildRoot.get(project.root_value_object_id) ?? [];
       const containsBySource = new Map<string, string[]>();
       const containedByTarget = new Map<string, string[]>();
 
@@ -581,6 +649,8 @@ export async function GET() {
         currencyCode: project.currency_code,
         createdAt: project.created_at,
         updatedAt: project.updated_at,
+        subprojectIds,
+        parentProjectIds,
         rootValueObject: root
           ? {
               id: root.id,

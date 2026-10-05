@@ -101,6 +101,8 @@ type ProjectItem = {
     parentValueObjectId: string | null;
   };
   activities: ProjectActivityItem[];
+  subprojectIds: string[];
+  parentProjectIds: string[];
 };
 
 type ProjectsPayload = {
@@ -152,6 +154,17 @@ type ProjectTaskCaptureCopy = {
   close: string;
 };
 
+type ProjectSubprojectCaptureCopy = {
+  title: string;
+  placeholder: string;
+  creating: string;
+  create: string;
+  error: string;
+  close: string;
+  label: string;
+  openObservationObject: string;
+};
+
 type Copy = {
   pageTitle: string;
   pageSubtitle: string;
@@ -166,6 +179,7 @@ type Copy = {
   leafRequired: string;
   addObservationObject: string;
   addTask: string;
+  addSubproject: string;
   addDateWindow: string;
   addTimeWindow: string;
   timeWindowLabel: string;
@@ -195,6 +209,7 @@ const EN: Copy = {
   leafRequired: "Choose a linked leaf observation object",
   addObservationObject: "Add new observation object",
   addTask: "Add task",
+  addSubproject: "Add subproject",
   addDateWindow: "Add date window",
   addTimeWindow: "Add time-of-day window",
   timeWindowLabel: "TIME WINDOW",
@@ -268,6 +283,82 @@ const PROJECT_TASK_CAPTURE_COPY: Record<LocaleCode, ProjectTaskCaptureCopy> = {
   },
 };
 
+const PROJECT_SUBPROJECT_CAPTURE_COPY: Record<
+  LocaleCode,
+  ProjectSubprojectCaptureCopy
+> = {
+  en: {
+    title: "Add subproject",
+    placeholder: "Subproject name",
+    creating: "Creating subproject…",
+    create: "Create subproject",
+    error: "Could not create the subproject.",
+    close: "Close",
+    label: "SUBPROJECT",
+    openObservationObject: "Observation object",
+  },
+  ru: {
+    title: "Добавить подпроект",
+    placeholder: "Название подпроекта",
+    creating: "Создаю подпроект…",
+    create: "Создать подпроект",
+    error: "Не удалось создать подпроект.",
+    close: "Закрыть",
+    label: "ПОДПРОЕКТ",
+    openObservationObject: "Объект наблюдения",
+  },
+  uk: {
+    title: "Додати підпроєкт",
+    placeholder: "Назва підпроєкту",
+    creating: "Створюю підпроєкт…",
+    create: "Створити підпроєкт",
+    error: "Не вдалося створити підпроєкт.",
+    close: "Закрити",
+    label: "ПІДПРОЄКТ",
+    openObservationObject: "Об'єкт спостереження",
+  },
+  pl: {
+    title: "Dodaj podprojekt",
+    placeholder: "Nazwa podprojektu",
+    creating: "Tworzenie podprojektu…",
+    create: "Utwórz podprojekt",
+    error: "Nie udało się utworzyć podprojektu.",
+    close: "Zamknij",
+    label: "PODPROJEKT",
+    openObservationObject: "Obiekt obserwacji",
+  },
+  de: {
+    title: "Unterprojekt hinzufügen",
+    placeholder: "Name des Unterprojekts",
+    creating: "Unterprojekt wird erstellt…",
+    create: "Unterprojekt erstellen",
+    error: "Unterprojekt konnte nicht erstellt werden.",
+    close: "Schließen",
+    label: "UNTERPROJEKT",
+    openObservationObject: "Beobachtungsobjekt",
+  },
+  es: {
+    title: "Añadir subproyecto",
+    placeholder: "Nombre del subproyecto",
+    creating: "Creando subproyecto…",
+    create: "Crear subproyecto",
+    error: "No se pudo crear el subproyecto.",
+    close: "Cerrar",
+    label: "SUBPROYECTO",
+    openObservationObject: "Objeto de observación",
+  },
+  cs: {
+    title: "Přidat podprojekt",
+    placeholder: "Název podprojektu",
+    creating: "Vytváření podprojektu…",
+    create: "Vytvořit podprojekt",
+    error: "Podprojekt se nepodařilo vytvořit.",
+    close: "Zavřít",
+    label: "PODPROJEKT",
+    openObservationObject: "Objekt pozorování",
+  },
+};
+
 const COPY: Record<LocaleCode, Copy> = {
   en: EN,
   ru: {
@@ -286,6 +377,7 @@ const COPY: Record<LocaleCode, Copy> = {
     leafRequired: "Выберите связанный листовой ОН",
     addObservationObject: "Добавить новый объект наблюдения",
     addTask: "Добавить задачу",
+    addSubproject: "Добавить подпроект",
     addDateWindow: "Добавить временное окно по датам",
     addTimeWindow: "Добавить временное окно по часам",
     timeWindowLabel: "ВРЕМЕННОЕ ОКНО",
@@ -645,6 +737,7 @@ type ProjectCenterData = Record<string, unknown> & {
   onRootToggle: () => void;
   onRootSelect: (option: RootOption) => void;
   onAddObservationObject: () => void;
+  onAddSubproject: () => void;
   onAddTask: () => void;
   onAddDateWindow: () => void;
   onAddTimeWindow: () => void;
@@ -668,6 +761,56 @@ type ProjectActivityNode = Node<
   ProjectActivityNodeData,
   "project-activity"
 >;
+
+type ProjectSubprojectNodeData = Record<string, unknown> & {
+  project: ProjectItem;
+  copy: ProjectSubprojectCaptureCopy;
+  onOpenProject: (projectId: string) => void;
+  onOpenObservationObject: (valueObjectId: string) => void;
+};
+
+type ProjectSubprojectNode = Node<
+  ProjectSubprojectNodeData,
+  "project-subproject"
+>;
+
+function ProjectSubprojectCard({
+  data,
+}: NodeProps<ProjectSubprojectNode>) {
+  return (
+    <div className="relative w-[300px] rounded-[22px] border-2 border-[#a9b9f4] bg-[#f8faff] px-4 py-3.5 shadow-[0_14px_34px_rgba(63,91,170,0.10)]">
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!h-2 !w-2 !border-0 !bg-[#8fa2d7]"
+      />
+      <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#5174ef]">
+        {data.copy.label}
+      </div>
+      <button
+        type="button"
+        onClick={() => data.onOpenProject(data.project.id)}
+        className="mt-2 block w-full text-left text-[12px] font-extrabold leading-5 text-[#29324a] hover:text-[#315ee7]"
+      >
+        {data.project.title}
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          data.onOpenObservationObject(data.project.rootValueObject.id)
+        }
+        className="mt-2 rounded-lg border border-[#d7def3] bg-white px-2.5 py-1.5 text-[9px] font-bold text-[#62719a] hover:border-[#aebfff] hover:text-[#315ee7]"
+      >
+        ОН · {data.copy.openObservationObject}
+      </button>
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!h-2 !w-2 !border-0 !bg-[#8fa2d7]"
+      />
+    </div>
+  );
+}
 
 function ProjectActivityCard({
   data,
@@ -910,6 +1053,15 @@ function ProjectCenterCard({ data }: NodeProps<ProjectCenterNode>) {
 
       {data.readonlyMode ? (
         <div className="nodrag nopan absolute -right-4 top-1/2 flex -translate-y-1/2 flex-col gap-1.5">
+          <button
+            type="button"
+            onClick={data.onAddSubproject}
+            title={data.copy.addSubproject}
+            aria-label={data.copy.addSubproject}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c9d5ff] bg-white text-sm font-black text-[#315ee7] shadow-md hover:bg-[#eef2ff]"
+          >
+            ⊞
+          </button>
           <button type="button" onClick={data.onAddTask} title={data.copy.addTask} aria-label={data.copy.addTask} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c9d5ff] bg-white text-base font-bold text-[#315ee7] shadow-md hover:bg-[#eef2ff]">+</button>
           <button type="button" onClick={data.onAddDateWindow} title={data.copy.addDateWindow} aria-label={data.copy.addDateWindow} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c9d5ff] bg-white text-sm font-black text-[#315ee7] shadow-md hover:bg-[#eef2ff]">↔</button>
           <button type="button" onClick={data.onAddTimeWindow} title={data.copy.addTimeWindow} aria-label={data.copy.addTimeWindow} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c9d5ff] bg-white text-sm font-black text-[#315ee7] shadow-md hover:bg-[#eef2ff]">↕</button>
@@ -928,6 +1080,7 @@ function ProjectCenterCard({ data }: NodeProps<ProjectCenterNode>) {
 const NODE_TYPES = {
   "project-center": ProjectCenterCard,
   "project-activity": ProjectActivityCard,
+  "project-subproject": ProjectSubprojectCard,
 };
 
 export default function ProjectMapStartClient({
@@ -938,6 +1091,7 @@ export default function ProjectMapStartClient({
   const locale = normalizeLocale(initialLocale);
   const copy = COPY[locale];
   const taskCaptureCopy = PROJECT_TASK_CAPTURE_COPY[locale];
+  const subprojectCaptureCopy = PROJECT_SUBPROJECT_CAPTURE_COPY[locale];
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedProjectId = searchParams.get("project");
@@ -970,6 +1124,14 @@ export default function ProjectMapStartClient({
   const [windowTimeEnd, setWindowTimeEnd] = useState("");
   const [windowCaptureSaving, setWindowCaptureSaving] = useState(false);
   const [windowCaptureError, setWindowCaptureError] = useState<string | null>(null);
+  const [subprojectCaptureOpen, setSubprojectCaptureOpen] = useState(false);
+  const [subprojectCaptureTitle, setSubprojectCaptureTitle] = useState("");
+  const [subprojectCaptureSubmitting, setSubprojectCaptureSubmitting] =
+    useState(false);
+  const [subprojectCaptureError, setSubprojectCaptureError] =
+    useState<string | null>(null);
+  const [subprojectCaptureRequestId, setSubprojectCaptureRequestId] =
+    useState("");
 
   const [title, setTitle] = useState("");
   const [rootQuery, setRootQuery] = useState("");
@@ -1217,7 +1379,7 @@ export default function ProjectMapStartClient({
     setSelectedProjectId(null);
   }
 
-  function showProject(projectId: string) {
+  const showProject = useCallback((projectId: string) => {
     clearProjectDraft();
     const project = projects.find((item) => item.id === projectId);
     if (!project) return;
@@ -1230,7 +1392,7 @@ export default function ProjectMapStartClient({
     setSelectedRootId(project.rootValueObject.id);
     setRootQuery(project.rootValueObject.title ?? "");
     setRootDropdownOpen(false);
-  }
+  }, [projects]);
 
   function handleRootQueryChange(value: string) {
     setSaved(false);
@@ -1309,6 +1471,78 @@ export default function ProjectMapStartClient({
 
   function addProjectActivity() {
     openTaskCapture(null);
+  }
+
+  function openSubprojectCapture() {
+    if (!selectedProject) return;
+    setSubprojectCaptureTitle("");
+    setSubprojectCaptureError(null);
+    setSubprojectCaptureRequestId(
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `pp5b-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    );
+    setSubprojectCaptureOpen(true);
+  }
+
+  async function submitSubprojectCapture() {
+    const parentProject = selectedProject;
+    const subprojectTitle = subprojectCaptureTitle.trim();
+
+    if (
+      !parentProject ||
+      !subprojectTitle ||
+      !subprojectCaptureRequestId ||
+      subprojectCaptureSubmitting
+    ) {
+      return;
+    }
+
+    setSubprojectCaptureSubmitting(true);
+    setSubprojectCaptureError(null);
+
+    try {
+      const response = await fetch("/api/projects/subprojects", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          parentProjectContextId: parentProject.id,
+          title: subprojectTitle,
+          description: subprojectTitle,
+          locale,
+          clientRequestId: subprojectCaptureRequestId,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            error?: string;
+            subproject?: { id?: string };
+          }
+        | null;
+
+      if (!response.ok || payload?.ok !== true || !payload.subproject?.id) {
+        throw new Error(payload?.error || subprojectCaptureCopy.error);
+      }
+
+      setSubprojectCaptureOpen(false);
+      setSubprojectCaptureTitle("");
+      setSubprojectCaptureRequestId("");
+      await loadProjects(parentProject.id, undefined, { background: true });
+      window.dispatchEvent(new Event(PROJECTS_CHANGED_EVENT));
+    } catch (error) {
+      setSubprojectCaptureError(
+        error instanceof Error
+          ? error.message
+          : subprojectCaptureCopy.error,
+      );
+    } finally {
+      setSubprojectCaptureSubmitting(false);
+    }
   }
 
   function openWindowCapture(kind: "date_range" | "time_of_day") {
@@ -1539,6 +1773,7 @@ export default function ProjectMapStartClient({
     onRootToggle: handleRootToggle,
     onRootSelect: handleRootSelect,
     onAddObservationObject: addObservationObject,
+    onAddSubproject: openSubprojectCapture,
     onAddTask: addProjectActivity,
     onAddDateWindow: () => openWindowCapture("date_range"),
     onAddTimeWindow: () => openWindowCapture("time_of_day"),
@@ -1546,15 +1781,46 @@ export default function ProjectMapStartClient({
 
   const nodes = useMemo<Node[]>(() => {
     const activities = selectedProject?.activities ?? [];
+    const subprojects = (selectedProject?.subprojectIds ?? [])
+      .map((projectId) =>
+        projects.find((project) => project.id === projectId),
+      )
+      .filter((project): project is ProjectItem => Boolean(project));
     const byId = new Map(activities.map((activity) => [activity.id, activity]));
     const containedIds = new Set(activities.flatMap((activity) => activity.containsActivityIds ?? []));
     const containers = activities.filter((activity) => activity.projectPlanning?.nodeKind === "time_container");
+
+    const subprojectNodes = subprojects.map((project, index) => ({
+      id: `project-subproject:${project.id}`,
+      type: "project-subproject",
+      position: {
+        x: 145 + (index % 3) * 335,
+        y: 505 + Math.floor(index / 3) * 145,
+      },
+      draggable: false,
+      selectable: false,
+      data: {
+        project,
+        copy: subprojectCaptureCopy,
+        onOpenProject: showProject,
+        onOpenObservationObject: (valueObjectId: string) => {
+          router.push(
+            localeHref(
+              `/value-objects/${encodeURIComponent(valueObjectId)}`,
+              locale,
+            ),
+          );
+        },
+      },
+    }) as ProjectSubprojectNode);
     const standalone = activities.filter((activity) => activity.projectPlanning?.nodeKind !== "time_container" && !containedIds.has(activity.id));
 
+    const subprojectRows = Math.ceil(subprojects.length / 3);
+    const containerBaseY = 525 + subprojectRows * 145;
     const containerNodes = containers.map((activity, index) => ({
       id: `project-activity:${activity.id}`,
       type: "project-activity",
-      position: { x: 40 + (index % 2) * 650, y: 525 + Math.floor(index / 2) * 285 },
+      position: { x: 40 + (index % 2) * 650, y: containerBaseY + Math.floor(index / 2) * 285 },
       draggable: false,
       selectable: false,
       data: {
@@ -1565,7 +1831,8 @@ export default function ProjectMapStartClient({
       },
     }) as ProjectActivityNode);
 
-    const standaloneBaseY = 525 + Math.ceil(containers.length / 2) * 285;
+    const standaloneBaseY =
+      containerBaseY + Math.ceil(containers.length / 2) * 285;
     const activityNodes = standalone.map((activity, index) => ({
       id: `project-activity:${activity.id}`,
       type: "project-activity",
@@ -1581,16 +1848,28 @@ export default function ProjectMapStartClient({
 
     return [
       { id: "__project_center__", type: "project-center", position: { x: 390, y: 220 }, draggable: false, selectable: false, data: nodeData } as ProjectCenterNode,
+      ...subprojectNodes,
       ...containerNodes,
       ...activityNodes,
     ];
-  }, [copy, locale, nodeData, openProjectActivity, openTaskCapture, selectedProject]);
+  }, [
+    copy,
+    locale,
+    nodeData,
+    openProjectActivity,
+    openTaskCapture,
+    projects,
+    router,
+    selectedProject,
+    showProject,
+    subprojectCaptureCopy,
+  ]);
 
   const edges = useMemo<Edge[]>(
     () => {
       const activities = selectedProject?.activities ?? [];
       const containedIds = new Set(activities.flatMap((activity) => activity.containsActivityIds ?? []));
-      return activities
+      const activityEdges = activities
         .filter((activity) => !containedIds.has(activity.id))
         .map((activity) => ({
           id: `project-to-activity:${activity.id}`,
@@ -1599,6 +1878,21 @@ export default function ProjectMapStartClient({
           type: "smoothstep",
           style: { stroke: "#c8d3f2", strokeWidth: 1.5 },
         }));
+
+      const subprojectEdges = (selectedProject?.subprojectIds ?? []).map(
+        (projectId) => ({
+          id: `project-to-subproject:${projectId}`,
+          source: "__project_center__",
+          target: `project-subproject:${projectId}`,
+          type: "smoothstep",
+          style: {
+            stroke: "#9fb2f3",
+            strokeWidth: 1.7,
+          },
+        }),
+      );
+
+      return [...subprojectEdges, ...activityEdges];
     },
     [selectedProject],
   );
@@ -1607,6 +1901,9 @@ export default function ProjectMapStartClient({
     () =>
       [
         selectedProjectId ?? "draft",
+        ...(selectedProject?.subprojectIds ?? []).map(
+          (projectId) => `subproject:${projectId}`,
+        ),
         ...(selectedProject?.activities ?? []).map(
           (activity) => [
             activity.id,
@@ -1735,6 +2032,88 @@ export default function ProjectMapStartClient({
             </ReactFlow>
           </ReactFlowProvider>
         </section>
+
+        {subprojectCaptureOpen && selectedProject ? (
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="fixed inset-0 z-[97] flex items-center justify-center bg-black/35 px-3 py-4"
+            onClick={() => {
+              if (!subprojectCaptureSubmitting) {
+                setSubprojectCaptureOpen(false);
+              }
+            }}
+          >
+            <div
+              className="w-full max-w-[520px] rounded-2xl border border-[rgba(0,0,0,0.06)] bg-white p-5 shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#3b6ef8]">
+                    {subprojectCaptureCopy.label}
+                  </div>
+                  <h3 className="mt-2 text-xl font-bold text-[#1a1d2e]">
+                    {subprojectCaptureCopy.title}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  disabled={subprojectCaptureSubmitting}
+                  onClick={() => setSubprojectCaptureOpen(false)}
+                  aria-label={subprojectCaptureCopy.close}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#e3e6ef] text-[#7c8099] hover:bg-[#f5f6fb] disabled:opacity-50"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-[#dce4ff] bg-[#f4f7ff] px-3 py-2 text-[11px] font-semibold text-[#4563c8]">
+                {copy.projectLabel}: {selectedProject.title}
+              </div>
+
+              <label className="mt-3 block text-[11px] font-bold text-[#667091]">
+                {subprojectCaptureCopy.placeholder}
+                <input
+                  autoFocus
+                  maxLength={180}
+                  value={subprojectCaptureTitle}
+                  disabled={subprojectCaptureSubmitting}
+                  onChange={(event) =>
+                    setSubprojectCaptureTitle(event.target.value)
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void submitSubprojectCapture();
+                    }
+                  }}
+                  className="mt-1 w-full rounded-xl border border-[#dfe5f1] px-3 py-2.5 text-sm outline-none focus:border-[#7895ff] disabled:opacity-60"
+                />
+              </label>
+
+              {subprojectCaptureError ? (
+                <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-700">
+                  {subprojectCaptureError}
+                </div>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={() => void submitSubprojectCapture()}
+                disabled={
+                  subprojectCaptureSubmitting ||
+                  !subprojectCaptureTitle.trim()
+                }
+                className="mt-4 w-full rounded-xl bg-[#3b6ef8] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#2c5df0] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {subprojectCaptureSubmitting
+                  ? subprojectCaptureCopy.creating
+                  : subprojectCaptureCopy.create}
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {windowCaptureKind && selectedProject ? (
           <div role="dialog" aria-modal="true" className="fixed inset-0 z-[96] flex items-center justify-center bg-black/35 px-3 py-4" onClick={() => { if (!windowCaptureSaving) setWindowCaptureKind(null); }}>
