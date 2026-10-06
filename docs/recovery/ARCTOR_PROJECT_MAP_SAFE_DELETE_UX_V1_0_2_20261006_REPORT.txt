@@ -1,0 +1,131 @@
+﻿ARCTor technical recovery checkpoint
+
+PATCH=ARCTOR_PROJECT_MAP_SAFE_DELETE_UX_V1_0_2_20261006
+TIMESTAMP=20261006_143028
+RESULT=PASS
+FAILURE=
+BASE_HEAD=3374cddf50a87be102aa846bff54fc63c451490e
+
+GOAL=
+1. Show visible deletion progress instead of a silent 1-3 second wait.
+2. Preserve project-map viewport x/y/zoom after task/time-window/subproject mutations.
+3. Add guarded deletion for time windows, subprojects and projects.
+4. Preserve audit/history rows and the personal ontology leaf.
+
+PATCHER_V1_0_1_FIX=
+- corrects activity-node indentation-aware marker counts discovered by V1 failure;
+- top-level activity data blocks use 12-space indentation (2 occurrences);
+- contained activity data block uses 14-space indentation (1 occurrence);
+- functional safe-delete design is unchanged from V1.
+
+PATCHER_V1_0_2_FIX=
+- imports readProjectPlanningTimeContainerV1 into the time-containers route;
+- resolves the TypeScript failure found only after V1.0.1 reached the full tsc gate;
+- safe-delete behavior, guards and ontology invariants are otherwise unchanged.
+
+DELETE_PENDING_UI=
+Full map interaction shield with LoaderCircle spinner and localized "Deleting..." label.
+Prevents duplicate deletion clicks while the server operation is running.
+
+VIEWPORT_POLICY=
+Structured view: capture structuredViewport before mutation and restore after graph remount.
+Free view: capture freeViewport before mutation and restore after graph remount.
+Deleting the currently focused project intentionally selects a fallback project and resets camera.
+
+TIME_WINDOW_DELETE_POLICY=
+Allowed only when:
+- no active activity_event_relations;
+- no contained tasks;
+- no membership in another active project;
+- no active/paused recurrence rule;
+- no completed fulfillment.
+Success:
+- activity_events row becomes cancelled;
+- calendar projection is cancelled if present;
+- project_activity_links becomes inactive;
+- audit row is preserved.
+
+PROJECT_SUBPROJECT_DELETE_POLICY=
+Logical deletion only: project_contexts.status_code -> archived.
+Blocked when:
+- active tasks or time windows remain;
+- child project relations remain;
+- activity_event_relations remain;
+- more than one active parent project relation remains;
+- another active project_context uses the same root leaf.
+For a clean subproject with one parent relation:
+- that contextual decomposes_into relation becomes inactive;
+- project context becomes archived.
+Personal root Value Object is PRESERVED and never reparented/deleted.
+
+ONTOLOGY_INVARIANTS=
+PROJECT_ROOT=private actor-scoped active leaf
+PROJECT_HIERARCHY=project_composition_relations/decomposes_into
+ONTOLOGY_PARENT_MUTATION=NO
+SUBPROJECT_SAME_GLOBAL_SYSTEM_INTERMEDIATE_PARENT=PRESERVED
+VALUE_OBJECT_DELETE=NO
+
+API_CHANGE=
+src/app/api/projects/route.ts : add guarded DELETE
+src/app/api/projects/time-containers/route.ts : add guarded DELETE
+src/app/api/calendar/task-shelf/[activityEventId]/route.ts : unchanged
+src/app/api/projects/subprojects/route.ts : unchanged
+
+DB_MIGRATION=NO
+DEPENDENCY_CHANGE=NO
+
+HASHES_SHA256=
+MAP=57AF3983260E8DC2E4FFDE13535AC121901D97B8587DFBBF3C3D417B5B71BB5A
+PROJECT_ROUTE=1E493AFE34B9A90AA7687FA9FA2368714573B63394AF454427C6472F3CE86438
+TIME_ROUTE=84ADD626679584CD55C9E3EB3DE8EB4A71829CEAA9A388A7160D114350B0ACAD
+VALIDATOR=61E56BC3BEAE37386B97870B1F39EFBC3EF25A1C9006E68F20C7CFFDC0F4E818
+
+VALIDATION_REQUIRED=
+SAFE_DELETE_VALIDATOR=PASS
+ESLINT=PASS
+TYPECHECK=PASS
+BUILD=PASS
+DB_MIGRATION=NO
+DEPENDENCY_CHANGE=NO
+TASK_DELETE_ROUTE_UNCHANGED=PASS
+SUBPROJECT_ROUTE_UNCHANGED=PASS
+
+PRODUCTION_SMOKE=PENDING
+COMMIT=false
+PUSH=false
+DEPLOY=false
+
+POST_INSTALL_COMMIT_CHECKPOINT=
+CODE_COMMIT=a06ef085fe8910d1965286d8deef4ac399548641
+VALIDATED_RESULT_ZIP_SHA256=C94C4AFBCDB8B062207763847D58A8BD08BCC2D758F84B1FC8278C4A3B0D1182
+VALIDATED_RESULT_REPORT_SHA256=3902652E83084AE205E924F26670740A57BE2A29724D5A6FE2907EF5C777D20F
+
+DELETE_PENDING_SPINNER=PASS
+DUPLICATE_DELETE_BLOCK=PASS
+
+TASK_DELETE_VIEWPORT_PRESERVE=PASS_BY_CONTRACT
+TIME_WINDOW_DELETE_VIEWPORT_PRESERVE=PASS_BY_CONTRACT
+SUBPROJECT_DELETE_VIEWPORT_PRESERVE=PASS_BY_CONTRACT
+FREE_VIEWPORT_PRESERVE=PASS_BY_CONTRACT
+STRUCTURED_VIEWPORT_PRESERVE=PASS_BY_CONTRACT
+
+PROJECT_DELETE_GUARD=PASS
+SUBPROJECT_DELETE_GUARD=PASS
+TIME_WINDOW_DELETE_GUARD=PASS
+
+PROJECT_DELETE_MODE=ARCHIVE_PROJECT_CONTEXT
+ROOT_VALUE_OBJECT_PRESERVED=YES
+VALUE_OBJECT_DELETE=NO
+ONTOLOGY_PARENT_MUTATION=NO
+PROJECT_HIERARCHY=project_composition_relations/decomposes_into
+
+TIME_WINDOW_AUDIT_ROW=PRESERVED
+TASK_WHOLE_SERIES_DELETE_ROUTE=UNCHANGED
+SUBPROJECT_CREATE_ROUTE=UNCHANGED
+
+API_CHANGE=PROJECT_DELETE_AND_TIME_CONTAINER_DELETE_ONLY
+DB_MIGRATION=NO
+DEPENDENCY_CHANGE=NO
+ONTOLOGY_INTEGRITY=PRESERVED
+
+PRODUCTION_SMOKE=PENDING
