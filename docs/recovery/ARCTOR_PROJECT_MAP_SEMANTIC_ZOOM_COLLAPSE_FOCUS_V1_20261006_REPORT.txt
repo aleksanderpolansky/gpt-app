@@ -1,0 +1,126 @@
+﻿ARCTor technical recovery checkpoint
+
+PATCH=ARCTOR_PROJECT_MAP_SEMANTIC_ZOOM_COLLAPSE_FOCUS_V1_20261006
+TIMESTAMP=20261006_115832
+RESULT=PASS
+FAILURE=
+BASE_HEAD=5f25929359b8991a20bcd86ce8518fadb86a5dbc
+
+PURPOSE=
+Advance the structured project-map view without changing the already-stable free map.
+
+SEMANTIC_ZOOM=
+- detail >= 0.72
+- compact >= 0.42 and < 0.72
+- overview < 0.42
+- semantic level changes only on structured-view init / move end, not every pointer frame
+- task recurrence details are detail-only
+- timing is hidden in overview
+- subproject ON/action controls reduce as zoom moves away
+- time-window add/empty controls are detail-only
+
+COLLAPSE=
+- Subprojects, time windows and tasks are independently collapsible.
+- Collapse is a view-only state.
+- Collapse state persists in browser localStorage per project.
+- Collapsed territory keeps title + item count and uses compact dimensions.
+- Collapsed territory children are not rendered into the structured graph.
+- No DB or API persistence is introduced.
+
+FOCUS=
+- Structured view gains a breadcrumb focus path.
+- Breadcrumb is derived from project_composition_relations read model through parentProjectIds.
+- DAG-safe deterministic parent traversal is used.
+- Clicking any breadcrumb project makes it the current focus using existing showProject.
+- Existing subproject title click remains a focus/drill-down action.
+
+FREE_MAP_LOCK=
+- defaultNodes/defaultEdges remains.
+- no onNodesChange parent-state loop is reintroduced.
+- drag-stop localStorage persistence remains.
+- white double-dashed drag handle remains.
+- free map code is otherwise unchanged.
+
+ONTOLOGY_LOCK=
+API_CHANGE=NO
+DB_MIGRATION=NO
+DEPENDENCY_CHANGE=NO
+VALUE_OBJECT_PARENT_MUTATION=NO
+SUBPROJECT_PRIVATE_ACTOR_LEAF=PRESERVED
+SAME_GLOBAL_SYSTEM_INTERMEDIATE_PARENT=PRESERVED
+PROJECT_HIERARCHY=project_composition_relations/decomposes_into
+CYCLE_GUARD=PRESERVED
+
+VALIDATION=
+SEMANTIC_ZOOM=PASS required
+COLLAPSE=PASS required
+BREADCRUMB_FOCUS=PASS required
+FREE_VIEW_UNCONTROLLED=PRESERVED required
+ESLINT=PASS required
+TYPECHECK=PASS required
+PRODUCTION_BUILD=PASS required
+NO_API_CHANGE=PASS required
+NO_DB_MIGRATION=PASS required
+NO_DEPENDENCY_CHANGE=PASS required
+
+HASHES_SHA256=
+PROJECT_MAP=83E1B9D4D218AB1B2B15D6D7B8420E9B8D01080A6F83DB89E8FC749325AD7BA4
+VALIDATOR=83785991B6B1023A9A060695C1A5CAB2A161F7A4A04224B5E4CD8D5FC2FF2B39
+
+GIT_DIFF_STDERR=warning: in the working copy of 'src/app/projects/ProjectMapStartClient.tsx', LF will be replaced by CRLF the next time Git touches it
+
+
+FILES_EXPECTED=
+src/app/projects/ProjectMapStartClient.tsx
+scripts/validate-project-map-semantic-zoom-collapse-focus-v1.mjs
+docs/recovery/ARCTOR_PROJECT_MAP_SEMANTIC_ZOOM_COLLAPSE_FOCUS_V1_20261006_REPORT.txt
+
+NEXT=
+1. Review RESULT package.
+2. Commit code and validator.
+3. Force-add this exact recovery report separately.
+4. Push main.
+5. Production smoke:
+   - Structured breadcrumb shows current path.
+   - Click subproject, then use breadcrumb to return.
+   - Collapse/expand each of the three territories.
+   - Leave /projects and return; collapse state restores for that project.
+   - Zoom structured view below/above thresholds and verify progressive detail reduction.
+   - Switch to Free map and verify drag/persistence remains unchanged.
+
+COMMIT=false
+PUSH=false
+DEPLOY=false
+
+POST_INSTALL_COMMIT_CHECKPOINT=
+CODE_COMMIT=f0e443ebfbd3ded32d91845e165583c5a8c71c3b
+VALIDATED_RESULT_ZIP_SHA256=26EF28403D6F74E36E8AD4AD443FF7EA8AF100E930938955A9FA464C8568202A
+VALIDATED_RESULT_REPORT_SHA256=81F0F2CE12AD683143FF7083F020FD9962039D7CD1B030FCDD811C406F434094
+
+SEMANTIC_ZOOM=PASS
+SEMANTIC_ZOOM_DETAIL_THRESHOLD=0.72
+SEMANTIC_ZOOM_OVERVIEW_THRESHOLD=0.42
+
+TERRITORY_COLLAPSE=PASS
+COLLAPSIBLE_SUBPROJECTS=PASS
+COLLAPSIBLE_TIME_WINDOWS=PASS
+COLLAPSIBLE_TASKS=PASS
+COLLAPSE_LOCAL_STORAGE_PER_PROJECT=PASS
+
+BREADCRUMB_FOCUS=PASS
+DAG_SAFE_PARENT_PATH=PASS
+SUBPROJECT_DRILL_DOWN=PRESERVED
+
+FREE_VIEW_UNCONTROLLED=PRESERVED
+FREE_DRAG_PERSISTENCE=PRESERVED
+FREE_MAP_SEMANTIC_DETAIL_LOCK=PRESERVED
+
+API_CHANGE=NO
+DB_MIGRATION=NO
+DEPENDENCY_CHANGE=NO
+ONTOLOGY_INTEGRITY=PASS
+PROJECT_HIERARCHY=project_composition_relations/decomposes_into
+VALUE_OBJECT_PARENT_MUTATION=NO
+SAME_GLOBAL_SYSTEM_INTERMEDIATE_PARENT=PRESERVED
+
+PRODUCTION_SMOKE=PENDING
