@@ -809,12 +809,12 @@ function ProjectMapDragHandle({
 
   return (
     <div
-      className="project-map-drag-handle nopan absolute -left-4 top-4 z-20 flex h-9 w-3 cursor-grab items-center justify-center gap-[3px] rounded-l-lg bg-white/90 shadow-sm active:cursor-grabbing"
+      className="project-map-drag-handle nopan absolute -left-5 top-3 z-20 flex h-10 w-5 cursor-grab select-none items-center justify-center gap-[4px] rounded-xl border border-[#d7e0f6] bg-white shadow-[0_8px_18px_rgba(63,91,170,0.16)] active:cursor-grabbing"
       title={label}
       aria-label={label}
     >
-      <span className="h-6 border-l border-dashed border-[#8ea2df]" />
-      <span className="h-6 border-l border-dashed border-[#8ea2df]" />
+      <span className="h-7 border-l border-dashed border-[#7f96dd]" />
+      <span className="h-7 border-l border-dashed border-[#7f96dd]" />
     </div>
   );
 }
@@ -3151,12 +3151,16 @@ if (loading) {
                 nodes={freeNodes}
                 edges={graphEdges}
                 nodeTypes={NODE_TYPES}
-                fitView
-                fitViewOptions={{ padding: 0.24, minZoom: 0.32, maxZoom: 1.05 }}
+                onInit={(instance) => {
+                  window.requestAnimationFrame(() => {
+                    instance.fitView({ padding: 0.24, minZoom: 0.32, maxZoom: 1.05 });
+                  });
+                }}
                 minZoom={0.2}
                 maxZoom={1.8}
                 nodesConnectable={false}
                 nodesDraggable
+                autoPanOnNodeDrag={false}
                 elementsSelectable={false}
                 onNodesChange={handleFreeNodesChange}
                 onNodeDragStop={(_, node) => persistFreeNodePosition(node)}
