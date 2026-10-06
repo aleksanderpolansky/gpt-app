@@ -188,6 +188,9 @@ type Copy = {
   timeWindowDefaultTitle: string;
   createWindow: string;
   taskLabel: string;
+  deleteTask: string;
+  confirmDeleteTask: string;
+  deleteTaskError: string;
   unscheduledLabel: string;
   save: string;
   saving: string;
@@ -218,6 +221,10 @@ const EN: Copy = {
   timeWindowDefaultTitle: "Time window",
   createWindow: "Create window",
   taskLabel: "TASK",
+  deleteTask: "Delete task",
+  confirmDeleteTask:
+    "Delete the entire task? If this is recurring, the whole series and its future planned occurrences will be removed.",
+  deleteTaskError: "Could not delete the task.",
   unscheduledLabel: "No exact time",
   save: "Save",
   saving: "Saving…",
@@ -386,6 +393,10 @@ const COPY: Record<LocaleCode, Copy> = {
     timeWindowDefaultTitle: "Промежуток по часам",
     createWindow: "Создать окно",
     taskLabel: "ЗАДАЧА",
+    deleteTask: "Удалить задачу",
+    confirmDeleteTask:
+      "Удалить всю задачу? Для повторяющейся задачи будут удалены вся серия и будущие плановые экземпляры.",
+    deleteTaskError: "Не удалось удалить задачу.",
     unscheduledLabel: "Без точного времени",
     save: "Сохранить",
     saving: "Сохраняю…",
@@ -409,6 +420,10 @@ const COPY: Record<LocaleCode, Copy> = {
     addObservationObject: "Додати новий об’єкт спостереження",
     addTask: "Додати завдання",
     taskLabel: "ЗАВДАННЯ",
+    deleteTask: "Видалити завдання",
+    confirmDeleteTask:
+      "Видалити все завдання? Для повторюваного завдання буде видалено всю серію та майбутні заплановані екземпляри.",
+    deleteTaskError: "Не вдалося видалити завдання.",
     unscheduledLabel: "Без точного часу",
     save: "Зберегти",
     saving: "Зберігаю…",
@@ -432,6 +447,10 @@ const COPY: Record<LocaleCode, Copy> = {
     addObservationObject: "Dodaj nowy obiekt obserwacji",
     addTask: "Dodaj zadanie",
     taskLabel: "ZADANIE",
+    deleteTask: "Usuń zadanie",
+    confirmDeleteTask:
+      "Usunąć całe zadanie? Jeśli jest cykliczne, zostanie usunięta cała seria i przyszłe zaplanowane wystąpienia.",
+    deleteTaskError: "Nie udało się usunąć zadania.",
     unscheduledLabel: "Bez dokładnej godziny",
     save: "Zapisz",
     saving: "Zapisywanie…",
@@ -449,6 +468,10 @@ const COPY: Record<LocaleCode, Copy> = {
     addObservationObject: "Neues Beobachtungsobjekt hinzufügen",
     addTask: "Aufgabe hinzufügen",
     taskLabel: "AUFGABE",
+    deleteTask: "Aufgabe löschen",
+    confirmDeleteTask:
+      "Die gesamte Aufgabe löschen? Bei einer wiederkehrenden Aufgabe werden die ganze Serie und zukünftige geplante Vorkommen entfernt.",
+    deleteTaskError: "Die Aufgabe konnte nicht gelöscht werden.",
     unscheduledLabel: "Ohne genaue Zeit",
     save: "Speichern",
     saving: "Speichern…",
@@ -465,6 +488,10 @@ const COPY: Record<LocaleCode, Copy> = {
     addObservationObject: "Añadir nuevo objeto de observación",
     addTask: "Añadir tarea",
     taskLabel: "TAREA",
+    deleteTask: "Eliminar tarea",
+    confirmDeleteTask:
+      "¿Eliminar toda la tarea? Si es recurrente, se eliminarán toda la serie y las próximas ocurrencias planificadas.",
+    deleteTaskError: "No se pudo eliminar la tarea.",
     unscheduledLabel: "Sin hora exacta",
     save: "Guardar",
     saving: "Guardando…",
@@ -481,6 +508,10 @@ const COPY: Record<LocaleCode, Copy> = {
     addObservationObject: "Přidat nový objekt pozorování",
     addTask: "Přidat úkol",
     taskLabel: "ÚKOL",
+    deleteTask: "Smazat úkol",
+    confirmDeleteTask:
+      "Smazat celý úkol? Pokud se opakuje, bude odstraněna celá série i budoucí plánované výskyty.",
+    deleteTaskError: "Úkol se nepodařilo smazat.",
     unscheduledLabel: "Bez přesného času",
     save: "Uložit",
     saving: "Ukládání…",
@@ -764,6 +795,7 @@ type ProjectActivityNodeData = Record<string, unknown> & {
     isRecurrenceDefinition: boolean,
   ) => void;
   onAddContainedTask: (containerActivityEventId: string) => void;
+  onDeleteActivity: (activityEventId: string) => void;
 };
 
 type ProjectActivityNode = Node<
@@ -968,7 +1000,20 @@ function ProjectActivityCard({
       />
       <ProjectMapDragHandle enabled={data.dragEnabled} label={data.dragLabel} />
 
-      <div className="flex items-center gap-2 text-[#5174ef]">
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          void data.onDeleteActivity(data.activity.id);
+        }}
+        title={data.copy.deleteTask}
+        aria-label={data.copy.deleteTask}
+        className="nodrag nopan absolute right-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-rose-200 bg-white text-rose-500 shadow-sm transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
+      >
+        <X size={13} strokeWidth={2.2} />
+      </button>
+
+      <div className="flex items-center gap-2 pr-8 text-[#5174ef]">
         <ListChecks size={15} />
         <span className="text-[10px] font-extrabold uppercase tracking-[0.15em]">
           {data.copy.taskLabel}
@@ -2172,6 +2217,53 @@ export default function ProjectMapStartClient({
     }
   }, [copy.loadError]);
 
+  async function deleteProjectActivity(activityEventId: string) {
+    if (!window.confirm(copy.confirmDeleteTask)) {
+      return;
+    }
+
+    setLoadError(null);
+
+    try {
+      const response = await fetch(
+        `/api/calendar/task-shelf/${encodeURIComponent(activityEventId)}`,
+        {
+          method: "DELETE",
+          headers: {
+            Accept: "application/json",
+          },
+        },
+      );
+
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            error?: string;
+            disposition?: string;
+          }
+        | null;
+
+      if (!response.ok || payload?.ok !== true) {
+        throw new Error(payload?.error || copy.deleteTaskError);
+      }
+
+      setSelectedActivityInitialEditing(false);
+      setSelectedActivityDetail((current) =>
+        current?.id === activityEventId ? null : current,
+      );
+
+      await loadProjects(selectedProjectId ?? undefined, undefined, {
+        background: true,
+      });
+
+      window.dispatchEvent(new Event(PROJECTS_CHANGED_EVENT));
+    } catch (error) {
+      setLoadError(
+        error instanceof Error ? error.message : copy.deleteTaskError,
+      );
+    }
+  }
+
   const openTaskCapture = useCallback((
     projectId: string,
     parentActivityEventId: string | null = null,
@@ -2623,6 +2715,7 @@ export default function ProjectMapStartClient({
             },
             onAddContainedTask: (containerActivityEventId: string) =>
               openTaskCapture(project.id, containerActivityEventId),
+            onDeleteActivity: deleteProjectActivity,
           },
         } as ProjectActivityNode);
 
@@ -2657,6 +2750,7 @@ export default function ProjectMapStartClient({
               },
               onAddContainedTask: (containerActivityEventId: string) =>
                 openTaskCapture(project.id, containerActivityEventId),
+              onDeleteActivity: deleteProjectActivity,
             },
           } as ProjectActivityNode);
         }
@@ -2685,6 +2779,7 @@ export default function ProjectMapStartClient({
             },
             onAddContainedTask: (containerActivityEventId: string) =>
               openTaskCapture(project.id, containerActivityEventId),
+            onDeleteActivity: deleteProjectActivity,
           },
         } as ProjectActivityNode);
       }

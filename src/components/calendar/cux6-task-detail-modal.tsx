@@ -93,7 +93,7 @@ const COPY: Record<UiLocale, Copy> = {
     privacy: "Privacy",
     analysis: "Analysis",
     edit: "Edit",
-    cancel: "Cancel activity",
+    cancel: "Delete task",
     save: "Save",
     back: "Back",
     title: "Title",
@@ -105,10 +105,10 @@ const COPY: Record<UiLocale, Copy> = {
     exactStart: "Start",
     exactEnd: "End",
     duration: "Duration, minutes",
-    confirmCancel: "Cancel this planned activity?",
+    confirmCancel: "Delete the entire task? If it is recurring, the whole series and its future planned occurrences will be removed.",
     validation: "Complete the required schedule fields.",
     saveError: "The activity could not be updated.",
-    cancelError: "The activity could not be cancelled.",
+    cancelError: "The task could not be deleted.",
     modes: {
       unscheduled: "Without date",
       date_only: "Date only",
@@ -128,7 +128,7 @@ const COPY: Record<UiLocale, Copy> = {
     privacy: "Prywatność",
     analysis: "Analiza",
     edit: "Edytuj",
-    cancel: "Anuluj aktywność",
+    cancel: "Usuń zadanie",
     save: "Zapisz",
     back: "Wstecz",
     title: "Nazwa",
@@ -140,10 +140,10 @@ const COPY: Record<UiLocale, Copy> = {
     exactStart: "Początek",
     exactEnd: "Koniec",
     duration: "Czas trwania, minuty",
-    confirmCancel: "Anulować tę planowaną aktywność?",
+    confirmCancel: "Usunąć całe zadanie? Jeśli jest cykliczne, zostanie usunięta cała seria i przyszłe zaplanowane wystąpienia.",
     validation: "Uzupełnij wymagane pola harmonogramu.",
     saveError: "Nie udało się zaktualizować aktywności.",
-    cancelError: "Nie udało się anulować aktywności.",
+    cancelError: "Nie udało się usunąć zadania.",
     modes: {
       unscheduled: "Bez daty",
       date_only: "Tylko data",
@@ -163,7 +163,7 @@ const COPY: Record<UiLocale, Copy> = {
     privacy: "Приватность",
     analysis: "Анализ",
     edit: "Редактировать",
-    cancel: "Отменить активность",
+    cancel: "Удалить задачу",
     save: "Сохранить",
     back: "Назад",
     title: "Название",
@@ -175,10 +175,10 @@ const COPY: Record<UiLocale, Copy> = {
     exactStart: "Начало",
     exactEnd: "Завершение",
     duration: "Длительность, минуты",
-    confirmCancel: "Отменить эту плановую активность?",
+    confirmCancel: "Удалить всю задачу? Для повторяющейся задачи будут удалены вся серия и будущие плановые экземпляры.",
     validation: "Заполните обязательные поля расписания.",
     saveError: "Не удалось обновить активность.",
-    cancelError: "Не удалось отменить активность.",
+    cancelError: "Не удалось удалить задачу.",
     modes: {
       unscheduled: "Без даты",
       date_only: "Только дата",
@@ -198,7 +198,7 @@ const COPY: Record<UiLocale, Copy> = {
     privacy: "Приватність",
     analysis: "Аналіз",
     edit: "Редагувати",
-    cancel: "Скасувати активність",
+    cancel: "Видалити завдання",
     save: "Зберегти",
     back: "Назад",
     title: "Назва",
@@ -210,10 +210,10 @@ const COPY: Record<UiLocale, Copy> = {
     exactStart: "Початок",
     exactEnd: "Завершення",
     duration: "Тривалість, хвилини",
-    confirmCancel: "Скасувати цю заплановану активність?",
+    confirmCancel: "Видалити все завдання? Для повторюваного завдання буде видалено всю серію та майбутні заплановані екземпляри.",
     validation: "Заповніть обов’язкові поля розкладу.",
     saveError: "Не вдалося оновити активність.",
-    cancelError: "Не вдалося скасувати активність.",
+    cancelError: "Не вдалося видалити завдання.",
     modes: {
       unscheduled: "Без дати",
       date_only: "Тільки дата",
@@ -233,7 +233,7 @@ const COPY: Record<UiLocale, Copy> = {
     privacy: "Privatsphäre",
     analysis: "Analyse",
     edit: "Bearbeiten",
-    cancel: "Aktivität stornieren",
+    cancel: "Aufgabe löschen",
     save: "Speichern",
     back: "Zurück",
     title: "Titel",
@@ -245,10 +245,10 @@ const COPY: Record<UiLocale, Copy> = {
     exactStart: "Beginn",
     exactEnd: "Ende",
     duration: "Dauer, Minuten",
-    confirmCancel: "Diese geplante Aktivität stornieren?",
+    confirmCancel: "Die gesamte Aufgabe löschen? Bei einer wiederkehrenden Aufgabe werden die ganze Serie und zukünftige geplante Vorkommen entfernt.",
     validation: "Füllen Sie die erforderlichen Zeitplanfelder aus.",
     saveError: "Die Aktivität konnte nicht aktualisiert werden.",
-    cancelError: "Die Aktivität konnte nicht storniert werden.",
+    cancelError: "Die Aufgabe konnte nicht gelöscht werden.",
     modes: {
       unscheduled: "Ohne Datum",
       date_only: "Nur Datum",
@@ -268,7 +268,7 @@ const COPY: Record<UiLocale, Copy> = {
     privacy: "Privacidad",
     analysis: "Análisis",
     edit: "Editar",
-    cancel: "Cancelar actividad",
+    cancel: "Eliminar tarea",
     save: "Guardar",
     back: "Volver",
     title: "Título",
@@ -280,10 +280,10 @@ const COPY: Record<UiLocale, Copy> = {
     exactStart: "Inicio",
     exactEnd: "Fin",
     duration: "Duración, minutos",
-    confirmCancel: "¿Cancelar esta actividad planificada?",
+    confirmCancel: "¿Eliminar toda la tarea? Si es recurrente, se eliminarán toda la serie y las próximas ocurrencias planificadas.",
     validation: "Complete los campos obligatorios del horario.",
     saveError: "No se pudo actualizar la actividad.",
-    cancelError: "No se pudo cancelar la actividad.",
+    cancelError: "No se pudo eliminar la tarea.",
     modes: {
       unscheduled: "Sin fecha",
       date_only: "Solo fecha",
@@ -303,7 +303,7 @@ const COPY: Record<UiLocale, Copy> = {
     privacy: "Soukromí",
     analysis: "Analýza",
     edit: "Upravit",
-    cancel: "Zrušit aktivitu",
+    cancel: "Smazat úkol",
     save: "Uložit",
     back: "Zpět",
     title: "Název",
@@ -315,10 +315,10 @@ const COPY: Record<UiLocale, Copy> = {
     exactStart: "Začátek",
     exactEnd: "Konec",
     duration: "Doba trvání, minuty",
-    confirmCancel: "Zrušit tuto plánovanou aktivitu?",
+    confirmCancel: "Smazat celý úkol? Pokud se opakuje, bude odstraněna celá série i budoucí plánované výskyty.",
     validation: "Vyplňte povinná pole plánu.",
     saveError: "Aktivitu se nepodařilo aktualizovat.",
-    cancelError: "Aktivitu se nepodařilo zrušit.",
+    cancelError: "Úkol se nepodařilo smazat.",
     modes: {
       unscheduled: "Bez data",
       date_only: "Pouze datum",
@@ -645,7 +645,7 @@ export function Cux6TaskDetailModal({
     }
   }
 
-  async function cancelActivity() {
+  async function deleteTask() {
     if (!window.confirm(copy.confirmCancel)) {
       return;
     }
@@ -963,7 +963,7 @@ export function Cux6TaskDetailModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => void cancelActivity()}
+                  onClick={() => void deleteTask()}
                   disabled={saving}
                   className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700 disabled:opacity-50"
                 >

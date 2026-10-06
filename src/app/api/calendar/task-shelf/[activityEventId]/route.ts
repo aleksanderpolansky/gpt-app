@@ -726,6 +726,261 @@ export async function PATCH(
   });
 }
 
+type WholeTaskDeletionScope = {
+  sourceActivityEventId: string;
+  recurrenceRuleIds: string[];
+  activityEventIds: string[];
+};
+
+async function resolveWholeTaskDeletionScope(params: {
+  activityEventId: string;
+  userId: string;
+  actorId: string;
+}): Promise<{
+  scope: WholeTaskDeletionScope | null;
+  error: string | null;
+}> {
+  const {
+    data: occurrenceRow,
+    error: occurrenceError,
+  } = await supabase
+    .from("activity_recurrence_occurrences")
+    .select("recurrence_rule_id,source_activity_event_id")
+    .eq("materialized_activity_event_id", params.activityEventId)
+    .eq("owner_user_id", params.userId)
+    .eq("owner_actor_id", params.actorId)
+    .maybeSingle();
+
+  if (occurrenceError) {
+    return {
+      scope: null,
+      error: occurrenceError.message,
+    };
+  }
+
+  const occurrence = asRecord(occurrenceRow);
+  const sourceActivityEventId =
+    asString(occurrence.source_activity_event_id) ??
+    params.activityEventId;
+
+  const source = await loadOwnedPlannedActivity({
+    activityEventId: sourceActivityEventId,
+    userId: params.userId,
+    actorId: params.actorId,
+  });
+
+  if (!source.row) {
+    return {
+      scope: null,
+      error:
+        source.error ??
+        "Recurrence source activity was not found or access was denied.",
+    };
+  }
+
+  const {
+    data: ruleRows,
+    error: ruleError,
+  } = await supabase
+    .from("activity_recurrence_rules")
+    .select("id")
+    .eq("source_activity_event_id", sourceActivityEventId)
+    .eq("owner_user_id", params.userId)
+    .eq("owner_actor_id", params.actorId);
+
+  if (ruleError) {
+    return {
+      scope: null,
+      error: ruleError.message,
+    };
+  }
+
+  const recurrenceRuleIds = [
+    ...new Set(
+      [
+        asString(occurrence.recurrence_rule_id),
+        ...(Array.isArray(ruleRows)
+          ? ruleRows.map((row) => asString(asRecord(row).id))
+          : []),
+      ].filter((value): value is string => Boolean(value)),
+    ),
+  ];
+
+  const activityEventIds = new Set<string>([
+    sourceActivityEventId,
+    params.activityEventId,
+  ]);
+
+  if (recurrenceRuleIds.length > 0) {
+    const {
+      data: occurrenceRows,
+      error: allOccurrencesError,
+    } = await supabase
+      .from("activity_recurrence_occurrences")
+      .select("materialized_activity_event_id")
+      .eq("owner_user_id", params.userId)
+      .eq("owner_actor_id", params.actorId)
+      .in("recurrence_rule_id", recurrenceRuleIds);
+
+    if (allOccurrencesError) {
+      return {
+        scope: null,
+        error: allOccurrencesError.message,
+      };
+    }
+
+    for (const row of Array.isArray(occurrenceRows) ? occurrenceRows : []) {
+      const materializedActivityEventId = asString(
+        asRecord(row).materialized_activity_event_id,
+      );
+
+      if (materializedActivityEventId) {
+        activityEventIds.add(materializedActivityEventId);
+      }
+    }
+  }
+
+  return {
+    scope: {
+      sourceActivityEventId,
+      recurrenceRuleIds,
+      activityEventIds: [...activityEventIds],
+    },
+    error: null,
+  };
+}
+
+async function endWholeTaskRecurrence(params: {
+  recurrenceRuleIds: string[];
+  userId: string;
+  actorId: string;
+  nowIso: string;
+}) {
+  if (params.recurrenceRuleIds.length === 0) {
+    return null;
+  }
+
+  const { error } = await supabase
+    .from("activity_recurrence_rules")
+    .update({
+      status_code: "ended",
+      updated_at: params.nowIso,
+    })
+    .eq("owner_user_id", params.userId)
+    .eq("owner_actor_id", params.actorId)
+    .in("id", params.recurrenceRuleIds)
+    .in("status_code", ["active", "paused"]);
+
+  return error?.message ?? null;
+}
+
+async function cancelWholeTaskOccurrenceLineage(params: {
+  recurrenceRuleIds: string[];
+  userId: string;
+  actorId: string;
+  nowIso: string;
+}) {
+  if (params.recurrenceRuleIds.length === 0) {
+    return null;
+  }
+
+  const { error } = await supabase
+    .from("activity_recurrence_occurrences")
+    .update({
+      status_code: "cancelled",
+      updated_at: params.nowIso,
+    })
+    .eq("owner_user_id", params.userId)
+    .eq("owner_actor_id", params.actorId)
+    .in("recurrence_rule_id", params.recurrenceRuleIds)
+    .in("status_code", ["active", "rescheduled"]);
+
+  return error?.message ?? null;
+}
+
+async function cancelWholeTaskPlannedEvents(params: {
+  activityEventIds: string[];
+  userId: string;
+  actorId: string;
+  nowIso: string;
+}) {
+  const { error } = await supabase
+    .from("activity_events")
+    .update({
+      status: "cancelled",
+      updated_at: params.nowIso,
+    })
+    .eq("user_id", params.userId)
+    .eq("acting_as_actor_id", params.actorId)
+    .eq("activity_role_code", "planned")
+    .in("id", params.activityEventIds)
+    .in("status", [...ACTIVE_PLANNED_STATUSES]);
+
+  return error?.message ?? null;
+}
+
+async function cancelWholeTaskCalendarProjections(params: {
+  activityEventIds: string[];
+  userId: string;
+  nowIso: string;
+}) {
+  const { error } = await supabase
+    .from("calendar_events")
+    .update({
+      status: "cancelled",
+      updated_at: params.nowIso,
+    })
+    .eq("user_id", params.userId)
+    .in("related_activity_event_id", params.activityEventIds)
+    .not("status", "in", "(cancelled,archived,hidden)");
+
+  return error?.message ?? null;
+}
+
+async function deactivateWholeTaskProjectRelations(params: {
+  activityEventIds: string[];
+  nowIso: string;
+}) {
+  const updates = {
+    status_code: "inactive",
+    updated_at: params.nowIso,
+  };
+
+  const { error: sourceError } = await supabase
+    .from("activity_event_relations")
+    .update(updates)
+    .in("source_activity_event_id", params.activityEventIds)
+    .eq("status_code", "active");
+
+  if (sourceError) {
+    return sourceError.message;
+  }
+
+  const { error: targetError } = await supabase
+    .from("activity_event_relations")
+    .update(updates)
+    .in("target_activity_event_id", params.activityEventIds)
+    .eq("status_code", "active");
+
+  return targetError?.message ?? null;
+}
+
+async function deactivateWholeTaskProjectMemberships(params: {
+  activityEventIds: string[];
+  nowIso: string;
+}) {
+  const { error } = await supabase
+    .from("project_activity_links")
+    .update({
+      status_code: "inactive",
+      updated_at: params.nowIso,
+    })
+    .in("activity_event_id", params.activityEventIds)
+    .eq("status_code", "active");
+
+  return error?.message ?? null;
+}
+
 export async function DELETE(
   _request: Request,
   context: RouteContext,
@@ -768,59 +1023,109 @@ export async function DELETE(
     );
   }
 
-  const currentStatus = asString(current.row.status);
+  const resolvedScope = await resolveWholeTaskDeletionScope({
+    activityEventId,
+    userId: appUser.id,
+    actorId: personActor.id,
+  });
 
-  if (
-    !currentStatus ||
-    !ACTIVE_PLANNED_STATUSES.includes(
-      currentStatus as (typeof ACTIVE_PLANNED_STATUSES)[number],
-    )
-  ) {
+  if (!resolvedScope.scope) {
     return NextResponse.json(
       {
         ok: false,
-        error: "Only active planned activities can be cancelled.",
-        status: currentStatus,
-      },
-      { status: 409 },
-    );
-  }
-
-  const nowIso = new Date().toISOString();
-
-  const { data, error } = await supabase
-    .from("activity_events")
-    .update({
-      status: "cancelled",
-      updated_at: nowIso,
-    })
-    .eq("id", activityEventId)
-    .eq("user_id", appUser.id)
-    .eq("acting_as_actor_id", personActor.id)
-    .eq("activity_role_code", "planned")
-    .in("status", [...ACTIVE_PLANNED_STATUSES])
-    .select(ACTIVITY_SELECT)
-    .single();
-
-  if (error || !data) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: error?.message ?? "Failed to cancel planned activity.",
+        error:
+          resolvedScope.error ??
+          "Could not resolve the whole-task deletion scope.",
       },
       { status: 500 },
     );
   }
 
-  const projectionWarning = await cancelCalendarProjection({
-    activityEventId,
-    userId: appUser.id,
-  });
+  const scope = resolvedScope.scope;
+  const nowIso = new Date().toISOString();
+
+  const steps: Array<[string, string | null]> = [
+    [
+      "end_recurrence_rule",
+      await endWholeTaskRecurrence({
+        recurrenceRuleIds: scope.recurrenceRuleIds,
+        userId: appUser.id,
+        actorId: personActor.id,
+        nowIso,
+      }),
+    ],
+    [
+      "cancel_recurrence_occurrences",
+      await cancelWholeTaskOccurrenceLineage({
+        recurrenceRuleIds: scope.recurrenceRuleIds,
+        userId: appUser.id,
+        actorId: personActor.id,
+        nowIso,
+      }),
+    ],
+    [
+      "cancel_planned_activity_events",
+      await cancelWholeTaskPlannedEvents({
+        activityEventIds: scope.activityEventIds,
+        userId: appUser.id,
+        actorId: personActor.id,
+        nowIso,
+      }),
+    ],
+    [
+      "cancel_calendar_projections",
+      await cancelWholeTaskCalendarProjections({
+        activityEventIds: scope.activityEventIds,
+        userId: appUser.id,
+        nowIso,
+      }),
+    ],
+    [
+      "deactivate_project_activity_relations",
+      await deactivateWholeTaskProjectRelations({
+        activityEventIds: scope.activityEventIds,
+        nowIso,
+      }),
+    ],
+    [
+      "deactivate_project_memberships",
+      await deactivateWholeTaskProjectMemberships({
+        activityEventIds: scope.activityEventIds,
+        nowIso,
+      }),
+    ],
+  ];
+
+  const failedStep = steps.find(([, error]) => Boolean(error));
+
+  if (failedStep) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "Whole-task deletion failed at " +
+          failedStep[0] +
+          ": " +
+          failedStep[1],
+        deletionScope: {
+          sourceActivityEventId: scope.sourceActivityEventId,
+          recurrenceRuleCount: scope.recurrenceRuleIds.length,
+          activityEventCount: scope.activityEventIds.length,
+        },
+        retrySafe: true,
+      },
+      { status: 500 },
+    );
+  }
 
   return NextResponse.json({
     ok: true,
-    activity: toActivity(asRecord(data)),
-    projectionDisposition: "projection_cancelled_if_present",
-    warning: projectionWarning,
+    disposition: "whole_task_removed",
+    deletionScope: {
+      sourceActivityEventId: scope.sourceActivityEventId,
+      recurrenceRuleIds: scope.recurrenceRuleIds,
+      activityEventIds: scope.activityEventIds,
+    },
+    auditRowsPreserved: true,
   });
 }
