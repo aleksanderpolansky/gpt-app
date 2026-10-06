@@ -1,0 +1,101 @@
+﻿ARCTor technical recovery checkpoint
+
+PATCH=ARCTOR_PROJECT_MAP_DUAL_VIEW_TERRITORIES_FREE_PERSISTENCE_V1_0_4_20261006
+TIMESTAMP=20261006_093637
+RESULT=PASS
+FAILURE=
+BASE_HEAD=649321332293caefacfe7dfc02c3d73031905162
+
+PURPOSE=Two switchable project-map views: structured territories plus persistent draggable free map. V1.0.4 keeps the V1.0.2 application code unchanged and corrects the validator to verify the real helper-based per-project persistence path.
+
+STRUCTURED_VIEW=
+- Focuses the selected project and its direct level.
+- View-only territories: subprojects, time windows, free tasks.
+- Local contents wrap in bounded grids.
+- Time-window contained tasks remain nested.
+- Top-level territory placement uses ELK Layered.
+- Territory nodes are not DB entities and not ontology objects.
+- Clicking a subproject still focuses it.
+
+FREE_VIEW=
+- Preserves the current recursive graph.
+- Starts from current ELK coordinates.
+- Project/subproject/task/time-window cards are draggable.
+- Drag starts from a double dashed vertical handle left of the card heading.
+- Positions persist in browser localStorage per project.
+- Same-browser return restores the layout.
+- New nodes without saved coordinates use ELK fallback.
+- Reset deletes only the visual layout for the current project.
+
+PERSISTENCE_SCOPE=
+browser_localStorage=YES
+same_browser_restore=YES
+cross_device_sync=NO
+server_write=NO
+db_migration=NO
+stored_fields=node_id,x,y
+
+ONTOLOGY_LOCK=
+API_CHANGE=NO
+PROJECT_WRITE_PATH_CHANGE=NO
+VALUE_OBJECT_PARENT_MUTATION=NO
+SUBPROJECT_PRIVATE_ACTOR_LEAF=PRESERVED
+SAME_GLOBAL_SYSTEM_INTERMEDIATE_PARENT=PRESERVED
+PROJECT_HIERARCHY=project_composition_relations/decomposes_into
+CYCLE_GUARD=PRESERVED
+
+VALIDATION=
+DUAL_VIEW_VALIDATOR=PASS_29_29 expected
+REACT_SET_STATE_IN_EFFECT_REGRESSION=PASS required
+ESLINT=PASS required
+TYPECHECK=PASS required
+PRODUCTION_BUILD=PASS required
+NO_API_CHANGE=PASS required
+NO_DB_MIGRATION=PASS required
+NO_DEPENDENCY_CHANGE=PASS required
+
+HASHES_SHA256=
+PROJECT_MAP=609EB36C0B5AA72F41517F87B911222BC8AFEFDFF18503E2862AE0318794B8C2
+VALIDATOR=5639EEA4681625766A68323C26172F874D220065DEA3F93B5F47A2C3DB09B91E
+
+GIT_DIFF_STAT=
+ src/app/projects/ProjectMapStartClient.tsx | 661 ++++++++++++++++++++++++++++-
+ 1 file changed, 644 insertions(+), 17 deletions(-)
+
+
+GIT_DIFF_STAT_STDERR=warning: in the working copy of 'src/app/projects/ProjectMapStartClient.tsx', LF will be replaced by CRLF the next time Git touches it
+
+GIT_DIFF_PATCH_STDERR=warning: in the working copy of 'src/app/projects/ProjectMapStartClient.tsx', LF will be replaced by CRLF the next time Git touches it
+
+
+FILES_EXPECTED=
+src/app/projects/ProjectMapStartClient.tsx
+scripts/validate-project-map-dual-view-territories-free-persistence-v1-0-4.mjs
+docs/recovery/ARCTOR_PROJECT_MAP_DUAL_VIEW_TERRITORIES_FREE_PERSISTENCE_V1_0_4_20261006_REPORT.txt
+
+NEXT=
+Commit code+validator, force-add this exact recovery report separately, push main, then production smoke for both views and persistence.
+
+COMMIT=false
+PUSH=false
+DEPLOY=false
+
+POST_INSTALL_COMMIT_CHECKPOINT=
+CODE_COMMIT=2c00d896b3dc1f9d1ae1a77eab09f1c7f8c3a33c
+VALIDATED_RESULT_ZIP_SHA256=3CFFB8A37CFC3714C1AF00831808464F9513BF4983D851F6DF8659294C2724FB
+VALIDATED_RESULT_REPORT_SHA256=36C7AEA6283C2D54305DE6D73383DBCEA6EE3BC21A058EC904923F1C686A6218
+DUAL_VIEW_VALIDATOR=PASS_29_29
+ESLINT=PASS
+TYPECHECK=PASS
+PRODUCTION_BUILD=PASS
+STRUCTURED_TERRITORIES=PASS
+FREE_DRAG_HANDLES=PASS
+FREE_LAYOUT_LOCAL_STORAGE=PASS
+API_CHANGE=NO
+DB_MIGRATION=NO
+DEPENDENCY_CHANGE=NO
+ONTOLOGY_INTEGRITY=PASS
+PROJECT_HIERARCHY=project_composition_relations/decomposes_into
+VALUE_OBJECT_PARENT_MUTATION=NO
+SAME_GLOBAL_SYSTEM_INTERMEDIATE_PARENT=PRESERVED
+PRODUCTION_SMOKE=PENDING
