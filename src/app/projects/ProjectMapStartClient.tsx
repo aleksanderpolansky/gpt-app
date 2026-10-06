@@ -1308,6 +1308,12 @@ function readProjectMapFreePositions(
 
 type ProjectMapViewMode = "structured" | "free";
 
+type ProjectMapViewport = {
+  x: number;
+  y: number;
+  zoom: number;
+};
+
 type ProjectMapViewCopy = {
   structured: string;
   free: string;
@@ -1783,6 +1789,10 @@ export default function ProjectMapStartClient({
     });
   const [structuredSemanticLevel, setStructuredSemanticLevel] =
     useState<ProjectSemanticZoomLevel>("detail");
+  const [structuredViewport, setStructuredViewport] =
+    useState<ProjectMapViewport | null>(null);
+  const [structuredRestoreViewport, setStructuredRestoreViewport] =
+    useState<ProjectMapViewport | null>(null);
   const [creating, setCreating] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -1937,6 +1947,8 @@ export default function ProjectMapStartClient({
         setFreePositions({});
         setStructuredCollapsed({ ...DEFAULT_STRUCTURED_COLLAPSED });
         setStructuredSemanticLevel("detail");
+        setStructuredViewport(null);
+        setStructuredRestoreViewport(null);
         setCreating(true);
         setSaved(false);
         setTitle(draftTitle);
@@ -1956,6 +1968,8 @@ export default function ProjectMapStartClient({
           readProjectMapStructuredCollapsed(nextSelectedId),
         );
         setStructuredSemanticLevel("detail");
+        setStructuredViewport(null);
+        setStructuredRestoreViewport(null);
 
         if (nextSelectedId) {
           const project =
@@ -2071,6 +2085,8 @@ export default function ProjectMapStartClient({
     setFreePositions({});
     setStructuredCollapsed({ ...DEFAULT_STRUCTURED_COLLAPSED });
     setStructuredSemanticLevel("detail");
+    setStructuredViewport(null);
+    setStructuredRestoreViewport(null);
     setActionProjectId(null);
   }
 
@@ -2086,6 +2102,8 @@ export default function ProjectMapStartClient({
     setFreePositions(readProjectMapFreePositions(project.id));
     setStructuredCollapsed(readProjectMapStructuredCollapsed(project.id));
     setStructuredSemanticLevel("detail");
+    setStructuredViewport(null);
+    setStructuredRestoreViewport(null);
     setTitle(project.title);
     setSelectedRootId(project.rootValueObject.id);
     setRootQuery(project.rootValueObject.title ?? "");
@@ -2821,6 +2839,10 @@ const structuredBreadcrumb = useMemo(
 
 const toggleStructuredTerritory = useCallback(
   (territory: ProjectStructuredTerritoryKey) => {
+    if (structuredViewport) {
+      setStructuredRestoreViewport(structuredViewport);
+    }
+
     setStructuredCollapsed((current) => {
       const next = {
         ...current,
@@ -2845,7 +2867,7 @@ const toggleStructuredTerritory = useCallback(
       return next;
     });
   },
-  [structuredStorageKey],
+  [structuredStorageKey, structuredViewport],
 );
 
 const freeNodes = layoutedNodes.map((node) => ({
@@ -3382,8 +3404,6 @@ if (loading) {
                   nodes={structuredNodes}
                   edges={structuredEdges}
                   nodeTypes={NODE_TYPES}
-                  fitView
-                  fitViewOptions={{ padding: 0.2, minZoom: 0.42, maxZoom: 1.05 }}
                   minZoom={0.28}
                   maxZoom={1.8}
                   nodesConnectable={false}
@@ -3391,12 +3411,39 @@ if (loading) {
                   elementsSelectable={false}
                   onInit={(instance) => {
                     window.requestAnimationFrame(() => {
-                      setStructuredSemanticLevel(
-                        projectSemanticZoomLevel(instance.getZoom()),
-                      );
+                      if (structuredRestoreViewport) {
+                        void instance.setViewport(
+                          structuredRestoreViewport,
+                          { duration: 0 },
+                        );
+                        setStructuredViewport(structuredRestoreViewport);
+                        setStructuredSemanticLevel(
+                          projectSemanticZoomLevel(
+                            structuredRestoreViewport.zoom,
+                          ),
+                        );
+                        setStructuredRestoreViewport(null);
+                        return;
+                      }
+
+                      void instance.fitView({
+                        padding: 0.2,
+                        minZoom: 0.42,
+                        maxZoom: 1.05,
+                        duration: 0,
+                      });
+
+                      window.requestAnimationFrame(() => {
+                        const viewport = instance.getViewport();
+                        setStructuredViewport(viewport);
+                        setStructuredSemanticLevel(
+                          projectSemanticZoomLevel(viewport.zoom),
+                        );
+                      });
                     });
                   }}
                   onMoveEnd={(_, viewport) => {
+                    setStructuredViewport(viewport);
                     setStructuredSemanticLevel(
                       projectSemanticZoomLevel(viewport.zoom),
                     );
