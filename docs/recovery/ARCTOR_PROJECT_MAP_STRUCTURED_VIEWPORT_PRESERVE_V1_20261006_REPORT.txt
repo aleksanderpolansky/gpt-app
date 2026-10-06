@@ -1,0 +1,121 @@
+﻿ARCTor technical recovery checkpoint
+
+PATCH=ARCTOR_PROJECT_MAP_STRUCTURED_VIEWPORT_PRESERVE_V1_20261006
+TIMESTAMP=20261006_121904
+RESULT=PASS
+FAILURE=
+BASE_HEAD=a202ac74d6287de0609256588c8dd4035573efee
+
+PRODUCTION_OBSERVATION=
+When a structured territory is collapsed or expanded, the current map zoom/position changes unexpectedly.
+
+ROOT_CAUSE=
+- structuredFlowKey includes collapse state.
+- collapse changes structuredFlowKey.
+- structuredLayoutReady becomes false during async ELK relayout.
+- structured ReactFlow is temporarily unmounted.
+- after relayout it mounts again.
+- the fitView prop recomputes viewport for the smaller/larger graph.
+- therefore user's manual structured zoom is lost.
+
+PURPOSE=
+Preserve the exact structured viewport across territory collapse/expand while keeping automatic fit for first open and project-focus changes.
+
+CHANGESET=
+- Track current structured viewport x/y/zoom on move end.
+- Capture current viewport before collapse/expand.
+- Remove automatic ReactFlow fitView prop from Structured view.
+- On structured ReactFlow init:
+  * if collapse/expand caused remount -> restore captured viewport exactly;
+  * otherwise -> perform the existing initial fitView.
+- Reset viewport snapshots when project focus changes.
+- Semantic zoom derives from restored/current zoom.
+- Collapse localStorage, breadcrumb focus and structured ELK layout remain unchanged.
+- Free map remains untouched.
+
+EXPECTED_RUNTIME=
+User zooms/pans Structured map -> clicks +/- territory -> ELK recalculates layout -> ReactFlow remounts -> same x/y/zoom is restored.
+
+ONTOLOGY_LOCK=
+API_CHANGE=NO
+DB_MIGRATION=NO
+DEPENDENCY_CHANGE=NO
+VALUE_OBJECT_PARENT_MUTATION=NO
+SUBPROJECT_PRIVATE_ACTOR_LEAF=PRESERVED
+SAME_GLOBAL_SYSTEM_INTERMEDIATE_PARENT=PRESERVED
+PROJECT_HIERARCHY=project_composition_relations/decomposes_into
+CYCLE_GUARD=PRESERVED
+
+VALIDATION=
+STRUCTURED_VIEWPORT_MODEL=PASS required
+COLLAPSE_CAPTURES_VIEWPORT=PASS required
+COLLAPSE_RESTORE_EXACT_VIEWPORT=PASS required
+INITIAL_STRUCTURED_FIT_PRESERVED=PASS required
+AUTO_FITVIEW_PROP_REMOVED=PASS required
+SEMANTIC_ZOOM=PRESERVED required
+COLLAPSE_PERSISTENCE=PRESERVED required
+BREADCRUMB_FOCUS=PRESERVED required
+FREE_VIEW_UNCONTROLLED=PRESERVED required
+ESLINT=PASS required
+TYPECHECK=PASS required
+PRODUCTION_BUILD=PASS required
+NO_API_CHANGE=PASS required
+NO_DB_MIGRATION=PASS required
+NO_DEPENDENCY_CHANGE=PASS required
+
+HASHES_SHA256=
+PROJECT_MAP=658B871E593B69D229E18F4E0C3A9346193CD1C2C75DC10E7423F06FDA89F4FB
+VALIDATOR=464AF4C3EF245874914169E1114D74A3DEDFDC1B010205F54C518DFCE9F8D6C5
+
+GIT_DIFF_STDERR=warning: in the working copy of 'src/app/projects/ProjectMapStartClient.tsx', LF will be replaced by CRLF the next time Git touches it
+
+
+FILES_EXPECTED=
+src/app/projects/ProjectMapStartClient.tsx
+scripts/validate-project-map-structured-viewport-preserve-v1.mjs
+docs/recovery/ARCTOR_PROJECT_MAP_STRUCTURED_VIEWPORT_PRESERVE_V1_20261006_REPORT.txt
+
+NEXT=
+1. Review RESULT.
+2. Commit code + validator.
+3. Force-add this exact recovery log.
+4. Push main.
+5. Production smoke:
+   - zoom Structured view noticeably in;
+   - collapse Tasks;
+   - confirm same scale and viewport remain;
+   - expand Tasks;
+   - confirm same scale and viewport remain;
+   - verify semantic zoom levels still change after user zoom;
+   - verify Free map drag/persistence remains unchanged.
+
+COMMIT=false
+PUSH=false
+DEPLOY=false
+
+POST_INSTALL_COMMIT_CHECKPOINT=
+CODE_COMMIT=3a60d9085918dab4f807c8bc39d56b3e85e0ec2a
+VALIDATED_RESULT_ZIP_SHA256=6730DFE252CB63A9210F617D945B04EA92E58DF0F688466EF71C14AEF378637C
+VALIDATED_RESULT_REPORT_SHA256=06B5F5B284EC96905DA7AA5A8D5EAB09BDD7665B7F6256FA9E7C11D9C45CF628
+
+COLLAPSE_VIEWPORT_CAPTURE=PASS
+COLLAPSE_VIEWPORT_RESTORE=PASS
+INITIAL_STRUCTURED_FIT=PRESERVED
+AUTO_FITVIEW_PROP_REMOVED=PASS
+
+SEMANTIC_ZOOM=PRESERVED
+COLLAPSE_LOCAL_STORAGE=PRESERVED
+BREADCRUMB_FOCUS=PRESERVED
+
+FREE_VIEW_UNCONTROLLED=PRESERVED
+FREE_DRAG_PERSISTENCE=PRESERVED
+
+API_CHANGE=NO
+DB_MIGRATION=NO
+DEPENDENCY_CHANGE=NO
+ONTOLOGY_INTEGRITY=PASS
+PROJECT_HIERARCHY=project_composition_relations/decomposes_into
+VALUE_OBJECT_PARENT_MUTATION=NO
+SAME_GLOBAL_SYSTEM_INTERMEDIATE_PARENT=PRESERVED
+
+PRODUCTION_SMOKE=PENDING
