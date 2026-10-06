@@ -28,6 +28,7 @@ import {
   ReactFlowProvider,
   type Edge,
   type Node,
+  type NodeChange,
   type NodeProps,
 } from "@xyflow/react";
 
@@ -732,6 +733,8 @@ type ProjectCenterData = Record<string, unknown> & {
   saveDisabled: boolean;
   saving: boolean;
   saveError: string | null;
+  dragEnabled?: boolean;
+  dragLabel?: string;
   onTitleChange: (value: string) => void;
   onRootQueryChange: (value: string) => void;
   onRootFocus: () => void;
@@ -751,6 +754,8 @@ type ProjectActivityNodeData = Record<string, unknown> & {
   locale: LocaleCode;
   activity: ProjectActivityItem;
   containedActivities: ProjectActivityItem[];
+  dragEnabled?: boolean;
+  dragLabel?: string;
   onOpenActivity: (
     activityEventId: string,
     isRecurrenceDefinition: boolean,
@@ -767,6 +772,8 @@ type ProjectSubprojectNodeData = Record<string, unknown> & {
   project: ProjectItem;
   copy: ProjectSubprojectCaptureCopy;
   actionCopy: Copy;
+  dragEnabled?: boolean;
+  dragLabel?: string;
   onOpenProject: (projectId: string) => void;
   onOpenObservationObject: (valueObjectId: string) => void;
   onAddSubproject: (projectId: string) => void;
@@ -780,6 +787,65 @@ type ProjectSubprojectNode = Node<
   "project-subproject"
 >;
 
+type ProjectTerritoryNodeData = Record<string, unknown> & {
+  title: string;
+  count: number;
+  emptyLabel: string;
+};
+
+type ProjectTerritoryNode = Node<
+  ProjectTerritoryNodeData,
+  "project-territory"
+>;
+
+function ProjectMapDragHandle({
+  enabled,
+  label,
+}: {
+  enabled?: boolean;
+  label?: string;
+}) {
+  if (!enabled) return null;
+
+  return (
+    <div
+      className="project-map-drag-handle nopan absolute -left-4 top-4 z-20 flex h-9 w-3 cursor-grab items-center justify-center gap-[3px] rounded-l-lg bg-white/90 shadow-sm active:cursor-grabbing"
+      title={label}
+      aria-label={label}
+    >
+      <span className="h-6 border-l border-dashed border-[#8ea2df]" />
+      <span className="h-6 border-l border-dashed border-[#8ea2df]" />
+    </div>
+  );
+}
+
+function ProjectTerritoryCard({
+  data,
+}: NodeProps<ProjectTerritoryNode>) {
+  return (
+    <div className="relative h-full w-full rounded-[24px] border border-dashed border-[#c7d2ef] bg-white/55 px-4 pb-4 pt-3 shadow-[0_12px_32px_rgba(63,91,170,0.06)]">
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!h-2 !w-2 !border-0 !bg-[#a4b3df]"
+      />
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#6b7ba5]">
+          {data.title}
+        </div>
+        <div className="rounded-full border border-[#dbe2f4] bg-white px-2 py-0.5 text-[9px] font-bold text-[#6f7b9b]">
+          {data.count}
+        </div>
+      </div>
+      {data.count === 0 ? (
+        <div className="absolute inset-x-4 top-[58px] rounded-xl border border-dashed border-[#e0e5f2] bg-white/70 px-3 py-5 text-center text-[10px] font-semibold text-[#9aa4bf]">
+          {data.emptyLabel}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ProjectSubprojectCard({
   data,
 }: NodeProps<ProjectSubprojectNode>) {
@@ -790,6 +856,7 @@ function ProjectSubprojectCard({
         position={Position.Top}
         className="!h-2 !w-2 !border-0 !bg-[#8fa2d7]"
       />
+      <ProjectMapDragHandle enabled={data.dragEnabled} label={data.dragLabel} />
       <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#5174ef]">
         {data.copy.label}
       </div>
@@ -839,6 +906,7 @@ function ProjectActivityCard({
     return (
       <div className="relative h-full w-full rounded-[26px] border-2 border-dashed border-[#8fa5f6] bg-[#f7f9ff] px-5 py-4 shadow-[0_18px_44px_rgba(63,91,170,0.12)]">
         <Handle type="target" position={Position.Top} className="!h-2 !w-2 !border-0 !bg-[#7895ff]" />
+        <ProjectMapDragHandle enabled={data.dragEnabled} label={data.dragLabel} />
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#5174ef]">{data.copy.timeWindowLabel}</div>
@@ -864,6 +932,7 @@ function ProjectActivityCard({
         position={Position.Top}
         className="!h-2 !w-2 !border-0 !bg-[#9baadc]"
       />
+      <ProjectMapDragHandle enabled={data.dragEnabled} label={data.dragLabel} />
 
       <div className="flex items-center gap-2 text-[#5174ef]">
         <ListChecks size={15} />
@@ -931,6 +1000,7 @@ function ProjectCenterCard({ data }: NodeProps<ProjectCenterNode>) {
         position={Position.Top}
         className="!h-2 !w-2 !border-0 !bg-[#8fa2d7]"
       />
+      <ProjectMapDragHandle enabled={data.dragEnabled} label={data.dragLabel} />
 
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2 text-[#5174ef]">
@@ -1090,6 +1160,7 @@ const NODE_TYPES = {
   "project-center": ProjectCenterCard,
   "project-activity": ProjectActivityCard,
   "project-subproject": ProjectSubprojectCard,
+  "project-territory": ProjectTerritoryCard,
 };
 
 const PROJECT_MAP_ELK = new ELK();
@@ -1103,6 +1174,157 @@ const PROJECT_TIME_CONTAINER_MIN_WIDTH = 654;
 const PROJECT_TIME_CONTAINER_EMPTY_HEIGHT = 190;
 const PROJECT_TIME_CONTAINER_HEADER_HEIGHT = 88;
 const PROJECT_TIME_CONTAINER_PADDING = 18;
+const PROJECT_TERRITORY_HEADER_HEIGHT = 58;
+const PROJECT_TERRITORY_PADDING = 18;
+const PROJECT_TERRITORY_GAP = 18;
+const STRUCTURED_SUBPROJECTS_ID = "__structured_subprojects__";
+const STRUCTURED_WINDOWS_ID = "__structured_windows__";
+const STRUCTURED_TASKS_ID = "__structured_tasks__";
+const PROJECT_MAP_FREE_STORAGE_PREFIX = "arctor:project-map:free-layout:v1:";
+
+function projectMapFreeStorageKey(projectId: string | null) {
+  return projectId ? `${PROJECT_MAP_FREE_STORAGE_PREFIX}${projectId}` : null;
+}
+
+function readProjectMapFreePositions(
+  projectId: string | null,
+): Record<string, { x: number; y: number }> {
+  if (!projectId || typeof window === "undefined") return {};
+
+  const storageKey = projectMapFreeStorageKey(projectId);
+  if (!storageKey) return {};
+
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) return {};
+
+    const parsed = JSON.parse(raw) as {
+      version?: number;
+      positions?: Record<string, { x: number; y: number }>;
+    };
+
+    return parsed.version === 1 && parsed.positions ? parsed.positions : {};
+  } catch {
+    return {};
+  }
+}
+
+type ProjectMapViewMode = "structured" | "free";
+
+type ProjectMapViewCopy = {
+  structured: string;
+  free: string;
+  reset: string;
+  drag: string;
+  subprojects: string;
+  windows: string;
+  tasks: string;
+  empty: string;
+};
+
+const PROJECT_MAP_VIEW_COPY: Record<LocaleCode, ProjectMapViewCopy> = {
+  ru: { structured: "Структура", free: "Свободная карта", reset: "Сбросить расположение", drag: "Перетащить блок", subprojects: "Подпроекты", windows: "Временные окна", tasks: "Задачи", empty: "Пока пусто" },
+  pl: { structured: "Struktura", free: "Mapa swobodna", reset: "Resetuj układ", drag: "Przeciągnij blok", subprojects: "Podprojekty", windows: "Okna czasowe", tasks: "Zadania", empty: "Na razie pusto" },
+  en: { structured: "Structure", free: "Free map", reset: "Reset layout", drag: "Drag block", subprojects: "Subprojects", windows: "Time windows", tasks: "Tasks", empty: "Empty" },
+  es: { structured: "Estructura", free: "Mapa libre", reset: "Restablecer diseño", drag: "Arrastrar bloque", subprojects: "Subproyectos", windows: "Ventanas de tiempo", tasks: "Tareas", empty: "Vacío" },
+  uk: { structured: "Структура", free: "Вільна карта", reset: "Скинути розташування", drag: "Перетягнути блок", subprojects: "Підпроєкти", windows: "Часові вікна", tasks: "Завдання", empty: "Поки порожньо" },
+  de: { structured: "Struktur", free: "Freie Karte", reset: "Layout zurücksetzen", drag: "Block verschieben", subprojects: "Teilprojekte", windows: "Zeitfenster", tasks: "Aufgaben", empty: "Noch leer" },
+  cs: { structured: "Struktura", free: "Volná mapa", reset: "Obnovit rozložení", drag: "Přesunout blok", subprojects: "Podprojekty", windows: "Časová okna", tasks: "Úkoly", empty: "Zatím prázdné" },
+};
+
+type ProjectMapGrid = {
+  width: number;
+  height: number;
+  positions: Array<{ x: number; y: number }>;
+};
+
+function projectMapGrid(
+  itemCount: number,
+  itemWidth: number,
+  itemHeight: number,
+  columns: number,
+  minWidth = 360,
+  minHeight = 150,
+  headerHeight = PROJECT_TERRITORY_HEADER_HEIGHT,
+): ProjectMapGrid {
+  if (itemCount <= 0) return { width: minWidth, height: minHeight, positions: [] };
+
+  const safeColumns = Math.max(1, Math.min(columns, itemCount));
+  const rows = Math.ceil(itemCount / safeColumns);
+  const width = Math.max(
+    minWidth,
+    PROJECT_TERRITORY_PADDING * 2 +
+      safeColumns * itemWidth +
+      Math.max(0, safeColumns - 1) * PROJECT_TERRITORY_GAP,
+  );
+  const height = Math.max(
+    minHeight,
+    headerHeight +
+      rows * itemHeight +
+      Math.max(0, rows - 1) * PROJECT_TERRITORY_GAP +
+      PROJECT_TERRITORY_PADDING,
+  );
+
+  return {
+    width,
+    height,
+    positions: Array.from({ length: itemCount }, (_, index) => ({
+      x: PROJECT_TERRITORY_PADDING + (index % safeColumns) * (itemWidth + PROJECT_TERRITORY_GAP),
+      y: headerHeight + Math.floor(index / safeColumns) * (itemHeight + PROJECT_TERRITORY_GAP),
+    })),
+  };
+}
+
+function projectMapTimeContainerGrid(itemCount: number) {
+  const childGrid = projectMapGrid(
+    itemCount,
+    PROJECT_ACTIVITY_WIDTH,
+    PROJECT_ACTIVITY_HEIGHT,
+    2,
+    PROJECT_TIME_CONTAINER_MIN_WIDTH,
+    PROJECT_TIME_CONTAINER_EMPTY_HEIGHT,
+    PROJECT_TIME_CONTAINER_HEADER_HEIGHT,
+  );
+
+  return {
+    width: Math.max(PROJECT_TIME_CONTAINER_MIN_WIDTH, childGrid.width),
+    height: Math.max(PROJECT_TIME_CONTAINER_EMPTY_HEIGHT, childGrid.height),
+    positions: childGrid.positions,
+  };
+}
+
+async function layoutStructuredProjectTopLevel(
+  specs: Array<{ id: string; width: number; height: number }>,
+) {
+  const rootId = "__project_center__";
+  const graph = await PROJECT_MAP_ELK.layout({
+    id: "structured-project-map-layout",
+    layoutOptions: {
+      "elk.algorithm": "org.eclipse.elk.layered",
+      "elk.direction": "DOWN",
+      "elk.edgeRouting": "ORTHOGONAL",
+      "elk.spacing.nodeNode": "72",
+      "elk.layered.spacing.nodeNodeBetweenLayers": "112",
+      "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
+      "elk.layered.crossingMinimization.forceNodeModelOrder": "true",
+      "elk.padding": "[top=32,left=36,bottom=36,right=36]",
+    },
+    children: specs.map((spec) => ({ id: spec.id, width: spec.width, height: spec.height })),
+    edges: specs
+      .filter((spec) => spec.id !== rootId)
+      .map((spec) => ({
+        id: `structured-edge:${spec.id}`,
+        sources: [rootId],
+        targets: [spec.id],
+      })),
+  });
+
+  const positions: Record<string, { x: number; y: number }> = {};
+  for (const child of graph.children ?? []) {
+    positions[child.id] = { x: child.x ?? 0, y: child.y ?? 0 };
+  }
+  return positions;
+}
 
 type ProjectMapLayoutEntry = {
   x: number;
@@ -1411,6 +1633,9 @@ export default function ProjectMapStartClient({
   const [eligibleRoots, setEligibleRoots] = useState<RootOption[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [actionProjectId, setActionProjectId] = useState<string | null>(null);
+  const [mapViewMode, setMapViewMode] = useState<ProjectMapViewMode>("free");
+  const [freePositions, setFreePositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [freeLayoutRevision, setFreeLayoutRevision] = useState(0);
   const [creating, setCreating] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -1562,6 +1787,7 @@ export default function ProjectMapStartClient({
 
       if (draftTitle !== undefined) {
         setSelectedProjectId(null);
+        setFreePositions({});
         setCreating(true);
         setSaved(false);
         setTitle(draftTitle);
@@ -1576,6 +1802,7 @@ export default function ProjectMapStartClient({
             : nextProjects[0]?.id ?? null;
 
         setSelectedProjectId(nextSelectedId);
+        setFreePositions(readProjectMapFreePositions(nextSelectedId));
 
         if (nextSelectedId) {
           const project =
@@ -1688,6 +1915,7 @@ export default function ProjectMapStartClient({
     setSelectedRootId("");
     setRootDropdownOpen(false);
     setSelectedProjectId(null);
+    setFreePositions({});
     setActionProjectId(null);
   }
 
@@ -1700,6 +1928,7 @@ export default function ProjectMapStartClient({
     setSaved(true);
     setSaveError(null);
     setSelectedProjectId(project.id);
+    setFreePositions(readProjectMapFreePositions(project.id));
     setTitle(project.title);
     setSelectedRootId(project.rootValueObject.id);
     setRootQuery(project.rootValueObject.title ?? "");
@@ -2423,7 +2652,348 @@ export default function ProjectMapStartClient({
     };
   });
 
-  if (loading) {
+  const viewCopy = PROJECT_MAP_VIEW_COPY[locale];
+const freeStorageKey = projectMapFreeStorageKey(selectedProjectId);
+
+const freeNodes = layoutedNodes.map((node) => ({
+  ...node,
+  position: freePositions[node.id] ?? node.position,
+  draggable: true,
+  dragHandle: ".project-map-drag-handle",
+  data: { ...node.data, dragEnabled: true, dragLabel: viewCopy.drag },
+}));
+
+const handleFreeNodesChange = useCallback((changes: NodeChange<Node>[]) => {
+  setFreePositions((current) => {
+    let changed = false;
+    const next = { ...current };
+
+    for (const change of changes) {
+      if (change.type !== "position" || !change.position) continue;
+      next[change.id] = { x: change.position.x, y: change.position.y };
+      changed = true;
+    }
+
+    return changed ? next : current;
+  });
+}, []);
+
+const persistFreeNodePosition = useCallback((node: Node) => {
+  if (!freeStorageKey) return;
+
+  setFreePositions((current) => {
+    const next = {
+      ...current,
+      [node.id]: { x: node.position.x, y: node.position.y },
+    };
+
+    try {
+      window.localStorage.setItem(
+        freeStorageKey,
+        JSON.stringify({ version: 1, updatedAt: new Date().toISOString(), positions: next }),
+      );
+    } catch {
+      // In-memory dragging still works if browser storage is unavailable.
+    }
+
+    return next;
+  });
+}, [freeStorageKey]);
+
+const resetFreeLayout = useCallback(() => {
+  if (freeStorageKey) {
+    try {
+      window.localStorage.removeItem(freeStorageKey);
+    } catch {
+      // In-memory reset still works if browser storage is unavailable.
+    }
+  }
+  setFreePositions({});
+  setFreeLayoutRevision((value) => value + 1);
+}, [freeStorageKey]);
+
+const structuredMetrics = useMemo(() => {
+  if (!selectedProject) return null;
+
+  const directSubprojects = (selectedProject.subprojectIds ?? [])
+    .map((projectId) => projects.find((project) => project.id === projectId))
+    .filter((project): project is ProjectItem => Boolean(project));
+  const activities = selectedProject.activities ?? [];
+  const byId = new Map(activities.map((activity) => [activity.id, activity]));
+  const containedIds = new Set(
+    activities.flatMap((activity) => activity.containsActivityIds ?? []),
+  );
+  const windows = activities.filter(
+    (activity) => activity.projectPlanning?.nodeKind === "time_container",
+  );
+  const tasks = activities.filter(
+    (activity) =>
+      activity.projectPlanning?.nodeKind !== "time_container" &&
+      !containedIds.has(activity.id),
+  );
+
+  const subprojectGrid = projectMapGrid(
+    directSubprojects.length,
+    PROJECT_SUBPROJECT_WIDTH,
+    PROJECT_SUBPROJECT_HEIGHT,
+    2,
+  );
+  const taskGrid = projectMapGrid(
+    tasks.length,
+    PROJECT_ACTIVITY_WIDTH,
+    PROJECT_ACTIVITY_HEIGHT,
+    2,
+  );
+
+  const windowEntries = windows.map((windowActivity) => {
+    const containedActivities = (windowActivity.containsActivityIds ?? [])
+      .map((activityId) => byId.get(activityId))
+      .filter((activity): activity is ProjectActivityItem => Boolean(activity));
+    return {
+      activity: windowActivity,
+      containedActivities,
+      inner: projectMapTimeContainerGrid(containedActivities.length),
+    };
+  });
+
+  let nextWindowY = PROJECT_TERRITORY_HEADER_HEIGHT;
+  const windowPlacements = windowEntries.map((entry) => {
+    const placement = {
+      x: PROJECT_TERRITORY_PADDING,
+      y: nextWindowY,
+      width: entry.inner.width,
+      height: entry.inner.height,
+    };
+    nextWindowY += entry.inner.height + PROJECT_TERRITORY_GAP;
+    return placement;
+  });
+
+  const windowsWidth = Math.max(
+    360,
+    ...windowEntries.map((entry) => entry.inner.width + PROJECT_TERRITORY_PADDING * 2),
+  );
+  const windowsHeight =
+    windowEntries.length === 0
+      ? 150
+      : Math.max(
+          150,
+          nextWindowY - PROJECT_TERRITORY_GAP + PROJECT_TERRITORY_PADDING,
+        );
+
+  return {
+    directSubprojects,
+    windows,
+    tasks,
+    subprojectGrid,
+    taskGrid,
+    windowEntries,
+    windowPlacements,
+    topLevelSpecs: [
+      { id: "__project_center__", width: PROJECT_CENTER_WIDTH, height: PROJECT_CENTER_HEIGHT },
+      { id: STRUCTURED_SUBPROJECTS_ID, width: subprojectGrid.width, height: subprojectGrid.height },
+      { id: STRUCTURED_WINDOWS_ID, width: windowsWidth, height: windowsHeight },
+      { id: STRUCTURED_TASKS_ID, width: taskGrid.width, height: taskGrid.height },
+    ],
+  };
+}, [projects, selectedProject]);
+
+const structuredFlowKey = useMemo(
+  () =>
+    structuredMetrics && selectedProject
+      ? [
+          selectedProject.id,
+          ...structuredMetrics.directSubprojects.map((project) => `p:${project.id}`),
+          ...structuredMetrics.windows.map((activity) => `w:${activity.id}`),
+          ...structuredMetrics.tasks.map((activity) => `t:${activity.id}`),
+          ...structuredMetrics.windowEntries.flatMap((entry) =>
+            entry.containedActivities.map(
+              (activity) => `c:${entry.activity.id}:${activity.id}`,
+            ),
+          ),
+        ].join(":")
+      : "structured:empty",
+  [selectedProject, structuredMetrics],
+);
+
+const [structuredLayoutState, setStructuredLayoutState] = useState<{
+  key: string;
+  positions: Record<string, { x: number; y: number }>;
+}>({ key: "", positions: {} });
+
+useEffect(() => {
+  let cancelled = false;
+
+  if (!structuredMetrics) {
+    return () => {
+      cancelled = true;
+    };
+  }
+
+  void layoutStructuredProjectTopLevel(structuredMetrics.topLevelSpecs)
+    .then((positions) => {
+      if (!cancelled) setStructuredLayoutState({ key: structuredFlowKey, positions });
+    })
+    .catch(() => {
+      if (cancelled) return;
+
+      const fallbackPositions: Record<string, { x: number; y: number }> = {
+        __project_center__: { x: 520, y: 32 },
+      };
+      let x = 24;
+      for (const spec of structuredMetrics.topLevelSpecs.slice(1)) {
+        fallbackPositions[spec.id] = { x, y: 380 };
+        x += spec.width + 72;
+      }
+      setStructuredLayoutState({ key: structuredFlowKey, positions: fallbackPositions });
+    });
+
+  return () => {
+    cancelled = true;
+  };
+}, [structuredFlowKey, structuredMetrics]);
+
+const structuredLayoutReady =
+  !structuredMetrics || structuredLayoutState.key === structuredFlowKey;
+
+const structuredNodes: Node[] = (() => {
+  if (!selectedProject || !structuredMetrics || !structuredLayoutReady) return [];
+
+  const sourceById = new Map(graphNodes.map((node) => [node.id, node]));
+  const result: Node[] = [];
+  const rootSource = sourceById.get("__project_center__");
+
+  if (rootSource) {
+    result.push({
+      ...rootSource,
+      position: structuredLayoutState.positions.__project_center__ ?? rootSource.position,
+      draggable: false,
+      data: { ...rootSource.data, dragEnabled: false },
+    });
+  }
+
+  const windowSpec = structuredMetrics.topLevelSpecs.find(
+    (spec) => spec.id === STRUCTURED_WINDOWS_ID,
+  );
+
+  const territoryDefinitions = [
+    {
+      id: STRUCTURED_SUBPROJECTS_ID,
+      title: viewCopy.subprojects,
+      count: structuredMetrics.directSubprojects.length,
+      width: structuredMetrics.subprojectGrid.width,
+      height: structuredMetrics.subprojectGrid.height,
+    },
+    {
+      id: STRUCTURED_WINDOWS_ID,
+      title: viewCopy.windows,
+      count: structuredMetrics.windows.length,
+      width: windowSpec?.width ?? 360,
+      height: windowSpec?.height ?? 150,
+    },
+    {
+      id: STRUCTURED_TASKS_ID,
+      title: viewCopy.tasks,
+      count: structuredMetrics.tasks.length,
+      width: structuredMetrics.taskGrid.width,
+      height: structuredMetrics.taskGrid.height,
+    },
+  ];
+
+  for (const territory of territoryDefinitions) {
+    result.push({
+      id: territory.id,
+      type: "project-territory",
+      position: structuredLayoutState.positions[territory.id] ?? { x: 0, y: 0 },
+      draggable: false,
+      selectable: false,
+      zIndex: 0,
+      style: { width: territory.width, height: territory.height },
+      data: {
+        title: territory.title,
+        count: territory.count,
+        emptyLabel: viewCopy.empty,
+      },
+    } as ProjectTerritoryNode);
+  }
+
+  structuredMetrics.directSubprojects.forEach((project, index) => {
+    const sourceNode = sourceById.get(`project-subproject:${project.id}`);
+    const position = structuredMetrics.subprojectGrid.positions[index];
+    if (!sourceNode || !position) return;
+
+    result.push({
+      ...sourceNode,
+      parentId: STRUCTURED_SUBPROJECTS_ID,
+      extent: "parent",
+      position,
+      draggable: false,
+      zIndex: 2,
+      data: { ...sourceNode.data, dragEnabled: false },
+    });
+  });
+
+  structuredMetrics.windowEntries.forEach((entry, index) => {
+    const windowNodeId = `project-activity:${selectedProject.id}:${entry.activity.id}`;
+    const sourceNode = sourceById.get(windowNodeId);
+    const placement = structuredMetrics.windowPlacements[index];
+    if (!sourceNode || !placement) return;
+
+    result.push({
+      ...sourceNode,
+      parentId: STRUCTURED_WINDOWS_ID,
+      extent: "parent",
+      position: { x: placement.x, y: placement.y },
+      draggable: false,
+      zIndex: 2,
+      style: { ...sourceNode.style, width: placement.width, height: placement.height },
+      data: { ...sourceNode.data, dragEnabled: false },
+    });
+
+    entry.containedActivities.forEach((activity, childIndex) => {
+      const childSource = sourceById.get(
+        `project-contained-activity:${selectedProject.id}:${entry.activity.id}:${activity.id}`,
+      );
+      const childPosition = entry.inner.positions[childIndex];
+      if (!childSource || !childPosition) return;
+
+      result.push({
+        ...childSource,
+        parentId: windowNodeId,
+        extent: "parent",
+        position: childPosition,
+        draggable: false,
+        zIndex: 4,
+        data: { ...childSource.data, dragEnabled: false },
+      });
+    });
+  });
+
+  structuredMetrics.tasks.forEach((activity, index) => {
+    const sourceNode = sourceById.get(`project-activity:${selectedProject.id}:${activity.id}`);
+    const position = structuredMetrics.taskGrid.positions[index];
+    if (!sourceNode || !position) return;
+
+    result.push({
+      ...sourceNode,
+      parentId: STRUCTURED_TASKS_ID,
+      extent: "parent",
+      position,
+      draggable: false,
+      zIndex: 2,
+      data: { ...sourceNode.data, dragEnabled: false },
+    });
+  });
+
+  return result;
+})();
+
+const structuredEdges: Edge[] = [
+  { id: "structured-root-subprojects", source: "__project_center__", target: STRUCTURED_SUBPROJECTS_ID, type: "smoothstep", style: { stroke: "#9fb2f3", strokeWidth: 1.6 } },
+  { id: "structured-root-windows", source: "__project_center__", target: STRUCTURED_WINDOWS_ID, type: "smoothstep", style: { stroke: "#b7c3e7", strokeWidth: 1.4 } },
+  { id: "structured-root-tasks", source: "__project_center__", target: STRUCTURED_TASKS_ID, type: "smoothstep", style: { stroke: "#c8d3f2", strokeWidth: 1.4 } },
+];
+
+if (loading) {
     return (
       <div className="min-h-full px-3 py-4 sm:px-5">
         <div className="mx-auto flex min-h-[420px] w-full max-w-[1220px] items-center justify-center rounded-[24px] border border-[#e0e5f0] bg-white text-[13px] text-[#8b91a7] shadow-sm">
@@ -2509,34 +3079,91 @@ export default function ProjectMapStartClient({
           ) : null}
         </header>
 
+        <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
+          <div className="inline-flex rounded-[14px] border border-[#dce2ef] bg-white p-1 shadow-sm">
+            <button
+              type="button"
+              aria-pressed={mapViewMode === "structured"}
+              onClick={() => setMapViewMode("structured")}
+              className={`rounded-[10px] px-3 py-1.5 text-[10px] font-bold transition ${
+                mapViewMode === "structured"
+                  ? "bg-[#315ee7] text-white"
+                  : "text-[#66708e] hover:bg-[#f2f5ff]"
+              }`}
+            >
+              {viewCopy.structured}
+            </button>
+            <button
+              type="button"
+              aria-pressed={mapViewMode === "free"}
+              onClick={() => setMapViewMode("free")}
+              className={`rounded-[10px] px-3 py-1.5 text-[10px] font-bold transition ${
+                mapViewMode === "free"
+                  ? "bg-[#315ee7] text-white"
+                  : "text-[#66708e] hover:bg-[#f2f5ff]"
+              }`}
+            >
+              {viewCopy.free}
+            </button>
+          </div>
+
+          {mapViewMode === "free" ? (
+            <button
+              type="button"
+              onClick={resetFreeLayout}
+              className="rounded-[12px] border border-[#dce2ef] bg-white px-3 py-2 text-[10px] font-semibold text-[#6f7892] shadow-sm transition hover:bg-[#f7f9ff]"
+            >
+              {viewCopy.reset}
+            </button>
+          ) : null}
+        </div>
+
         <section className="relative h-[720px] min-h-[600px] overflow-hidden rounded-[26px] border border-[#dfe4ef] bg-[#f8fafc] shadow-inner">
           <ReactFlowProvider>
-            {layoutReady ? (
+            {mapViewMode === "structured" ? (
+              structuredLayoutReady ? (
+                <ReactFlow
+                  key={`${structuredFlowKey}:structured`}
+                  nodes={structuredNodes}
+                  edges={structuredEdges}
+                  nodeTypes={NODE_TYPES}
+                  fitView
+                  fitViewOptions={{ padding: 0.2, minZoom: 0.42, maxZoom: 1.05 }}
+                  minZoom={0.28}
+                  maxZoom={1.8}
+                  nodesConnectable={false}
+                  nodesDraggable={false}
+                  elementsSelectable={false}
+                  onNodeClick={() => undefined}
+                  proOptions={{ hideAttribution: true }}
+                >
+                  <Background variant={BackgroundVariant.Dots} gap={18} size={1} color="#cfd7e8" />
+                  <Controls showInteractive={false} />
+                </ReactFlow>
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-[12px] font-semibold text-[#8b91a7]">
+                  {copy.loading}
+                </div>
+              )
+            ) : layoutReady ? (
               <ReactFlow
-                key={`${flowKey}:elk`}
-                nodes={layoutedNodes}
+                key={`${flowKey}:free:${freeLayoutRevision}`}
+                nodes={freeNodes}
                 edges={graphEdges}
                 nodeTypes={NODE_TYPES}
                 fitView
-                fitViewOptions={{
-                  padding: 0.24,
-                  minZoom: 0.42,
-                  maxZoom: 1.05,
-                }}
-                minZoom={0.28}
+                fitViewOptions={{ padding: 0.24, minZoom: 0.32, maxZoom: 1.05 }}
+                minZoom={0.2}
                 maxZoom={1.8}
                 nodesConnectable={false}
-                nodesDraggable={false}
+                nodesDraggable
                 elementsSelectable={false}
+                onNodesChange={handleFreeNodesChange}
+                onNodeDragStop={(_, node) => persistFreeNodePosition(node)}
                 onNodeClick={() => undefined}
                 proOptions={{ hideAttribution: true }}
               >
-                <Background
-                  variant={BackgroundVariant.Dots}
-                  gap={18}
-                  size={1}
-                  color="#cfd7e8"
-                />
+                <Background variant={BackgroundVariant.Dots} gap={18} size={1} color="#cfd7e8" />
                 <Controls showInteractive={false} />
               </ReactFlow>
             ) : (
