@@ -1,0 +1,88 @@
+﻿ARCTor technical recovery checkpoint
+
+PATCH=ARCTOR_PROJECT_MAP_NEW_PROJECT_DRAFT_SELECTOR_HIERARCHY_V1_0_1_20261006
+TIMESTAMP=20261006_150605
+RESULT=PASS
+FAILURE=
+BASE_HEAD=43475ec68b6b89ae81eb1a65c7564c5a78c33d7b
+
+GOAL=
+Fix the blank structured map after clicking New project.
+Keep the already working free-map draft form.
+Make the project selector communicate project/subproject hierarchy.
+
+ROOT_CAUSE=
+beginNewProject() intentionally clears selectedProjectId.
+Free view renders graphNodes, which always contains __project_center__.
+Structured view previously returned [] whenever selectedProject was null.
+Therefore the same draft form existed but structured view discarded its node.
+
+VALIDATOR_V1_0_1_FIX=
+The V1 functional patch passed 9/10 checks but the ontology guard falsely
+searched the entire existing ProjectMap source for parent_value_object_id.
+That field already existed in the baseline ValueObjectCatalogRow and root
+catalog mapping, so the guard produced a false failure.
+V1.0.1 checks only lines ADDED by this patch for ontology-mutating tokens.
+Functional UI code is unchanged from V1.
+
+FIX=
+1. Structured mode renders the editable __project_center__ draft when creating=true and selectedProject=null.
+2. Structured draft has zero territory edges until a project exists.
+3. Project selector remains capable of selecting both projects and subprojects.
+4. Selector options are ordered hierarchically and subprojects are prefixed with indentation + â†³.
+5. For DAG-style multiple-parent data, each project appears once using deterministic first traversal.
+
+FILES_CHANGED=
+src/app/projects/ProjectMapStartClient.tsx
+scripts/validate-project-map-new-project-draft-selector-hierarchy-v1.mjs
+
+API_CHANGE=NO
+DB_MIGRATION=NO
+DEPENDENCY_CHANGE=NO
+ONTOLOGY_MUTATION=NO
+PROJECT_HIERARCHY_MODEL=UNCHANGED
+PROJECT_CREATION_API=UNCHANGED
+SUBPROJECT_CREATION_API=UNCHANGED
+
+HASHES_SHA256=
+MAP=19DE1083193CCFFE86598B9D6A25B5EA259D1E3AF6FE4EE9CC3774ED1650769A
+VALIDATOR=E51F1CA0798658133C9C7879AD37B307C222240FFACB2B7C66B94D6ED1FABD96
+
+VALIDATION_REQUIRED=
+VALIDATOR=PASS
+ESLINT=PASS
+TYPECHECK=PASS
+BUILD=PASS
+
+CONTINUATION=
+After production smoke, project map usability can be considered closed and work can move to /feed.
+
+COMMIT=false
+PUSH=false
+DEPLOY=false
+
+POST_INSTALL_COMMIT_CHECKPOINT=
+CODE_COMMIT=7a7af10ce1616dede3f1a59316c12e9440f519aa
+VALIDATED_RESULT_ZIP_SHA256=A0E8DD4FC718D0C7399C0A3D70E72A0FE5050724987F80B174B5F44B24A3AD5D
+VALIDATED_RESULT_REPORT_SHA256=51286DAD6C362F7F4451E3B471DAD44FEF9B8B66BFA7AECACB75A76C395AA268
+
+STRUCTURED_NEW_PROJECT_DRAFT=PASS
+FREE_NEW_PROJECT_DRAFT=PRESERVED
+
+PROJECT_SELECTOR_HIERARCHY=PASS
+PROJECT_SELECTOR_ROOTS_FIRST=PASS
+PROJECT_SELECTOR_SUBPROJECT_INDENT=PASS
+PROJECT_SELECTOR_SUBPROJECT_PREFIX=↳
+SUBPROJECT_SELECTABLE=PASS
+
+PROJECT_HIERARCHY_MODEL=UNCHANGED
+PROJECT_HIERARCHY=project_composition_relations/decomposes_into
+PROJECT_CREATION_API=UNCHANGED
+SUBPROJECT_CREATION_API=UNCHANGED
+
+API_CHANGE=NO
+DB_MIGRATION=NO
+DEPENDENCY_CHANGE=NO
+ONTOLOGY_MUTATION=NO
+
+PRODUCTION_SMOKE=PENDING
