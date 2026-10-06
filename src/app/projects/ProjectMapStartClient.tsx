@@ -721,8 +721,11 @@ function projectActivityOccurrenceLabel(
     .join(" → ");
 }
 
+type ProjectSemanticZoomLevel = "detail" | "compact" | "overview";
+
 type ProjectCenterData = Record<string, unknown> & {
   copy: Copy;
+  semanticLevel?: ProjectSemanticZoomLevel;
   title: string;
   rootQuery: string;
   selectedRoot: RootOption | null;
@@ -753,6 +756,7 @@ type ProjectActivityNodeData = Record<string, unknown> & {
   locale: LocaleCode;
   activity: ProjectActivityItem;
   containedActivities: ProjectActivityItem[];
+  semanticLevel?: ProjectSemanticZoomLevel;
   dragEnabled?: boolean;
   dragLabel?: string;
   onOpenActivity: (
@@ -771,6 +775,7 @@ type ProjectSubprojectNodeData = Record<string, unknown> & {
   project: ProjectItem;
   copy: ProjectSubprojectCaptureCopy;
   actionCopy: Copy;
+  semanticLevel?: ProjectSemanticZoomLevel;
   dragEnabled?: boolean;
   dragLabel?: string;
   onOpenProject: (projectId: string) => void;
@@ -790,6 +795,10 @@ type ProjectTerritoryNodeData = Record<string, unknown> & {
   title: string;
   count: number;
   emptyLabel: string;
+  collapsed: boolean;
+  collapseLabel: string;
+  expandLabel: string;
+  onToggle: () => void;
 };
 
 type ProjectTerritoryNode = Node<
@@ -829,14 +838,29 @@ function ProjectTerritoryCard({
         className="!h-2 !w-2 !border-0 !bg-[#a4b3df]"
       />
       <div className="flex items-center justify-between gap-3">
-        <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#6b7ba5]">
+        <div className="min-w-0 text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#6b7ba5]">
           {data.title}
         </div>
-        <div className="rounded-full border border-[#dbe2f4] bg-white px-2 py-0.5 text-[9px] font-bold text-[#6f7b9b]">
-          {data.count}
+        <div className="flex shrink-0 items-center gap-1.5">
+          <div className="rounded-full border border-[#dbe2f4] bg-white px-2 py-0.5 text-[9px] font-bold text-[#6f7b9b]">
+            {data.count}
+          </div>
+          <button
+            type="button"
+            onClick={data.onToggle}
+            title={data.collapsed ? data.expandLabel : data.collapseLabel}
+            aria-label={data.collapsed ? data.expandLabel : data.collapseLabel}
+            className="nodrag nopan flex h-7 w-7 items-center justify-center rounded-full border border-[#d4dcf2] bg-white text-[13px] font-black text-[#6072ad] shadow-sm transition hover:border-[#aebfff] hover:bg-[#f2f5ff] hover:text-[#315ee7]"
+          >
+            {data.collapsed ? "+" : "−"}
+          </button>
         </div>
       </div>
-      {data.count === 0 ? (
+      {data.collapsed ? (
+        <div className="absolute inset-x-4 top-[58px] rounded-xl border border-dashed border-[#dfe5f4] bg-white/75 px-3 py-3 text-center text-[10px] font-semibold text-[#7d89a8]">
+          {data.count} · {data.title}
+        </div>
+      ) : data.count === 0 ? (
         <div className="absolute inset-x-4 top-[58px] rounded-xl border border-dashed border-[#e0e5f2] bg-white/70 px-3 py-5 text-center text-[10px] font-semibold text-[#9aa4bf]">
           {data.emptyLabel}
         </div>
@@ -866,22 +890,27 @@ function ProjectSubprojectCard({
       >
         {data.project.title}
       </button>
-      <button
-        type="button"
-        onClick={() =>
-          data.onOpenObservationObject(data.project.rootValueObject.id)
-        }
-        className="mt-2 rounded-lg border border-[#d7def3] bg-white px-2.5 py-1.5 text-[9px] font-bold text-[#62719a] hover:border-[#aebfff] hover:text-[#315ee7]"
-      >
-        ОН · {data.copy.openObservationObject}
-      </button>
 
+      {data.semanticLevel !== "overview" ? (
+        <button
+          type="button"
+          onClick={() =>
+            data.onOpenObservationObject(data.project.rootValueObject.id)
+          }
+          className="mt-2 rounded-lg border border-[#d7def3] bg-white px-2.5 py-1.5 text-[9px] font-bold text-[#62719a] hover:border-[#aebfff] hover:text-[#315ee7]"
+        >
+          ОН · {data.copy.openObservationObject}
+        </button>
+      ) : null}
+
+      {data.semanticLevel === "detail" ? (
       <div className="nodrag nopan absolute -right-4 top-1/2 flex -translate-y-1/2 flex-col gap-1.5">
         <button type="button" onClick={() => data.onAddSubproject(data.project.id)} title={data.actionCopy.addSubproject} aria-label={data.actionCopy.addSubproject} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c9d5ff] bg-white text-sm font-black text-[#315ee7] shadow-md hover:bg-[#eef2ff]">⊞</button>
         <button type="button" onClick={() => data.onAddTask(data.project.id)} title={data.actionCopy.addTask} aria-label={data.actionCopy.addTask} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c9d5ff] bg-white text-base font-bold text-[#315ee7] shadow-md hover:bg-[#eef2ff]">+</button>
         <button type="button" onClick={() => data.onAddDateWindow(data.project.id)} title={data.actionCopy.addDateWindow} aria-label={data.actionCopy.addDateWindow} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c9d5ff] bg-white text-sm font-black text-[#315ee7] shadow-md hover:bg-[#eef2ff]">↔</button>
         <button type="button" onClick={() => data.onAddTimeWindow(data.project.id)} title={data.actionCopy.addTimeWindow} aria-label={data.actionCopy.addTimeWindow} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c9d5ff] bg-white text-sm font-black text-[#315ee7] shadow-md hover:bg-[#eef2ff]">↕</button>
       </div>
+      ) : null}
 
       <Handle
         type="source"
@@ -910,11 +939,17 @@ function ProjectActivityCard({
           <div className="min-w-0">
             <div className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#5174ef]">{data.copy.timeWindowLabel}</div>
             <button type="button" onClick={() => data.onOpenActivity(data.activity.id, Boolean(data.activity.recurrence))} className="mt-1 block max-w-[470px] truncate text-left text-[13px] font-extrabold text-[#27324d] hover:text-[#315ee7]">{data.activity.title}</button>
-            <div className="mt-1 text-[10px] font-semibold text-[#7180a2]">{windowLabel || data.copy.unscheduledLabel}</div>
+            {data.semanticLevel !== "overview" ? (
+              <div className="mt-1 text-[10px] font-semibold text-[#7180a2]">
+                {windowLabel || data.copy.unscheduledLabel}
+              </div>
+            ) : null}
           </div>
-          <button type="button" onClick={() => data.onAddContainedTask(data.activity.id)} title={data.copy.addTask} aria-label={data.copy.addTask} className="nodrag nopan flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#b9c8ff] bg-white text-lg font-bold text-[#315ee7] shadow-sm hover:bg-[#eef2ff]">+</button>
+          {data.semanticLevel === "detail" ? (
+            <button type="button" onClick={() => data.onAddContainedTask(data.activity.id)} title={data.copy.addTask} aria-label={data.copy.addTask} className="nodrag nopan flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#b9c8ff] bg-white text-lg font-bold text-[#315ee7] shadow-sm hover:bg-[#eef2ff]">+</button>
+          ) : null}
         </div>
-        {data.containedActivities.length === 0 ? (
+        {data.semanticLevel === "detail" && data.containedActivities.length === 0 ? (
           <div className="absolute inset-x-5 top-[88px] rounded-xl border border-dashed border-[#dce3f7] bg-white/70 px-3 py-5 text-center text-[10px] font-semibold text-[#9aa4bf]">
             {data.copy.addTask}
           </div>
@@ -953,20 +988,23 @@ function ProjectActivityCard({
         {data.activity.title}
       </button>
 
-      <button
-        type="button"
-        onClick={() =>
-          data.onOpenActivity(
-            data.activity.id,
-            Boolean(data.activity.recurrence),
-          )
-        }
-        className="mt-2 block text-left text-[10px] font-medium text-[#7b849d] hover:text-[#315ee7]"
-      >
-        {projectActivityTimingLabel(data.activity, data.copy, data.locale)}
-      </button>
+      {data.semanticLevel !== "overview" ? (
+        <button
+          type="button"
+          onClick={() =>
+            data.onOpenActivity(
+              data.activity.id,
+              Boolean(data.activity.recurrence),
+            )
+          }
+          className="mt-2 block text-left text-[10px] font-medium text-[#7b849d] hover:text-[#315ee7]"
+        >
+          {projectActivityTimingLabel(data.activity, data.copy, data.locale)}
+        </button>
+      ) : null}
 
-      {data.activity.recurrence?.upcomingOccurrences?.length ? (
+      {data.semanticLevel === "detail" &&
+      data.activity.recurrence?.upcomingOccurrences?.length ? (
         <div className="mt-2 space-y-1 rounded-xl border border-[#edf0f7] bg-[#fafbff] px-2.5 py-2">
           {data.activity.recurrence.upcomingOccurrences
             .slice(0, 3)
@@ -1180,6 +1218,66 @@ const STRUCTURED_SUBPROJECTS_ID = "__structured_subprojects__";
 const STRUCTURED_WINDOWS_ID = "__structured_windows__";
 const STRUCTURED_TASKS_ID = "__structured_tasks__";
 const PROJECT_MAP_FREE_STORAGE_PREFIX = "arctor:project-map:free-layout:v1:";
+const PROJECT_MAP_STRUCTURED_STORAGE_PREFIX =
+  "arctor:project-map:structured-view:v1:";
+const PROJECT_TERRITORY_COLLAPSED_HEIGHT = 104;
+
+type ProjectStructuredTerritoryKey = "subprojects" | "windows" | "tasks";
+type ProjectStructuredCollapsedState = Record<
+  ProjectStructuredTerritoryKey,
+  boolean
+>;
+
+const DEFAULT_STRUCTURED_COLLAPSED: ProjectStructuredCollapsedState = {
+  subprojects: false,
+  windows: false,
+  tasks: false,
+};
+
+function projectMapStructuredStorageKey(projectId: string | null) {
+  return projectId
+    ? `${PROJECT_MAP_STRUCTURED_STORAGE_PREFIX}${projectId}`
+    : null;
+}
+
+function readProjectMapStructuredCollapsed(
+  projectId: string | null,
+): ProjectStructuredCollapsedState {
+  if (!projectId || typeof window === "undefined") {
+    return { ...DEFAULT_STRUCTURED_COLLAPSED };
+  }
+
+  const storageKey = projectMapStructuredStorageKey(projectId);
+  if (!storageKey) return { ...DEFAULT_STRUCTURED_COLLAPSED };
+
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) return { ...DEFAULT_STRUCTURED_COLLAPSED };
+
+    const parsed = JSON.parse(raw) as {
+      version?: number;
+      collapsed?: Partial<ProjectStructuredCollapsedState>;
+    };
+
+    if (parsed.version !== 1 || !parsed.collapsed) {
+      return { ...DEFAULT_STRUCTURED_COLLAPSED };
+    }
+
+    return {
+      subprojects: parsed.collapsed.subprojects === true,
+      windows: parsed.collapsed.windows === true,
+      tasks: parsed.collapsed.tasks === true,
+    };
+  } catch {
+    return { ...DEFAULT_STRUCTURED_COLLAPSED };
+  }
+}
+
+function projectSemanticZoomLevel(zoom: number): ProjectSemanticZoomLevel {
+  if (zoom < 0.42) return "overview";
+  if (zoom < 0.72) return "compact";
+  return "detail";
+}
 
 function projectMapFreeStorageKey(projectId: string | null) {
   return projectId ? `${PROJECT_MAP_FREE_STORAGE_PREFIX}${projectId}` : null;
@@ -1219,16 +1317,18 @@ type ProjectMapViewCopy = {
   windows: string;
   tasks: string;
   empty: string;
+  collapse: string;
+  expand: string;
 };
 
 const PROJECT_MAP_VIEW_COPY: Record<LocaleCode, ProjectMapViewCopy> = {
-  ru: { structured: "Структура", free: "Свободная карта", reset: "Сбросить расположение", drag: "Перетащить блок", subprojects: "Подпроекты", windows: "Временные окна", tasks: "Задачи", empty: "Пока пусто" },
-  pl: { structured: "Struktura", free: "Mapa swobodna", reset: "Resetuj układ", drag: "Przeciągnij blok", subprojects: "Podprojekty", windows: "Okna czasowe", tasks: "Zadania", empty: "Na razie pusto" },
-  en: { structured: "Structure", free: "Free map", reset: "Reset layout", drag: "Drag block", subprojects: "Subprojects", windows: "Time windows", tasks: "Tasks", empty: "Empty" },
-  es: { structured: "Estructura", free: "Mapa libre", reset: "Restablecer diseño", drag: "Arrastrar bloque", subprojects: "Subproyectos", windows: "Ventanas de tiempo", tasks: "Tareas", empty: "Vacío" },
-  uk: { structured: "Структура", free: "Вільна карта", reset: "Скинути розташування", drag: "Перетягнути блок", subprojects: "Підпроєкти", windows: "Часові вікна", tasks: "Завдання", empty: "Поки порожньо" },
-  de: { structured: "Struktur", free: "Freie Karte", reset: "Layout zurücksetzen", drag: "Block verschieben", subprojects: "Teilprojekte", windows: "Zeitfenster", tasks: "Aufgaben", empty: "Noch leer" },
-  cs: { structured: "Struktura", free: "Volná mapa", reset: "Obnovit rozložení", drag: "Přesunout blok", subprojects: "Podprojekty", windows: "Časová okna", tasks: "Úkoly", empty: "Zatím prázdné" },
+  ru: { structured: "Структура", free: "Свободная карта", reset: "Сбросить расположение", drag: "Перетащить блок", subprojects: "Подпроекты", windows: "Временные окна", tasks: "Задачи", empty: "Пока пусто", collapse: "Свернуть", expand: "Развернуть" },
+  pl: { structured: "Struktura", free: "Mapa swobodna", reset: "Resetuj układ", drag: "Przeciągnij blok", subprojects: "Podprojekty", windows: "Okna czasowe", tasks: "Zadania", empty: "Na razie pusto", collapse: "Zwiń", expand: "Rozwiń" },
+  en: { structured: "Structure", free: "Free map", reset: "Reset layout", drag: "Drag block", subprojects: "Subprojects", windows: "Time windows", tasks: "Tasks", empty: "Empty", collapse: "Collapse", expand: "Expand" },
+  es: { structured: "Estructura", free: "Mapa libre", reset: "Restablecer diseño", drag: "Arrastrar bloque", subprojects: "Subproyectos", windows: "Ventanas de tiempo", tasks: "Tareas", empty: "Vacío", collapse: "Contraer", expand: "Expandir" },
+  uk: { structured: "Структура", free: "Вільна карта", reset: "Скинути розташування", drag: "Перетягнути блок", subprojects: "Підпроєкти", windows: "Часові вікна", tasks: "Завдання", empty: "Поки порожньо", collapse: "Згорнути", expand: "Розгорнути" },
+  de: { structured: "Struktur", free: "Freie Karte", reset: "Layout zurücksetzen", drag: "Block verschieben", subprojects: "Teilprojekte", windows: "Zeitfenster", tasks: "Aufgaben", empty: "Noch leer", collapse: "Einklappen", expand: "Ausklappen" },
+  cs: { structured: "Struktura", free: "Volná mapa", reset: "Obnovit rozložení", drag: "Přesunout blok", subprojects: "Podprojekty", windows: "Časová okna", tasks: "Úkoly", empty: "Zatím prázdné", collapse: "Sbalit", expand: "Rozbalit" },
 };
 
 type ProjectMapGrid = {
@@ -1361,6 +1461,48 @@ function collectVisibleProjectBranch(
   }
 
   return visible;
+}
+
+function projectBreadcrumbPath(
+  projects: ProjectItem[],
+  selectedProjectId: string | null,
+) {
+  if (!selectedProjectId) return [] as ProjectItem[];
+
+  const byId = new Map(projects.map((project) => [project.id, project]));
+  const selected = byId.get(selectedProjectId);
+  if (!selected) return [] as ProjectItem[];
+
+  const queue: ProjectItem[][] = [[selected]];
+  const bestDepth = new Map<string, number>([[selected.id, 0]]);
+
+  while (queue.length > 0) {
+    const path = queue.shift();
+    if (!path) break;
+
+    const current = path[0];
+    const parents = (current.parentProjectIds ?? [])
+      .map((projectId) => byId.get(projectId))
+      .filter((project): project is ProjectItem => Boolean(project))
+      .sort((left, right) =>
+        left.title.localeCompare(right.title) || left.id.localeCompare(right.id),
+      );
+
+    if (parents.length === 0) {
+      return path;
+    }
+
+    for (const parent of parents) {
+      const nextDepth = path.length;
+      const knownDepth = bestDepth.get(parent.id);
+      if (knownDepth !== undefined && knownDepth <= nextDepth) continue;
+
+      bestDepth.set(parent.id, nextDepth);
+      queue.push([parent, ...path]);
+    }
+  }
+
+  return [selected];
 }
 
 function isTimeContainerNode(node: Node) {
@@ -1635,6 +1777,12 @@ export default function ProjectMapStartClient({
   const [mapViewMode, setMapViewMode] = useState<ProjectMapViewMode>("free");
   const [freePositions, setFreePositions] = useState<Record<string, { x: number; y: number }>>({});
   const [freeLayoutRevision, setFreeLayoutRevision] = useState(0);
+  const [structuredCollapsed, setStructuredCollapsed] =
+    useState<ProjectStructuredCollapsedState>({
+      ...DEFAULT_STRUCTURED_COLLAPSED,
+    });
+  const [structuredSemanticLevel, setStructuredSemanticLevel] =
+    useState<ProjectSemanticZoomLevel>("detail");
   const [creating, setCreating] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -1787,6 +1935,8 @@ export default function ProjectMapStartClient({
       if (draftTitle !== undefined) {
         setSelectedProjectId(null);
         setFreePositions({});
+        setStructuredCollapsed({ ...DEFAULT_STRUCTURED_COLLAPSED });
+        setStructuredSemanticLevel("detail");
         setCreating(true);
         setSaved(false);
         setTitle(draftTitle);
@@ -1802,6 +1952,10 @@ export default function ProjectMapStartClient({
 
         setSelectedProjectId(nextSelectedId);
         setFreePositions(readProjectMapFreePositions(nextSelectedId));
+        setStructuredCollapsed(
+          readProjectMapStructuredCollapsed(nextSelectedId),
+        );
+        setStructuredSemanticLevel("detail");
 
         if (nextSelectedId) {
           const project =
@@ -1915,6 +2069,8 @@ export default function ProjectMapStartClient({
     setRootDropdownOpen(false);
     setSelectedProjectId(null);
     setFreePositions({});
+    setStructuredCollapsed({ ...DEFAULT_STRUCTURED_COLLAPSED });
+    setStructuredSemanticLevel("detail");
     setActionProjectId(null);
   }
 
@@ -1928,6 +2084,8 @@ export default function ProjectMapStartClient({
     setSaveError(null);
     setSelectedProjectId(project.id);
     setFreePositions(readProjectMapFreePositions(project.id));
+    setStructuredCollapsed(readProjectMapStructuredCollapsed(project.id));
+    setStructuredSemanticLevel("detail");
     setTitle(project.title);
     setSelectedRootId(project.rootValueObject.id);
     setRootQuery(project.rootValueObject.title ?? "");
@@ -2653,13 +2811,54 @@ export default function ProjectMapStartClient({
 
   const viewCopy = PROJECT_MAP_VIEW_COPY[locale];
 const freeStorageKey = projectMapFreeStorageKey(selectedProjectId);
+const structuredStorageKey =
+  projectMapStructuredStorageKey(selectedProjectId);
+
+const structuredBreadcrumb = useMemo(
+  () => projectBreadcrumbPath(projects, selectedProjectId),
+  [projects, selectedProjectId],
+);
+
+const toggleStructuredTerritory = useCallback(
+  (territory: ProjectStructuredTerritoryKey) => {
+    setStructuredCollapsed((current) => {
+      const next = {
+        ...current,
+        [territory]: !current[territory],
+      };
+
+      if (structuredStorageKey) {
+        try {
+          window.localStorage.setItem(
+            structuredStorageKey,
+            JSON.stringify({
+              version: 1,
+              updatedAt: new Date().toISOString(),
+              collapsed: next,
+            }),
+          );
+        } catch {
+          // The structured view still works if browser storage is unavailable.
+        }
+      }
+
+      return next;
+    });
+  },
+  [structuredStorageKey],
+);
 
 const freeNodes = layoutedNodes.map((node) => ({
   ...node,
   position: freePositions[node.id] ?? node.position,
   draggable: true,
   dragHandle: ".project-map-drag-handle",
-  data: { ...node.data, dragEnabled: true, dragLabel: viewCopy.drag },
+  data: {
+    ...node.data,
+    dragEnabled: true,
+    dragLabel: viewCopy.drag,
+    semanticLevel: "detail",
+  },
 }));
 
 const persistFreeNodePosition = useCallback((node: Node) => {
@@ -2716,18 +2915,30 @@ const structuredMetrics = useMemo(() => {
       !containedIds.has(activity.id),
   );
 
-  const subprojectGrid = projectMapGrid(
-    directSubprojects.length,
-    PROJECT_SUBPROJECT_WIDTH,
-    PROJECT_SUBPROJECT_HEIGHT,
-    2,
-  );
-  const taskGrid = projectMapGrid(
-    tasks.length,
-    PROJECT_ACTIVITY_WIDTH,
-    PROJECT_ACTIVITY_HEIGHT,
-    2,
-  );
+  const subprojectGrid = structuredCollapsed.subprojects
+    ? {
+        width: 360,
+        height: PROJECT_TERRITORY_COLLAPSED_HEIGHT,
+        positions: [],
+      }
+    : projectMapGrid(
+        directSubprojects.length,
+        PROJECT_SUBPROJECT_WIDTH,
+        PROJECT_SUBPROJECT_HEIGHT,
+        2,
+      );
+  const taskGrid = structuredCollapsed.tasks
+    ? {
+        width: 360,
+        height: PROJECT_TERRITORY_COLLAPSED_HEIGHT,
+        positions: [],
+      }
+    : projectMapGrid(
+        tasks.length,
+        PROJECT_ACTIVITY_WIDTH,
+        PROJECT_ACTIVITY_HEIGHT,
+        2,
+      );
 
   const windowEntries = windows.map((windowActivity) => {
     const containedActivities = (windowActivity.containsActivityIds ?? [])
@@ -2752,12 +2963,17 @@ const structuredMetrics = useMemo(() => {
     return placement;
   });
 
-  const windowsWidth = Math.max(
-    360,
-    ...windowEntries.map((entry) => entry.inner.width + PROJECT_TERRITORY_PADDING * 2),
-  );
-  const windowsHeight =
-    windowEntries.length === 0
+  const windowsWidth = structuredCollapsed.windows
+    ? 360
+    : Math.max(
+        360,
+        ...windowEntries.map(
+          (entry) => entry.inner.width + PROJECT_TERRITORY_PADDING * 2,
+        ),
+      );
+  const windowsHeight = structuredCollapsed.windows
+    ? PROJECT_TERRITORY_COLLAPSED_HEIGHT
+    : windowEntries.length === 0
       ? 150
       : Math.max(
           150,
@@ -2779,13 +2995,14 @@ const structuredMetrics = useMemo(() => {
       { id: STRUCTURED_TASKS_ID, width: taskGrid.width, height: taskGrid.height },
     ],
   };
-}, [projects, selectedProject]);
+}, [projects, selectedProject, structuredCollapsed]);
 
 const structuredFlowKey = useMemo(
   () =>
     structuredMetrics && selectedProject
       ? [
           selectedProject.id,
+          `collapsed:${structuredCollapsed.subprojects ? 1 : 0}:${structuredCollapsed.windows ? 1 : 0}:${structuredCollapsed.tasks ? 1 : 0}`,
           ...structuredMetrics.directSubprojects.map((project) => `p:${project.id}`),
           ...structuredMetrics.windows.map((activity) => `w:${activity.id}`),
           ...structuredMetrics.tasks.map((activity) => `t:${activity.id}`),
@@ -2796,7 +3013,7 @@ const structuredFlowKey = useMemo(
           ),
         ].join(":")
       : "structured:empty",
-  [selectedProject, structuredMetrics],
+  [selectedProject, structuredCollapsed, structuredMetrics],
 );
 
 const [structuredLayoutState, setStructuredLayoutState] = useState<{
@@ -2862,6 +3079,7 @@ const structuredNodes: Node[] = (() => {
   const territoryDefinitions = [
     {
       id: STRUCTURED_SUBPROJECTS_ID,
+      key: "subprojects" as const,
       title: viewCopy.subprojects,
       count: structuredMetrics.directSubprojects.length,
       width: structuredMetrics.subprojectGrid.width,
@@ -2869,6 +3087,7 @@ const structuredNodes: Node[] = (() => {
     },
     {
       id: STRUCTURED_WINDOWS_ID,
+      key: "windows" as const,
       title: viewCopy.windows,
       count: structuredMetrics.windows.length,
       width: windowSpec?.width ?? 360,
@@ -2876,6 +3095,7 @@ const structuredNodes: Node[] = (() => {
     },
     {
       id: STRUCTURED_TASKS_ID,
+      key: "tasks" as const,
       title: viewCopy.tasks,
       count: structuredMetrics.tasks.length,
       width: structuredMetrics.taskGrid.width,
@@ -2896,11 +3116,15 @@ const structuredNodes: Node[] = (() => {
         title: territory.title,
         count: territory.count,
         emptyLabel: viewCopy.empty,
+        collapsed: structuredCollapsed[territory.key],
+        collapseLabel: viewCopy.collapse,
+        expandLabel: viewCopy.expand,
+        onToggle: () => toggleStructuredTerritory(territory.key),
       },
     } as ProjectTerritoryNode);
   }
 
-  structuredMetrics.directSubprojects.forEach((project, index) => {
+  if (!structuredCollapsed.subprojects) structuredMetrics.directSubprojects.forEach((project, index) => {
     const sourceNode = sourceById.get(`project-subproject:${project.id}`);
     const position = structuredMetrics.subprojectGrid.positions[index];
     if (!sourceNode || !position) return;
@@ -2912,11 +3136,15 @@ const structuredNodes: Node[] = (() => {
       position,
       draggable: false,
       zIndex: 2,
-      data: { ...sourceNode.data, dragEnabled: false },
+      data: {
+        ...sourceNode.data,
+        dragEnabled: false,
+        semanticLevel: structuredSemanticLevel,
+      },
     });
   });
 
-  structuredMetrics.windowEntries.forEach((entry, index) => {
+  if (!structuredCollapsed.windows) structuredMetrics.windowEntries.forEach((entry, index) => {
     const windowNodeId = `project-activity:${selectedProject.id}:${entry.activity.id}`;
     const sourceNode = sourceById.get(windowNodeId);
     const placement = structuredMetrics.windowPlacements[index];
@@ -2930,7 +3158,11 @@ const structuredNodes: Node[] = (() => {
       draggable: false,
       zIndex: 2,
       style: { ...sourceNode.style, width: placement.width, height: placement.height },
-      data: { ...sourceNode.data, dragEnabled: false },
+      data: {
+        ...sourceNode.data,
+        dragEnabled: false,
+        semanticLevel: structuredSemanticLevel,
+      },
     });
 
     entry.containedActivities.forEach((activity, childIndex) => {
@@ -2947,12 +3179,16 @@ const structuredNodes: Node[] = (() => {
         position: childPosition,
         draggable: false,
         zIndex: 4,
-        data: { ...childSource.data, dragEnabled: false },
+        data: {
+          ...childSource.data,
+          dragEnabled: false,
+          semanticLevel: structuredSemanticLevel,
+        },
       });
     });
   });
 
-  structuredMetrics.tasks.forEach((activity, index) => {
+  if (!structuredCollapsed.tasks) structuredMetrics.tasks.forEach((activity, index) => {
     const sourceNode = sourceById.get(`project-activity:${selectedProject.id}:${activity.id}`);
     const position = structuredMetrics.taskGrid.positions[index];
     if (!sourceNode || !position) return;
@@ -2964,7 +3200,11 @@ const structuredNodes: Node[] = (() => {
       position,
       draggable: false,
       zIndex: 2,
-      data: { ...sourceNode.data, dragEnabled: false },
+      data: {
+        ...sourceNode.data,
+        dragEnabled: false,
+        semanticLevel: structuredSemanticLevel,
+      },
     });
   });
 
@@ -3063,7 +3303,38 @@ if (loading) {
           ) : null}
         </header>
 
-        <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          {mapViewMode === "structured" && structuredBreadcrumb.length > 0 ? (
+            <nav
+              aria-label="Project focus path"
+              className="flex min-w-0 flex-1 flex-wrap items-center gap-1 rounded-[14px] border border-[#dce2ef] bg-white px-2 py-1.5 shadow-sm"
+            >
+              {structuredBreadcrumb.map((project, index) => (
+                <span key={project.id} className="flex min-w-0 items-center gap-1">
+                  {index > 0 ? (
+                    <span className="text-[11px] font-bold text-[#a0a9bf]">›</span>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => showProject(project.id)}
+                    aria-current={
+                      project.id === selectedProjectId ? "page" : undefined
+                    }
+                    className={`max-w-[220px] truncate rounded-lg px-2 py-1 text-[10px] font-bold transition ${
+                      project.id === selectedProjectId
+                        ? "bg-[#eef2ff] text-[#315ee7]"
+                        : "text-[#68738f] hover:bg-[#f5f7fc] hover:text-[#315ee7]"
+                    }`}
+                  >
+                    {project.title}
+                  </button>
+                </span>
+              ))}
+            </nav>
+          ) : (
+            <div className="flex-1" />
+          )}
+
           <div className="inline-flex rounded-[14px] border border-[#dce2ef] bg-white p-1 shadow-sm">
             <button
               type="button"
@@ -3118,6 +3389,18 @@ if (loading) {
                   nodesConnectable={false}
                   nodesDraggable={false}
                   elementsSelectable={false}
+                  onInit={(instance) => {
+                    window.requestAnimationFrame(() => {
+                      setStructuredSemanticLevel(
+                        projectSemanticZoomLevel(instance.getZoom()),
+                      );
+                    });
+                  }}
+                  onMoveEnd={(_, viewport) => {
+                    setStructuredSemanticLevel(
+                      projectSemanticZoomLevel(viewport.zoom),
+                    );
+                  }}
                   onNodeClick={() => undefined}
                   proOptions={{ hideAttribution: true }}
                 >
