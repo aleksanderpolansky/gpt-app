@@ -1725,6 +1725,76 @@ function projectBreadcrumbPath(
   return [selected];
 }
 
+type ProjectSelectHierarchyItem = {
+  project: ProjectItem;
+  depth: number;
+};
+
+function projectSelectHierarchy(projects: ProjectItem[]) {
+  const byId = new Map(projects.map((project) => [project.id, project]));
+  const childrenByParent = new Map<string, ProjectItem[]>();
+
+  for (const project of projects) {
+    for (const parentProjectId of project.parentProjectIds ?? []) {
+      if (!byId.has(parentProjectId)) continue;
+
+      const children = childrenByParent.get(parentProjectId) ?? [];
+      children.push(project);
+      childrenByParent.set(parentProjectId, children);
+    }
+  }
+
+  for (const children of childrenByParent.values()) {
+    children.sort(
+      (left, right) =>
+        left.title.localeCompare(right.title) ||
+        left.id.localeCompare(right.id),
+    );
+  }
+
+  const roots = projects
+    .filter(
+      (project) =>
+        (project.parentProjectIds ?? []).filter((projectId) => byId.has(projectId))
+          .length === 0,
+    )
+    .sort(
+      (left, right) =>
+        left.title.localeCompare(right.title) ||
+        left.id.localeCompare(right.id),
+    );
+
+  const result: ProjectSelectHierarchyItem[] = [];
+  const visited = new Set<string>();
+
+  function visit(project: ProjectItem, depth: number) {
+    if (visited.has(project.id)) return;
+
+    visited.add(project.id);
+    result.push({ project, depth });
+
+    for (const child of childrenByParent.get(project.id) ?? []) {
+      visit(child, depth + 1);
+    }
+  }
+
+  for (const root of roots) {
+    visit(root, 0);
+  }
+
+  for (const project of [...projects].sort(
+    (left, right) =>
+      left.title.localeCompare(right.title) ||
+      left.id.localeCompare(right.id),
+  )) {
+    if (!visited.has(project.id)) {
+      visit(project, 0);
+    }
+  }
+
+  return result;
+}
+
 function isTimeContainerNode(node: Node) {
   if (node.type !== "project-activity") return false;
 
@@ -2063,6 +2133,11 @@ export default function ProjectMapStartClient({
   const actionProject = useMemo(
     () => projects.find((project) => project.id === actionProjectId) ?? null,
     [actionProjectId, projects],
+  );
+
+  const projectSelectItems = useMemo(
+    () => projectSelectHierarchy(projects),
+    [projects],
   );
 
   const selectedRoot = useMemo(
@@ -3573,11 +3648,29 @@ const structuredLayoutReady =
   !structuredMetrics || structuredLayoutState.key === structuredFlowKey;
 
 const structuredNodes: Node[] = (() => {
-  if (!selectedProject || !structuredMetrics || !structuredLayoutReady) return [];
-
   const sourceById = new Map(graphNodes.map((node) => [node.id, node]));
-  const result: Node[] = [];
   const rootSource = sourceById.get("__project_center__");
+
+  if (!selectedProject) {
+    if (!creating || !rootSource) return [];
+
+    return [
+      {
+        ...rootSource,
+        position: { x: 0, y: 0 },
+        draggable: false,
+        data: {
+          ...rootSource.data,
+          dragEnabled: false,
+          semanticLevel: "detail",
+        },
+      },
+    ];
+  }
+
+  if (!structuredMetrics || !structuredLayoutReady) return [];
+
+  const result: Node[] = [];
 
   if (rootSource) {
     result.push({
@@ -3727,11 +3820,14 @@ const structuredNodes: Node[] = (() => {
   return result;
 })();
 
-const structuredEdges: Edge[] = [
-  { id: "structured-root-subprojects", source: "__project_center__", target: STRUCTURED_SUBPROJECTS_ID, type: "smoothstep", style: { stroke: "#9fb2f3", strokeWidth: 1.6 } },
-  { id: "structured-root-windows", source: "__project_center__", target: STRUCTURED_WINDOWS_ID, type: "smoothstep", style: { stroke: "#b7c3e7", strokeWidth: 1.4 } },
-  { id: "structured-root-tasks", source: "__project_center__", target: STRUCTURED_TASKS_ID, type: "smoothstep", style: { stroke: "#c8d3f2", strokeWidth: 1.4 } },
-];
+const structuredEdges: Edge[] =
+  selectedProject && structuredMetrics
+    ? [
+        { id: "structured-root-subprojects", source: "__project_center__", target: STRUCTURED_SUBPROJECTS_ID, type: "smoothstep", style: { stroke: "#9fb2f3", strokeWidth: 1.6 } },
+        { id: "structured-root-windows", source: "__project_center__", target: STRUCTURED_WINDOWS_ID, type: "smoothstep", style: { stroke: "#b7c3e7", strokeWidth: 1.4 } },
+        { id: "structured-root-tasks", source: "__project_center__", target: STRUCTURED_TASKS_ID, type: "smoothstep", style: { stroke: "#c8d3f2", strokeWidth: 1.4 } },
+      ]
+    : [];
 
 if (loading) {
     return (
@@ -3768,9 +3864,9 @@ if (loading) {
                   className="min-w-[210px] rounded-[14px] border border-[#dce2ef] bg-white px-3 py-2.5 text-[11px] font-semibold text-[#3d435b] outline-none focus:border-[#7895ff]"
                   aria-label={copy.chooseProject}
                 >
-                  {projects.map((project) => (
+                  {projectSelectItems.map(({ project, depth }) => (
                     <option key={project.id} value={project.id}>
-                      {project.title}
+                      {`${"\u00A0\u00A0\u00A0".repeat(depth)}${depth > 0 ? "↳ " : ""}${project.title}`}
                     </option>
                   ))}
                 </select>
