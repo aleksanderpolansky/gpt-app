@@ -936,3 +936,229 @@ export async function POST(request: Request) {
     { status: 201 },
   );
 }
+
+export async function DELETE(request: Request) {
+  const auth = await getCurrentUserContext();
+
+  if (auth.errorResponse || !auth.context) {
+    return auth.errorResponse;
+  }
+
+  const projectContextId = normalizeUuid(
+    new URL(request.url).searchParams.get("projectContextId"),
+  );
+
+  if (!projectContextId) {
+    return NextResponse.json(
+      { ok: false, error: "A valid projectContextId is required." },
+      { status: 400 },
+    );
+  }
+
+  const { appUserId, actorId } = auth.context;
+
+  const { data: projectData, error: projectError } = await supabase
+    .from("project_contexts")
+    .select("id,root_value_object_id,status_code")
+    .eq("id", projectContextId)
+    .eq("owner_user_id", appUserId)
+    .eq("owner_actor_id", actorId)
+    .maybeSingle();
+
+  if (projectError) {
+    return NextResponse.json(
+      { ok: false, error: projectError.message },
+      { status: 500 },
+    );
+  }
+
+  if (!projectData) {
+    return NextResponse.json(
+      { ok: false, error: "Project not found." },
+      { status: 404 },
+    );
+  }
+
+  if (projectData.status_code === "archived") {
+    return NextResponse.json({
+      ok: true,
+      disposition: "already_archived",
+      projectContextId,
+      rootValueObjectPreserved: true,
+    });
+  }
+
+  const rootValueObjectId = projectData.root_value_object_id;
+
+  const [
+    activityLinksResult,
+    activityRelationsResult,
+    childRelationsResult,
+    parentRelationsResult,
+    otherContextsResult,
+  ] = await Promise.all([
+    supabase
+      .from("project_activity_links")
+      .select("id,activity_event_id")
+      .eq("project_context_id", projectContextId)
+      .eq("status_code", "active"),
+    supabase
+      .from("activity_event_relations")
+      .select("id")
+      .eq("project_context_id", projectContextId)
+      .eq("status_code", "active"),
+    supabase
+      .from("project_composition_relations")
+      .select("id,project_context_id")
+      .eq("parent_value_object_id", rootValueObjectId)
+      .eq("relation_type_code", "decomposes_into")
+      .eq("status_code", "active"),
+    supabase
+      .from("project_composition_relations")
+      .select("id,project_context_id")
+      .eq("child_value_object_id", rootValueObjectId)
+      .eq("relation_type_code", "decomposes_into")
+      .eq("status_code", "active"),
+    supabase
+      .from("project_contexts")
+      .select("id")
+      .eq("owner_user_id", appUserId)
+      .eq("owner_actor_id", actorId)
+      .eq("root_value_object_id", rootValueObjectId)
+      .neq("id", projectContextId)
+      .neq("status_code", "archived"),
+  ]);
+
+  const readError =
+    activityLinksResult.error ??
+    activityRelationsResult.error ??
+    childRelationsResult.error ??
+    parentRelationsResult.error ??
+    otherContextsResult.error;
+
+  if (readError) {
+    return NextResponse.json(
+      { ok: false, error: readError.message },
+      { status: 500 },
+    );
+  }
+
+  const activeLinks = activityLinksResult.data ?? [];
+  const activityIds = activeLinks.map((row) => row.activity_event_id);
+
+  let tasks = 0;
+  let timeWindows = 0;
+
+  if (activityIds.length > 0) {
+    const { data: activityRows, error: activityError } = await supabase
+      .from("activity_events")
+      .select("id,metadata_json")
+      .in("id", activityIds);
+
+    if (activityError) {
+      return NextResponse.json(
+        { ok: false, error: activityError.message },
+        { status: 500 },
+      );
+    }
+
+    for (const activity of activityRows ?? []) {
+      if (readProjectPlanningTimeContainerV1(activity.metadata_json)) {
+        timeWindows += 1;
+      } else {
+        tasks += 1;
+      }
+    }
+  }
+
+  const childProjects = (childRelationsResult.data ?? []).length;
+  const parentProjects = (parentRelationsResult.data ?? []).length;
+  const activityRelations = (activityRelationsResult.data ?? []).length;
+  const otherProjectContexts = (otherContextsResult.data ?? []).length;
+
+  const debts = {
+    tasks,
+    timeWindows,
+    childProjects,
+    parentProjects: Math.max(0, parentProjects - 1),
+    activityRelations,
+    otherProjectContexts,
+  };
+
+  const blocked =
+    tasks > 0 ||
+    timeWindows > 0 ||
+    childProjects > 0 ||
+    parentProjects > 1 ||
+    activityRelations > 0 ||
+    otherProjectContexts > 0;
+
+  if (blocked) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Project has active dependencies and cannot be archived yet.",
+        errorCode: "PROJECT_DELETE_BLOCKED",
+        debts,
+      },
+      { status: 409 },
+    );
+  }
+
+  const nowIso = new Date().toISOString();
+  const parentRelations = parentRelationsResult.data ?? [];
+
+  if (parentRelations.length === 1) {
+    const { error: relationError } = await supabase
+      .from("project_composition_relations")
+      .update({
+        status_code: "inactive",
+        updated_at: nowIso,
+      })
+      .eq("id", parentRelations[0].id)
+      .eq("status_code", "active");
+
+    if (relationError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Project parent relation could not be deactivated: " +
+            relationError.message,
+          retrySafe: true,
+        },
+        { status: 500 },
+      );
+    }
+  }
+
+  const { error: archiveError } = await supabase
+    .from("project_contexts")
+    .update({
+      status_code: "archived",
+      updated_at: nowIso,
+    })
+    .eq("id", projectContextId)
+    .eq("owner_user_id", appUserId)
+    .eq("owner_actor_id", actorId)
+    .neq("status_code", "archived");
+
+  if (archiveError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: archiveError.message,
+        retrySafe: true,
+      },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    disposition: "project_archived",
+    projectContextId,
+    detachedParentRelationCount: parentRelations.length,
+    rootValueObjectPreserved: true,
+  });
+}

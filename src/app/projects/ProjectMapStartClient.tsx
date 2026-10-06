@@ -4,6 +4,7 @@ import {
   Check,
   ChevronDown,
   ListChecks,
+  LoaderCircle,
   Maximize2,
   Network,
   Plus,
@@ -768,6 +769,8 @@ type ProjectCenterData = Record<string, unknown> & {
   saveError: string | null;
   dragEnabled?: boolean;
   dragLabel?: string;
+  deleteCopy: ProjectSafeDeleteCopy;
+  onDeleteProject: () => void;
   onTitleChange: (value: string) => void;
   onRootQueryChange: (value: string) => void;
   onRootFocus: () => void;
@@ -790,12 +793,14 @@ type ProjectActivityNodeData = Record<string, unknown> & {
   semanticLevel?: ProjectSemanticZoomLevel;
   dragEnabled?: boolean;
   dragLabel?: string;
+  deleteCopy: ProjectSafeDeleteCopy;
   onOpenActivity: (
     activityEventId: string,
     isRecurrenceDefinition: boolean,
   ) => void;
   onAddContainedTask: (containerActivityEventId: string) => void;
   onDeleteActivity: (activityEventId: string) => void;
+  onDeleteTimeContainer: (activityEventId: string) => void;
 };
 
 type ProjectActivityNode = Node<
@@ -810,6 +815,8 @@ type ProjectSubprojectNodeData = Record<string, unknown> & {
   semanticLevel?: ProjectSemanticZoomLevel;
   dragEnabled?: boolean;
   dragLabel?: string;
+  deleteCopy: ProjectSafeDeleteCopy;
+  onDeleteProject: (projectId: string) => void;
   onOpenProject: (projectId: string) => void;
   onOpenObservationObject: (valueObjectId: string) => void;
   onAddSubproject: (projectId: string) => void;
@@ -856,6 +863,29 @@ function ProjectMapDragHandle({
       <span className="h-7 border-l border-dashed border-[#7f96dd]" />
       <span className="h-7 border-l border-dashed border-[#7f96dd]" />
     </div>
+  );
+}
+
+function ProjectDeleteIconButton({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+      title={label}
+      aria-label={label}
+      className="nodrag nopan flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-rose-200 bg-white text-rose-500 shadow-sm transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
+    >
+      <X size={13} strokeWidth={2.2} />
+    </button>
   );
 }
 
@@ -912,7 +942,13 @@ function ProjectSubprojectCard({
         className="!h-2 !w-2 !border-0 !bg-[#8fa2d7]"
       />
       <ProjectMapDragHandle enabled={data.dragEnabled} label={data.dragLabel} />
-      <div className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#5174ef]">
+      <div className="nodrag nopan absolute right-2 top-2 z-20">
+        <ProjectDeleteIconButton
+          label={data.deleteCopy.deleteSubproject}
+          onClick={() => data.onDeleteProject(data.project.id)}
+        />
+      </div>
+      <div className="pr-8 text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#5174ef]">
         {data.copy.label}
       </div>
       <button
@@ -977,9 +1013,15 @@ function ProjectActivityCard({
               </div>
             ) : null}
           </div>
-          {data.semanticLevel === "detail" ? (
-            <button type="button" onClick={() => data.onAddContainedTask(data.activity.id)} title={data.copy.addTask} aria-label={data.copy.addTask} className="nodrag nopan flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#b9c8ff] bg-white text-lg font-bold text-[#315ee7] shadow-sm hover:bg-[#eef2ff]">+</button>
-          ) : null}
+          <div className="flex shrink-0 items-center gap-2">
+            <ProjectDeleteIconButton
+              label={data.deleteCopy.deleteTimeWindow}
+              onClick={() => data.onDeleteTimeContainer(data.activity.id)}
+            />
+            {data.semanticLevel === "detail" ? (
+              <button type="button" onClick={() => data.onAddContainedTask(data.activity.id)} title={data.copy.addTask} aria-label={data.copy.addTask} className="nodrag nopan flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#b9c8ff] bg-white text-lg font-bold text-[#315ee7] shadow-sm hover:bg-[#eef2ff]">+</button>
+            ) : null}
+          </div>
         </div>
         {data.semanticLevel === "detail" && data.containedActivities.length === 0 ? (
           <div className="absolute inset-x-5 top-[88px] rounded-xl border border-dashed border-[#dce3f7] bg-white/70 px-3 py-5 text-center text-[10px] font-semibold text-[#9aa4bf]">
@@ -1092,14 +1134,22 @@ function ProjectCenterCard({ data }: NodeProps<ProjectCenterNode>) {
           </span>
         </div>
 
-        <button
-          type="button"
-          disabled
-          aria-label="expand"
-          className="flex h-8 w-8 cursor-default items-center justify-center rounded-full border border-[#e0e5ef] bg-white text-[#8791aa] shadow-sm"
-        >
-          <Maximize2 size={14} />
-        </button>
+        <div className="flex items-center gap-2">
+          {data.readonlyMode ? (
+            <ProjectDeleteIconButton
+              label={data.deleteCopy.deleteProject}
+              onClick={data.onDeleteProject}
+            />
+          ) : null}
+          <button
+            type="button"
+            disabled
+            aria-label="expand"
+            className="flex h-8 w-8 cursor-default items-center justify-center rounded-full border border-[#e0e5ef] bg-white text-[#8791aa] shadow-sm"
+          >
+            <Maximize2 size={14} />
+          </button>
+        </div>
       </div>
 
       <div className="nodrag nopan space-y-3">
@@ -1380,6 +1430,125 @@ const PROJECT_MAP_VIEW_COPY: Record<LocaleCode, ProjectMapViewCopy> = {
   uk: { structured: "Структура", free: "Вільна карта", reset: "Скинути розташування", drag: "Перетягнути блок", subprojects: "Підпроєкти", windows: "Часові вікна", tasks: "Завдання", empty: "Поки порожньо", collapse: "Згорнути", expand: "Розгорнути" },
   de: { structured: "Struktur", free: "Freie Karte", reset: "Layout zurücksetzen", drag: "Block verschieben", subprojects: "Teilprojekte", windows: "Zeitfenster", tasks: "Aufgaben", empty: "Noch leer", collapse: "Einklappen", expand: "Ausklappen" },
   cs: { structured: "Struktura", free: "Volná mapa", reset: "Obnovit rozložení", drag: "Přesunout blok", subprojects: "Podprojekty", windows: "Časová okna", tasks: "Úkoly", empty: "Zatím prázdné", collapse: "Sbalit", expand: "Rozbalit" },
+};
+
+type ProjectSafeDeleteCopy = {
+  deleteProject: string;
+  deleteSubproject: string;
+  deleteTimeWindow: string;
+  confirmProject: string;
+  confirmSubproject: string;
+  confirmTimeWindow: string;
+  deleting: string;
+  blocked: string;
+  failed: string;
+  debtLabels: Record<string, string>;
+};
+
+const SAFE_DELETE_EN: ProjectSafeDeleteCopy = {
+  deleteProject: "Delete project",
+  deleteSubproject: "Delete subproject",
+  deleteTimeWindow: "Delete time window",
+  confirmProject:
+    "Delete this project? It can be removed only if it has no active tasks, time windows, child projects or other active dependencies.",
+  confirmSubproject:
+    "Delete this subproject? It can be removed only if it has no active tasks, time windows, child projects or other active dependencies.",
+  confirmTimeWindow:
+    "Delete this time window? It can be removed only if it contains no tasks and has no other active dependencies.",
+  deleting: "Deleting…",
+  blocked: "Deletion is blocked because active dependencies remain:",
+  failed: "Could not delete this item.",
+  debtLabels: {
+    tasks: "tasks",
+    timeWindows: "time windows",
+    childProjects: "child projects",
+    parentProjects: "parent projects",
+    activityRelations: "activity relations",
+    otherProjectContexts: "other project contexts",
+    containedTasks: "contained tasks",
+    otherProjectMemberships: "other project memberships",
+    recurrenceRules: "recurrence rules",
+    fulfillments: "completed fulfillments",
+  },
+};
+
+const PROJECT_SAFE_DELETE_COPY: Record<LocaleCode, ProjectSafeDeleteCopy> = {
+  en: SAFE_DELETE_EN,
+  ru: {
+    ...SAFE_DELETE_EN,
+    deleteProject: "Удалить проект",
+    deleteSubproject: "Удалить подпроект",
+    deleteTimeWindow: "Удалить временное окно",
+    confirmProject:
+      "Удалить этот проект? Удаление разрешено только если нет активных задач, временных окон, дочерних подпроектов и других активных связей.",
+    confirmSubproject:
+      "Удалить этот подпроект? Удаление разрешено только если нет активных задач, временных окон, дочерних подпроектов и других активных связей.",
+    confirmTimeWindow:
+      "Удалить это временное окно? Удаление разрешено только если внутри нет задач и отсутствуют другие активные связи.",
+    deleting: "Удаляю…",
+    blocked: "Удаление заблокировано. Сначала устраните активные связи:",
+    failed: "Не удалось удалить объект.",
+    debtLabels: {
+      tasks: "задачи",
+      timeWindows: "временные окна",
+      childProjects: "дочерние подпроекты",
+      parentProjects: "родительские проекты",
+      activityRelations: "связи активностей",
+      otherProjectContexts: "другие контексты проекта",
+      containedTasks: "задачи внутри окна",
+      otherProjectMemberships: "другие связи с проектами",
+      recurrenceRules: "правила повторения",
+      fulfillments: "завершённые исполнения",
+    },
+  },
+  pl: {
+    ...SAFE_DELETE_EN,
+    deleteProject: "Usuń projekt",
+    deleteSubproject: "Usuń podprojekt",
+    deleteTimeWindow: "Usuń okno czasowe",
+    confirmProject: "Usunąć projekt? Można go usunąć tylko bez aktywnych zadań, okien czasowych, podprojektów i innych zależności.",
+    confirmSubproject: "Usunąć podprojekt? Można go usunąć tylko bez aktywnych zadań, okien czasowych, podprojektów i innych zależności.",
+    confirmTimeWindow: "Usunąć okno czasowe? Musi być puste i bez aktywnych zależności.",
+    deleting: "Usuwanie…",
+    blocked: "Usunięcie jest zablokowane przez aktywne zależności:",
+    failed: "Nie udało się usunąć elementu.",
+  },
+  uk: {
+    ...SAFE_DELETE_EN,
+    deleteProject: "Видалити проєкт",
+    deleteSubproject: "Видалити підпроєкт",
+    deleteTimeWindow: "Видалити часове вікно",
+    deleting: "Видаляю…",
+    blocked: "Видалення заблоковано активними зв’язками:",
+    failed: "Не вдалося видалити об’єкт.",
+  },
+  de: {
+    ...SAFE_DELETE_EN,
+    deleteProject: "Projekt löschen",
+    deleteSubproject: "Unterprojekt löschen",
+    deleteTimeWindow: "Zeitfenster löschen",
+    deleting: "Wird gelöscht…",
+    blocked: "Löschen ist wegen aktiver Abhängigkeiten blockiert:",
+    failed: "Element konnte nicht gelöscht werden.",
+  },
+  es: {
+    ...SAFE_DELETE_EN,
+    deleteProject: "Eliminar proyecto",
+    deleteSubproject: "Eliminar subproyecto",
+    deleteTimeWindow: "Eliminar ventana de tiempo",
+    deleting: "Eliminando…",
+    blocked: "La eliminación está bloqueada por dependencias activas:",
+    failed: "No se pudo eliminar el elemento.",
+  },
+  cs: {
+    ...SAFE_DELETE_EN,
+    deleteProject: "Smazat projekt",
+    deleteSubproject: "Smazat podprojekt",
+    deleteTimeWindow: "Smazat časové okno",
+    deleting: "Mazání…",
+    blocked: "Smazání blokují aktivní vazby:",
+    failed: "Položku se nepodařilo smazat.",
+  },
 };
 
 type ProjectMapGrid = {
@@ -1813,6 +1982,7 @@ export default function ProjectMapStartClient({
 }) {
   const locale = normalizeLocale(initialLocale);
   const copy = COPY[locale];
+  const safeDeleteCopy = PROJECT_SAFE_DELETE_COPY[locale];
   const taskCaptureCopy = PROJECT_TASK_CAPTURE_COPY[locale];
   const subprojectCaptureCopy = PROJECT_SUBPROJECT_CAPTURE_COPY[locale];
   const router = useRouter();
@@ -1838,6 +2008,12 @@ export default function ProjectMapStartClient({
     useState<ProjectMapViewport | null>(null);
   const [structuredRestoreViewport, setStructuredRestoreViewport] =
     useState<ProjectMapViewport | null>(null);
+  const [freeViewport, setFreeViewport] =
+    useState<ProjectMapViewport | null>(null);
+  const [freeRestoreViewport, setFreeRestoreViewport] =
+    useState<ProjectMapViewport | null>(null);
+  const [deletingEntityKey, setDeletingEntityKey] =
+    useState<string | null>(null);
   const [creating, setCreating] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -1918,9 +2094,10 @@ export default function ProjectMapStartClient({
   async function loadProjects(
     preferredProjectId?: string,
     draftTitle?: string,
-    options?: { background?: boolean },
+    options?: { background?: boolean; preserveViewport?: boolean },
   ) {
     const background = options?.background === true;
+    const preserveViewport = options?.preserveViewport === true;
 
     if (!background) {
       setLoading(true);
@@ -1994,6 +2171,8 @@ export default function ProjectMapStartClient({
         setStructuredSemanticLevel("detail");
         setStructuredViewport(null);
         setStructuredRestoreViewport(null);
+        setFreeViewport(null);
+        setFreeRestoreViewport(null);
         setCreating(true);
         setSaved(false);
         setTitle(draftTitle);
@@ -2007,14 +2186,22 @@ export default function ProjectMapStartClient({
             ? preferredProjectId
             : nextProjects[0]?.id ?? null;
 
+        const preserveCurrentViewport =
+          preserveViewport && nextSelectedId === selectedProjectId;
+
         setSelectedProjectId(nextSelectedId);
         setFreePositions(readProjectMapFreePositions(nextSelectedId));
         setStructuredCollapsed(
           readProjectMapStructuredCollapsed(nextSelectedId),
         );
-        setStructuredSemanticLevel("detail");
-        setStructuredViewport(null);
-        setStructuredRestoreViewport(null);
+
+        if (!preserveCurrentViewport) {
+          setStructuredSemanticLevel("detail");
+          setStructuredViewport(null);
+          setStructuredRestoreViewport(null);
+          setFreeViewport(null);
+          setFreeRestoreViewport(null);
+        }
 
         if (nextSelectedId) {
           const project =
@@ -2132,6 +2319,8 @@ export default function ProjectMapStartClient({
     setStructuredSemanticLevel("detail");
     setStructuredViewport(null);
     setStructuredRestoreViewport(null);
+    setFreeViewport(null);
+    setFreeRestoreViewport(null);
     setActionProjectId(null);
   }
 
@@ -2149,6 +2338,8 @@ export default function ProjectMapStartClient({
     setStructuredSemanticLevel("detail");
     setStructuredViewport(null);
     setStructuredRestoreViewport(null);
+    setFreeViewport(null);
+    setFreeRestoreViewport(null);
     setTitle(project.title);
     setSelectedRootId(project.rootValueObject.id);
     setRootQuery(project.rootValueObject.title ?? "");
@@ -2217,11 +2408,46 @@ export default function ProjectMapStartClient({
     }
   }, [copy.loadError]);
 
+  function captureMutationViewport() {
+    if (mapViewMode === "structured" && structuredViewport) {
+      setStructuredRestoreViewport({ ...structuredViewport });
+    }
+
+    if (mapViewMode === "free" && freeViewport) {
+      setFreeRestoreViewport({ ...freeViewport });
+    }
+  }
+
+  function deletionErrorMessage(payload: {
+    error?: string;
+    debts?: Record<string, unknown>;
+  } | null) {
+    const debts = payload?.debts;
+    const parts = debts
+      ? Object.entries(debts)
+          .filter(([, value]) => typeof value === "number" && value > 0)
+          .map(([key, value]) => {
+            const label = safeDeleteCopy.debtLabels[key] ?? key;
+            return `${label}: ${String(value)}`;
+          })
+      : [];
+
+    if (parts.length > 0) {
+      return `${safeDeleteCopy.blocked} ${parts.join(" · ")}`;
+    }
+
+    return payload?.error || safeDeleteCopy.failed;
+  }
+
   async function deleteProjectActivity(activityEventId: string) {
+    if (deletingEntityKey) return;
+
     if (!window.confirm(copy.confirmDeleteTask)) {
       return;
     }
 
+    captureMutationViewport();
+    setDeletingEntityKey(`task:${activityEventId}`);
     setLoadError(null);
 
     try {
@@ -2254,13 +2480,164 @@ export default function ProjectMapStartClient({
 
       await loadProjects(selectedProjectId ?? undefined, undefined, {
         background: true,
+        preserveViewport: true,
       });
 
       window.dispatchEvent(new Event(PROJECTS_CHANGED_EVENT));
     } catch (error) {
-      setLoadError(
-        error instanceof Error ? error.message : copy.deleteTaskError,
+      const message =
+        error instanceof Error ? error.message : copy.deleteTaskError;
+      setStructuredRestoreViewport(null);
+      setFreeRestoreViewport(null);
+      setLoadError(message);
+      window.alert(message);
+    } finally {
+      setDeletingEntityKey(null);
+    }
+  }
+
+  async function deleteTimeContainer(
+    projectContextId: string,
+    activityEventId: string,
+  ) {
+    if (deletingEntityKey) return;
+
+    if (!window.confirm(safeDeleteCopy.confirmTimeWindow)) {
+      return;
+    }
+
+    captureMutationViewport();
+    setDeletingEntityKey(`window:${activityEventId}`);
+    setLoadError(null);
+
+    try {
+      const response = await fetch(
+        `/api/projects/time-containers?projectContextId=${encodeURIComponent(projectContextId)}&activityEventId=${encodeURIComponent(activityEventId)}`,
+        {
+          method: "DELETE",
+          headers: { Accept: "application/json" },
+        },
       );
+
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            error?: string;
+            errorCode?: string;
+            debts?: Record<string, unknown>;
+          }
+        | null;
+
+      if (!response.ok || payload?.ok !== true) {
+        throw new Error(deletionErrorMessage(payload));
+      }
+
+      await loadProjects(selectedProjectId ?? undefined, undefined, {
+        background: true,
+        preserveViewport: true,
+      });
+
+      window.dispatchEvent(new Event(PROJECTS_CHANGED_EVENT));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : safeDeleteCopy.failed;
+      setStructuredRestoreViewport(null);
+      setFreeRestoreViewport(null);
+      setLoadError(message);
+      window.alert(message);
+    } finally {
+      setDeletingEntityKey(null);
+    }
+  }
+
+  async function deleteProjectContext(
+    projectContextId: string,
+    kind: "project" | "subproject",
+  ) {
+    if (deletingEntityKey) return;
+
+    const confirmation =
+      kind === "subproject"
+        ? safeDeleteCopy.confirmSubproject
+        : safeDeleteCopy.confirmProject;
+
+    if (!window.confirm(confirmation)) {
+      return;
+    }
+
+    const deletingCurrentProject =
+      projectContextId === selectedProjectId;
+
+    if (!deletingCurrentProject) {
+      captureMutationViewport();
+    }
+
+    setDeletingEntityKey(`project:${projectContextId}`);
+    setLoadError(null);
+
+    try {
+      const response = await fetch(
+        `/api/projects?projectContextId=${encodeURIComponent(projectContextId)}`,
+        {
+          method: "DELETE",
+          headers: { Accept: "application/json" },
+        },
+      );
+
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            error?: string;
+            errorCode?: string;
+            debts?: Record<string, unknown>;
+          }
+        | null;
+
+      if (!response.ok || payload?.ok !== true) {
+        throw new Error(deletionErrorMessage(payload));
+      }
+
+      if (deletingCurrentProject) {
+        const removedProject =
+          projects.find((project) => project.id === projectContextId) ?? null;
+        const preferredParentId =
+          removedProject?.parentProjectIds?.find((projectId) =>
+            projects.some((project) => project.id === projectId),
+          ) ?? null;
+        const fallbackProjectId =
+          preferredParentId ??
+          projects.find((project) => project.id !== projectContextId)?.id ??
+          null;
+
+        await loadProjects(fallbackProjectId ?? undefined, undefined, {
+          background: true,
+        });
+
+        router.replace(
+          fallbackProjectId
+            ? localeHref(
+                `/projects?project=${encodeURIComponent(fallbackProjectId)}`,
+                locale,
+              )
+            : localeHref("/projects", locale),
+        );
+      } else {
+        await loadProjects(selectedProjectId ?? undefined, undefined, {
+          background: true,
+          preserveViewport: true,
+        });
+      }
+
+      window.dispatchEvent(new Event(PROJECTS_CHANGED_EVENT));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : safeDeleteCopy.failed;
+      setStructuredRestoreViewport(null);
+      setFreeRestoreViewport(null);
+      setLoadError(message);
+      window.alert(message);
+    } finally {
+      setDeletingEntityKey(null);
     }
   }
 
@@ -2589,6 +2966,12 @@ export default function ProjectMapStartClient({
       saving || !creating || !title.trim() || !selectedRootId,
     saving,
     saveError,
+    deleteCopy: safeDeleteCopy,
+    onDeleteProject: () => {
+      if (selectedProject) {
+        void deleteProjectContext(selectedProject.id, "project");
+      }
+    },
     onTitleChange: (value) => {
       setTitle(value);
       setSaved(false);
@@ -2648,6 +3031,10 @@ export default function ProjectMapStartClient({
             project,
             copy: subprojectCaptureCopy,
             actionCopy: copy,
+            deleteCopy: safeDeleteCopy,
+            onDeleteProject: (projectId: string) => {
+              void deleteProjectContext(projectId, "subproject");
+            },
             onAddSubproject: openSubprojectCapture,
             onAddTask: (projectId: string) => openTaskCapture(projectId, null),
             onAddDateWindow: (projectId: string) =>
@@ -2702,6 +3089,7 @@ export default function ProjectMapStartClient({
           data: {
             copy,
             locale,
+            deleteCopy: safeDeleteCopy,
             activity: container,
             containedActivities,
             onOpenActivity: (
@@ -2716,6 +3104,9 @@ export default function ProjectMapStartClient({
             onAddContainedTask: (containerActivityEventId: string) =>
               openTaskCapture(project.id, containerActivityEventId),
             onDeleteActivity: deleteProjectActivity,
+            onDeleteTimeContainer: (activityEventId: string) => {
+              void deleteTimeContainer(project.id, activityEventId);
+            },
           },
         } as ProjectActivityNode);
 
@@ -2737,6 +3128,7 @@ export default function ProjectMapStartClient({
             data: {
               copy,
               locale,
+              deleteCopy: safeDeleteCopy,
               activity: childActivity,
               containedActivities: [],
               onOpenActivity: (
@@ -2751,6 +3143,9 @@ export default function ProjectMapStartClient({
               onAddContainedTask: (containerActivityEventId: string) =>
                 openTaskCapture(project.id, containerActivityEventId),
               onDeleteActivity: deleteProjectActivity,
+              onDeleteTimeContainer: (activityEventId: string) => {
+                void deleteTimeContainer(project.id, activityEventId);
+              },
             },
           } as ProjectActivityNode);
         }
@@ -2766,6 +3161,7 @@ export default function ProjectMapStartClient({
           data: {
             copy,
             locale,
+            deleteCopy: safeDeleteCopy,
             activity,
             containedActivities: [],
             onOpenActivity: (
@@ -2780,6 +3176,9 @@ export default function ProjectMapStartClient({
             onAddContainedTask: (containerActivityEventId: string) =>
               openTaskCapture(project.id, containerActivityEventId),
             onDeleteActivity: deleteProjectActivity,
+            onDeleteTimeContainer: (activityEventId: string) => {
+              void deleteTimeContainer(project.id, activityEventId);
+            },
           },
         } as ProjectActivityNode);
       }
@@ -3491,6 +3890,14 @@ if (loading) {
         </div>
 
         <section className="relative h-[720px] min-h-[600px] overflow-hidden rounded-[26px] border border-[#dfe4ef] bg-[#f8fafc] shadow-inner">
+          {deletingEntityKey ? (
+            <div className="absolute inset-0 z-[80] flex cursor-wait items-start justify-center bg-white/10 pt-5">
+              <div className="flex items-center gap-2 rounded-full border border-[#d9e1f7] bg-white/95 px-4 py-2 text-[11px] font-bold text-[#4d609a] shadow-lg">
+                <LoaderCircle size={16} className="animate-spin" />
+                {safeDeleteCopy.deleting}
+              </div>
+            </div>
+          ) : null}
           <ReactFlowProvider>
             {mapViewMode === "structured" ? (
               structuredLayoutReady ? (
@@ -3562,8 +3969,28 @@ if (loading) {
                 nodeTypes={NODE_TYPES}
                 onInit={(instance) => {
                   window.requestAnimationFrame(() => {
-                    instance.fitView({ padding: 0.24, minZoom: 0.32, maxZoom: 1.05 });
+                    if (freeRestoreViewport) {
+                      void instance.setViewport(freeRestoreViewport, {
+                        duration: 0,
+                      });
+                      setFreeViewport(freeRestoreViewport);
+                      setFreeRestoreViewport(null);
+                      return;
+                    }
+
+                    instance.fitView({
+                      padding: 0.24,
+                      minZoom: 0.32,
+                      maxZoom: 1.05,
+                    });
+
+                    window.requestAnimationFrame(() => {
+                      setFreeViewport(instance.getViewport());
+                    });
                   });
+                }}
+                onMoveEnd={(_, viewport) => {
+                  setFreeViewport(viewport);
                 }}
                 minZoom={0.2}
                 maxZoom={1.8}

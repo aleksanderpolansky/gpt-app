@@ -6,6 +6,7 @@ import { getActivityUserContext } from "../../../../../lib/activity/activityUser
 import { supabase } from "../../../../../lib/supabase";
 import { createActivityEventViaPp1Rpc } from "@/lib/activity/pp1/createActivityEventRpc";
 import {
+  readProjectPlanningTimeContainerV1,
   writeProjectPlanningTimeContainerV1,
   type ProjectPlanningWindowKindV1,
 } from "@/lib/activity/projectPlanningContainerV1";
@@ -233,4 +234,245 @@ export async function POST(request: Request) {
     { ok: true, activityEventId, windowKind },
     { status: 201 },
   );
+}
+
+export async function DELETE(request: Request) {
+  const { appUser, personActor, errorResponse } = await getActivityUserContext();
+
+  if (errorResponse) return errorResponse;
+  if (!appUser || !personActor) {
+    return NextResponse.json(
+      { ok: false, error: "User context not found." },
+      { status: 500 },
+    );
+  }
+
+  const url = new URL(request.url);
+  const projectContextId = uuid(url.searchParams.get("projectContextId"));
+  const activityEventId = uuid(url.searchParams.get("activityEventId"));
+
+  if (!projectContextId || !activityEventId) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Valid projectContextId and activityEventId are required.",
+      },
+      { status: 400 },
+    );
+  }
+
+  const { data: project, error: projectError } = await supabase
+    .from("project_contexts")
+    .select("id,status_code")
+    .eq("id", projectContextId)
+    .eq("owner_user_id", appUser.id)
+    .eq("owner_actor_id", personActor.id)
+    .maybeSingle();
+
+  if (projectError) {
+    return NextResponse.json(
+      { ok: false, error: projectError.message },
+      { status: 500 },
+    );
+  }
+
+  if (!project) {
+    return NextResponse.json(
+      { ok: false, error: "Project not found." },
+      { status: 404 },
+    );
+  }
+
+  const { data: activity, error: activityError } = await supabase
+    .from("activity_events")
+    .select("id,activity_role_code,status,metadata_json")
+    .eq("id", activityEventId)
+    .eq("user_id", appUser.id)
+    .eq("acting_as_actor_id", personActor.id)
+    .maybeSingle();
+
+  if (activityError) {
+    return NextResponse.json(
+      { ok: false, error: activityError.message },
+      { status: 500 },
+    );
+  }
+
+  if (
+    !activity ||
+    activity.activity_role_code !== "planned" ||
+    !readProjectPlanningTimeContainerV1(activity.metadata_json)
+  ) {
+    return NextResponse.json(
+      { ok: false, error: "Activity is not an owned planned time container." },
+      { status: 409 },
+    );
+  }
+
+  const [
+    membershipsResult,
+    sourceRelationsResult,
+    targetRelationsResult,
+    recurrenceResult,
+    fulfillmentsResult,
+  ] = await Promise.all([
+    supabase
+      .from("project_activity_links")
+      .select("id,project_context_id")
+      .eq("activity_event_id", activityEventId)
+      .eq("status_code", "active"),
+    supabase
+      .from("activity_event_relations")
+      .select("id,relation_type_code")
+      .eq("source_activity_event_id", activityEventId)
+      .eq("status_code", "active"),
+    supabase
+      .from("activity_event_relations")
+      .select("id,relation_type_code")
+      .eq("target_activity_event_id", activityEventId)
+      .eq("status_code", "active"),
+    supabase
+      .from("activity_recurrence_rules")
+      .select("id")
+      .eq("source_activity_event_id", activityEventId)
+      .in("status_code", ["active", "paused"]),
+    supabase
+      .from("activity_events")
+      .select("id")
+      .eq("fulfills_planned_activity_event_id", activityEventId)
+      .eq("activity_role_code", "actual")
+      .eq("status", "completed"),
+  ]);
+
+  const readError =
+    membershipsResult.error ??
+    sourceRelationsResult.error ??
+    targetRelationsResult.error ??
+    recurrenceResult.error ??
+    fulfillmentsResult.error;
+
+  if (readError) {
+    return NextResponse.json(
+      { ok: false, error: readError.message },
+      { status: 500 },
+    );
+  }
+
+  const memberships = membershipsResult.data ?? [];
+  const belongsToRequestedProject = memberships.some(
+    (row) => row.project_context_id === projectContextId,
+  );
+
+  if (!belongsToRequestedProject) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Time container is not actively linked to the selected project.",
+      },
+      { status: 409 },
+    );
+  }
+
+  const sourceRelations = sourceRelationsResult.data ?? [];
+  const targetRelations = targetRelationsResult.data ?? [];
+  const containedTasks = sourceRelations.filter(
+    (row) => row.relation_type_code === "contains",
+  ).length;
+  const activityRelations =
+    sourceRelations.length + targetRelations.length;
+  const otherProjectMemberships = Math.max(0, memberships.length - 1);
+  const recurrenceRules = (recurrenceResult.data ?? []).length;
+  const fulfillments = (fulfillmentsResult.data ?? []).length;
+
+  const debts = {
+    containedTasks,
+    activityRelations,
+    otherProjectMemberships,
+    recurrenceRules,
+    fulfillments,
+  };
+
+  if (
+    containedTasks > 0 ||
+    activityRelations > 0 ||
+    otherProjectMemberships > 0 ||
+    recurrenceRules > 0 ||
+    fulfillments > 0
+  ) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "Time container has active dependencies and cannot be removed yet.",
+        errorCode: "TIME_CONTAINER_DELETE_BLOCKED",
+        debts,
+      },
+      { status: 409 },
+    );
+  }
+
+  const nowIso = new Date().toISOString();
+
+  const { error: projectionError } = await supabase
+    .from("calendar_events")
+    .update({
+      status: "cancelled",
+      updated_at: nowIso,
+    })
+    .eq("user_id", appUser.id)
+    .eq("related_activity_event_id", activityEventId)
+    .not("status", "in", "(cancelled,archived,hidden)");
+
+  if (projectionError) {
+    return NextResponse.json(
+      { ok: false, error: projectionError.message, retrySafe: true },
+      { status: 500 },
+    );
+  }
+
+  const { error: activityCancelError } = await supabase
+    .from("activity_events")
+    .update({
+      status: "cancelled",
+      updated_at: nowIso,
+    })
+    .eq("id", activityEventId)
+    .eq("user_id", appUser.id)
+    .eq("acting_as_actor_id", personActor.id)
+    .eq("activity_role_code", "planned");
+
+  if (activityCancelError) {
+    return NextResponse.json(
+      { ok: false, error: activityCancelError.message, retrySafe: true },
+      { status: 500 },
+    );
+  }
+
+  const membershipIds = memberships.map((row) => row.id);
+
+  if (membershipIds.length > 0) {
+    const { error: membershipError } = await supabase
+      .from("project_activity_links")
+      .update({
+        status_code: "inactive",
+        updated_at: nowIso,
+      })
+      .in("id", membershipIds)
+      .eq("status_code", "active");
+
+    if (membershipError) {
+      return NextResponse.json(
+        { ok: false, error: membershipError.message, retrySafe: true },
+        { status: 500 },
+      );
+    }
+  }
+
+  return NextResponse.json({
+    ok: true,
+    disposition: "time_container_removed",
+    projectContextId,
+    activityEventId,
+    auditRowPreserved: true,
+  });
 }
