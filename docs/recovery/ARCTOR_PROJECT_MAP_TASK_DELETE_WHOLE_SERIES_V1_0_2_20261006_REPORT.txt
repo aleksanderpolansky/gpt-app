@@ -1,0 +1,163 @@
+﻿ARCTor technical recovery checkpoint
+
+PATCH=ARCTOR_PROJECT_MAP_TASK_DELETE_WHOLE_SERIES_V1_0_2_20261006
+TIMESTAMP=20261006_132718
+RESULT=PASS
+FAILURE=
+BASE_HEAD=276e9732b186bb0a450ccb849fa1400c59d62e27
+
+USER_DECISION=
+VARIANT_A=DELETE_WHOLE_TASK
+RECURRENCE_POLICY=DELETE_WHOLE_SERIES_AND_FUTURE_PLANNED_OCCURRENCES
+
+ROOT_CAUSE=
+The existing DELETE endpoint did not delete a task from project planning.
+It only changed activity_events.status to cancelled.
+project_activity_links remained active, so the project API continued to return
+the planned activity and the card remained on the map.
+A second DELETE then failed because the route accepted only
+draft/planned/confirmed statuses and rejected the already-cancelled row.
+
+PRODUCT_DELETE_CONTRACT=
+This patch implements audit-preserving whole-task logical deletion:
+- resolve a recurrence occurrence back to its source task;
+- include source + all materialized recurrence occurrence activity_event ids;
+- end active/paused recurrence rule(s);
+- cancel active/rescheduled recurrence occurrence lineage rows;
+- cancel active planned activity_event rows;
+- cancel related calendar projections;
+- deactivate project activity relations;
+- deactivate all active project_activity_links for the task/series;
+- preserve activity_events and recurrence lineage rows as audit/history records.
+
+WHY_NOT_HARD_DELETE=
+Hard physical deletion of activity_events could cascade into or conflict with
+historical, analytics, semantic, and audit references. The user-visible task is
+fully removed from project/future planning surfaces while technical lineage is
+preserved.
+
+PROJECT_MAP_UI=
+- normal task cards gain an X button in the top-right corner;
+- X -> localized confirmation -> DELETE endpoint;
+- success reloads project map immediately;
+- contained tasks receive the same action;
+- time-container cards do not receive the task X button.
+
+SHARED_TASK_MODAL=
+- existing red action is relabeled from Cancel activity to Delete task;
+- confirmation explicitly says whole task / recurring series;
+- existing onChanged action token remains "cancelled" for compatibility only.
+
+API_CHANGE=
+YES: src/app/api/calendar/task-shelf/[activityEventId]/route.ts DELETE semantics only
+
+DB_MIGRATION=NO
+DEPENDENCY_CHANGE=NO
+
+INSTALLER_V1_0_1_FIX=
+- recognizes the existing task-modal react-hooks/set-state-in-effect lint debt
+  before applying the patch;
+- lints all newly changed project-map/API/validator code normally;
+- lints the shared task modal with only that verified pre-existing rule disabled;
+- uses Test-Path -LiteralPath for the dynamic route path containing [activityEventId]
+  so RESULT/recovery hashes and file copies include the route correctly.
+
+INSTALLER_V1_0_2_FIX=
+- fixes the remaining PowerShell wildcard-path bug in Write-Report:
+  Get-FileHash now uses -LiteralPath for the dynamic [activityEventId] route;
+- applies -LiteralPath consistently to all report hash calls;
+- functional source patch is unchanged from V1 and V1.0.1.
+
+ONTOLOGY_LOCK=
+VALUE_OBJECT_PARENT_MUTATION=NO
+SUBPROJECT_PRIVATE_ACTOR_LEAF=PRESERVED
+SAME_GLOBAL_SYSTEM_INTERMEDIATE_PARENT=PRESERVED
+PROJECT_HIERARCHY=project_composition_relations/decomposes_into
+CYCLE_GUARD=PRESERVED
+
+VALIDATION=
+DIRECT_MAP_DELETE_X=PASS required
+WHOLE_TASK_SCOPE_RESOLUTION=PASS required
+RECURRENCE_SERIES_ENDED=PASS required
+RECURRENCE_OCCURRENCES_CANCELLED=PASS required
+PROJECT_MEMBERSHIPS_DEACTIVATED=PASS required
+PROJECT_RELATIONS_DEACTIVATED=PASS required
+CALENDAR_PROJECTIONS_CANCELLED=PASS required
+AUDIT_ROWS_PRESERVED=PASS required
+ONLY_INTENDED_API_CHANGE=PASS required
+ESLINT=PASS required
+BASELINE_MODAL_LINT_DEBT=KNOWN react-hooks/set-state-in-effect required
+BASELINE_MODAL_LINT_DEBT_INTRODUCED_BY_PATCH=NO
+TYPECHECK=PASS required
+PRODUCTION_BUILD=PASS required
+NO_DB_MIGRATION=PASS required
+NO_DEPENDENCY_CHANGE=PASS required
+
+HASHES_SHA256=
+PROJECT_MAP=41F5327F20F67FF7D6A329BF5BC7EE76052F7AEC1084A3E5EE811FFBB7674EA5
+TASK_MODAL=6EFA8A4F9087A0474092959D54B187A640F4BD4774895B36F596AED4E72480CB
+DELETE_ROUTE=02DA8DEF869B26EDD0D017455FC94CAEC19A62AD1E362C55C8A65E19EFAB0524
+VALIDATOR=8E12F2A3339A365996735892AE1AC560AA906C7F6D2710E86D41EA615870F326
+
+GIT_DIFF_STDERR=warning: in the working copy of 'src/app/api/calendar/task-shelf/[activityEventId]/route.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/projects/ProjectMapStartClient.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/calendar/cux6-task-detail-modal.tsx', LF will be replaced by CRLF the next time Git touches it
+
+
+FILES_EXPECTED=
+src/app/projects/ProjectMapStartClient.tsx
+src/components/calendar/cux6-task-detail-modal.tsx
+src/app/api/calendar/task-shelf/[activityEventId]/route.ts
+scripts/validate-project-map-task-delete-whole-series-v1.mjs
+docs/recovery/ARCTOR_PROJECT_MAP_TASK_DELETE_WHOLE_SERIES_V1_0_2_20261006_REPORT.txt
+
+NEXT=
+1. Review RESULT package.
+2. Commit code + validator.
+3. Force-add this exact recovery report separately.
+4. Push main.
+5. Production smoke:
+   - use X on a non-recurring task and confirm it disappears;
+   - reopen/reload and confirm it stays absent;
+   - delete an already-cancelled legacy task and confirm no 409;
+   - delete a recurring task source and confirm entire series disappears;
+   - verify unrelated tasks/projects remain;
+   - verify structured/free map behavior remains stable.
+
+COMMIT=false
+PUSH=false
+DEPLOY=false
+
+POST_INSTALL_COMMIT_CHECKPOINT=
+CODE_COMMIT=04b308d7284308787b2cf23e67baafe54d250271
+VALIDATED_RESULT_ZIP_SHA256=B4C2A9E4CECC3CAB47EC2CA16D82B6E23920EE299774E72278809C9D8066CF4D
+VALIDATED_RESULT_REPORT_SHA256=523CE0E9929DFEFF7DEC08CE82AC8A8E224EC6E6E999862072F63C4B7A101E8B
+
+VARIANT_A=DELETE_WHOLE_TASK
+DIRECT_MAP_DELETE_X=PASS
+MODAL_DELETE_TASK_ACTION=PASS
+
+NON_RECURRING_WHOLE_TASK_DELETE=PASS_BY_CONTRACT
+RECURRING_WHOLE_SERIES_DELETE=PASS_BY_CONTRACT
+LEGACY_CANCELLED_TASK_DELETE=PASS_BY_CONTRACT
+
+RECURRENCE_RULE_END=PASS
+RECURRENCE_OCCURRENCES_CANCEL=PASS
+PLANNED_ACTIVITY_CANCEL=PASS
+CALENDAR_PROJECTIONS_CANCEL=PASS
+PROJECT_MEMBERSHIPS_DEACTIVATE=PASS
+PROJECT_RELATIONS_DEACTIVATE=PASS
+
+AUDIT_ROWS=PRESERVED
+PHYSICAL_ACTIVITY_EVENT_DELETE=NO
+
+API_CHANGE=TASK_SHELF_DELETE_ONLY
+DB_MIGRATION=NO
+DEPENDENCY_CHANGE=NO
+
+ONTOLOGY_INTEGRITY=PRESERVED
+PROJECT_HIERARCHY=project_composition_relations/decomposes_into
+VALUE_OBJECT_PARENT_MUTATION=NO
+SAME_GLOBAL_SYSTEM_INTERMEDIATE_PARENT=PRESERVED
+
+PRODUCTION_SMOKE=PENDING
