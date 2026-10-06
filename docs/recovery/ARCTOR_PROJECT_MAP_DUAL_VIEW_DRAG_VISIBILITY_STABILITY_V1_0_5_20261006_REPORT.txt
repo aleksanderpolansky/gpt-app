@@ -1,0 +1,64 @@
+﻿ARCTor technical recovery checkpoint
+
+PATCH=ARCTOR_PROJECT_MAP_DUAL_VIEW_DRAG_VISIBILITY_STABILITY_V1_0_5_20261006
+TIMESTAMP=20261006_100341
+RESULT=PASS
+FAILURE=
+
+PURPOSE=Refine the free project-map mode after production smoke. The drag handle becomes visibly white-filled and easier to grab, while free dragging stops re-fitting and auto-panning the whole map during movement.
+
+CHANGESET=
+- Keep the structured view unchanged.
+- Keep browser-local per-project free-layout persistence unchanged.
+- Keep the same recursive free graph unchanged.
+- Make the drag handle wider, fully white, bordered, and more visible.
+- Replace continuous free-view fitView with one-shot onInit fitView.
+- Disable free-view autoPanOnNodeDrag to stop shaking and interrupted visibility during drag.
+
+ONTOLOGY_LOCK=
+API_CHANGE=NO
+DB_MIGRATION=NO
+DEPENDENCY_CHANGE=NO
+VALUE_OBJECT_PARENT_MUTATION=NO
+SUBPROJECT_PRIVATE_ACTOR_LEAF=PRESERVED
+SAME_GLOBAL_SYSTEM_INTERMEDIATE_PARENT=PRESERVED
+PROJECT_HIERARCHY=project_composition_relations/decomposes_into
+CYCLE_GUARD=PRESERVED
+
+VALIDATION=
+VALIDATOR=PASS expected
+ESLINT=PASS required
+TYPECHECK=PASS required
+BUILD=PASS required
+
+HASHES_SHA256=
+PROJECT_MAP=04B35D3AF7E5EFDD0695F893C84338EDC2915575687314895097FA0C20EA881C
+VALIDATOR=61F279190A38FB674A0EE535B6E1BC9AAAAB9F8498BA9DF2FCE020BDE48E3EB9
+
+FILES_EXPECTED=
+src/app/projects/ProjectMapStartClient.tsx
+scripts/validate-project-map-dual-view-drag-visibility-stability-v1-0-5.mjs
+docs/recovery/ARCTOR_PROJECT_MAP_DUAL_VIEW_DRAG_VISIBILITY_STABILITY_V1_0_5_20261006_REPORT.txt
+
+NEXT=
+Commit code+validator, force-add this exact recovery report separately, push main, then production smoke for free dragging quality.
+
+COMMIT=false
+PUSH=false
+DEPLOY=false
+
+POST_INSTALL_COMMIT_CHECKPOINT=
+CODE_COMMIT=52d5c7ad57eda7fb343ab236979680f2866d40d2
+VALIDATED_RESULT_ZIP_SHA256=49340842D4EC57B9A0D14B31537F257093B3D3933597410EECBBD7E62B6C46C1
+VALIDATED_RESULT_REPORT_SHA256=98DD617C9C60129DF8255745ACDE0212EA05A790617E6774A0F50AAAE2250AB1
+HANDLE_VISIBILITY=PASS
+FREE_DRAG_STABILITY=PASS
+FREE_LAYOUT_LOCAL_STORAGE=PRESERVED
+STRUCTURED_VIEW=UNCHANGED
+API_CHANGE=NO
+DB_MIGRATION=NO
+DEPENDENCY_CHANGE=NO
+ONTOLOGY_INTEGRITY=PASS
+PROJECT_HIERARCHY=project_composition_relations/decomposes_into
+VALUE_OBJECT_PARENT_MUTATION=NO
+PRODUCTION_SMOKE=PENDING
