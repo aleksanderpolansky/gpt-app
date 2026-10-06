@@ -28,7 +28,6 @@ import {
   ReactFlowProvider,
   type Edge,
   type Node,
-  type NodeChange,
   type NodeProps,
 } from "@xyflow/react";
 
@@ -2663,21 +2662,6 @@ const freeNodes = layoutedNodes.map((node) => ({
   data: { ...node.data, dragEnabled: true, dragLabel: viewCopy.drag },
 }));
 
-const handleFreeNodesChange = useCallback((changes: NodeChange<Node>[]) => {
-  setFreePositions((current) => {
-    let changed = false;
-    const next = { ...current };
-
-    for (const change of changes) {
-      if (change.type !== "position" || !change.position) continue;
-      next[change.id] = { x: change.position.x, y: change.position.y };
-      changed = true;
-    }
-
-    return changed ? next : current;
-  });
-}, []);
-
 const persistFreeNodePosition = useCallback((node: Node) => {
   if (!freeStorageKey) return;
 
@@ -3148,8 +3132,8 @@ if (loading) {
             ) : layoutReady ? (
               <ReactFlow
                 key={`${flowKey}:free:${freeLayoutRevision}`}
-                nodes={freeNodes}
-                edges={graphEdges}
+                defaultNodes={freeNodes}
+                defaultEdges={graphEdges}
                 nodeTypes={NODE_TYPES}
                 onInit={(instance) => {
                   window.requestAnimationFrame(() => {
@@ -3162,7 +3146,6 @@ if (loading) {
                 nodesDraggable
                 autoPanOnNodeDrag={false}
                 elementsSelectable={false}
-                onNodesChange={handleFreeNodesChange}
                 onNodeDragStop={(_, node) => persistFreeNodePosition(node)}
                 onNodeClick={() => undefined}
                 proOptions={{ hideAttribution: true }}
