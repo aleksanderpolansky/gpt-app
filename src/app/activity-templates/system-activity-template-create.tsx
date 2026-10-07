@@ -606,6 +606,41 @@ SystemActivityTemplateCreate({
   ] =
     useState("");
 
+  // ARCTOR_TYPICAL_ACTIVITY_AUTHORING_V2_UI
+  const [
+    actorApplicability,
+    setActorApplicability,
+  ] =
+    useState<
+      "private" |
+      "commercial" |
+      "both"
+    >(
+      "private",
+    );
+
+  const [
+    templateMode,
+    setTemplateMode,
+  ] =
+    useState<
+      "fixed" |
+      "parameterized"
+    >(
+      "fixed",
+    );
+
+  const [
+    acceptanceMode,
+    setAcceptanceMode,
+  ] =
+    useState<
+      "user_confirmation" |
+      "auto_if_unambiguous"
+    >(
+      "user_confirmation",
+    );
+
   const [
     parameters,
     setParameters,
@@ -1144,6 +1179,11 @@ SystemActivityTemplateCreate({
       new URLSearchParams({
         locale,
         parameterDefinitionId,
+        targetNodeRole:
+          templateMode ===
+          "parameterized"
+            ? "intermediate"
+            : "leaf",
       });
 
     const response =
@@ -1406,6 +1446,15 @@ SystemActivityTemplateCreate({
     setDescriptionEn(
       "",
     );
+    setActorApplicability(
+      "private",
+    );
+    setTemplateMode(
+      "fixed",
+    );
+    setAcceptanceMode(
+      "user_confirmation",
+    );
     setSelectedParameterIds(
       [],
     );
@@ -1466,15 +1515,20 @@ SystemActivityTemplateCreate({
       return;
     }
 
-    try {
-      for (const parameterId of selectedParameterIds) {
-        for (const objectId of selectedObjectIdsByParameter[parameterId] ?? []) {
-          parseSourceResolution(sourceSettings[`${parameterId}|${objectId}`]);
+    if (
+      templateMode ===
+      "fixed"
+    ) {
+      try {
+        for (const parameterId of selectedParameterIds) {
+          for (const objectId of selectedObjectIdsByParameter[parameterId] ?? []) {
+            parseSourceResolution(sourceSettings[`${parameterId}|${objectId}`]);
+          }
         }
+      } catch {
+        setMessage(locale === "ru" ? "Выберите состояние и укажите конечное число-множитель для каждой расчётной связи." : "Select a state and a finite multiplier for each calculated mapping.");
+        return;
       }
-    } catch {
-      setMessage(locale === "ru" ? "Выберите состояние и укажите конечное число-множитель для каждой расчётной связи." : "Select a state and a finite multiplier for each calculated mapping.");
-      return;
     }
 
     const parameterById =
@@ -1488,101 +1542,133 @@ SystemActivityTemplateCreate({
       );
 
     const mappings =
-      selectedParameterIds
-        .flatMap(
-          (
-            parameterDefinitionId,
-          ) => {
-            const parameter =
-              parameterById.get(
-                parameterDefinitionId,
-              );
-
-            if (!parameter) {
-              return [];
-            }
-
-            const all =
-              valueObjectsByParameter[
-                parameterDefinitionId
-              ] ??
-              [];
-
-            return (
-              selectedObjectIdsByParameter[
-                parameterDefinitionId
-              ] ??
-              []
-            ).map(
+      templateMode ===
+      "fixed"
+        ? selectedParameterIds
+            .flatMap(
               (
-                valueObjectId,
+                parameterDefinitionId,
               ) => {
-                const object =
-                  all.find(
-                    (item) =>
-                      item.id ===
-                      valueObjectId,
+                const parameter =
+                  parameterById.get(
+                    parameterDefinitionId,
                   );
 
-                if (!object) {
-                  throw new Error(
-                    "DIRECT_SYSTEM_TEMPLATE_SELECTED_OBJECT_MISSING",
-                  );
+                if (!parameter) {
+                  return [];
                 }
 
-                const targetQualification = {
-                  mode:
-                    explicitQualifierByBinding[
-                      `${parameterDefinitionId}|${valueObjectId}`
-                    ]
-                      ? "explicit_qualifier"
-                      : "default",
-                  aliases:
-                    qualifierAliasesForObject(
-                      parameter,
-                      object,
-                    ),
-                } as const;
+                const all =
+                  valueObjectsByParameter[
+                    parameterDefinitionId
+                  ] ??
+                  [];
 
-                parseSourceTargetQualification(
-                  targetQualification,
+                return (
+                  selectedObjectIdsByParameter[
+                    parameterDefinitionId
+                  ] ??
+                  []
+                ).map(
+                  (
+                    valueObjectId,
+                  ) => {
+                    const object =
+                      all.find(
+                        (item) =>
+                          item.id ===
+                          valueObjectId,
+                      );
+
+                    if (!object) {
+                      throw new Error(
+                        "SYSTEM_TEMPLATE_SELECTED_OBJECT_MISSING",
+                      );
+                    }
+
+                    const targetQualification = {
+                      mode:
+                        explicitQualifierByBinding[
+                          `${parameterDefinitionId}|${valueObjectId}`
+                        ]
+                          ? "explicit_qualifier"
+                          : "default",
+                      aliases:
+                        qualifierAliasesForObject(
+                          parameter,
+                          object,
+                        ),
+                    } as const;
+
+                    parseSourceTargetQualification(
+                      targetQualification,
+                    );
+
+                    return {
+                      parameterDefinitionId,
+                      valueObjectId,
+                      sourceResolution:
+                        sourceSettings[
+                          `${parameterDefinitionId}|${valueObjectId}`
+                        ],
+                      targetQualification,
+                    };
+                  },
                 );
-
-                return {
-                  parameterDefinitionId,
-                  valueObjectId,
-                  sourceResolution:
-                    sourceSettings[
-                      `${parameterDefinitionId}|${valueObjectId}`
-                    ],
-                  targetQualification,
-                };
               },
-            );
-          },
-        );
+            )
+        : [];
 
-    for (const parameterDefinitionId of selectedParameterIds) {
-      const rows =
-        mappings.filter(
-          (mapping) =>
-            mapping.parameterDefinitionId ===
-            parameterDefinitionId,
-        );
+    const dynamicTargetBindings =
+      templateMode ===
+      "parameterized"
+        ? selectedParameterIds
+            .flatMap(
+              (
+                parameterDefinitionId,
+              ) =>
+                (
+                  selectedObjectIdsByParameter[
+                    parameterDefinitionId
+                  ] ??
+                  []
+                ).map(
+                  (
+                    intermediateValueObjectId,
+                  ) => ({
+                    parameterDefinitionId,
+                    intermediateValueObjectId,
+                  }),
+                ),
+            )
+        : [];
 
-      if (
-        rows.filter(
-          (mapping) =>
-            mapping
-              .targetQualification
-              .mode ===
-            "default",
-        ).length > 1
-      ) {
-        setMessage(
-          copy.defaultTargetConflict,
-        );
-        return;
+    if (
+      templateMode ===
+      "fixed"
+    ) {
+      for (const parameterDefinitionId of selectedParameterIds) {
+        const rows =
+          mappings.filter(
+            (mapping) =>
+              mapping.parameterDefinitionId ===
+              parameterDefinitionId,
+          );
+
+        if (
+          rows.filter(
+            (mapping) =>
+              mapping
+                .targetQualification
+                .mode ===
+              "default",
+          ).length > 1
+        ) {
+          setMessage(
+            copy.defaultTargetConflict,
+          );
+          return;
+        }
       }
     }
 
@@ -1602,7 +1688,15 @@ SystemActivityTemplateCreate({
         )
     ) {
       setMessage(
-        copy.mappingsHelp,
+        templateMode ===
+        "parameterized"
+          ? (
+              locale ===
+              "ru"
+                ? "Для каждого параметра выберите как минимум один конкретный промежуточный ОН."
+                : "Select at least one concrete intermediate observation object for every parameter."
+            )
+          : copy.mappingsHelp,
       );
       return;
     }
@@ -1637,9 +1731,13 @@ SystemActivityTemplateCreate({
                   description.trim(),
                 descriptionEn:
                   descriptionEn.trim(),
+                actorApplicability,
+                templateMode,
+                acceptanceMode,
                 parameterDefinitionIds:
                   selectedParameterIds,
                 mappings,
+                dynamicTargetBindings,
               }),
           },
         );
@@ -1830,6 +1928,125 @@ SystemActivityTemplateCreate({
             className="resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#3b6ef8]"
           />
         </label>
+      </div>
+
+      <div className="mt-5 rounded-[18px] border border-black/[0.07] bg-[#fafbfe] p-4">
+        <div className="grid gap-4 md:grid-cols-3">
+          <label className="grid gap-1.5">
+            <span className="text-xs font-bold text-slate-600">
+              {locale === "ru" ? "Применяется к активностям" : "Applies to activities"}
+            </span>
+            <select
+              value={actorApplicability}
+              onChange={(event) =>
+                setActorApplicability(
+                  event.target.value as
+                    "private" |
+                    "commercial" |
+                    "both",
+                )
+              }
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
+            >
+              <option value="private">
+                {locale === "ru" ? "Частным" : "Private"}
+              </option>
+              <option value="commercial">
+                {locale === "ru" ? "Коммерческим" : "Commercial"}
+              </option>
+              <option value="both">
+                {locale === "ru" ? "Частным и коммерческим" : "Private and commercial"}
+              </option>
+            </select>
+          </label>
+
+          <label className="grid gap-1.5">
+            <span className="text-xs font-bold text-slate-600">
+              {locale === "ru" ? "Тип типовой активности" : "Typical activity type"}
+            </span>
+            <select
+              value={templateMode}
+              disabled={selectedParameterIds.length > 0}
+              onChange={(event) => {
+                const next =
+                  event.target.value as
+                    "fixed" |
+                    "parameterized";
+
+                setTemplateMode(
+                  next,
+                );
+                setValueObjectsByParameter(
+                  {},
+                );
+                setSelectedObjectIdsByParameter(
+                  {},
+                );
+                setExplicitQualifierByBinding(
+                  {},
+                );
+                setSourceSettings(
+                  {},
+                );
+              }}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm disabled:opacity-60"
+            >
+              <option value="fixed">
+                {locale === "ru" ? "Фиксированная" : "Fixed"}
+              </option>
+              <option value="parameterized">
+                {locale === "ru" ? "Параметризованная" : "Parameterized"}
+              </option>
+            </select>
+            <span className="text-[11px] leading-4 text-slate-400">
+              {
+                selectedParameterIds.length > 0
+                  ? (
+                      locale === "ru"
+                        ? "Чтобы изменить тип, сначала удалите выбранные параметры."
+                        : "Remove selected parameters before changing the type."
+                    )
+                  : (
+                      templateMode === "parameterized"
+                        ? (
+                            locale === "ru"
+                              ? "Куратор задаёт конкретные промежуточные ОН; при разборе выбирается не более одного листового ОН среди потомков каждого из них."
+                              : "The curator selects concrete intermediate objects; runtime may select at most one descendant leaf under each one."
+                          )
+                        : (
+                            locale === "ru"
+                              ? "Куратор заранее задаёт конкретные листовые ОН."
+                              : "The curator selects exact leaf observation objects in advance."
+                          )
+                    )
+              }
+            </span>
+          </label>
+
+          <label className="grid gap-1.5">
+            <span className="text-xs font-bold text-slate-600">
+              {locale === "ru" ? "После распознавания" : "After recognition"}
+            </span>
+            <select
+              value={acceptanceMode}
+              onChange={(event) =>
+                setAcceptanceMode(
+                  event.target.value as
+                    "user_confirmation" |
+                    "auto_if_unambiguous",
+                )
+              }
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
+            >
+              <option value="user_confirmation">
+                {locale === "ru" ? "Требует подтверждения" : "Require confirmation"}
+              </option>
+              <option value="auto_if_unambiguous">
+                {locale === "ru" ? "Автоматически при полном однозначном распознавании" : "Automatic when fully unambiguous"}
+              </option>
+            </select>
+          </label>
+        </div>
       </div>
 
       <div className="mt-5">
@@ -2409,12 +2626,30 @@ SystemActivityTemplateCreate({
                   </div>
 
                   <div className="mt-3 text-xs font-bold text-slate-600">
-                    {copy.mappings}
+                    {
+                      templateMode ===
+                      "parameterized"
+                        ? (
+                            locale ===
+                            "ru"
+                              ? "Промежуточные ОН для выбора листового ОН"
+                              : "Intermediate objects for descendant leaf selection"
+                          )
+                        : copy.mappings
+                    }
                   </div>
 
                   <p className="mt-1 text-[11px] leading-4 text-slate-400">
                     {
-                      copy.mappingsHelp
+                      templateMode ===
+                      "parameterized"
+                        ? (
+                            locale ===
+                            "ru"
+                              ? "Выберите конкретные промежуточные ОН. Для каждого из них при распознавании разрешён выбор не более одного подходящего листового ОН только среди его потомков. Поиск за пределами выбранной ветви запрещён."
+                              : "Select concrete intermediate observation objects. For each one, runtime may select at most one suitable descendant leaf. Search outside the selected branch is forbidden."
+                          )
+                        : copy.mappingsHelp
                     }
                   </p>
 
@@ -2422,20 +2657,36 @@ SystemActivityTemplateCreate({
                     const key = `${parameter.id}|${objectId}`;
                     return <div key={key} className="mt-3">
                       <p className="text-xs font-bold">{parameter.title} → {all.find((item) => item.id === objectId)?.title ?? objectId}</p>
-                      <p className="mt-1 text-[11px] text-slate-500">
-                        {
-                          explicitQualifierByBinding[
-                            key
-                          ]
-                            ? copy.explicitQualifier
-                            : locale === "ru"
-                              ? "Основное значение без уточнения"
-                              : "Default target for an unqualified value"
-                        }
-                      </p>
-                      <SourceSnapshotSettings locale={locale} parameterId={parameter.id} parameterCode={parameter.parameterCode}
-                        value={sourceSettings[key]} disabled={busy}
-                        onChange={(value) => setSourceSettings((current) => ({ ...current, [key]: value }))} />
+                      {
+                        templateMode ===
+                        "fixed" ? (
+                          <>
+                            <p className="mt-1 text-[11px] text-slate-500">
+                              {
+                                explicitQualifierByBinding[
+                                  key
+                                ]
+                                  ? copy.explicitQualifier
+                                  : locale === "ru"
+                                    ? "Основное значение без уточнения"
+                                    : "Default target for an unqualified value"
+                              }
+                            </p>
+                            <SourceSnapshotSettings locale={locale} parameterId={parameter.id} parameterCode={parameter.parameterCode}
+                              value={sourceSettings[key]} disabled={busy}
+                              onChange={(value) => setSourceSettings((current) => ({ ...current, [key]: value }))} />
+                          </>
+                        ) : (
+                          <p className="mt-1 text-[11px] text-slate-500">
+                            {
+                              locale ===
+                              "ru"
+                                ? "Промежуточный ОН: при выполнении система выбирает не более одного листового потомка внутри этой ветви."
+                                : "Intermediate ON: runtime selects at most one descendant leaf inside this branch."
+                            }
+                          </p>
+                        )
+                      }
                     </div>;
                   })}
 
@@ -2546,7 +2797,7 @@ SystemActivityTemplateCreate({
                                   </span>
                                 </button>
 
-                                {checked ? (
+                                {checked && templateMode === "fixed" ? (
                                   <label
                                     className="mr-2 mt-2 flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-slate-500"
                                     title={
