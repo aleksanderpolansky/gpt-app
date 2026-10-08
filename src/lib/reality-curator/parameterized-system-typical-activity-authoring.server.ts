@@ -730,21 +730,31 @@ authorParameterizedSystemTypicalActivityV1(
     );
 
   if (error) {
-    const migrationMissing =
-      error.code === "PGRST202" ||
-      error.code === "42883" ||
-      /save_curator_parameterized_system_typical_activity_v1/i.test(
-        error.message,
-      );
+    const details = [
+      `code=${error.code || "unknown"}`,
+      `message=${error.message || "unknown"}`,
+      error.details
+        ? `details=${error.details}`
+        : "",
+      error.hint
+        ? `hint=${error.hint}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" | ");
 
-    if (migrationMissing) {
+    const rpcUnavailable =
+      error.code === "PGRST202" ||
+      error.code === "42883";
+
+    if (rpcUnavailable) {
       throw new Error(
-        "PARAMETERIZED_SYSTEM_TEMPLATE_MIGRATION_REQUIRED",
+        `PARAMETERIZED_SYSTEM_TEMPLATE_RPC_UNAVAILABLE:${details}`,
       );
     }
 
     throw new Error(
-      `PARAMETERIZED_SYSTEM_TEMPLATE_RPC_FAILED:${error.message}`,
+      `PARAMETERIZED_SYSTEM_TEMPLATE_RPC_FAILED:${details}`,
     );
   }
 
