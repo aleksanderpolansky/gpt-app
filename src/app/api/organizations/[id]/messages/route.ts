@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { revalidatePath } from "next/cache";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import {
   ActorContextError,
@@ -13,6 +13,7 @@ import {
   PUBLIC_MEDIA_BUCKET_ID,
 } from "../../../../../../lib/media-storage";
 import { supabase } from "../../../../../../lib/supabase";
+import { processPublicFeedMessageV1 } from "@/lib/activity/commercialFeedActivityBridge.server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -694,6 +695,20 @@ export async function POST(request: Request, { params }: RouteProps) {
     revalidatePath(`/directory/${organization.public_slug}`);
   }
   revalidatePath("/feed");
+
+  after(async () => {
+    try {
+      await processPublicFeedMessageV1({
+        messageObjectId: activatedMessage.id,
+      });
+    } catch (error) {
+      console.error(
+        "COMMERCIAL_FEED_ACTIVITY_BRIDGE_FAILED",
+        activatedMessage.id,
+        error,
+      );
+    }
+  });
 
   return NextResponse.json(
     {

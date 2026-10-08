@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import {
   ActorContextError,
@@ -13,6 +13,7 @@ import {
 } from "../../../../lib/media-storage";
 import { supabase } from "../../../../lib/supabase";
 import { getPublicationAuthorOptionForUser } from "@/lib/messages/publicationAuthors.server";
+import { processPublicFeedMessageV1 } from "@/lib/activity/commercialFeedActivityBridge.server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -574,6 +575,20 @@ export async function POST(request: Request) {
       { status: error?.code === "42501" ? 403 : 500 },
     );
   }
+
+  after(async () => {
+    try {
+      await processPublicFeedMessageV1({
+        messageObjectId: activatedMessage.id,
+      });
+    } catch (error) {
+      console.error(
+        "COMMERCIAL_FEED_ACTIVITY_BRIDGE_FAILED",
+        activatedMessage.id,
+        error,
+      );
+    }
+  });
 
   return NextResponse.json(
     {

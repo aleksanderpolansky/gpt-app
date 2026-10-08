@@ -234,6 +234,7 @@ function candidateScore(sourceText: string, template: TemplateRow): number {
 
 async function loadCandidateTemplates(input: {
   sourceText: string;
+  activityContextCode: "private" | "commercial";
 }): Promise<Candidate[]> {
   const templates = await loadSystemTypicalActivityCatalogV1({
     limit: MAX_ACTIVE_TEMPLATES + 1,
@@ -258,10 +259,55 @@ async function loadCandidateTemplates(input: {
     return [];
   }
 
-  const templateIds = rankedCandidates.map((candidate) => candidate.id);
+  const rankedTemplateIds = rankedCandidates.map(
+    (candidate) => candidate.id,
+  );
+
+  const { data: templateMetadataRows, error: templateMetadataError } =
+    await supabase
+      .from("activity_templates")
+      .select("id,default_metadata_json")
+      .in("id", rankedTemplateIds);
+
+  if (templateMetadataError) {
+    throw new Error(
+      `BASIC_INTAKE_TEMPLATE_APPLICABILITY_READ_FAILED:${templateMetadataError.message}`,
+    );
+  }
+
+  const applicableTemplateIds = new Set(
+    (templateMetadataRows ?? []).flatMap((row) => {
+      const metadata = asRecord(row.default_metadata_json);
+      const authoring = asRecord(metadata.typicalActivityAuthoringV2);
+      const applicability = text(authoring.actorApplicability);
+
+      if (input.activityContextCode === "commercial") {
+        return applicability === "commercial" || applicability === "both"
+          ? [String(row.id)]
+          : [];
+      }
+
+      return applicability === "commercial"
+        ? []
+        : [String(row.id)];
+    }),
+  );
+
+  const applicableRankedCandidates = rankedCandidates.filter(
+    (candidate) => applicableTemplateIds.has(candidate.id),
+  );
+
+  if (applicableRankedCandidates.length === 0) {
+    return [];
+  }
+
+  const templateIds = applicableRankedCandidates.map(
+    (candidate) => candidate.id,
+  );
+
   const { data: profileRowsRaw, error: profileRowsError } = await supabase
     .from("activity_template_impact_profiles_v1")
-    .select("id,template_id")
+    .select("id,template_id,routing_contract_code,metadata_json")
     .eq("status", "active")
     .in("template_id", templateIds);
 
@@ -274,53 +320,85 @@ async function loadCandidateTemplates(input: {
   const profileRows = (profileRowsRaw ?? []) as Array<{
     id: string;
     template_id: string;
+    routing_contract_code: string | null;
+    metadata_json: unknown;
   }>;
 
   if (profileRows.length === 0) {
     return [];
   }
 
-  const profileIds = profileRows.map((profile) => profile.id);
-  const { data: linkRowsRaw, error: linkRowsError } = await supabase
-    .from("activity_template_profile_object_links_v1")
-    .select("profile_id,target_value_object_id")
-    .in("profile_id", profileIds);
+  const parameterizedProfileIds = new Set(
+    profileRows.flatMap((profile) => {
+      const metadata = asRecord(profile.metadata_json);
+      const authoring = asRecord(metadata.typicalActivityAuthoringV2);
+      const bindings = metadata.parameterizedTargetBindingsV1;
 
-  if (linkRowsError) {
-    throw new Error(
-      `BASIC_INTAKE_PROFILE_LINK_READ_FAILED:${linkRowsError.message}`,
-    );
-  }
+      return profile.routing_contract_code === "parameter_registry_v2" &&
+        authoring.templateMode === "parameterized" &&
+        Array.isArray(bindings) &&
+        bindings.length > 0
+        ? [profile.id]
+        : [];
+    }),
+  );
 
-  const linkRows = (linkRowsRaw ?? []) as Array<{
+  const fixedProfileIds = profileRows
+    .map((profile) => profile.id)
+    .filter((profileId) => !parameterizedProfileIds.has(profileId));
+
+  const linkRows: Array<{
     profile_id: string;
     target_value_object_id: string;
-  }>;
+  }> = [];
+
+  if (fixedProfileIds.length > 0) {
+    const { data: linkRowsRaw, error: linkRowsError } = await supabase
+      .from("activity_template_profile_object_links_v1")
+      .select("profile_id,target_value_object_id")
+      .in("profile_id", fixedProfileIds);
+
+    if (linkRowsError) {
+      throw new Error(
+        `BASIC_INTAKE_PROFILE_LINK_READ_FAILED:${linkRowsError.message}`,
+      );
+    }
+
+    linkRows.push(
+      ...((linkRowsRaw ?? []) as Array<{
+        profile_id: string;
+        target_value_object_id: string;
+      }>),
+    );
+  }
 
   const linkedObjectIds = Array.from(
     new Set(linkRows.map((row) => String(row.target_value_object_id))),
   );
-  if (linkedObjectIds.length === 0) {
-    return [];
+
+  const globalObjectIds = new Set<string>();
+
+  if (linkedObjectIds.length > 0) {
+    const { data: globalObjectsRaw, error: globalObjectsError } = await supabase
+      .from("value_objects")
+      .select("id")
+      .in("id", linkedObjectIds)
+      .eq("scope_code", "global")
+      .eq("status", "active");
+
+    if (globalObjectsError) {
+      throw new Error(
+        `BASIC_INTAKE_SYSTEM_OBJECT_ELIGIBILITY_READ_FAILED:${globalObjectsError.message}`,
+      );
+    }
+
+    for (const row of globalObjectsRaw ?? []) {
+      globalObjectIds.add(String(row.id));
+    }
   }
 
-  const { data: globalObjectsRaw, error: globalObjectsError } = await supabase
-    .from("value_objects")
-    .select("id")
-    .in("id", linkedObjectIds)
-    .eq("scope_code", "global")
-    .eq("status", "active");
-
-  if (globalObjectsError) {
-    throw new Error(
-      `BASIC_INTAKE_SYSTEM_OBJECT_ELIGIBILITY_READ_FAILED:${globalObjectsError.message}`,
-    );
-  }
-
-  const globalObjectIds = new Set(
-    (globalObjectsRaw ?? []).map((row) => String(row.id)),
-  );
   const linksByProfile = new Map<string, string[]>();
+
   for (const row of linkRows) {
     const profileId = String(row.profile_id);
     const current = linksByProfile.get(profileId) ?? [];
@@ -331,7 +409,12 @@ async function loadCandidateTemplates(input: {
   const eligibleTemplateIds = new Set(
     profileRows
       .filter((profile) => {
+        if (parameterizedProfileIds.has(profile.id)) {
+          return true;
+        }
+
         const objectIds = linksByProfile.get(profile.id) ?? [];
+
         return (
           objectIds.length > 0 &&
           objectIds.every((objectId) => globalObjectIds.has(objectId))
@@ -340,7 +423,7 @@ async function loadCandidateTemplates(input: {
       .map((profile) => profile.template_id),
   );
 
-  return rankedCandidates
+  return applicableRankedCandidates
     .filter((candidate) => eligibleTemplateIds.has(candidate.id))
     .slice(0, MAX_CANDIDATES_SENT);
 }
@@ -1228,18 +1311,27 @@ export async function analyzeBasicActivityIntakeV1(input: {
     input.locale,
   );
 
+  const activityMetadata = asRecord(activity.metadata_json);
+  const commercialFeedMetadata = asRecord(
+    activityMetadata.commercialFeedPublicationV1,
+  );
+  const activityContextCode =
+    commercialFeedMetadata.activityContextCode === "commercial"
+      ? "commercial"
+      : "private";
+
   let candidates: Candidate[] = [];
   let candidateLoadWarning: string | null = null;
   try {
     candidates = await loadCandidateTemplates({
       sourceText,
+      activityContextCode,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     candidateLoadWarning = message.split(":", 1)[0].slice(0, 120);
   }
 
-  const activityMetadata = asRecord(activity.metadata_json);
   const temporalDirection =
     text(activityMetadata.temporalDirection) ||
     text(activityMetadata.quickCaptureTemporalDirection) ||
