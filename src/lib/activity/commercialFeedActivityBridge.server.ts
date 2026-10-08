@@ -78,21 +78,87 @@ function normalizeLocale(value: unknown): ActivityTimingLocalePp1 {
 }
 
 async function actorControlledByUser(userId: string, actorId: string) {
-  const { data, error } = await supabase.rpc(
-    "message_actor_controlled_by_user_v1",
-    {
-      p_user_id: userId,
-      p_actor_id: actorId,
-    },
-  );
+  const { data: actor, error: actorError } = await supabase
+    .from("actors")
+    .select("id,actor_type,organization_id,status")
+    .eq("id", actorId)
+    .maybeSingle();
 
-  if (error) {
+  if (actorError) {
     throw new Error(
-      `COMMERCIAL_FEED_ACTOR_CONTROL_CHECK_FAILED:${error.message}`,
+      `COMMERCIAL_FEED_ACTOR_READ_FAILED:${actorError.message}`,
     );
   }
 
-  return data === true;
+  if (!actor || actor.status !== "active") {
+    return false;
+  }
+
+  if (
+    actor.actor_type === "person" ||
+    actor.actor_type === "avatar"
+  ) {
+    const { data: profile, error: profileError } = await supabase
+      .from("actor_public_profiles")
+      .select("id")
+      .eq("owner_user_id", userId)
+      .eq("actor_id", actorId)
+      .limit(1)
+      .maybeSingle();
+
+    if (profileError) {
+      throw new Error(
+        `COMMERCIAL_FEED_ACTOR_PROFILE_READ_FAILED:${profileError.message}`,
+      );
+    }
+
+    return Boolean(profile);
+  }
+
+  if (
+    actor.actor_type === "organization" &&
+    actor.organization_id
+  ) {
+    const { data: organization, error: organizationError } =
+      await supabase
+        .from("organizations")
+        .select("id,owner_actor_id,status")
+        .eq("id", actor.organization_id)
+        .maybeSingle();
+
+    if (organizationError) {
+      throw new Error(
+        `COMMERCIAL_FEED_ORGANIZATION_READ_FAILED:${organizationError.message}`,
+      );
+    }
+
+    if (
+      !organization ||
+      organization.status !== "active" ||
+      !organization.owner_actor_id
+    ) {
+      return false;
+    }
+
+    const { data: ownerProfile, error: ownerProfileError } =
+      await supabase
+        .from("actor_public_profiles")
+        .select("id")
+        .eq("owner_user_id", userId)
+        .eq("actor_id", organization.owner_actor_id)
+        .limit(1)
+        .maybeSingle();
+
+    if (ownerProfileError) {
+      throw new Error(
+        `COMMERCIAL_FEED_ORGANIZATION_OWNER_PROFILE_READ_FAILED:${ownerProfileError.message}`,
+      );
+    }
+
+    return Boolean(ownerProfile);
+  }
+
+  return false;
 }
 
 async function loadPublicMessageObject(
