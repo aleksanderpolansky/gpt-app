@@ -30,6 +30,7 @@ import {
 
 import {
   authorParameterizedSystemTypicalActivityV1,
+  type ParameterizedDefaultNumericValue,
   type ParameterizedTargetBinding,
 } from "@/lib/reality-curator/parameterized-system-typical-activity-authoring.server";
 
@@ -73,6 +74,7 @@ type WorkBody = {
   parameterDefinitionIds?: unknown;
   mappings?: unknown;
   dynamicTargetBindings?: unknown;
+  parameterDefaults?: unknown;
 };
 
 type MappingPair = {
@@ -239,6 +241,49 @@ function dynamicTargetBindingArray(
         {
           parameterDefinitionId,
           intermediateValueObjectId,
+        },
+      ];
+    },
+  );
+}
+
+function parameterDefaultArray(
+  value: unknown,
+): ParameterizedDefaultNumericValue[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap(
+    (item) => {
+      const row =
+        record(item);
+
+      const parameterDefinitionId =
+        text(
+          row.parameterDefinitionId,
+        );
+
+      const valueNumeric =
+        row.valueNumeric;
+
+      if (
+        !UUID_RE.test(
+          parameterDefinitionId,
+        ) ||
+        typeof valueNumeric !==
+          "number" ||
+        !Number.isFinite(
+          valueNumeric,
+        )
+      ) {
+        return [];
+      }
+
+      return [
+        {
+          parameterDefinitionId,
+          valueNumeric,
         },
       ];
     },
@@ -707,6 +752,9 @@ export async function POST(
   let dynamicTargetBindings:
     ParameterizedTargetBinding[];
 
+  let parameterDefaults:
+    ParameterizedDefaultNumericValue[];
+
   try {
     mappings =
       mappingArray(
@@ -716,6 +764,11 @@ export async function POST(
     dynamicTargetBindings =
       dynamicTargetBindingArray(
         body.dynamicTargetBindings,
+      );
+
+    parameterDefaults =
+      parameterDefaultArray(
+        body.parameterDefaults,
       );
 
     if (
@@ -765,6 +818,50 @@ export async function POST(
     ) {
       throw new Error(
         "DYNAMIC_TARGET_BINDINGS_INVALID",
+      );
+    }
+
+    if (
+      body.parameterDefaults !==
+        undefined &&
+      (
+        !Array.isArray(
+          body.parameterDefaults,
+        ) ||
+        parameterDefaults.length !==
+          body.parameterDefaults.length ||
+        parameterDefaults.some(
+          (
+            item,
+          ) =>
+            !parameterDefinitionIds.includes(
+              item.parameterDefinitionId,
+            ),
+        ) ||
+        new Set(
+          parameterDefaults.map(
+            (
+              item,
+            ) =>
+              item.parameterDefinitionId,
+          ),
+        ).size !==
+          parameterDefaults.length
+      )
+    ) {
+      throw new Error(
+        "PARAMETER_DEFAULTS_INVALID",
+      );
+    }
+
+    if (
+      templateMode ===
+        "fixed" &&
+      parameterDefaults.length >
+        0
+    ) {
+      throw new Error(
+        "PARAMETER_DEFAULTS_FIXED_TEMPLATE_FORBIDDEN",
       );
     }
 
@@ -970,6 +1067,7 @@ export async function POST(
             acceptanceMode,
             parameterDefinitionIds,
             dynamicTargetBindings,
+            parameterDefaults,
           })
         : await authorFixedSystemTypicalActivityV2({
             requestId,

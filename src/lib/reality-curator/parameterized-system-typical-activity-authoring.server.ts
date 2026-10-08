@@ -19,6 +19,11 @@ export type ParameterizedTargetBinding = {
   intermediateValueObjectId: string;
 };
 
+export type ParameterizedDefaultNumericValue = {
+  parameterDefinitionId: string;
+  valueNumeric: number;
+};
+
 type CuratorIdentity = {
   curatorAppUserId: string;
   curatorActorId: string;
@@ -38,6 +43,7 @@ export type ParameterizedSystemTypicalActivityAuthoringInput = {
   acceptanceMode: TypicalActivityAcceptanceMode;
   parameterDefinitionIds: string[];
   dynamicTargetBindings: ParameterizedTargetBinding[];
+  parameterDefaults: ParameterizedDefaultNumericValue[];
 };
 
 export type ParameterizedSystemTypicalActivityAuthoringResult = {
@@ -167,6 +173,51 @@ function normalizeBindings(
   );
 }
 
+function normalizeDefaultNumericValues(
+  values:
+    readonly ParameterizedDefaultNumericValue[],
+) {
+  const byParameter =
+    new Map<
+      string,
+      ParameterizedDefaultNumericValue
+    >();
+
+  for (const value of values) {
+    if (
+      !Number.isFinite(
+        value.valueNumeric,
+      )
+    ) {
+      throw new Error(
+        `PARAMETERIZED_SYSTEM_TEMPLATE_DEFAULT_VALUE_INVALID:${value.parameterDefinitionId}`,
+      );
+    }
+
+    byParameter.set(
+      value.parameterDefinitionId,
+      {
+        parameterDefinitionId:
+          value.parameterDefinitionId,
+        valueNumeric:
+          value.valueNumeric,
+      },
+    );
+  }
+
+  return [
+    ...byParameter.values(),
+  ].sort(
+    (
+      left,
+      right,
+    ) =>
+      left.parameterDefinitionId.localeCompare(
+        right.parameterDefinitionId,
+      ),
+  );
+}
+
 function fingerprint(
   input:
     ParameterizedSystemTypicalActivityAuthoringInput,
@@ -203,10 +254,213 @@ function fingerprint(
           normalizeBindings(
             input.dynamicTargetBindings,
           ),
+        parameterDefaults:
+          normalizeDefaultNumericValues(
+            input.parameterDefaults,
+          ),
       }),
       "utf8",
     )
     .digest("hex");
+}
+
+async function applyDefaultNumericValues(
+  input: {
+    profileId: string;
+    values:
+      readonly ParameterizedDefaultNumericValue[];
+  },
+) {
+  const values =
+    normalizeDefaultNumericValues(
+      input.values,
+    );
+
+  if (values.length === 0) {
+    return;
+  }
+
+  const parameterDefinitionIds =
+    values.map(
+      (
+        value,
+      ) =>
+        value.parameterDefinitionId,
+    );
+
+  const [
+    definitionsResult,
+    profileParametersResult,
+  ] =
+    await Promise.all([
+      supabase
+        .from(
+          "value_object_parameter_definitions",
+        )
+        .select(
+          "id,value_type_code,canonical_unit_code,allow_negative,scope_code,status",
+        )
+        .in(
+          "id",
+          parameterDefinitionIds,
+        ),
+      supabase
+        .from(
+          "activity_template_profile_parameters_v2",
+        )
+        .select(
+          "id,parameter_definition_id,metadata_json",
+        )
+        .eq(
+          "profile_id",
+          input.profileId,
+        )
+        .in(
+          "parameter_definition_id",
+          parameterDefinitionIds,
+        ),
+    ]);
+
+  if (definitionsResult.error) {
+    throw new Error(
+      `PARAMETERIZED_SYSTEM_TEMPLATE_DEFAULT_DEFINITION_READ_FAILED:${definitionsResult.error.message}`,
+    );
+  }
+
+  if (profileParametersResult.error) {
+    throw new Error(
+      `PARAMETERIZED_SYSTEM_TEMPLATE_DEFAULT_PROFILE_PARAMETER_READ_FAILED:${profileParametersResult.error.message}`,
+    );
+  }
+
+  if (
+    (
+      definitionsResult.data ??
+      []
+    ).length !==
+      parameterDefinitionIds.length ||
+    (
+      profileParametersResult.data ??
+      []
+    ).length !==
+      parameterDefinitionIds.length
+  ) {
+    throw new Error(
+      "PARAMETERIZED_SYSTEM_TEMPLATE_DEFAULT_PARAMETER_SET_CHANGED",
+    );
+  }
+
+  const definitions =
+    new Map(
+      (
+        definitionsResult.data ??
+        []
+      ).map(
+        (
+          row,
+        ) => [
+          String(
+            row.id,
+          ),
+          row,
+        ],
+      ),
+    );
+
+  const profileParameters =
+    new Map(
+      (
+        profileParametersResult.data ??
+        []
+      ).map(
+        (
+          row,
+        ) => [
+          String(
+            row.parameter_definition_id,
+          ),
+          row,
+        ],
+      ),
+    );
+
+  for (const value of values) {
+    const definition =
+      definitions.get(
+        value.parameterDefinitionId,
+      );
+
+    const profileParameter =
+      profileParameters.get(
+        value.parameterDefinitionId,
+      );
+
+    if (
+      !definition ||
+      !profileParameter ||
+      definition.scope_code !==
+        "system" ||
+      definition.status !==
+        "active" ||
+      definition.value_type_code !==
+        "numeric"
+    ) {
+      throw new Error(
+        `PARAMETERIZED_SYSTEM_TEMPLATE_DEFAULT_PARAMETER_INVALID:${value.parameterDefinitionId}`,
+      );
+    }
+
+    if (
+      value.valueNumeric <
+        0 &&
+      definition.allow_negative !==
+        true
+    ) {
+      throw new Error(
+        `PARAMETERIZED_SYSTEM_TEMPLATE_DEFAULT_NEGATIVE_FORBIDDEN:${value.parameterDefinitionId}`,
+      );
+    }
+
+    const metadata =
+      record(
+        profileParameter.metadata_json,
+      );
+
+    const {
+      error,
+    } =
+      await supabase
+        .from(
+          "activity_template_profile_parameters_v2",
+        )
+        .update({
+          metadata_json: {
+            ...metadata,
+            defaultLiteralValueV1: {
+              contract:
+                "ARCTOR_DEFAULT_LITERAL_VALUE_V1",
+              valueTypeCode:
+                "numeric",
+              valueNumeric:
+                value.valueNumeric,
+              unitCode:
+                definition.canonical_unit_code,
+              useWhenMissing:
+                true,
+            },
+          },
+        })
+        .eq(
+          "id",
+          profileParameter.id,
+        );
+
+    if (error) {
+      throw new Error(
+        `PARAMETERIZED_SYSTEM_TEMPLATE_DEFAULT_WRITE_FAILED:${error.message}`,
+      );
+    }
+  }
 }
 
 async function appendAuditLog(input: {
@@ -302,6 +556,11 @@ async function appendAuditLog(input: {
               input.source
                 .dynamicTargetBindings,
             ),
+          parameterDefaults:
+            normalizeDefaultNumericValues(
+              input.source
+                .parameterDefaults,
+            ),
           rawSignalCreated:
             false,
           activityEventCreated:
@@ -360,6 +619,23 @@ authorParameterizedSystemTypicalActivityV1(
     normalizeBindings(
       input.dynamicTargetBindings,
     );
+
+  const parameterDefaults =
+    normalizeDefaultNumericValues(
+      input.parameterDefaults,
+    );
+
+  for (const value of parameterDefaults) {
+    if (
+      !parameterDefinitionIds.includes(
+        value.parameterDefinitionId,
+      )
+    ) {
+      throw new Error(
+        `PARAMETERIZED_SYSTEM_TEMPLATE_DEFAULT_PARAMETER_NOT_SELECTED:${value.parameterDefinitionId}`,
+      );
+    }
+  }
 
   if (
     parameterDefinitionIds.length ===
@@ -520,6 +796,13 @@ authorParameterizedSystemTypicalActivityV1(
       "PARAMETERIZED_SYSTEM_TEMPLATE_RPC_RESULT_INVALID",
     );
   }
+
+  await applyDefaultNumericValues({
+    profileId:
+      result.profileId,
+    values:
+      parameterDefaults,
+  });
 
   await appendAuditLog({
     source:

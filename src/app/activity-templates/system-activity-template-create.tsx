@@ -642,6 +642,17 @@ SystemActivityTemplateCreate({
     );
 
   const [
+    defaultNumericValueByParameter,
+    setDefaultNumericValueByParameter,
+  ] =
+    useState<
+      Record<
+        string,
+        string
+      >
+    >({});
+
+  const [
     parameters,
     setParameters,
   ] =
@@ -1166,8 +1177,15 @@ SystemActivityTemplateCreate({
   loadTargets(
     parameterDefinitionId:
       string,
+    mode:
+      "fixed" |
+      "parameterized" =
+        templateMode,
+    forceReload =
+      false,
   ) {
     if (
+      !forceReload &&
       valueObjectsByParameter[
         parameterDefinitionId
       ]
@@ -1180,7 +1198,7 @@ SystemActivityTemplateCreate({
         locale,
         parameterDefinitionId,
         targetNodeRole:
-          templateMode ===
+          mode ===
           "parameterized"
             ? "intermediate"
             : "leaf",
@@ -1282,6 +1300,22 @@ SystemActivityTemplateCreate({
     );
 
     setSelectedObjectIdsByParameter(
+      (
+        current,
+      ) => {
+        const next = {
+          ...current,
+        };
+
+        delete next[
+          parameterDefinitionId
+        ];
+
+        return next;
+      },
+    );
+
+    setDefaultNumericValueByParameter(
       (
         current,
       ) => {
@@ -1479,6 +1513,9 @@ SystemActivityTemplateCreate({
     setSelectedObjectIdsByParameter(
       {},
     );
+    setDefaultNumericValueByParameter(
+      {},
+    );
     setExplicitQualifierByBinding(
       {},
     );
@@ -1643,6 +1680,63 @@ SystemActivityTemplateCreate({
             )
         : [];
 
+    const parameterDefaults:
+      Array<{
+        parameterDefinitionId:
+          string;
+        valueNumeric:
+          number;
+      }> =
+      [];
+
+    if (
+      templateMode ===
+      "parameterized"
+    ) {
+      for (
+        const parameter
+        of selectedParameters
+      ) {
+        const rawValue =
+          (
+            defaultNumericValueByParameter[
+              parameter.id
+            ] ??
+            ""
+          ).trim();
+
+        if (!rawValue) {
+          continue;
+        }
+
+        const valueNumeric =
+          Number(
+            rawValue,
+          );
+
+        if (
+          parameter.valueTypeCode !==
+            "numeric" ||
+          !Number.isFinite(
+            valueNumeric,
+          )
+        ) {
+          setMessage(
+            locale === "ru"
+              ? `Некорректное значение по умолчанию для параметра «${parameter.title}».`
+              : `Invalid default value for parameter "${parameter.title}".`,
+          );
+          return;
+        }
+
+        parameterDefaults.push({
+          parameterDefinitionId:
+            parameter.id,
+          valueNumeric,
+        });
+      }
+    }
+
     if (
       templateMode ===
       "fixed"
@@ -1738,6 +1832,7 @@ SystemActivityTemplateCreate({
                   selectedParameterIds,
                 mappings,
                 dynamicTargetBindings,
+                parameterDefaults,
               }),
           },
         );
@@ -1931,7 +2026,7 @@ SystemActivityTemplateCreate({
       </div>
 
       <div className="mt-5 rounded-[18px] border border-black/[0.07] bg-[#fafbfe] p-4">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           <label className="grid gap-1.5">
             <span className="text-xs font-bold text-slate-600">
               {locale === "ru" ? "Применяется к активностям" : "Applies to activities"}
@@ -1966,7 +2061,6 @@ SystemActivityTemplateCreate({
             </span>
             <select
               value={templateMode}
-              disabled={selectedParameterIds.length > 0}
               onChange={(event) => {
                 const next =
                   event.target.value as
@@ -1982,14 +2076,42 @@ SystemActivityTemplateCreate({
                 setSelectedObjectIdsByParameter(
                   {},
                 );
+                setDefaultNumericValueByParameter(
+                  {},
+                );
                 setExplicitQualifierByBinding(
                   {},
                 );
                 setSourceSettings(
                   {},
                 );
+                setMessage(
+                  "",
+                );
+
+                void Promise.all(
+                  selectedParameterIds.map(
+                    (
+                      parameterDefinitionId,
+                    ) =>
+                      loadTargets(
+                        parameterDefinitionId,
+                        next,
+                        true,
+                      ),
+                  ),
+                ).catch(
+                  (
+                    error,
+                  ) =>
+                    setMessage(
+                      error instanceof Error
+                        ? error.message
+                        : copy.loadError,
+                    ),
+                );
               }}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm disabled:opacity-60"
+              className="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
             >
               <option value="fixed">
                 {locale === "ru" ? "Фиксированная" : "Fixed"}
@@ -2000,30 +2122,23 @@ SystemActivityTemplateCreate({
             </select>
             <span className="text-[11px] leading-4 text-slate-400">
               {
-                selectedParameterIds.length > 0
+                templateMode ===
+                "parameterized"
                   ? (
                       locale === "ru"
-                        ? "Чтобы изменить тип, сначала удалите выбранные параметры."
-                        : "Remove selected parameters before changing the type."
+                        ? "Куратор задаёт конкретные промежуточные ОН; при разборе выбирается не более одного листового ОН среди потомков каждого из них."
+                        : "The curator selects concrete intermediate objects; runtime may select at most one descendant leaf under each one."
                     )
                   : (
-                      templateMode === "parameterized"
-                        ? (
-                            locale === "ru"
-                              ? "Куратор задаёт конкретные промежуточные ОН; при разборе выбирается не более одного листового ОН среди потомков каждого из них."
-                              : "The curator selects concrete intermediate objects; runtime may select at most one descendant leaf under each one."
-                          )
-                        : (
-                            locale === "ru"
-                              ? "Куратор заранее задаёт конкретные листовые ОН."
-                              : "The curator selects exact leaf observation objects in advance."
-                          )
+                      locale === "ru"
+                        ? "Куратор заранее задаёт конкретные листовые ОН."
+                        : "The curator selects exact leaf observation objects in advance."
                     )
               }
             </span>
           </label>
 
-          <label className="grid gap-1.5">
+          <label className="grid gap-1.5 md:col-span-2">
             <span className="text-xs font-bold text-slate-600">
               {locale === "ru" ? "После распознавания" : "After recognition"}
             </span>
@@ -2039,12 +2154,29 @@ SystemActivityTemplateCreate({
               className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
             >
               <option value="user_confirmation">
-                {locale === "ru" ? "Требует подтверждения" : "Require confirmation"}
+                {locale === "ru" ? "С подтверждением" : "With confirmation"}
               </option>
               <option value="auto_if_unambiguous">
-                {locale === "ru" ? "Автоматически при полном однозначном распознавании" : "Automatic when fully unambiguous"}
+                {locale === "ru" ? "Автоматически" : "Automatic"}
               </option>
             </select>
+
+            <span className="text-[11px] leading-4 text-slate-400">
+              {
+                acceptanceMode ===
+                "auto_if_unambiguous"
+                  ? (
+                      locale === "ru"
+                        ? "Только при полном однозначном распознавании."
+                        : "Only when recognition is complete and unambiguous."
+                    )
+                  : (
+                      locale === "ru"
+                        ? "Результат требует подтверждения перед окончательной записью."
+                        : "The result requires confirmation before final recording."
+                    )
+              }
+            </span>
           </label>
         </div>
       </div>
@@ -2624,6 +2756,79 @@ SystemActivityTemplateCreate({
                       }
                     </div>
                   </div>
+
+                  {
+                    templateMode ===
+                      "parameterized" &&
+                    parameter.valueTypeCode ===
+                      "numeric" ? (
+                      <div className="mt-4 rounded-xl border border-black/[0.07] bg-white p-3">
+                        <div className="grid gap-3 sm:grid-cols-[minmax(0,220px)_1fr] sm:items-end">
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-bold text-slate-600">
+                              {
+                                locale === "ru"
+                                  ? "Значение по умолчанию"
+                                  : "Default value"
+                              }
+                            </span>
+
+                            <div className="flex min-w-0 items-center gap-2">
+                              <input
+                                type="number"
+                                step="any"
+                                value={
+                                  defaultNumericValueByParameter[
+                                    parameter.id
+                                  ] ??
+                                  ""
+                                }
+                                onChange={(
+                                  event,
+                                ) =>
+                                  setDefaultNumericValueByParameter(
+                                    (
+                                      current,
+                                    ) => ({
+                                      ...current,
+                                      [parameter.id]:
+                                        event
+                                          .target
+                                          .value,
+                                    }),
+                                  )
+                                }
+                                placeholder={
+                                  locale === "ru"
+                                    ? "Например: 1"
+                                    : "For example: 1"
+                                }
+                                className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#3b6ef8]"
+                              />
+
+                              <span className="shrink-0 text-xs font-bold text-slate-500">
+                                {
+                                  getActivityUnitLabel(
+                                    parameter
+                                      .canonicalUnitCode,
+                                    locale,
+                                  )
+                                }
+                              </span>
+                            </div>
+                          </label>
+
+                          <p className="text-[11px] leading-4 text-slate-400">
+                            {
+                              locale === "ru"
+                                ? "Необязательно. Используется только если значение не указано явно. Единица берётся из параметра автоматически."
+                                : "Optional. Used only when no explicit value is provided. The unit is taken from the parameter automatically."
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    ) : null
+                  }
 
                   <div className="mt-3 text-xs font-bold text-slate-600">
                     {
