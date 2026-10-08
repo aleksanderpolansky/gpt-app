@@ -744,8 +744,7 @@ authorParameterizedSystemTypicalActivityV1(
       .join(" | ");
 
     const rpcUnavailable =
-      error.code === "PGRST202" ||
-      error.code === "42883";
+      error.code === "PGRST202";
 
     if (rpcUnavailable) {
       throw new Error(
