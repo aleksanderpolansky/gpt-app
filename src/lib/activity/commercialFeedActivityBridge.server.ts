@@ -1,4 +1,5 @@
 import "server-only";
+import { runCommercialAutoFactPilotV1 } from "@/lib/activity/commercialAutoFactPilotV1.server";
 
 import { supabase } from "../../../lib/supabase";
 import {
@@ -372,7 +373,7 @@ async function templateAllowsAutomaticCommercialUse(templateId: string) {
   const acceptanceMode = text(authoring.acceptanceMode);
 
   return (
-    (applicability === "commercial" || applicability === "both") &&
+    applicability === "commercial" &&
     acceptanceMode === "auto_if_unambiguous"
   );
 }
@@ -643,6 +644,7 @@ export async function ensureCommercialFeedActivityV1(input: {
 
 export async function analyzeCommercialFeedActivityV1(
   receipt: CommercialBridgeReceipt,
+  analysisTrigger: "initial" | "retry" = "initial",
 ) {
   const message = await loadPublicMessageObject(
     receipt.messageObjectId,
@@ -662,6 +664,7 @@ export async function analyzeCommercialFeedActivityV1(
           receipt.activityEventId,
         locale,
         timeZone: "UTC",
+        analysisTrigger,
       }) as JsonRecord;
 
     const candidate =
@@ -744,21 +747,47 @@ export async function analyzeCommercialFeedActivityV1(
     }
 
     await markCommercialEvent({
-      activityEventId:
-        receipt.activityEventId,
+      activityEventId: receipt.activityEventId,
       status: "analysis_ready",
       error: null,
-      activityTemplateId:
-        candidate.templateId,
+      activityTemplateId: candidate.templateId,
     });
+
+    // Opt-in and fail-closed: preserve STEP1 behavior unless SQL is
+    // installed and the production feature flag is explicitly enabled.
+    if (process.env.ARCTOR_COMMERCIAL_AUTO_FACTS_V1 === "enabled") {
+      const automatic = await runCommercialAutoFactPilotV1({
+        activityEventId: receipt.activityEventId,
+        templateId: candidate.templateId,
+        sourceText: text(message?.content_text),
+      });
+      if (automatic.status === "needs_review") {
+        await markCommercialEvent({
+          activityEventId: receipt.activityEventId,
+          status: "needs_review",
+          error: automatic.reason,
+          activityTemplateId: candidate.templateId,
+        });
+        await queueCommercialReview({
+          ownerUserId: receipt.ownerUserId,
+          rawSignalId: receipt.rawSignalId,
+          activityEventId: receipt.activityEventId,
+          reasonCode: automatic.reason,
+          messageObjectId: receipt.messageObjectId,
+        });
+        return { ok: true, status: "needs_review" as const,
+          reason: automatic.reason };
+      }
+      return { ok: true, status: "auto_processed" as const,
+        activityTemplateId: candidate.templateId,
+        factsWritten: automatic.count };
+    }
 
     return {
       ok: true,
       status: "analysis_ready" as const,
-      activityTemplateId:
-        candidate.templateId,
-      confidence:
-        candidate.confidence,
+      activityTemplateId: candidate.templateId,
+      confidence: candidate.confidence,
     };
   } catch (error) {
     const messageText =
@@ -826,4 +855,70 @@ export async function processPublicFeedMessageV1(input: {
     receipt,
     analysis,
   };
+}
+
+// Administrator only (route enforces requirePlatformAdmin).
+// Replays the existing event, preserving raw publication and fact history.
+export async function retryCommercialFeedActivityV1(activityEventId: string) {
+  const { data: event, error } = await supabase.from("activity_events")
+    .select("id,user_id,performed_by_actor_id,acting_as_actor_id,source_message_object_id,commercial_processing_status,metadata_json")
+    .eq("id", activityEventId)
+    .eq("activity_context_code", "commercial")
+    .maybeSingle();
+  if (error) throw new Error(`COMMERCIAL_RETRY_EVENT_READ_FAILED:${error.message}`);
+  if (!event || !event.source_message_object_id) {
+    throw new Error("COMMERCIAL_RETRY_EVENT_NOT_FOUND");
+  }
+  if (event.commercial_processing_status === "auto_processed") {
+    return { ok: true, status: "already_processed" as const };
+  }
+  const meta = record(event.metadata_json);
+  const source = record(meta.commercialFeedPublicationV1);
+  const rawSignalId = text(source.rawSignalId);
+  if (!rawSignalId) throw new Error("COMMERCIAL_RETRY_RAW_SIGNAL_MISSING");
+  const { data: signal, error: signalError } = await supabase
+    .from("raw_activity_signals")
+    .select("id,user_id,normalized_preview_json")
+    .eq("id", rawSignalId).eq("user_id",event.user_id).maybeSingle();
+  if (signalError || !signal) throw new Error("COMMERCIAL_RETRY_SIGNAL_READ_FAILED");
+
+  const { data: claimed, error: claimError } = await supabase.from("activity_events")
+    .update({ commercial_processing_status: "pending", commercial_processing_error: null })
+    .eq("id", activityEventId)
+    .in("commercial_processing_status", ["needs_review", "failed", "analysis_ready"])
+    .select("id");
+  if (claimError) throw new Error(`COMMERCIAL_RETRY_CLAIM_FAILED:${claimError.message}`);
+  if (!claimed?.length) throw new Error("COMMERCIAL_RETRY_ALREADY_IN_PROGRESS");
+
+  // Old preview is evidence, not discarded. Clearing only the cached
+  // basic-intake result forces a fresh template search after curator changes.
+  const preview = record(signal.normalized_preview_json);
+  const oldAnalysis = preview.basicIntakeAnalysisV1;
+  const previous = Array.isArray(preview.commercialRetryHistoryV1)
+    ? preview.commercialRetryHistoryV1.slice(-9) : [];
+  delete preview.basicIntakeAnalysisV1;
+  const { error: resetError } = await supabase.from("raw_activity_signals")
+    .update({ normalized_preview_json: {
+      ...preview,
+      commercialRetryHistoryV1: [ ...previous, {
+        at: new Date().toISOString(), previous: oldAnalysis ?? null,
+      } ],
+    } })
+    .eq("id", rawSignalId).eq("user_id", event.user_id);
+  if (resetError) {
+    await markCommercialEvent({activityEventId,status:"needs_review",
+      error:`COMMERCIAL_RETRY_PREVIEW_RESET_FAILED:${resetError.message}`});
+    throw new Error(`COMMERCIAL_RETRY_PREVIEW_RESET_FAILED:${resetError.message}`);
+  }
+
+  const receipt: CommercialBridgeReceipt = {
+    activityEventId, rawSignalId,
+    messageObjectId: String(event.source_message_object_id),
+    ownerUserId: String(event.user_id),
+    performedByActorId: String(event.performed_by_actor_id),
+    actingAsActorId: String(event.acting_as_actor_id),
+    actorResolutionStatus: source.actorResolutionStatus === "resolved_author_actor"
+      ? "resolved_author_actor" : "unresolved_reported_source",
+  };
+  return analyzeCommercialFeedActivityV1(receipt, "retry");
 }

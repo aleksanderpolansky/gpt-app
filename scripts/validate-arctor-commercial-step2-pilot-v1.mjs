@@ -1,0 +1,14 @@
+import { readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
+const bridge=readFileSync('src/lib/activity/commercialFeedActivityBridge.server.ts','utf8');
+const pilot=readFileSync('src/lib/activity/commercialAutoFactPilotV1.server.ts','utf8');
+const admin=readFileSync('src/app/api/admin/commercial-activities/route.ts','utf8');
+const ui=readFileSync('src/app/admin/commercial-activities/page.tsx','utf8');
+assert(bridge.includes('ARCTOR_COMMERCIAL_AUTO_FACTS_V1') && bridge.includes('runCommercialAutoFactPilotV1'));
+assert(pilot.includes('COMMERCIAL_CITY_NOT_UNIQUE') && pilot.includes('COMMERCIAL_LEAF_OUTSIDE_PROFILE_BINDINGS'));
+assert(pilot.includes('arctor_commercial_first_leaf_v1') && pilot.includes('COMMERCIAL_NO_STORE_REPRESENTATIVE'));
+assert(pilot.includes('arctor_validate_commercial_fact_v1') && pilot.includes('arctor_write_commercial_auto_facts_v1'));
+assert(pilot.includes('canonical_key') === false || pilot.includes('commercial_first_leaf'));
+assert(admin.includes('requirePlatformAdmin') && admin.includes('retryCommercialFeedActivityV1'));
+assert(ui.includes('Повторно обработать'));
+console.log('ARCTOR_COMMERCIAL_STEP2_PILOT_SOURCE_CHECK PASS');
