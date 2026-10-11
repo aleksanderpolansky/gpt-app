@@ -4,10 +4,22 @@ import Link from "next/link";
 
 type AutoFactSetting = { enabled: boolean; revision: number; updatedAt: string | null };
 
+type Diagnostic = {
+  code:string|null; stage:string; problem:string; suggestion:string;
+  severity:"waiting"|"review"|"failure";
+  source:{rawSignalAvailable:boolean;basicAnalysisAvailable:boolean};
+  extractedMeasurements:Array<{parameterCode:string|null;valueNumeric:number|null;valueText:string|null;unit:string|null;fragment:string|null}>;
+  candidateCount:number;
+  recordedFacts:Array<{valueObjectId:string|null;parameterDefinitionId:string|null;valueNumeric:number|null;valueText:string|null;unit:string;status:string}>;
+  recordedFactCountWithinSample:number; factsQueryLimitReached:boolean;
+  history:Array<{at:string|null;status:string|null;reason:string|null;templateId:string|null;analysisAvailable:boolean}>;
+  historyNote:string;
+};
 type Row = {
   id:string; title:string|null; input_text:string|null; created_at:string;
   commercial_processing_status:string|null; commercial_processing_error:string|null;
   activity_template_id:string|null; source_message_object_id:string|null;
+  diagnostic:Diagnostic;
 };
 
 export default function CommercialActivitiesAdminPage() {
@@ -114,7 +126,49 @@ export default function CommercialActivitiesAdminPage() {
         <time className="text-xs opacity-70">{new Date(item.created_at).toLocaleString("ru-RU")}</time>
       </div>
       <p className="whitespace-pre-wrap">{item.input_text??item.title??"Без текста"}</p>
-      <p className="text-sm opacity-80">{item.commercial_processing_error??"Ожидает автоматического продолжения"}</p>
+      <section aria-label="Диагностика обработки" className="rounded-lg border p-3 space-y-2 text-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-semibold">Этап: {item.diagnostic.stage}</span>
+          <span className={item.diagnostic.severity==="waiting"?"text-amber-700":item.diagnostic.severity==="failure"?"text-red-700":"text-orange-700"}>
+            {item.diagnostic.severity==="waiting"?"Ожидание (не ошибка)":item.diagnostic.severity==="failure"?"Ошибка":"Нужна проверка"}
+          </span>
+        </div>
+        <p>{item.diagnostic.problem}</p>
+        <p className="opacity-80">Что проверить: {item.diagnostic.suggestion}</p>
+        {item.diagnostic.code&&<p className="break-all font-mono text-xs opacity-70">Код: {item.diagnostic.code}</p>}
+        {item.commercial_processing_error&&item.commercial_processing_error!==item.diagnostic.code&&<details>
+          <summary className="cursor-pointer">Техническое сообщение</summary>
+          <p className="mt-2 break-all font-mono text-xs">{item.commercial_processing_error}</p>
+        </details>}
+        <details className="rounded-md border p-2">
+          <summary className="cursor-pointer font-medium">Результаты анализа и история</summary>
+          <div className="mt-3 space-y-3">
+            <p>Исходный сигнал: {item.diagnostic.source.rawSignalAvailable?"найден":"не найден"}; сохранённый базовый анализ: {item.diagnostic.source.basicAnalysisAvailable?"есть":"нет"}.</p>
+            <p>Кандидатов типовой активности: {item.diagnostic.candidateCount}. Сохранённых фактов в выборке: {item.diagnostic.recordedFactCountWithinSample}.</p>
+            {item.diagnostic.extractedMeasurements.length>0?<div className="space-y-1">
+              <h3 className="font-semibold">Извлечённые значения</h3>
+              {item.diagnostic.extractedMeasurements.map((m,i)=><p key={i} className="break-words">
+                {m.parameterCode??"Параметр не указан"}: {m.valueNumeric??m.valueText??"значение отсутствует"} {m.unit??""}
+                {m.fragment?` — «${m.fragment}»`:""}
+              </p>)}
+            </div>:<p className="opacity-70">Извлечённые значения в сохранённом анализе отсутствуют.</p>}
+            {item.diagnostic.recordedFacts.length>0?<div className="space-y-1">
+              <h3 className="font-semibold">Фактически записанные листовые ОН и параметры</h3>
+              {item.diagnostic.recordedFacts.map((fact,i)=><p key={i} className="break-all text-xs">
+                ОН: {fact.valueObjectId??"не определён"}; параметр: {fact.parameterDefinitionId??"не определён"}; значение: {fact.valueNumeric??fact.valueText??"—"} {fact.unit}; статус: {fact.status}
+              </p>)}
+            </div>:<p className="opacity-70">Подтверждённые листовые назначения в фактах отсутствуют. Кандидаты не считаются фактами.</p>}
+            {item.diagnostic.factsQueryLimitReached&&<p role="note">Выборка фактов достигла ограничения 1000 строк; здесь показана диагностическая выдержка, не полная статистика.</p>}
+            <h3 className="font-semibold">Предыдущие попытки ({item.diagnostic.history.length})</h3>
+            {item.diagnostic.history.length>0?<ol className="list-decimal pl-5 space-y-1">
+              {item.diagnostic.history.map((entry,i)=><li key={i}>
+                {entry.at?new Date(entry.at).toLocaleString("ru-RU"):"Дата не сохранена"} — {entry.status??"прежний статус не сохранён"}; {entry.reason??"прежняя причина не сохранена"}
+              </li>)}
+            </ol>:<p className="opacity-70">История предыдущих попыток отсутствует.</p>}
+            <p className="text-xs opacity-65">{item.diagnostic.historyNote}</p>
+          </div>
+        </details>
+      </section>
       <p className="text-xs opacity-60 break-all">Событие: {item.id} | Шаблон: {item.activity_template_id??"не найден"}</p>
       <div className="flex flex-wrap gap-2">
         <button className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"

@@ -862,7 +862,7 @@ export async function processPublicFeedMessageV1(input: {
 // Replays the existing event, preserving raw publication and fact history.
 export async function retryCommercialFeedActivityV1(activityEventId: string) {
   const { data: event, error } = await supabase.from("activity_events")
-    .select("id,user_id,performed_by_actor_id,acting_as_actor_id,source_message_object_id,commercial_processing_status,metadata_json")
+    .select("id,user_id,performed_by_actor_id,acting_as_actor_id,source_message_object_id,commercial_processing_status,commercial_processing_error,activity_template_id,metadata_json")
     .eq("id", activityEventId)
     .eq("activity_context_code", "commercial")
     .maybeSingle();
@@ -902,7 +902,12 @@ export async function retryCommercialFeedActivityV1(activityEventId: string) {
     .update({ normalized_preview_json: {
       ...preview,
       commercialRetryHistoryV1: [ ...previous, {
-        at: new Date().toISOString(), previous: oldAnalysis ?? null,
+        at: new Date().toISOString(),
+        previousStatus: event.commercial_processing_status,
+        previousReason: event.commercial_processing_error ?? null,
+        previousTemplateId: event.activity_template_id ?? null,
+        trigger: "admin_retry",
+        previous: oldAnalysis ?? null,
       } ],
     } })
     .eq("id", rawSignalId).eq("user_id", event.user_id);
