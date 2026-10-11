@@ -1,5 +1,6 @@
 import "server-only";
 import { runCommercialAutoFactPilotV1 } from "@/lib/activity/commercialAutoFactPilotV1.server";
+import { commercialAutoFactsEnabledV1 } from "@/lib/activity/commercialAutoFactControlV1.server";
 
 import { supabase } from "../../../lib/supabase";
 import {
@@ -753,9 +754,9 @@ export async function analyzeCommercialFeedActivityV1(
       activityTemplateId: candidate.templateId,
     });
 
-    // Opt-in and fail-closed: preserve STEP1 behavior unless SQL is
-    // installed and the production feature flag is explicitly enabled.
-    if (process.env.ARCTOR_COMMERCIAL_AUTO_FACTS_V1 === "enabled") {
+    // Database setting is fail-closed; a second check and transaction lock
+    // at the SQL writer prevent writes after an administrator disables it.
+    if (await commercialAutoFactsEnabledV1()) {
       const automatic = await runCommercialAutoFactPilotV1({
         activityEventId: receipt.activityEventId,
         templateId: candidate.templateId,

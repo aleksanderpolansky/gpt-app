@@ -1,5 +1,6 @@
 import "server-only";
 import { supabase } from "../../../lib/supabase";
+import { commercialAutoFactsEnabledV1 } from "@/lib/activity/commercialAutoFactControlV1.server";
 
 export const ARCTOR_COMMERCIAL_AUTO_FACT_PILOT_V1 = "ARCTOR_COMMERCIAL_AUTO_FACT_PILOT_V1" as const;
 const TEMPLATE_ID = "9a30b134-8afd-4657-9665-a7d58c4029e4";
@@ -111,7 +112,7 @@ export async function runCommercialAutoFactPilotV1(input: {
   templateId: string;
   sourceText: string;
 }): Promise<Result> {
-  if (process.env.ARCTOR_COMMERCIAL_AUTO_FACTS_V1 !== "enabled") {
+  if (!(await commercialAutoFactsEnabledV1())) {
     return { status: "needs_review", reason: "COMMERCIAL_AUTO_FACTS_FEATURE_DISABLED" };
   }
   // Never auto-route personal or other templates.
@@ -165,7 +166,7 @@ export async function runCommercialAutoFactPilotV1(input: {
       rawFragment: parsed.fragment, reportedSeller: parsed.seller,
       selectionRule: "exact_product_class_and_price_basis" },
   ];
-  const { data, error } = await supabase.rpc("arctor_write_commercial_auto_facts_v1", {
+  const { data, error } = await supabase.rpc("arctor_write_commercial_auto_facts_guarded_p1_v1", {
     p_activity_event_id: input.activityEventId,
     p_facts: facts,
   });
