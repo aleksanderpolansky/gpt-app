@@ -1,6 +1,7 @@
 import "server-only";
 import { supabase } from "../../../lib/supabase";
 import { inspectParameterizedLeafCandidatesP25, type CandidateLeafP25 } from "@/lib/activity/parameterizedLeafCandidatesP25.server";
+import { resolveTemplateParameterValueV1, type TemplatePreparedValueV1 } from "@/lib/activity/activityTemplateParameterDefaultsV1";
 
 /**
  * P2.5.1: read-only template-driven inspection of the existing basic analysis.
@@ -33,7 +34,11 @@ export type InspectedBinding = {
   intermediateValueObjectId: string;
   intermediateTitle: string | null;
   measurements: InspectedMeasurement[];
-  status: "explicit_candidate" | "unresolved";
+  status: "explicit_candidate" | "default_candidate" | "unresolved";
+  valueStatus: "explicit" | "default" | "missing" | "ambiguous" | "invalid";
+  preparedValue: TemplatePreparedValueV1 | null;
+  hasStoredDefault: boolean;
+  valueReason: string | null;
   issue: string | null;
   selectedLeafValueObjectId: null;
   descendantCount: number;
@@ -52,6 +57,7 @@ export type CommercialPreflight = {
   profileVersion: number;
   bindings: InspectedBinding[];
   factsPlanned: 0;
+  preparedValuesCount: number;
   readyForWrite: false;
   reason: string;
   /** Actual profile metadata keys, useful for checking defaults without fabricating them. */
@@ -134,20 +140,26 @@ export async function inspectCommercialFactRoutesP25(activityEventId: string): P
   }
   const [parameterResponse, intermediateResponse, profileParameterResponse] = await Promise.all([
     supabase.from("value_object_parameter_definitions")
-      .select("id,parameter_code,dimension_code,status,scope_code")
+      .select("id,parameter_code,dimension_code,value_type_code,canonical_unit_code,allowed_unit_codes,allow_negative,status,scope_code")
       .in("id", definitionsIds).eq("status", "active").eq("scope_code", "system"),
     supabase.from("value_objects")
       .select("id,title,status,ontology_node_role_code")
       .in("id", intermediateIds).eq("status", "active"),
     supabase.from("activity_template_profile_parameters_v2")
-      .select("parameter_definition_id").eq("profile_id", profile.id),
+      .select("parameter_definition_id,metadata_json").eq("profile_id", profile.id),
   ]);
   for (const response of [parameterResponse, intermediateResponse, profileParameterResponse]) {
     if (response.error) throw new Error(`P25_PROFILE_BINDING_READ_FAILED:${response.error.message}`);
   }
   const params = new Map((parameterResponse.data ?? []).map((r) => [r.id, r]));
   const roots = new Map((intermediateResponse.data ?? []).map((r) => [r.id, r]));
-  const permitted = new Set((profileParameterResponse.data ?? []).map((r) => r.parameter_definition_id));
+  const parameterProfiles = new Map<string, Record<string, unknown>>();
+  for (const row of profileParameterResponse.data ?? []) {
+    if (parameterProfiles.has(row.parameter_definition_id)) {
+      throw new Error("P25_DUPLICATE_PROFILE_PARAMETER");
+    }
+    parameterProfiles.set(row.parameter_definition_id, obj(row.metadata_json));
+  }
   const leafInspections = await inspectParameterizedLeafCandidatesP25({
     intermediateValueObjectIds: intermediateIds,
     sourceText: str(event.input_text) || str(event.title),
@@ -156,6 +168,11 @@ export async function inspectCommercialFactRoutesP25(activityEventId: string): P
     inspection.intermediateValueObjectId, inspection,
   ]));
   const seen = new Set<string>();
+  const repetitions = new Map<string, number>();
+  for (const b of rawBindings) {
+    const definitionId = str(obj(b).parameterDefinitionId);
+    repetitions.set(definitionId,(repetitions.get(definitionId) ?? 0) + 1);
+  }
   const bindings: InspectedBinding[] = rawBindings.map((entry: unknown) => {
     const b = obj(entry);
     const parameterDefinitionId = str(b.parameterDefinitionId);
@@ -165,28 +182,51 @@ export async function inspectCommercialFactRoutesP25(activityEventId: string): P
     seen.add(k);
     const parameter = params.get(parameterDefinitionId);
     const root = roots.get(intermediateValueObjectId);
-    if (!parameter || !permitted.has(parameterDefinitionId) || !root ||
+    if (!parameter || !parameterProfiles.has(parameterDefinitionId) || !root ||
         root.ontology_node_role_code !== "intermediate") {
       throw new Error("P25_PROFILE_BINDING_INVALID");
     }
     const inspectedLeaves = leavesByRoot.get(intermediateValueObjectId);
     if (!inspectedLeaves) throw new Error("P25_LEAF_INSPECTION_MISSING");
     const code = str(parameter.parameter_code).toLowerCase();
-    const dimension = str(parameter.dimension_code).toLowerCase();
-    // Match only known parameter/dimension identity; never pick a product, store,
-    // city or a default merely from the names used in this pilot.
-    const matches = rawMeasurements.filter((m) => {
-      const measured = m.parameterCode.toLowerCase();
-      return measured === code || (dimension !== "" && measured === dimension);
+    const definition = {
+      parameter_code: parameter.parameter_code,
+      dimension_code: parameter.dimension_code,
+      value_type_code: parameter.value_type_code,
+      canonical_unit_code: parameter.canonical_unit_code,
+      allowed_unit_codes: parameter.allowed_unit_codes,
+      allow_negative: parameter.allow_negative,
+    };
+    const resolved = resolveTemplateParameterValueV1({
+      definition,
+      profileParameterMetadata: parameterProfiles.get(parameterDefinitionId),
+      measurements: rawMeasurements,
     });
+    const matches = resolved.matchingMeasurements;
+    // A generic extracted count/value cannot be assigned to several different
+    // target branches without target-specific evidence. Defaults are different:
+    // their authored useWhenMissing rule explicitly applies per binding.
+    const requiresTargetDisambiguation = resolved.status === "explicit" &&
+      (repetitions.get(parameterDefinitionId) ?? 0) > 1;
+    const proposedValue = requiresTargetDisambiguation ? null : resolved.preparedValue;
+    const valueReason = requiresTargetDisambiguation
+      ? "P25_3_EXPLICIT_PARAMETER_SHARED_BY_MULTIPLE_TARGETS_NEEDS_BINDING"
+      : resolved.reason;
+
     return {
       parameterDefinitionId, parameterCode: code,
       intermediateValueObjectId, intermediateTitle: root.title,
       measurements: matches,
-      status: matches.length > 0 ? "explicit_candidate" : "unresolved",
-      issue: matches.length === 0
-        ? "Значение не сопоставлено с параметром; проверить действующие правила значений по умолчанию"
-        : "Для записи требуется доказанное соответствие листовому ОН этой ветви",
+      valueStatus: resolved.status,
+      preparedValue: proposedValue,
+      hasStoredDefault: resolved.hasStoredDefault,
+      valueReason,
+      status: proposedValue
+        ? resolved.status === "default" ? "default_candidate" : "explicit_candidate"
+        : "unresolved",
+      issue: proposedValue
+        ? "Значение подготовлено, но листовой ОН этой ветви ещё не подтверждён"
+        : "Значение не подготовлено: проверить действующий профиль, исходное сообщение и назначения параметра",
       selectedLeafValueObjectId: null,
       descendantCount: inspectedLeaves.descendantCount,
       leafCount: inspectedLeaves.leafCount,
@@ -200,9 +240,11 @@ export async function inspectCommercialFactRoutesP25(activityEventId: string): P
     sourceMessageObjectId: event.source_message_object_id,
     rawSignalId: signal.id, templateId, profileId: profile.id,
     profileVersion: profile.version_no, bindings, factsPlanned: 0,
+    preparedValuesCount: bindings.filter((binding) => binding.preparedValue !== null).length,
     readyForWrite: false,
-    reason: "P25_2_EXACT_ALIAS_LEAF_CANDIDATES_ONLY_NO_FACT_WRITES",
+    reason: "P25_3_STORED_DEFAULT_VALUES_RESOLVED_NO_LEAF_NO_FACT_WRITES",
     profileMetadataKeys: Object.keys(metadata).sort(),
-    profileHasDefaultRules: Array.isArray(metadata.parameterDefaults) && metadata.parameterDefaults.length > 0,
+    profileHasDefaultRules: [...parameterProfiles.values()].some((entry) =>
+      Object.keys(obj(entry.defaultLiteralValueV1)).length > 0),
   };
 }

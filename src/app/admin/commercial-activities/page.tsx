@@ -17,10 +17,14 @@ type Diagnostic = {
 };
 type P25Preflight = {
   contract: string; reason: string; readyForWrite: false; factsPlanned: 0;
-  profileVersion: number; profileHasDefaultRules: boolean; bindings: Array<{
+  profileVersion: number; profileHasDefaultRules: boolean; preparedValuesCount: number;
+  bindings: Array<{
     parameterCode: string; intermediateTitle: string | null;
     measurements: Array<{valueNumeric:number|null;valueText:string|null;unit:string;qualifier:string|null}>;
     issue:string|null; selectedLeafValueObjectId:null;
+    valueStatus:"explicit"|"default"|"missing"|"ambiguous"|"invalid";
+    preparedValue:{origin:"source_explicit"|"template_default";valueNumeric:number;unit:string;rawFragment:string|null;defaultContract:string|null}|null;
+    hasStoredDefault:boolean;valueReason:string|null;
     descendantCount:number; leafCount:number; scanComplete:boolean;
     leafEvidenceIssue:string|null;
     exactTextCandidates:Array<{id:string;title:string;aliasesMatched:string[];matchingMethod:string}>;
@@ -199,13 +203,19 @@ export default function CommercialActivitiesAdminPage() {
       {p25Inspect[item.id] && <section className="rounded-lg border p-3 space-y-2 text-sm" aria-label="P2.5 проверка профиля">
         <h3 className="font-semibold">P2.5 — маршруты и кандидаты листовых ОН (только чтение)</h3>
         <p>Версия профиля: {p25Inspect[item.id].profileVersion}. Привязок: {p25Inspect[item.id].bindings.length}.</p>
-        <p className="text-xs opacity-75">Значения по умолчанию в метаданных профиля: {p25Inspect[item.id].profileHasDefaultRules ? "присутствуют (не применяются на этом этапе)" : "не обнаружены"}.</p>
-        <p className="text-amber-700">Это ещё не блок «Будет записано»: листовые ОН не выбраны и факты не готовы к сохранению.</p>
+        <p className="text-xs opacity-75">Значения по умолчанию в метаданных параметров: {p25Inspect[item.id].profileHasDefaultRules ? "найдены и проверены" : "не найдены"}. Подготовлено значений: {p25Inspect[item.id].preparedValuesCount} из {p25Inspect[item.id].bindings.length}.</p>
+        <p className="text-amber-700">Предварительные значения — НЕ факты: листовые ОН не подтверждены, запись в базу недоступна.</p>
         {p25Inspect[item.id].bindings.map((binding,i)=><div key={i} className="rounded border p-2 space-y-1">
           <p className="font-medium">{binding.parameterCode} → {binding.intermediateTitle ?? "Промежуточный ОН"}</p>
           {binding.measurements.length ? binding.measurements.map((m,j)=><p key={j}>
             Извлечено: {m.valueNumeric ?? m.valueText ?? "—"} {m.unit}{m.qualifier ? ` (${m.qualifier})` : ""}
           </p>) : <p>Явное значение не сопоставлено.</p>}
+          {binding.preparedValue ? <p className="rounded border p-2 text-sm">
+            <strong>Подготовлено значение: {binding.preparedValue.valueNumeric} {binding.preparedValue.unit}</strong>
+            {binding.preparedValue.origin === "template_default"
+              ? " — правило типовой активности (при отсутствии значения в тексте)"
+              : " — извлечено из исходного сообщения"}
+          </p> : <p className="text-amber-700">Значение не подготовлено: {binding.valueReason ?? binding.valueStatus}</p>}
           <p className="opacity-70">{binding.issue}</p>
           <p className="text-xs opacity-75">Проверено потомков: {binding.descendantCount}; листовых ОН: {binding.leafCount}. {binding.scanComplete ? "Обход завершён." : "Обход неполный; автоматический выбор запрещён."}</p>
           {binding.exactTextCandidates.length > 0 ? <div className="rounded border p-2 space-y-1">
