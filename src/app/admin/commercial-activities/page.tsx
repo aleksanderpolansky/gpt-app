@@ -26,6 +26,9 @@ type P25Preflight = {
     preparedValue:{origin:"source_explicit"|"template_default";valueNumeric:number;unit:string;rawFragment:string|null;defaultContract:string|null}|null;
     hasStoredDefault:boolean;valueReason:string|null;
     descendantCount:number; leafCount:number; scanComplete:boolean;
+    intermediateNodesInspected:number; narrowedToIntermediateTitle:string|null;
+    narrowingMethod:"matched_intermediate"|"small_tree_fallback"|"unresolved";
+    narrowingReason:string;
     leafEvidenceIssue:string|null;
     exactTextCandidates:Array<{id:string;title:string;aliasesMatched:string[];matchingMethod:string}>;
   }>;
@@ -220,7 +223,15 @@ export default function CommercialActivitiesAdminPage() {
           <p className="text-xs opacity-75">Общий выбор листового ОН: {binding.selectedLeafValueObjectId
             ? `доказано совпадение внутри ветви; ОН ${binding.selectedLeafValueObjectId}`
             : `пока не выбран (${binding.targetResolutionReason})`}</p>
-          <p className="text-xs opacity-75">Проверено потомков: {binding.descendantCount}; листовых ОН: {binding.leafCount}. {binding.scanComplete ? "Обход завершён." : "Обход неполный; автоматический выбор запрещён."}</p>
+          <p className="text-xs opacity-75">Иерархический поиск: проверено промежуточных ОН: {binding.intermediateNodesInspected}.
+            {binding.narrowingMethod === "matched_intermediate"
+              ? ` По тексту найдена подветвь «${binding.narrowedToIntermediateTitle ?? "без названия"}». Листья проверялись только внутри неё.`
+              : binding.narrowingMethod === "small_tree_fallback"
+                ? " Небольшая ветвь: сохранён полный проверочный обход."
+                : " Подветвь не определена надёжно. Полный перебор листьев не выполнялся."}
+          </p>
+          <p className="text-xs opacity-75">Проверено потомков в выбранной области: {binding.descendantCount}; листовых ОН: {binding.leafCount}. {binding.scanComplete ? "Обход области завершён." : "Выбор не завершён; автоматическая запись запрещена."}</p>
+          <p className="text-xs opacity-60">Причина сужения: {binding.narrowingReason}</p>
           {binding.exactTextCandidates.length > 0 ? <div className="rounded border p-2 space-y-1">
             <p className="font-semibold">Кандидаты по буквальному названию или утверждённому псевдониму — НЕ факты:</p>
             {binding.exactTextCandidates.map((candidate) => <p key={candidate.id} className="text-xs break-words">

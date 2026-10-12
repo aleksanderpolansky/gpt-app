@@ -1,6 +1,7 @@
 import "server-only";
 import { supabase } from "../../../lib/supabase";
 import { resolveTargetLeafV1, type ObservationNodeV1, type TargetLeafResolutionV1 } from "@/lib/activity/resolveTargetLeafV1";
+import { narrowTargetIntermediateV1 } from "@/lib/activity/hierarchicalTargetNarrowingV1";
 
 /** Shared, read-only descendant/alias inspection for parameterized target bindings.
  * No inference by template name, retailer, geography, product or fact count.
@@ -10,6 +11,9 @@ const MAX_NODES_PER_BRANCH = 3000;
 const PAGE_SIZE = 500;
 const PARENT_BATCH_SIZE = 40;
 const ALIAS_BATCH_SIZE = 80;
+// A bounded fallback preserves direct exact-leaf searching in genuinely small trees.
+// This is a performance limit, never an assumption about which ON is correct.
+const SMALL_TREE_INTERMEDIATE_LIMIT = 16;
 type Obj = {id: string; title: string | null; parent_value_object_id: string | null;
   ontology_node_role_code: string | null};
 export type CandidateLeafP25 = { id: string; title: string; aliasesMatched: string[];
@@ -22,6 +26,11 @@ export type LeafBranchInspectionP25 = {
   scanComplete: boolean;
   issue: string | null;
   targetResolution: TargetLeafResolutionV1;
+  intermediateNodesInspected: number;
+  narrowedToIntermediateId: string | null;
+  narrowedToIntermediateTitle: string | null;
+  narrowingMethod: "matched_intermediate" | "small_tree_fallback" | "unresolved";
+  narrowingReason: string;
 };
 function normalize(value: string): string {
   return value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
@@ -68,14 +77,48 @@ async function collectBranch(rootId: string): Promise<{ nodes: Obj[]; complete: 
   if (frontier.length) complete = false;
   return { nodes, complete };
 }
-async function readApprovedAliases(leafIds: string[]): Promise<Map<string, string[]>> {
+/** Read ONLY active intermediate nodes first, without materializing 520+ store leaves. */
+async function collectIntermediateHierarchy(rootId: string): Promise<{ nodes: Obj[]; complete: boolean }> {
+  const visited = new Set<string>([rootId]);
+  const nodes: Obj[] = [];
+  let frontier = [rootId];
+  for (let depth = 0; frontier.length && depth < MAX_DEPTH; depth++) {
+    const next: string[] = [];
+    for (let start = 0; start < frontier.length; start += PARENT_BATCH_SIZE) {
+      const batch = frontier.slice(start, start + PARENT_BATCH_SIZE);
+      for (let page = 0; ; page++) {
+        const offset = page * PAGE_SIZE;
+        const { data, error } = await supabase.from("value_objects")
+          .select("id,title,parent_value_object_id,ontology_node_role_code")
+          .in("parent_value_object_id", batch)
+          .eq("ontology_node_role_code", "intermediate")
+          .eq("scope_code", "global").eq("origin_type_code", "system_model")
+          .eq("status", "active")
+          .order("id", { ascending: true })
+          .range(offset, offset + PAGE_SIZE - 1);
+        if (error) throw new Error(`P25_INTERMEDIATE_READ_FAILED:${error.message}`);
+        for (const node of data ?? []) {
+          if (visited.has(node.id)) continue;
+          visited.add(node.id);
+          nodes.push(node);
+          next.push(node.id);
+          if (nodes.length >= MAX_NODES_PER_BRANCH) return {nodes, complete: false};
+        }
+        if ((data ?? []).length < PAGE_SIZE) break;
+      }
+    }
+    frontier = next;
+  }
+  return { nodes, complete: frontier.length === 0 };
+}
+async function readApprovedAliases(ids: string[]): Promise<Map<string, string[]>> {
   const aliases = new Map<string, string[]>();
-  for (let start = 0; start < leafIds.length; start += ALIAS_BATCH_SIZE) {
-    const ids = leafIds.slice(start, start + ALIAS_BATCH_SIZE);
+  for (let start = 0; start < ids.length; start += ALIAS_BATCH_SIZE) {
+    const batch = ids.slice(start, start + ALIAS_BATCH_SIZE);
     const { data, error } = await supabase.from("concept_aliases")
       .select("concept_id,alias_text,status")
       .eq("concept_type", "value_object")
-      .in("concept_id", ids)
+      .in("concept_id", batch)
       .in("status", ["approved", "published"]);
     if (error) throw new Error(`P25_ALIAS_READ_FAILED:${error.message}`);
     for (const entry of data ?? []) {
@@ -89,46 +132,85 @@ async function readApprovedAliases(leafIds: string[]): Promise<Map<string, strin
   return aliases;
 }
 
-/** No static lists; only descendants of roots referenced by the active template. */
+/** Hierarchical, read-only branch narrowing; no brand, city or product literals. */
 export async function inspectParameterizedLeafCandidatesP25(input: {
   intermediateValueObjectIds: string[]; sourceText: string;
 }): Promise<LeafBranchInspectionP25[]> {
   const roots = [...new Set(input.intermediateValueObjectIds)];
   const result: LeafBranchInspectionP25[] = [];
   for (const rootId of roots) {
-    const { nodes, complete } = await collectBranch(rootId);
-    const leaves = nodes.filter((node) => node.ontology_node_role_code === "leaf");
-    // If the search was bounded, NEVER infer uniqueness from incomplete candidates.
-    const aliases = await readApprovedAliases(leaves.map((leaf) => leaf.id));
+    const hierarchy = await collectIntermediateHierarchy(rootId);
+    const intermediateNodesInspected = hierarchy.nodes.length;
+    const aliases = await readApprovedAliases(hierarchy.nodes.map((node) => node.id));
+    const narrowing = hierarchy.complete ? narrowTargetIntermediateV1({
+      rootId,
+      sourceText: input.sourceText,
+      nodes: [
+        { id:rootId, parentId:null, title:"", aliases:[] },
+        ...hierarchy.nodes.map((node) => ({
+          id:node.id, parentId:node.parent_value_object_id,
+          title:node.title ?? "", aliases:aliases.get(node.id) ?? [],
+        })),
+      ],
+    }) : null;
+    // No guessing when the intermediate hierarchy is incomplete or two
+    // unrelated intermediate paths match the same source publication.
+    const hasMatchedSubtree = narrowing?.status === "narrowed";
+    const allowSmallFallback = narrowing?.status === "no_match" &&
+      intermediateNodesInspected <= SMALL_TREE_INTERMEDIATE_LIMIT;
+    const narrowingMethod: LeafBranchInspectionP25["narrowingMethod"] =
+      hasMatchedSubtree ? "matched_intermediate" : allowSmallFallback ? "small_tree_fallback" : "unresolved";
+    const scopeId = hasMatchedSubtree ? narrowing.selectedIntermediateId! : rootId;
+    // In a large tree with no supported intermediate path, do NOT scan every
+    // store. Leave the target unresolved for semantic review.
+    const scan = hasMatchedSubtree || allowSmallFallback
+      ? await collectBranch(scopeId)
+      : {nodes: [] as Obj[], complete: false};
+    const leaves = scan.nodes.filter((node) => node.ontology_node_role_code === "leaf");
+    const leafAliases = await readApprovedAliases(leaves.map((node) => node.id));
+    const byId = new Map<string, Obj>();
+    for (const node of [...hierarchy.nodes, ...scan.nodes]) byId.set(node.id, node);
     const observationNodes: ObservationNodeV1[] = [
       {id:rootId,parentId:null,title:"",role:"intermediate",aliases:[]},
-      ...nodes.map((node): ObservationNodeV1 => ({
+      ...[...byId.values()].map((node): ObservationNodeV1 => ({
         id:node.id, parentId:node.parent_value_object_id,
-        title:node.title ?? "", role:node.ontology_node_role_code === "leaf" ? "leaf" : "intermediate",
-        aliases:aliases.get(node.id) ?? [],
+        title:node.title ?? "",
+        role:node.ontology_node_role_code === "leaf" ? "leaf" : "intermediate",
+        aliases:leafAliases.get(node.id) ?? aliases.get(node.id) ?? [],
       })),
     ];
-    const targetResolution = complete
+    const scanComplete = hierarchy.complete && scan.complete;
+    const targetResolution: TargetLeafResolutionV1 = scanComplete
       ? resolveTargetLeafV1({sourceText:input.sourceText,targetId:rootId,nodes:observationNodes})
-      : {contract:"ARCTOR_SHARED_TARGET_LEAF_V1" as const,status:"needs_review" as const,
-         valueObjectId:null,evidence:null,reason:"TARGET_BRANCH_SCAN_INCOMPLETE"};
+      : {
+        contract:"ARCTOR_SHARED_TARGET_LEAF_V1", status:"needs_review",
+        valueObjectId:null, evidence:null,
+        reason:narrowing?.status === "ambiguous" ? "TARGET_INTERMEDIATE_PATH_AMBIGUOUS" :
+          !hierarchy.complete ? "TARGET_INTERMEDIATE_SCAN_INCOMPLETE" :
+          "TARGET_NO_MATCHED_INTERMEDIATE_NEED_SEMANTIC_RESOLUTION",
+      };
     const matches: CandidateLeafP25[] = [];
     for (const leaf of leaves) {
-      const labels = [leaf.title ?? "", ...(aliases.get(leaf.id) ?? [])];
+      const labels = [leaf.title ?? "", ...(leafAliases.get(leaf.id) ?? [])];
       const matched = labels.filter((label) => containsExactPhrase(input.sourceText, label));
-      if (matched.length > 0) matches.push({
-        id: leaf.id, title: leaf.title ?? "",
-        aliasesMatched: [...new Set(matched)].slice(0, 8),
-        matchingMethod: "exact_title_or_approved_alias",
+      if (matched.length) matches.push({
+        id:leaf.id,title:leaf.title ?? "",
+        aliasesMatched:[...new Set(matched)].slice(0,8),
+        matchingMethod:"exact_title_or_approved_alias",
       });
     }
     result.push({
-      intermediateValueObjectId: rootId,
-      descendantCount: nodes.length, leafCount: leaves.length,
-      exactTextCandidates: matches.slice(0, 30),
-      scanComplete: complete,
-      targetResolution,
-      issue: !complete ? "P25_BRANCH_SCAN_INCOMPLETE_NO_AUTOMATIC_SELECTION"
+      intermediateValueObjectId:rootId,
+      descendantCount:scan.nodes.length,
+      leafCount:leaves.length,
+      exactTextCandidates:matches.slice(0,30),
+      scanComplete, targetResolution,
+      intermediateNodesInspected,
+      narrowedToIntermediateId:hasMatchedSubtree ? scopeId : null,
+      narrowedToIntermediateTitle:hasMatchedSubtree ? narrowing.selectedIntermediateTitle : null,
+      narrowingMethod,
+      narrowingReason:narrowing?.reason ?? "NARROWING_INTERMEDIATE_HIERARCHY_INCOMPLETE",
+      issue: !scanComplete ? "P25_HIERARCHICAL_SEARCH_UNRESOLVED_NO_FACT_WRITES"
         : matches.length === 0 ? "P25_NO_EXACT_LEAF_OR_APPROVED_ALIAS_IN_TEXT"
         : matches.length > 1 ? "P25_MULTIPLE_EXACT_LEAF_CANDIDATES_REVIEW_REQUIRED"
         : null,

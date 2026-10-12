@@ -47,6 +47,10 @@ export type InspectedBinding = {
   scanComplete: boolean;
   leafEvidenceIssue: string | null;
   targetResolutionReason: string;
+  intermediateNodesInspected: number;
+  narrowedToIntermediateTitle: string | null;
+  narrowingMethod: "matched_intermediate" | "small_tree_fallback" | "unresolved";
+  narrowingReason: string;
 };
 export type CommercialPreflight = {
   contract: typeof ARCTOR_P25_SHARED_PREFLIGHT_V1;
@@ -235,6 +239,10 @@ export async function inspectCommercialFactRoutesP25(activityEventId: string): P
       scanComplete: inspectedLeaves.scanComplete,
       leafEvidenceIssue: inspectedLeaves.issue,
       targetResolutionReason: inspectedLeaves.targetResolution.reason,
+      intermediateNodesInspected: inspectedLeaves.intermediateNodesInspected,
+      narrowedToIntermediateTitle: inspectedLeaves.narrowedToIntermediateTitle,
+      narrowingMethod: inspectedLeaves.narrowingMethod,
+      narrowingReason: inspectedLeaves.narrowingReason,
     };
   });
   return {
