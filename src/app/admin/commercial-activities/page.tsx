@@ -15,6 +15,14 @@ type Diagnostic = {
   history:Array<{at:string|null;status:string|null;reason:string|null;templateId:string|null;analysisAvailable:boolean}>;
   historyNote:string;
 };
+type P25Preflight = {
+  contract: string; reason: string; readyForWrite: false; factsPlanned: 0;
+  profileVersion: number; bindings: Array<{
+    parameterCode: string; intermediateTitle: string | null;
+    measurements: Array<{valueNumeric:number|null;valueText:string|null;unit:string;qualifier:string|null}>;
+    issue:string|null; selectedLeafValueObjectId:null;
+  }>;
+};
 type Row = {
   id:string; title:string|null; input_text:string|null; created_at:string;
   commercial_processing_status:string|null; commercial_processing_error:string|null;
@@ -24,6 +32,9 @@ type Row = {
 
 export default function CommercialActivitiesAdminPage() {
   const [rows,setRows] = useState<Row[]>([]);
+  const [p25Inspect,setP25Inspect] = useState<Record<string,P25Preflight>>({});
+  const [p25Errors,setP25Errors] = useState<Record<string,string>>({});
+  const [p25Busy,setP25Busy] = useState<string|null>(null);
   const [loading,setLoading] = useState(true);
   const [busy,setBusy] = useState<string|null>(null);
   const [message,setMessage] = useState("");
@@ -78,6 +89,18 @@ export default function CommercialActivitiesAdminPage() {
     const timer = setTimeout(() => { void reload(); void loadAutoFactSetting(); }, 0);
     return () => clearTimeout(timer);
   }, [reload,loadAutoFactSetting]);
+  async function inspectP25(id:string){
+    setP25Busy(id);
+    try {
+      const response = await fetch(`/api/admin/commercial-activities/preflight?activityEventId=${encodeURIComponent(id)}`, {cache:"no-store"});
+      const payload = await response.json();
+      if(!response.ok || !payload.ok) throw new Error(payload.error ?? "Проверка не удалась");
+      setP25Inspect((prev)=>({...prev,[id]:payload.preflight as P25Preflight}));
+      setP25Errors((prev)=>({...prev,[id]:""}));
+    } catch(error) {
+      setP25Errors((prev)=>({...prev,[id]:error instanceof Error ? error.message : String(error)}));
+    } finally { setP25Busy(null); }
+  }
   async function retry(id:string){
     setBusy(id);setMessage("");
     try {
@@ -169,11 +192,29 @@ export default function CommercialActivitiesAdminPage() {
           </div>
         </details>
       </section>
+      {p25Errors[item.id] && <p role="alert" className="text-red-700 text-sm">{p25Errors[item.id]}</p>}
+      {p25Inspect[item.id] && <section className="rounded-lg border p-3 space-y-2 text-sm" aria-label="P2.5 проверка профиля">
+        <h3 className="font-semibold">P2.5 — маршруты типовой активности (только чтение)</h3>
+        <p>Версия профиля: {p25Inspect[item.id].profileVersion}. Привязок: {p25Inspect[item.id].bindings.length}.</p>
+        <p className="text-amber-700">Это ещё не блок «Будет записано»: листовые ОН не выбраны и факты не готовы к сохранению.</p>
+        {p25Inspect[item.id].bindings.map((binding,i)=><div key={i} className="rounded border p-2 space-y-1">
+          <p className="font-medium">{binding.parameterCode} → {binding.intermediateTitle ?? "Промежуточный ОН"}</p>
+          {binding.measurements.length ? binding.measurements.map((m,j)=><p key={j}>
+            Извлечено: {m.valueNumeric ?? m.valueText ?? "—"} {m.unit}{m.qualifier ? ` (${m.qualifier})` : ""}
+          </p>) : <p>Явное значение не сопоставлено.</p>}
+          <p className="opacity-70">{binding.issue}</p>
+        </div>)}
+        <p className="text-xs opacity-60">{p25Inspect[item.id].reason}</p>
+      </section>}
       <p className="text-xs opacity-60 break-all">Событие: {item.id} | Шаблон: {item.activity_template_id??"не найден"}</p>
       <div className="flex flex-wrap gap-2">
         <button className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
           disabled={busy!==null} onClick={()=>void retry(item.id)}>
           {busy===item.id?"Повторная обработка...":"Повторно обработать"}
+        </button>
+        <button className="rounded border px-4 py-2 disabled:opacity-50"
+          disabled={p25Busy!==null} onClick={()=>void inspectP25(item.id)}>
+          {p25Busy===item.id ? "Проверка профиля..." : "Проверить маршруты фактов (P2.5)"}
         </button>
         <Link href="/activity-templates?scope=system&locale=ru" className="rounded border px-4 py-2">Типовые активности</Link>
         <Link href="/value-objects?scope=system&locale=ru" className="rounded border px-4 py-2">Объекты наблюдения</Link>
