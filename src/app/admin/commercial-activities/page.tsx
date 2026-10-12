@@ -51,6 +51,9 @@ export default function CommercialActivitiesAdminPage() {
   const [rows,setRows] = useState<Row[]>([]);
   const [p25Inspect,setP25Inspect] = useState<Record<string,P25Preflight>>({});
   const [p25Selections,setP25Selections] = useState<Record<string,Record<string,string>>>({});
+  const [p257ApprovedTech,setP257ApprovedTech] = useState<Record<string,Record<string,boolean>>>({});
+  const [p257Writing,setP257Writing] = useState<string|null>(null);
+  const [p257Result,setP257Result] = useState<Record<string,string>>({});
   const [p25Errors,setP25Errors] = useState<Record<string,string>>({});
   const [p25Busy,setP25Busy] = useState<string|null>(null);
   const [loading,setLoading] = useState(true);
@@ -129,6 +132,43 @@ export default function CommercialActivitiesAdminPage() {
     else delete next[rootId];
     setP25Selections(prev=>({...prev,[eventId]:next}));
     void inspectP25(eventId,next);
+  }
+  function preparedRowsFor(item: Row) {
+    const preview=p25Inspect[item.id];
+    if (!preview) return [];
+    return preview.bindings.map(binding => {
+      const tech=binding.technicalRepresentative;
+      const technicalAccepted=Boolean(p257ApprovedTech[item.id]?.[binding.intermediateValueObjectId]);
+      const targetId=binding.adminNominatedLeafId ??
+        (technicalAccepted && tech?.status === "proposed" ? tech.leafId : binding.selectedLeafValueObjectId);
+      const title=binding.manualLeafChoices.find(o => o.id===targetId)?.title ??
+        (tech?.leafId === targetId ? `Технический представитель магазина (${targetId})` : targetId ?? "Не выбран");
+      return {rootId:binding.intermediateValueObjectId, targetId, title,
+        prepared:binding.preparedValue, technicalAccepted:technicalAccepted && tech?.leafId===targetId};
+    });
+  }
+  async function confirmP257(item:Row){
+    const planned=preparedRowsFor(item);
+    if (!planned.length || planned.some(row=>!row.targetId || !row.prepared))return;
+    if (!window.confirm(`Подтвердить и записать ${planned.length} коммерческих фактов через общий исполнитель ARCTor?`))return;
+    setP257Writing(item.id);
+    setP257Result(prev=>({...prev,[item.id]:""}));
+    try {
+      const response=await fetch("/api/admin/commercial-activities/confirm",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({activityEventId:item.id,
+          manualLeafByRoot:p25Selections[item.id]??{},
+          acceptedTechnicalRootIds:Object.entries(p257ApprovedTech[item.id]??{})
+            .filter(([,approved])=>approved).map(([id])=>id),
+        }),
+      });
+      const body=await response.json();
+      if(!response.ok || !body.ok)throw new Error(body.error??"Запись отклонена");
+      const count=body.result?.factsPrepared;
+      setP257Result(prev=>({...prev,[item.id]:`Записано через общий исполнитель: ${count??"?"} фактов.`}));
+      await reload();
+    }catch(error){setP257Result(prev=>({...prev,[item.id]:error instanceof Error?error.message:String(error)}));}
+    finally{setP257Writing(null);}
   }
   async function retry(id:string){
     setBusy(id);setMessage("");
@@ -277,6 +317,32 @@ export default function CommercialActivitiesAdminPage() {
           </div> : <p className="text-xs opacity-75">Однозначных текстовых совпадений с листом или утверждённым псевдонимом нет.</p>}
           {binding.leafEvidenceIssue && <p className="text-xs text-amber-700">{binding.leafEvidenceIssue}</p>}
         </div>)}
+        <section aria-label="Будет записано" className="rounded-lg border p-3 space-y-2">
+          <h3 className="font-semibold">Будет записано — предварительный набор P2.5.7</h3>
+          {preparedRowsFor(item).map((row,i)=><div className="rounded border p-2" key={`${row.rootId}:${i}`}>
+            <p className="font-semibold">{row.prepared ? `${row.prepared.valueNumeric} ${row.prepared.unit}` : "Нет значения"}</p>
+            <p>Параметр: {p25Inspect[item.id].bindings[i]?.parameterCode ?? "—"}</p>
+            <p>Листовой ОН: {row.title}</p>
+            <p className="text-xs opacity-75">Источник значения: {row.prepared?.origin === "template_default" ? "настройка типовой активности" : "текст публичной публикации"}</p>
+            {row.technicalAccepted&&<p className="text-xs text-amber-700">Технический представитель; конкретный адрес не подтверждён.</p>}
+          </div>)}
+          {p25Inspect[item.id].bindings.map(binding=>binding.technicalRepresentative?.status === "proposed" &&
+             !binding.adminNominatedLeafId ? <label key={binding.intermediateValueObjectId} className="flex gap-2 items-start text-sm">
+              <input type="checkbox" checked={Boolean(p257ApprovedTech[item.id]?.[binding.intermediateValueObjectId])}
+                onChange={e=>setP257ApprovedTech(prev=>({...prev,[item.id]:{
+                  ...(prev[item.id]??{}),[binding.intermediateValueObjectId]:e.target.checked,
+                }}))}/>
+              <span>Подтверждаю использование технического представителя магазина. Это не подтверждение фактического адреса продажи.</span>
+            </label> : null)}
+          <p className="text-xs opacity-75">При подтверждении сервер заново проверит все значения, листовые ОН, типовую активность и происхождение. Повторная запись блокируется.</p>
+          <button type="button" className="rounded bg-green-700 text-white px-4 py-2 disabled:opacity-40"
+            disabled={p257Writing!==null || p25Busy!==null || !preparedRowsFor(item).length ||
+              preparedRowsFor(item).some(row=>!row.targetId || !row.prepared)}
+            onClick={()=>void confirmP257(item)}>
+            {p257Writing===item.id ? "Записываем..." : "Подтвердить и записать факты"}
+          </button>
+          {p257Result[item.id]&&<p role="status" className="text-sm">{p257Result[item.id]}</p>}
+        </section>
         <p className="text-xs opacity-60">{p25Inspect[item.id].reason}</p>
       </section>}
       <p className="text-xs opacity-60 break-all">Событие: {item.id} | Шаблон: {item.activity_template_id??"не найден"}</p>
