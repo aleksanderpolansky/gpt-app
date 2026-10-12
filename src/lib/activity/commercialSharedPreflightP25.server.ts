@@ -1,6 +1,7 @@
 import "server-only";
 import { supabase } from "../../../lib/supabase";
 import { inspectParameterizedLeafCandidatesP25, type CandidateLeafP25 } from "@/lib/activity/parameterizedLeafCandidatesP25.server";
+import { type RepresentativeResultV1 } from "@/lib/activity/technicalRepresentativeV1";
 import { resolveTemplateParameterValueV1, type TemplatePreparedValueV1 } from "@/lib/activity/activityTemplateParameterDefaultsV1";
 
 /**
@@ -51,6 +52,9 @@ export type InspectedBinding = {
   narrowedToIntermediateTitle: string | null;
   narrowingMethod: "matched_intermediate" | "small_tree_fallback" | "unresolved";
   narrowingReason: string;
+  manualLeafChoices: Array<{id:string;title:string}>;
+  adminNominatedLeafId: string | null;
+  technicalRepresentative: RepresentativeResultV1 | null;
 };
 export type CommercialPreflight = {
   contract: typeof ARCTOR_P25_SHARED_PREFLIGHT_V1;
@@ -70,7 +74,9 @@ export type CommercialPreflight = {
   profileHasDefaultRules: boolean;
 };
 
-export async function inspectCommercialFactRoutesP25(activityEventId: string): Promise<CommercialPreflight> {
+export async function inspectCommercialFactRoutesP25(
+  activityEventId: string, manualLeafByRoot: Record<string,string> = {},
+): Promise<CommercialPreflight> {
   if (!UUID_RE.test(activityEventId)) throw new Error("P25_INVALID_EVENT_ID");
   const { data: event, error: eventError } = await supabase.from("activity_events")
     .select("id,user_id,activity_context_code,source_message_object_id,activity_template_id,input_text,title")
@@ -168,6 +174,7 @@ export async function inspectCommercialFactRoutesP25(activityEventId: string): P
   const leafInspections = await inspectParameterizedLeafCandidatesP25({
     intermediateValueObjectIds: intermediateIds,
     sourceText: str(event.input_text) || str(event.title),
+    manualLeafByRoot,
   });
   const leavesByRoot = new Map(leafInspections.map((inspection) => [
     inspection.intermediateValueObjectId, inspection,
@@ -243,6 +250,9 @@ export async function inspectCommercialFactRoutesP25(activityEventId: string): P
       narrowedToIntermediateTitle: inspectedLeaves.narrowedToIntermediateTitle,
       narrowingMethod: inspectedLeaves.narrowingMethod,
       narrowingReason: inspectedLeaves.narrowingReason,
+      manualLeafChoices: inspectedLeaves.manualLeafChoices,
+      adminNominatedLeafId: inspectedLeaves.adminNominatedLeafId,
+      technicalRepresentative: inspectedLeaves.technicalRepresentative,
     };
   });
   return {

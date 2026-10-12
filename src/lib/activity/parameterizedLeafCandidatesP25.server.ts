@@ -2,6 +2,7 @@ import "server-only";
 import { supabase } from "../../../lib/supabase";
 import { resolveTargetLeafV1, type ObservationNodeV1, type TargetLeafResolutionV1 } from "@/lib/activity/resolveTargetLeafV1";
 import { narrowTargetIntermediateV1 } from "@/lib/activity/hierarchicalTargetNarrowingV1";
+import { proposeTechnicalRepresentativeV1, type RepresentativeResultV1 } from "@/lib/activity/technicalRepresentativeV1";
 
 /** Shared, read-only descendant/alias inspection for parameterized target bindings.
  * No inference by template name, retailer, geography, product or fact count.
@@ -31,6 +32,10 @@ export type LeafBranchInspectionP25 = {
   narrowedToIntermediateTitle: string | null;
   narrowingMethod: "matched_intermediate" | "small_tree_fallback" | "unresolved";
   narrowingReason: string;
+  /** Read-only catalog for explicit administrator semantic nomination. */
+  manualLeafChoices: Array<{id:string;title:string}>;
+  adminNominatedLeafId: string | null;
+  technicalRepresentative: RepresentativeResultV1 | null;
 };
 function normalize(value: string): string {
   return value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
@@ -135,11 +140,14 @@ async function readApprovedAliases(ids: string[]): Promise<Map<string, string[]>
 /** Hierarchical, read-only branch narrowing; no brand, city or product literals. */
 export async function inspectParameterizedLeafCandidatesP25(input: {
   intermediateValueObjectIds: string[]; sourceText: string;
+  manualLeafByRoot?: Record<string,string>;
 }): Promise<LeafBranchInspectionP25[]> {
   const roots = [...new Set(input.intermediateValueObjectIds)];
   const result: LeafBranchInspectionP25[] = [];
+  const hierarchyByRoot = new Map<string, Obj[]>();
   for (const rootId of roots) {
     const hierarchy = await collectIntermediateHierarchy(rootId);
+    hierarchyByRoot.set(rootId, hierarchy.nodes);
     const intermediateNodesInspected = hierarchy.nodes.length;
     const aliases = await readApprovedAliases(hierarchy.nodes.map((node) => node.id));
     const narrowing = hierarchy.complete ? narrowTargetIntermediateV1({
@@ -189,6 +197,13 @@ export async function inspectParameterizedLeafCandidatesP25(input: {
           !hierarchy.complete ? "TARGET_INTERMEDIATE_SCAN_INCOMPLETE" :
           "TARGET_NO_MATCHED_INTERMEDIATE_NEED_SEMANTIC_RESOLUTION",
       };
+    const manualLeafId = input.manualLeafByRoot?.[rootId] ?? null;
+    const availableChoices = scanComplete && leaves.length <= 20 ? leaves.map((node) => ({
+      id:node.id,title:node.title ?? "",
+    })) : [];
+    if (manualLeafId && !availableChoices.some((choice) => choice.id === manualLeafId)) {
+      throw new Error("P256_MANUAL_NOMINATION_OUTSIDE_AUTHORIZED_LEAF_SET");
+    }
     const matches: CandidateLeafP25[] = [];
     for (const leaf of leaves) {
       const labels = [leaf.title ?? "", ...(leafAliases.get(leaf.id) ?? [])];
@@ -210,11 +225,66 @@ export async function inspectParameterizedLeafCandidatesP25(input: {
       narrowedToIntermediateTitle:hasMatchedSubtree ? narrowing.selectedIntermediateTitle : null,
       narrowingMethod,
       narrowingReason:narrowing?.reason ?? "NARROWING_INTERMEDIATE_HIERARCHY_INCOMPLETE",
+      manualLeafChoices: availableChoices,
+      adminNominatedLeafId: manualLeafId,
+      technicalRepresentative: null,
       issue: !scanComplete ? "P25_HIERARCHICAL_SEARCH_UNRESOLVED_NO_FACT_WRITES"
         : matches.length === 0 ? "P25_NO_EXACT_LEAF_OR_APPROVED_ALIAS_IN_TEXT"
         : matches.length > 1 ? "P25_MULTIPLE_EXACT_LEAF_CANDIDATES_REVIEW_REQUIRED"
         : null,
     });
+  }
+  // If an administrator nominates a small-branch leaf (e.g. locality),
+  // look for a compatible locality subbranch under a verified network match.
+  // This is a proposal ONLY: it never replaces manual review or writes facts.
+  const verifiedChoices = result.flatMap((entry) => entry.adminNominatedLeafId
+    ? entry.manualLeafChoices.filter((choice) => choice.id === entry.adminNominatedLeafId)
+    : []);
+  for (const inspection of result) {
+    if (inspection.narrowingMethod !== "matched_intermediate" ||
+        !inspection.narrowedToIntermediateId || inspection.manualLeafChoices.length ||
+        !verifiedChoices.length) continue;
+    const hierarchy = hierarchyByRoot.get(inspection.intermediateValueObjectId) ?? [];
+    const idsByParent = new Map(hierarchy.map((node) => [node.id,node.parent_value_object_id]));
+    const inNarrowed = (id:string):boolean => {
+      let p:string|null=id;
+      const seen=new Set<string>();
+      while(p){
+        if(seen.has(p))return false;
+        seen.add(p);
+        if(p===inspection.narrowedToIntermediateId)return true;
+        p=idsByParent.get(p) ?? null;
+      }
+      return false;
+    };
+    const norm=(s:string)=>s.normalize("NFKD").replace(/[\u0300-\u036f]/g,"")
+      .toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu," ").trim();
+    const matchPairs = verifiedChoices.flatMap((choice) => {
+      const locality=norm(choice.title);
+      if(locality.length<3)return [];
+      return hierarchy.filter((node)=>node.id!==inspection.narrowedToIntermediateId &&
+        inNarrowed(node.id) && (` ${norm(node.title ?? "")} `).includes(` ${locality} `))
+        .map((node)=>({node,localityTitle:choice.title}));
+    });
+    if (matchPairs.length !== 1) continue;
+    const cityTitle=matchPairs[0].localityTitle;
+    const localityBranches=[matchPairs[0].node];
+    const subtree=await collectBranch(localityBranches[0].id);
+    const proposal=proposeTechnicalRepresentativeV1({
+      authorizedRootId: inspection.intermediateValueObjectId,
+      verifiedNetworkIntermediateId: inspection.narrowedToIntermediateId,
+      verifiedLocalityTitle: cityTitle,
+      intermediates: [
+        {id:inspection.intermediateValueObjectId,parentId:null,title:"",role:"intermediate"},
+        ...hierarchy.map((node)=>({id:node.id,parentId:node.parent_value_object_id,
+          title:node.title ?? "",role:"intermediate" as const})),
+      ],
+      localityDescendants:subtree.nodes.map((node)=>({id:node.id,parentId:node.parent_value_object_id,
+        title:node.title ?? "",role:node.ontology_node_role_code === "leaf" ? "leaf" as const : "intermediate" as const})),
+      descendantsComplete:subtree.complete,
+      specificAddressStated:false,
+    });
+    inspection.technicalRepresentative=proposal;
   }
   return result;
 }

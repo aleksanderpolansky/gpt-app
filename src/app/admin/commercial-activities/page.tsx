@@ -19,7 +19,7 @@ type P25Preflight = {
   contract: string; reason: string; readyForWrite: false; factsPlanned: 0;
   profileVersion: number; profileHasDefaultRules: boolean; preparedValuesCount: number;
   bindings: Array<{
-    parameterCode: string; intermediateTitle: string | null;
+    parameterCode: string; intermediateTitle: string | null; intermediateValueObjectId:string;
     measurements: Array<{valueNumeric:number|null;valueText:string|null;unit:string;qualifier:string|null}>;
     issue:string|null; selectedLeafValueObjectId:string|null; targetResolutionReason:string;
     valueStatus:"explicit"|"default"|"missing"|"ambiguous"|"invalid";
@@ -29,6 +29,13 @@ type P25Preflight = {
     intermediateNodesInspected:number; narrowedToIntermediateTitle:string|null;
     narrowingMethod:"matched_intermediate"|"small_tree_fallback"|"unresolved";
     narrowingReason:string;
+    manualLeafChoices:Array<{id:string;title:string}>;
+    adminNominatedLeafId:string|null;
+    technicalRepresentative: {
+      status:"proposed"|"needs_review";leafId:string|null;
+      localityBranchId:string|null;candidateCount:number;
+      technicalRepresentative:boolean;actualStoreAddressConfirmed:false;reason:string;
+    }|null;
     leafEvidenceIssue:string|null;
     exactTextCandidates:Array<{id:string;title:string;aliasesMatched:string[];matchingMethod:string}>;
   }>;
@@ -43,6 +50,7 @@ type Row = {
 export default function CommercialActivitiesAdminPage() {
   const [rows,setRows] = useState<Row[]>([]);
   const [p25Inspect,setP25Inspect] = useState<Record<string,P25Preflight>>({});
+  const [p25Selections,setP25Selections] = useState<Record<string,Record<string,string>>>({});
   const [p25Errors,setP25Errors] = useState<Record<string,string>>({});
   const [p25Busy,setP25Busy] = useState<string|null>(null);
   const [loading,setLoading] = useState(true);
@@ -99,10 +107,14 @@ export default function CommercialActivitiesAdminPage() {
     const timer = setTimeout(() => { void reload(); void loadAutoFactSetting(); }, 0);
     return () => clearTimeout(timer);
   }, [reload,loadAutoFactSetting]);
-  async function inspectP25(id:string){
+  async function inspectP25(id:string, selections?:Record<string,string>){
     setP25Busy(id);
     try {
-      const response = await fetch(`/api/admin/commercial-activities/preflight?activityEventId=${encodeURIComponent(id)}`, {cache:"no-store"});
+      const params=new URLSearchParams({activityEventId:id});
+      for(const [rootId,leafId] of Object.entries(selections ?? p25Selections[id] ?? {})) {
+        if(leafId)params.append("nomination",`${rootId}:${leafId}`);
+      }
+      const response = await fetch(`/api/admin/commercial-activities/preflight?${params.toString()}`, {cache:"no-store"});
       const payload = await response.json();
       if(!response.ok || !payload.ok) throw new Error(payload.error ?? "Проверка не удалась");
       setP25Inspect((prev)=>({...prev,[id]:payload.preflight as P25Preflight}));
@@ -110,6 +122,13 @@ export default function CommercialActivitiesAdminPage() {
     } catch(error) {
       setP25Errors((prev)=>({...prev,[id]:error instanceof Error ? error.message : String(error)}));
     } finally { setP25Busy(null); }
+  }
+  function chooseLeaf(eventId:string,rootId:string,leafId:string) {
+    const next={...(p25Selections[eventId]??{})};
+    if(leafId)next[rootId]=leafId;
+    else delete next[rootId];
+    setP25Selections(prev=>({...prev,[eventId]:next}));
+    void inspectP25(eventId,next);
   }
   async function retry(id:string){
     setBusy(id);setMessage("");
@@ -220,6 +239,24 @@ export default function CommercialActivitiesAdminPage() {
               : " — извлечено из исходного сообщения"}
           </p> : <p className="text-amber-700">Значение не подготовлено: {binding.valueReason ?? binding.valueStatus}</p>}
           <p className="opacity-70">{binding.issue}</p>
+          {binding.manualLeafChoices.length>0&&<div className="rounded border p-2 space-y-1">
+            <label className="block font-medium text-sm" htmlFor={`p256-${item.id}-${i}`}>
+              Административное смысловое подтверждение листа (предложение, не запись факта)
+            </label>
+            <select id={`p256-${item.id}-${i}`} className="w-full max-w-xl rounded border p-2 text-sm"
+              value={binding.adminNominatedLeafId??""} disabled={p25Busy!==null}
+              onChange={event=>chooseLeaf(item.id,binding.intermediateValueObjectId,event.target.value)}>
+              <option value="">Не выбран — оставить на проверке</option>
+              {binding.manualLeafChoices.map(option=><option key={option.id} value={option.id}>{option.title}</option>)}
+            </select>
+            {binding.adminNominatedLeafId&&<p className="text-xs opacity-75">Подтверждено администратором только для этого предварительного просмотра. В базу не сохраняется.</p>}
+          </div>}
+          {binding.technicalRepresentative?.status === "proposed" && <div className="rounded border border-amber-500 p-2 space-y-1 text-sm">
+            <p className="font-semibold">Предложен технический представитель магазина (НЕ подтверждён адрес)</p>
+            <p>Листовой ОН: <code className="break-all">{binding.technicalRepresentative.leafId}</code></p>
+            <p>Кандидатов внутри подтверждённой сети и города: {binding.technicalRepresentative.candidateCount}.</p>
+            <p className="text-amber-700">Предложение для администратора. Это не утверждение, что акция действует по адресу этого магазина; факты пока не записываются.</p>
+          </div>}
           <p className="text-xs opacity-75">Общий выбор листового ОН: {binding.selectedLeafValueObjectId
             ? `доказано совпадение внутри ветви; ОН ${binding.selectedLeafValueObjectId}`
             : `пока не выбран (${binding.targetResolutionReason})`}</p>
