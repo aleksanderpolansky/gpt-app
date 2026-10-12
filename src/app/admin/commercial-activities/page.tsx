@@ -17,10 +17,13 @@ type Diagnostic = {
 };
 type P25Preflight = {
   contract: string; reason: string; readyForWrite: false; factsPlanned: 0;
-  profileVersion: number; bindings: Array<{
+  profileVersion: number; profileHasDefaultRules: boolean; bindings: Array<{
     parameterCode: string; intermediateTitle: string | null;
     measurements: Array<{valueNumeric:number|null;valueText:string|null;unit:string;qualifier:string|null}>;
     issue:string|null; selectedLeafValueObjectId:null;
+    descendantCount:number; leafCount:number; scanComplete:boolean;
+    leafEvidenceIssue:string|null;
+    exactTextCandidates:Array<{id:string;title:string;aliasesMatched:string[];matchingMethod:string}>;
   }>;
 };
 type Row = {
@@ -194,8 +197,9 @@ export default function CommercialActivitiesAdminPage() {
       </section>
       {p25Errors[item.id] && <p role="alert" className="text-red-700 text-sm">{p25Errors[item.id]}</p>}
       {p25Inspect[item.id] && <section className="rounded-lg border p-3 space-y-2 text-sm" aria-label="P2.5 проверка профиля">
-        <h3 className="font-semibold">P2.5 — маршруты типовой активности (только чтение)</h3>
+        <h3 className="font-semibold">P2.5 — маршруты и кандидаты листовых ОН (только чтение)</h3>
         <p>Версия профиля: {p25Inspect[item.id].profileVersion}. Привязок: {p25Inspect[item.id].bindings.length}.</p>
+        <p className="text-xs opacity-75">Значения по умолчанию в метаданных профиля: {p25Inspect[item.id].profileHasDefaultRules ? "присутствуют (не применяются на этом этапе)" : "не обнаружены"}.</p>
         <p className="text-amber-700">Это ещё не блок «Будет записано»: листовые ОН не выбраны и факты не готовы к сохранению.</p>
         {p25Inspect[item.id].bindings.map((binding,i)=><div key={i} className="rounded border p-2 space-y-1">
           <p className="font-medium">{binding.parameterCode} → {binding.intermediateTitle ?? "Промежуточный ОН"}</p>
@@ -203,6 +207,14 @@ export default function CommercialActivitiesAdminPage() {
             Извлечено: {m.valueNumeric ?? m.valueText ?? "—"} {m.unit}{m.qualifier ? ` (${m.qualifier})` : ""}
           </p>) : <p>Явное значение не сопоставлено.</p>}
           <p className="opacity-70">{binding.issue}</p>
+          <p className="text-xs opacity-75">Проверено потомков: {binding.descendantCount}; листовых ОН: {binding.leafCount}. {binding.scanComplete ? "Обход завершён." : "Обход неполный; автоматический выбор запрещён."}</p>
+          {binding.exactTextCandidates.length > 0 ? <div className="rounded border p-2 space-y-1">
+            <p className="font-semibold">Кандидаты по буквальному названию или утверждённому псевдониму — НЕ факты:</p>
+            {binding.exactTextCandidates.map((candidate) => <p key={candidate.id} className="text-xs break-words">
+              {candidate.title} — {candidate.aliasesMatched.join(", ")}; ОН: {candidate.id}
+            </p>)}
+          </div> : <p className="text-xs opacity-75">Однозначных текстовых совпадений с листом или утверждённым псевдонимом нет.</p>}
+          {binding.leafEvidenceIssue && <p className="text-xs text-amber-700">{binding.leafEvidenceIssue}</p>}
         </div>)}
         <p className="text-xs opacity-60">{p25Inspect[item.id].reason}</p>
       </section>}

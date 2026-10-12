@@ -1,5 +1,6 @@
 import "server-only";
 import { supabase } from "../../../lib/supabase";
+import { inspectParameterizedLeafCandidatesP25, type CandidateLeafP25 } from "@/lib/activity/parameterizedLeafCandidatesP25.server";
 
 /**
  * P2.5.1: read-only template-driven inspection of the existing basic analysis.
@@ -35,6 +36,11 @@ export type InspectedBinding = {
   status: "explicit_candidate" | "unresolved";
   issue: string | null;
   selectedLeafValueObjectId: null;
+  descendantCount: number;
+  leafCount: number;
+  exactTextCandidates: CandidateLeafP25[];
+  scanComplete: boolean;
+  leafEvidenceIssue: string | null;
 };
 export type CommercialPreflight = {
   contract: typeof ARCTOR_P25_SHARED_PREFLIGHT_V1;
@@ -50,12 +56,13 @@ export type CommercialPreflight = {
   reason: string;
   /** Actual profile metadata keys, useful for checking defaults without fabricating them. */
   profileMetadataKeys: string[];
+  profileHasDefaultRules: boolean;
 };
 
 export async function inspectCommercialFactRoutesP25(activityEventId: string): Promise<CommercialPreflight> {
   if (!UUID_RE.test(activityEventId)) throw new Error("P25_INVALID_EVENT_ID");
   const { data: event, error: eventError } = await supabase.from("activity_events")
-    .select("id,user_id,activity_context_code,source_message_object_id,activity_template_id")
+    .select("id,user_id,activity_context_code,source_message_object_id,activity_template_id,input_text,title")
     .eq("id", activityEventId).maybeSingle();
   if (eventError) throw new Error(`P25_EVENT_READ_FAILED:${eventError.message}`);
   if (!event || event.activity_context_code !== "commercial" ||
@@ -141,6 +148,13 @@ export async function inspectCommercialFactRoutesP25(activityEventId: string): P
   const params = new Map((parameterResponse.data ?? []).map((r) => [r.id, r]));
   const roots = new Map((intermediateResponse.data ?? []).map((r) => [r.id, r]));
   const permitted = new Set((profileParameterResponse.data ?? []).map((r) => r.parameter_definition_id));
+  const leafInspections = await inspectParameterizedLeafCandidatesP25({
+    intermediateValueObjectIds: intermediateIds,
+    sourceText: str(event.input_text) || str(event.title),
+  });
+  const leavesByRoot = new Map(leafInspections.map((inspection) => [
+    inspection.intermediateValueObjectId, inspection,
+  ]));
   const seen = new Set<string>();
   const bindings: InspectedBinding[] = rawBindings.map((entry: unknown) => {
     const b = obj(entry);
@@ -155,6 +169,8 @@ export async function inspectCommercialFactRoutesP25(activityEventId: string): P
         root.ontology_node_role_code !== "intermediate") {
       throw new Error("P25_PROFILE_BINDING_INVALID");
     }
+    const inspectedLeaves = leavesByRoot.get(intermediateValueObjectId);
+    if (!inspectedLeaves) throw new Error("P25_LEAF_INSPECTION_MISSING");
     const code = str(parameter.parameter_code).toLowerCase();
     const dimension = str(parameter.dimension_code).toLowerCase();
     // Match only known parameter/dimension identity; never pick a product, store,
@@ -172,6 +188,11 @@ export async function inspectCommercialFactRoutesP25(activityEventId: string): P
         ? "Значение не сопоставлено с параметром; проверить действующие правила значений по умолчанию"
         : "Для записи требуется доказанное соответствие листовому ОН этой ветви",
       selectedLeafValueObjectId: null,
+      descendantCount: inspectedLeaves.descendantCount,
+      leafCount: inspectedLeaves.leafCount,
+      exactTextCandidates: inspectedLeaves.exactTextCandidates,
+      scanComplete: inspectedLeaves.scanComplete,
+      leafEvidenceIssue: inspectedLeaves.issue,
     };
   });
   return {
@@ -180,7 +201,8 @@ export async function inspectCommercialFactRoutesP25(activityEventId: string): P
     rawSignalId: signal.id, templateId, profileId: profile.id,
     profileVersion: profile.version_no, bindings, factsPlanned: 0,
     readyForWrite: false,
-    reason: "P25_1_LEAF_RESOLUTION_AND_SHARED_WRITER_NOT_YET_CONNECTED",
+    reason: "P25_2_EXACT_ALIAS_LEAF_CANDIDATES_ONLY_NO_FACT_WRITES",
     profileMetadataKeys: Object.keys(metadata).sort(),
+    profileHasDefaultRules: Array.isArray(metadata.parameterDefaults) && metadata.parameterDefaults.length > 0,
   };
 }
