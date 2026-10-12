@@ -1,5 +1,6 @@
 import "server-only";
 import { supabase } from "../../../lib/supabase";
+import { resolveTargetLeafV1, type ObservationNodeV1, type TargetLeafResolutionV1 } from "@/lib/activity/resolveTargetLeafV1";
 
 /** Shared, read-only descendant/alias inspection for parameterized target bindings.
  * No inference by template name, retailer, geography, product or fact count.
@@ -20,6 +21,7 @@ export type LeafBranchInspectionP25 = {
   exactTextCandidates: CandidateLeafP25[];
   scanComplete: boolean;
   issue: string | null;
+  targetResolution: TargetLeafResolutionV1;
 };
 function normalize(value: string): string {
   return value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
@@ -98,6 +100,18 @@ export async function inspectParameterizedLeafCandidatesP25(input: {
     const leaves = nodes.filter((node) => node.ontology_node_role_code === "leaf");
     // If the search was bounded, NEVER infer uniqueness from incomplete candidates.
     const aliases = await readApprovedAliases(leaves.map((leaf) => leaf.id));
+    const observationNodes: ObservationNodeV1[] = [
+      {id:rootId,parentId:null,title:"",role:"intermediate",aliases:[]},
+      ...nodes.map((node): ObservationNodeV1 => ({
+        id:node.id, parentId:node.parent_value_object_id,
+        title:node.title ?? "", role:node.ontology_node_role_code === "leaf" ? "leaf" : "intermediate",
+        aliases:aliases.get(node.id) ?? [],
+      })),
+    ];
+    const targetResolution = complete
+      ? resolveTargetLeafV1({sourceText:input.sourceText,targetId:rootId,nodes:observationNodes})
+      : {contract:"ARCTOR_SHARED_TARGET_LEAF_V1" as const,status:"needs_review" as const,
+         valueObjectId:null,evidence:null,reason:"TARGET_BRANCH_SCAN_INCOMPLETE"};
     const matches: CandidateLeafP25[] = [];
     for (const leaf of leaves) {
       const labels = [leaf.title ?? "", ...(aliases.get(leaf.id) ?? [])];
@@ -113,6 +127,7 @@ export async function inspectParameterizedLeafCandidatesP25(input: {
       descendantCount: nodes.length, leafCount: leaves.length,
       exactTextCandidates: matches.slice(0, 30),
       scanComplete: complete,
+      targetResolution,
       issue: !complete ? "P25_BRANCH_SCAN_INCOMPLETE_NO_AUTOMATIC_SELECTION"
         : matches.length === 0 ? "P25_NO_EXACT_LEAF_OR_APPROVED_ALIAS_IN_TEXT"
         : matches.length > 1 ? "P25_MULTIPLE_EXACT_LEAF_CANDIDATES_REVIEW_REQUIRED"

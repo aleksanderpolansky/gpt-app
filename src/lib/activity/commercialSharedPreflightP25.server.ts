@@ -40,12 +40,13 @@ export type InspectedBinding = {
   hasStoredDefault: boolean;
   valueReason: string | null;
   issue: string | null;
-  selectedLeafValueObjectId: null;
+  selectedLeafValueObjectId: string | null;
   descendantCount: number;
   leafCount: number;
   exactTextCandidates: CandidateLeafP25[];
   scanComplete: boolean;
   leafEvidenceIssue: string | null;
+  targetResolutionReason: string;
 };
 export type CommercialPreflight = {
   contract: typeof ARCTOR_P25_SHARED_PREFLIGHT_V1;
@@ -227,12 +228,13 @@ export async function inspectCommercialFactRoutesP25(activityEventId: string): P
       issue: proposedValue
         ? "Значение подготовлено, но листовой ОН этой ветви ещё не подтверждён"
         : "Значение не подготовлено: проверить действующий профиль, исходное сообщение и назначения параметра",
-      selectedLeafValueObjectId: null,
+      selectedLeafValueObjectId: inspectedLeaves.targetResolution.valueObjectId,
       descendantCount: inspectedLeaves.descendantCount,
       leafCount: inspectedLeaves.leafCount,
       exactTextCandidates: inspectedLeaves.exactTextCandidates,
       scanComplete: inspectedLeaves.scanComplete,
       leafEvidenceIssue: inspectedLeaves.issue,
+      targetResolutionReason: inspectedLeaves.targetResolution.reason,
     };
   });
   return {

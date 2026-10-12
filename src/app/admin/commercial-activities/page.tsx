@@ -21,7 +21,7 @@ type P25Preflight = {
   bindings: Array<{
     parameterCode: string; intermediateTitle: string | null;
     measurements: Array<{valueNumeric:number|null;valueText:string|null;unit:string;qualifier:string|null}>;
-    issue:string|null; selectedLeafValueObjectId:null;
+    issue:string|null; selectedLeafValueObjectId:string|null; targetResolutionReason:string;
     valueStatus:"explicit"|"default"|"missing"|"ambiguous"|"invalid";
     preparedValue:{origin:"source_explicit"|"template_default";valueNumeric:number;unit:string;rawFragment:string|null;defaultContract:string|null}|null;
     hasStoredDefault:boolean;valueReason:string|null;
@@ -217,6 +217,9 @@ export default function CommercialActivitiesAdminPage() {
               : " — извлечено из исходного сообщения"}
           </p> : <p className="text-amber-700">Значение не подготовлено: {binding.valueReason ?? binding.valueStatus}</p>}
           <p className="opacity-70">{binding.issue}</p>
+          <p className="text-xs opacity-75">Общий выбор листового ОН: {binding.selectedLeafValueObjectId
+            ? `доказано совпадение внутри ветви; ОН ${binding.selectedLeafValueObjectId}`
+            : `пока не выбран (${binding.targetResolutionReason})`}</p>
           <p className="text-xs opacity-75">Проверено потомков: {binding.descendantCount}; листовых ОН: {binding.leafCount}. {binding.scanComplete ? "Обход завершён." : "Обход неполный; автоматический выбор запрещён."}</p>
           {binding.exactTextCandidates.length > 0 ? <div className="rounded border p-2 space-y-1">
             <p className="font-semibold">Кандидаты по буквальному названию или утверждённому псевдониму — НЕ факты:</p>
