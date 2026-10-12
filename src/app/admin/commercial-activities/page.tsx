@@ -123,6 +123,16 @@ export default function CommercialActivitiesAdminPage() {
       setP25Inspect((prev)=>({...prev,[id]:payload.preflight as P25Preflight}));
       setP25Errors((prev)=>({...prev,[id]:""}));
     } catch(error) {
+      // A rejected nomination must not stay visually selected as if validated.
+      if (selections) {
+        const previouslyValidated: Record<string,string> = {};
+        for (const binding of p25Inspect[id]?.bindings ?? []) {
+          if (binding.adminNominatedLeafId) {
+            previouslyValidated[binding.intermediateValueObjectId] = binding.adminNominatedLeafId;
+          }
+        }
+        setP25Selections((prev)=>({...prev,[id]:previouslyValidated}));
+      }
       setP25Errors((prev)=>({...prev,[id]:error instanceof Error ? error.message : String(error)}));
     } finally { setP25Busy(null); }
   }
@@ -284,12 +294,18 @@ export default function CommercialActivitiesAdminPage() {
               Административное смысловое подтверждение листа (предложение, не запись факта)
             </label>
             <select id={`p256-${item.id}-${i}`} className="w-full max-w-xl rounded border p-2 text-sm"
-              value={binding.adminNominatedLeafId??""} disabled={p25Busy!==null}
+              value={p25Selections[item.id]?.[binding.intermediateValueObjectId] ?? binding.adminNominatedLeafId ?? ""}
+              disabled={p25Busy!==null}
               onChange={event=>chooseLeaf(item.id,binding.intermediateValueObjectId,event.target.value)}>
               <option value="">Не выбран — оставить на проверке</option>
               {binding.manualLeafChoices.map(option=><option key={option.id} value={option.id}>{option.title}</option>)}
             </select>
-            {binding.adminNominatedLeafId&&<p className="text-xs opacity-75">Подтверждено администратором только для этого предварительного просмотра. В базу не сохраняется.</p>}
+            {p25Busy===item.id &&
+              p25Selections[item.id]?.[binding.intermediateValueObjectId] !== undefined &&
+              p25Selections[item.id]?.[binding.intermediateValueObjectId] !== (binding.adminNominatedLeafId ?? "") &&
+              <p role="status" className="text-xs text-amber-700">Выбор отображён; сервер проверяет принадлежность листа ветви и пересчитывает предварительный набор...</p>}
+            {binding.adminNominatedLeafId&&p25Selections[item.id]?.[binding.intermediateValueObjectId] === undefined&&
+              <p className="text-xs opacity-75">Подтверждено администратором только для этого предварительного просмотра. В базу не сохраняется.</p>}
           </div>}
           {binding.technicalRepresentative?.status === "proposed" && <div className="rounded border border-amber-500 p-2 space-y-1 text-sm">
             <p className="font-semibold">Предложен технический представитель магазина (НЕ подтверждён адрес)</p>
