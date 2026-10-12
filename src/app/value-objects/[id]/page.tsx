@@ -20,6 +20,7 @@ import {
   type ValueObjectSummaryItem,
 } from "@/components/workspace/value-objects/value-object-profile-top-grid";
 import { ValueObjectRelationshipMap } from "@/components/workspace/value-objects/value-object-relationship-map";
+import { TechnicalRepresentativeManagerV1 } from "@/components/workspace/value-objects/technical-representative-manager-v1";
 import { ValueObjectFullCardPanel } from "@/components/workspace/value-objects/value-object-full-card-panel";
 import { ValueObjectDeleteAction } from "@/components/workspace/value-objects/value-object-delete-action";
 import { ValueObjectAnalyticsProfileManager } from "@/components/workspace/value-objects/value-object-analytics-profile-manager";
@@ -1863,6 +1864,10 @@ export default async function ValueObjectDetailPage({
           canCreateLeaf={isIntermediate}
           canManageRelations={canManageRelations}
         />
+
+        {isGlobalSystemObject && isIntermediate && canManageRelations ? (
+          <TechnicalRepresentativeManagerV1 parentId={valueObject.id} locale={locale} />
+        ) : null}
 
         {isGlobalSystemObject && isLeaf && canManageRelations ? (
           <ValueObjectMeasurementRollupManager

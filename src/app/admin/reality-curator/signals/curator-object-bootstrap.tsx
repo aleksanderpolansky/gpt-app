@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { ObservationObjectCombobox } from "@/components/observation-objects/observation-object-combobox";
+import { TechnicalRepresentativeManagerV1 } from "@/components/workspace/value-objects/technical-representative-manager-v1";
 import type { LocaleCode } from "@/i18n";
 
 type ScopeCode = "private" | "system";
@@ -494,6 +495,10 @@ export function CuratorObjectBootstrap({
             </div>
           ) : null}
 
+
+          {nodeRole === "leaf" && parentId ? (
+            <TechnicalRepresentativeManagerV1 parentId={parentId} locale={locale} compact />
+          ) : null}
 
           <>
             <div className={`grid gap-3 ${locale === "en" ? "" : "sm:grid-cols-2"}`}>

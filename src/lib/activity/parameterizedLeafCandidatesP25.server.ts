@@ -284,7 +284,36 @@ export async function inspectParameterizedLeafCandidatesP25(input: {
       descendantsComplete:subtree.complete,
       specificAddressStated:false,
     });
-    inspection.technicalRepresentative=proposal;
+    // Approved parent-level representative takes precedence over deterministic
+    // temporary selection. Verify direct parent membership before using it.
+    let selectedProposal = proposal;
+    if (proposal.status === "proposed" && proposal.localityBranchId) {
+      const { data: permanent, error: permanentError } = await supabase
+        .from("value_object_technical_representatives_v1")
+        .select("representative_leaf_id,enabled")
+        .eq("parent_value_object_id", proposal.localityBranchId)
+        .maybeSingle();
+      if (permanentError) throw new Error(
+        "P259_REPRESENTATIVE_READ_FAILED:" + permanentError.message
+      );
+      if (permanent?.enabled === true && permanent.representative_leaf_id) {
+        const leaf = subtree.nodes.find((candidate) =>
+          candidate.id === permanent.representative_leaf_id &&
+          candidate.parent_value_object_id === proposal.localityBranchId &&
+          candidate.ontology_node_role_code === "leaf"
+        );
+        if (leaf) {
+          selectedProposal = {
+            ...proposal,
+            leafId: leaf.id,
+            reason: "P259_PERMANENT_FIRST_DIRECT_LEAF_REPRESENTATIVE",
+            technicalRepresentative: true,
+            actualStoreAddressConfirmed: false,
+          };
+        }
+      }
+    }
+    inspection.technicalRepresentative=selectedProposal;
   }
   return result;
 }
