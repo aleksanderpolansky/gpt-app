@@ -1,7 +1,7 @@
-import Link from "next/link";
 import AiChannels from "./AiChannels";
 import SemanticFeedFilters from "./SemanticFeedFilters";
 import { Suspense } from "react";
+import { LoaderCircle } from "lucide-react";
 
 import { normalizeLocale, type LocaleCode } from "@/i18n";
 import type { SemanticFeedQueryF31 } from "@/lib/messages/semanticFeedSearchF31.server";
@@ -37,16 +37,6 @@ function firstSearchParam(value: string | string[] | undefined) {
 const CHANNELS_LABEL: Record<LocaleCode, string> = {
   en: "AI channels", pl: "Kanały AI", ru: "ИИ-каналы", uk: "ШІ-канали",
   de: "KI-Kanäle", es: "Canales de IA", cs: "AI kanály",
-};
-
-const SEMANTIC_BANNER: Record<LocaleCode, { label: string; reset: string }> = {
-  en: { label: "Semantic search: up to 20 matching ARCTor publications", reset: "Show all" },
-  pl: { label: "Wyszukiwanie semantyczne: do 20 najnowszych pasujących publikacji ARCTor", reset: "Pokaż wszystkie" },
-  ru: { label: "Смысловой поиск: до 20 последних подходящих публикаций ARCTor", reset: "Показать все" },
-  uk: { label: "Смисловий пошук: до 20 останніх відповідних публікацій ARCTor", reset: "Показати всі" },
-  de: { label: "Semantische Suche: bis zu 20 letzte passende ARCTor-Beiträge", reset: "Alle anzeigen" },
-  es: { label: "Búsqueda semántica: hasta 20 publicaciones coincidentes recientes de ARCTor", reset: "Mostrar todas" },
-  cs: { label: "Sémantické hledání: až 20 nejnovějších odpovídajících příspěvků ARCTor", reset: "Zobrazit vše" },
 };
 
 export default async function GlobalFeedPage({
@@ -94,16 +84,13 @@ export default async function GlobalFeedPage({
           locale={locale}
           initialObjectIds={firstSearchParam(params.on) ?? ""}
           hasLegacyMetric={Boolean(params.metric)}
+          initialMetric={{
+            min: firstSearchParam(params.min),
+            max: firstSearchParam(params.max),
+            unit: firstSearchParam(params.unit),
+          }}
         />
 
-        {semanticRequested ? (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#cbd5e1] bg-white px-4 py-3 text-[12px] text-[#334155]" role="status">
-            <span>{SEMANTIC_BANNER[locale].label}</span>
-            <Link className="font-semibold text-[#3b6ef8] hover:underline" href={locale === "en" ? "/feed" : `/feed?locale=${encodeURIComponent(locale)}`}>
-              {SEMANTIC_BANNER[locale].reset}
-            </Link>
-          </div>
-        ) : null}
 
         <details className="mb-3 rounded-2xl border border-[#e2e6f0] bg-white px-4 py-3 text-[#334155] group">
           <summary className="cursor-pointer select-none text-[12px] font-semibold focus-visible:outline-2 focus-visible:outline-[#3b6ef8]">
@@ -124,8 +111,8 @@ export default async function GlobalFeedPage({
 
         <Suspense
           fallback={
-            <div className="flex min-h-[180px] items-center justify-center rounded-2xl border border-[#e4e8f2] bg-white px-6 text-center text-[12px] text-[#9ca3b8]">
-              {copy.loading}
+            <div role="status" aria-live="polite" className="flex min-h-[180px] items-center justify-center gap-2 rounded-2xl border border-[#e4e8f2] bg-white px-6 text-center text-[12px] text-[#9ca3b8]">
+              <LoaderCircle className="h-4 w-4 animate-spin text-[#3b6ef8]" aria-hidden="true" /> {copy.loading}
             </div>
           }
         >

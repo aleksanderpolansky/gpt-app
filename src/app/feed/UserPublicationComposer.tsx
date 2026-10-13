@@ -11,6 +11,13 @@ import {
 } from "@/lib/media/browserPublicationImage";
 import { getFeedInteractionCopy } from "./feedInteractionCopy";
 
+const COMPOSER_PLACEHOLDER: Record<LocaleCode, string> = {
+  ru: "О чём хотите рассказать?", uk: "Про що хочете розповісти?",
+  en: "What would you like to share?", pl: "O czym chcesz opowiedzieć?",
+  de: "Worüber möchten Sie berichten?", es: "¿Qué te gustaría compartir?",
+  cs: "O čem se chcete podělit?",
+};
+
 function publicationImageErrorMessage(
   error: unknown,
   copy: ReturnType<typeof getFeedInteractionCopy>,
@@ -198,7 +205,7 @@ export default function UserPublicationComposer({
         onClick={() => setExpanded((current) => !current)}
         className="mb-1 flex w-full items-center justify-between gap-3 rounded-lg px-1 py-2 text-left text-[12px] font-medium text-[#5f677f] transition hover:bg-[#f6f8fd] focus-visible:outline-2 focus-visible:outline-[#3b6ef8] disabled:cursor-default"
       >
-        <span>{expanded ? copy.newPublication : copy.publicationPlaceholder}</span>
+        <span>{expanded ? copy.newPublication : COMPOSER_PLACEHOLDER[locale]}</span>
         <span className="text-[#3b6ef8]" aria-hidden="true">{expanded ? "−" : "+"}</span>
       </button>
       {expanded ? (
@@ -235,7 +242,7 @@ export default function UserPublicationComposer({
         onChange={(event) => setContentText(event.target.value)}
         maxLength={5000}
         rows={3}
-        placeholder={copy.publicationPlaceholder}
+        placeholder={COMPOSER_PLACEHOLDER[locale]}
         className="w-full resize-y rounded-xl border border-[#dfe3f1] bg-white px-3 py-2 text-[12px] leading-5 text-[#33384f] outline-none transition placeholder:text-[#a4a9bd] focus:border-[#9db3ff] focus:ring-2 focus:ring-[#e7edff]"
       />
 

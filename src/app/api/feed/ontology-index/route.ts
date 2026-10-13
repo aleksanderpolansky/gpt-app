@@ -25,12 +25,15 @@ type PublicCatalogEntry = {
   title: string;
   parentId: string | null;
   role: string;
+  facet?: "geography" | null;
 };
 
 export async function GET(request: Request) {
   const locale = normalizeLocale(new URL(request.url).searchParams.get("locale"));
   const entries: PublicCatalogEntry[] = [];
   let totalRead = 0;
+  const allParents = new Map<string, string | null>();
+  const geographicRoots = new Set<string>();
 
   try {
     for (let offset = 0; offset < MAX_ITEMS; offset += PAGE_SIZE) {
@@ -50,6 +53,10 @@ export async function GET(request: Request) {
       const rows = (data ?? []) as GlobalObservationObject[];
       totalRead += rows.length;
       for (const row of rows) {
+        allParents.set(row.id, row.parent_value_object_id);
+        if (row.canonical_key?.startsWith("system.geographic_objects.")) {
+          geographicRoots.add(row.id);
+        }
         const metadata = row.metadata_json;
         if (
           metadata?.system_hidden_from_observation_ui === true ||
@@ -82,8 +89,19 @@ export async function GET(request: Request) {
       );
     }
 
+    const isGeography = (id: string): boolean => {
+      const visited = new Set<string>();
+      let current: string | null | undefined = id;
+      for (let depth = 0; depth < 32 && current && !visited.has(current); depth += 1) {
+        if (geographicRoots.has(current)) return true;
+        visited.add(current);
+        current = allParents.get(current);
+      }
+      return false;
+    };
+
     return NextResponse.json(
-      { ok: true, entries },
+      { ok: true, entries: entries.map(entry => ({ ...entry, facet: isGeography(entry.id) ? "geography" : null })) },
       { headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=300" } },
     );
   } catch (error) {
