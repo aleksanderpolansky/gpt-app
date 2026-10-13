@@ -1,4 +1,8 @@
 import { readChannelFeed } from "@/lib/ai-channels/server";
+import {
+  searchSemanticFeedF31,
+  type SemanticFeedQueryF31,
+} from "@/lib/messages/semanticFeedSearchF31.server";
 import { channelWords } from "@/lib/ai-channels/copy";
 import { Suspense } from "react";
 import Link from "next/link";
@@ -209,25 +213,52 @@ export default async function GlobalFeedContent({
   mode = "feed",
   canPersonalize = false,
   emptyLabel,
+  semanticQuery,
 }: {
   locale: LocaleCode;
   hiddenMessageObjectIds?: string[];
   mode?: "feed" | "hidden";
   canPersonalize?: boolean;
   emptyLabel?: string;
+  semanticQuery?: SemanticFeedQueryF31;
 }) {
   const copy = getGlobalFeedCopy(locale);
+  const semanticResult = mode === "feed" && semanticQuery
+    ? await searchSemanticFeedF31(semanticQuery)
+    : null;
+
+  // Critical: never fall back to unfiltered posts on invalid/RPC failure.
+  if (semanticResult?.error) {
+    return (
+      <div role="alert" className="rounded-2xl border border-[#f3c7c7] bg-[#fff7f7] px-4 py-4 text-[12px] text-[#b42318]">
+        {semanticResult.error === "invalid"
+          ? "Invalid semantic filter. / Некорректные условия смыслового поиска."
+          : copy.loadError}
+      </div>
+    );
+  }
+
   const result = await getGlobalArctorFeed({
     locale,
-    limit: mode === "hidden" ? 50 : 30,
+    limit: semanticResult ? 20 : (mode === "hidden" ? 50 : 30),
     excludeMessageObjectIds:
       mode === "feed" ? hiddenMessageObjectIds : undefined,
     includeOnlyMessageObjectIds:
-      mode === "hidden" ? hiddenMessageObjectIds : undefined,
+      semanticResult?.messageIds ?? (mode === "hidden" ? hiddenMessageObjectIds : undefined),
   });
 
+  // F3.1A orders by COALESCE(activated_at,created_at), id; keep that order.
+  if (semanticResult) {
+    const position = new Map(semanticResult.messageIds.map((id, index) => [id, index]));
+    result.items.sort((a, b) =>
+      (position.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
+      (position.get(b.id) ?? Number.MAX_SAFE_INTEGER),
+    );
+  }
+
   let aiError = false;
-  const aiItems = mode === "feed" ? await readChannelFeed().catch(() => { aiError = true; return []; }) : [];
+  // AI-channel items are not yet F3.1A indexed; never mix unfiltered AI posts.
+  const aiItems = mode === "feed" && !semanticResult ? await readChannelFeed().catch(() => { aiError = true; return []; }) : [];
   const aiCopy = channelWords(locale);
   const aiGroups = new Map<string, typeof aiItems>();
   for (const item of aiItems) {
