@@ -77,6 +77,7 @@ export default function UserPublicationComposer({
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [optimizingImage, setOptimizingImage] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -174,6 +175,7 @@ export default function UserPublicationComposer({
 
       setContentText("");
       clearSelectedImage();
+      setExpanded(false);
       setNotice(copy.published);
       router.refresh();
     } catch (error) {
@@ -188,6 +190,19 @@ export default function UserPublicationComposer({
       onSubmit={publish}
       className="mb-3 rounded-2xl border border-[#e2e6f0] bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.02)] sm:px-5"
     >
+      <button
+        type="button"
+        aria-expanded={expanded}
+        aria-controls="arctor-feed-compose-fields"
+        disabled={busy || optimizingImage || Boolean(trimmedText) || Boolean(image)}
+        onClick={() => setExpanded((current) => !current)}
+        className="mb-1 flex w-full items-center justify-between gap-3 rounded-lg px-1 py-2 text-left text-[12px] font-medium text-[#5f677f] transition hover:bg-[#f6f8fd] focus-visible:outline-2 focus-visible:outline-[#3b6ef8] disabled:cursor-default"
+      >
+        <span>{expanded ? copy.newPublication : copy.publicationPlaceholder}</span>
+        <span className="text-[#3b6ef8]" aria-hidden="true">{expanded ? "−" : "+"}</span>
+      </button>
+      {expanded ? (
+        <div id="arctor-feed-compose-fields">
       <div className="mb-2 flex items-center justify-between gap-3">
         <div className="text-[11px] font-semibold text-[#4a4f6a]">
           {copy.newPublication}
@@ -288,6 +303,9 @@ export default function UserPublicationComposer({
           {busy ? copy.publishing : copy.publish}
         </button>
       </div>
+
+        </div>
+      ) : null}
 
       {errorMessage ? (
         <p className="mt-2 text-[11px] leading-4 text-[#b42318]">

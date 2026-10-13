@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AiChannels from "./AiChannels";
+import SemanticFeedFilters from "./SemanticFeedFilters";
 import { Suspense } from "react";
 
 import { normalizeLocale, type LocaleCode } from "@/i18n";
@@ -32,6 +33,11 @@ type FeedPageProps = {
 function firstSearchParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
+
+const CHANNELS_LABEL: Record<LocaleCode, string> = {
+  en: "AI channels", pl: "Kanały AI", ru: "ИИ-каналы", uk: "ШІ-канали",
+  de: "KI-Kanäle", es: "Canales de IA", cs: "AI kanály",
+};
 
 const SEMANTIC_BANNER: Record<LocaleCode, { label: string; reset: string }> = {
   en: { label: "Semantic search: up to 20 matching ARCTor publications", reset: "Show all" },
@@ -73,7 +79,7 @@ export default async function GlobalFeedPage({
 
   return (
     <div className="min-h-full px-3 py-4 sm:px-5 sm:py-5">
-      <section className="mx-auto w-full max-w-[860px]">
+      <section className="mx-auto w-full max-w-[760px]">
         <header className="mb-4 rounded-2xl border border-[#e2e6f0] bg-white px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.02)] sm:px-5">
           <h1 className="text-[18px] font-bold tracking-[-0.01em] text-[#1f2438]">
             {copy.title}
@@ -82,6 +88,13 @@ export default async function GlobalFeedPage({
             {copy.subtitle}
           </p>
         </header>
+
+        <SemanticFeedFilters
+          key={`${locale}:${firstSearchParam(params.on) ?? ""}:${firstSearchParam(params.metric) ?? ""}`}
+          locale={locale}
+          initialObjectIds={firstSearchParam(params.on) ?? ""}
+          hasLegacyMetric={Boolean(params.metric)}
+        />
 
         {semanticRequested ? (
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#cbd5e1] bg-white px-4 py-3 text-[12px] text-[#334155]" role="status">
@@ -92,7 +105,14 @@ export default async function GlobalFeedPage({
           </div>
         ) : null}
 
-        <AiChannels locale={locale} />
+        <details className="mb-3 rounded-2xl border border-[#e2e6f0] bg-white px-4 py-3 text-[#334155] group">
+          <summary className="cursor-pointer select-none text-[12px] font-semibold focus-visible:outline-2 focus-visible:outline-[#3b6ef8]">
+            {CHANNELS_LABEL[locale]}
+          </summary>
+          <div className="mt-3 border-t border-[#e9edf5] pt-3">
+            <AiChannels locale={locale} />
+          </div>
+        </details>
 
         {viewer && authorOptions.length > 0 ? (
           <UserPublicationComposer
