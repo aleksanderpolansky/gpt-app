@@ -20,6 +20,7 @@ type FeedSearchParams = {
   locale?: string | string[];
   lang?: string | string[];
   on?: string | string[];
+  money?: string | string[];
   metric?: string | string[];
   parameter?: string | string[];
   min?: string | string[];
@@ -50,13 +51,14 @@ export default async function GlobalFeedPage({
   const copy = getGlobalFeedCopy(locale);
   // F3.1B pilot: optional URL filter only. Ordinary /feed remains unchanged.
   const semanticRequested = [
-    params.on, params.metric, params.parameter,
+    params.on, params.money, params.metric, params.parameter,
     params.min, params.max, params.unit,
   ].some((value) => value !== undefined);
   const semanticQuery: SemanticFeedQueryF31 | undefined = semanticRequested
     ? {
         objectIds: firstSearchParam(params.on),
         metricObjectId: firstSearchParam(params.metric),
+        money: firstSearchParam(params.money),
         parameterId: firstSearchParam(params.parameter),
         min: firstSearchParam(params.min),
         max: firstSearchParam(params.max),
@@ -86,6 +88,7 @@ export default async function GlobalFeedPage({
           activeFilters={{
             on: firstSearchParam(params.on) ?? "",
             metric: firstSearchParam(params.metric) ?? "",
+            money: firstSearchParam(params.money) ?? "",
             parameter: firstSearchParam(params.parameter) ?? "",
             min: firstSearchParam(params.min) ?? "",
             max: firstSearchParam(params.max) ?? "",
@@ -94,10 +97,11 @@ export default async function GlobalFeedPage({
         />
 
         <SemanticFeedFilters
-          key={`${locale}:${firstSearchParam(params.on) ?? ""}:${firstSearchParam(params.metric) ?? ""}:${firstSearchParam(params.parameter) ?? ""}:${firstSearchParam(params.min) ?? ""}:${firstSearchParam(params.max) ?? ""}:${firstSearchParam(params.unit) ?? ""}`}
+          key={`${locale}:${firstSearchParam(params.money) ?? ""}:${firstSearchParam(params.on) ?? ""}:${firstSearchParam(params.metric) ?? ""}:${firstSearchParam(params.parameter) ?? ""}:${firstSearchParam(params.min) ?? ""}:${firstSearchParam(params.max) ?? ""}:${firstSearchParam(params.unit) ?? ""}`}
           locale={locale}
           initialObjectIds={firstSearchParam(params.on) ?? ""}
           hasLegacyMetric={Boolean(params.metric)}
+          initialMoney={firstSearchParam(params.money) === "1"}
           initialMetric={{
             metric: firstSearchParam(params.metric),
             parameter: firstSearchParam(params.parameter),

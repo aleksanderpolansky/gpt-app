@@ -9,6 +9,7 @@ import type { LocaleCode } from "@/i18n";
 export type SavedSearchFilters = {
   on: string;
   metric: string;
+  money?: string;
   parameter: string;
   min: string;
   max: string;
@@ -38,20 +39,20 @@ const TEXT: Record<LocaleCode, Copy> = {
   cs: { all:"Vše",save:"Uložit hledání",title:"Název karty",confirm:"Uložit",cancel:"Zrušit",rename:"Přejmenovat",remove:"Smazat kartu",loading:"Načítání karet…",error:"Karty nelze načíst ani uložit",signIn:"Pro uložení hledání se přihlaste",max:"Nejvýše 20 karet",saving:"Ukládání…" },
 };
 
-const FIELDS: Array<keyof SavedSearchFilters> = ["on", "metric", "parameter", "min", "max", "unit"];
+const FIELDS: Array<keyof SavedSearchFilters> = ["on", "metric", "parameter", "min", "max", "unit", "money"];
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function keyOf(value: SavedSearchFilters) {
   const ids = value.on.split(",").map(x => x.trim()).filter(x => UUID_RE.test(x));
   return JSON.stringify({
     on: [...new Set(ids)].sort().join(","),
-    metric: value.metric || "", parameter: value.parameter || "",
+    metric: value.metric || "", money: value.money || "", parameter: value.parameter || "",
     min: value.min || "", max: value.max || "", unit: (value.unit || "").toLowerCase(),
   });
 }
 
 function isFilterPresent(value: SavedSearchFilters) {
-  return Boolean(value.on || value.metric);
+  return Boolean(value.on || value.metric || value.money);
 }
 
 export default function SavedFeedSearchTabs({
@@ -97,7 +98,8 @@ export default function SavedFeedSearchTabs({
     for (const field of [...FIELDS, "lang"]) url.searchParams.delete(field);
     url.searchParams.set("locale", locale);
     if (filters) for (const field of FIELDS) {
-      if (filters[field]) url.searchParams.set(field, filters[field]);
+      const value = filters[field];
+      if (value) url.searchParams.set(field, value);
     }
     setError("");
     startTransition(() => router.push(`${url.pathname}${url.search}`));

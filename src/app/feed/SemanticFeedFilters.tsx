@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import type { LocaleCode } from "@/i18n";
+import MoneyRangeSliderF324 from "./MoneyRangeSliderF324";
 
 type OntologyEntry = {
   id: string;
@@ -20,29 +21,22 @@ type IndexedEntry = OntologyEntry & {
   searchText: string;
 };
 
-type PriceFacet = {
-  metricObjectId: string;
-  parameterId: string;
+type MoneyFacet = {
   unit: string;
   minValue: number;
   maxValue: number;
   publications: number;
 };
 
-function facetKey(facet: Pick<PriceFacet, "metricObjectId" | "parameterId" | "unit">) {
-  return `${facet.metricObjectId}|${facet.parameterId}|${facet.unit}`;
-}
-
-const PRICE_COPY: Record<LocaleCode, { kind: string; from: string; to: string; loading: string; empty: string; invalid: string }> = {
-  ru: { kind:"Вид цены",from:"От",to:"До",loading:"Проверяем доступные цены…",empty:"Для этой выборки нет подтверждённых ценовых фактов",invalid:"Проверьте диапазон цены" },
-  uk: { kind:"Вид ціни",from:"Від",to:"До",loading:"Перевіряємо доступні ціни…",empty:"Для цієї вибірки немає підтверджених цінових фактів",invalid:"Перевірте діапазон ціни" },
-  en: { kind:"Price type",from:"From",to:"To",loading:"Checking available prices…",empty:"No confirmed price facts for this selection",invalid:"Check the price range" },
-  pl: { kind:"Rodzaj ceny",from:"Od",to:"Do",loading:"Sprawdzamy dostępne ceny…",empty:"Brak potwierdzonych cen dla tego wyboru",invalid:"Sprawdź zakres ceny" },
-  de: { kind:"Preistyp",from:"Von",to:"Bis",loading:"Verfügbare Preise werden geprüft…",empty:"Keine bestätigten Preisdaten für diese Auswahl",invalid:"Preisbereich prüfen" },
-  es: { kind:"Tipo de precio",from:"Desde",to:"Hasta",loading:"Comprobando precios disponibles…",empty:"No hay precios confirmados para esta selección",invalid:"Comprueba el rango de precios" },
-  cs: { kind:"Typ ceny",from:"Od",to:"Do",loading:"Ověřujeme dostupné ceny…",empty:"Pro tento výběr nejsou potvrzené ceny",invalid:"Zkontrolujte rozsah ceny" },
+const MONEY_COPY: Record<LocaleCode, { from: string; to: string; loading: string; empty: string; invalid: string; currency: string; legacy: string }> = {
+  ru: { from:"От",to:"До",loading:"Проверяем денежные факты…",empty:"Денежных фактов в этой выборке нет",invalid:"Проверьте диапазон",currency:"Валюта",legacy:"Старый фильтр конкретного ОН оставлен без изменения" },
+  uk: { from:"Від",to:"До",loading:"Перевіряємо грошові факти…",empty:"Грошових фактів у цій вибірці немає",invalid:"Перевірте діапазон",currency:"Валюта",legacy:"Старий фільтр певного ОН залишено без змін" },
+  en: { from:"From",to:"To",loading:"Checking monetary facts…",empty:"No monetary facts in this selection",invalid:"Check the range",currency:"Currency",legacy:"Legacy object-specific numeric filter remains unchanged" },
+  pl: { from:"Od",to:"Do",loading:"Sprawdzamy fakty pieniężne…",empty:"Brak faktów pieniężnych w tym wyborze",invalid:"Sprawdź zakres",currency:"Waluta",legacy:"Stary filtr określonego obiektu pozostaje bez zmian" },
+  de: { from:"Von",to:"Bis",loading:"Geldwerte werden geprüft…",empty:"Keine Geldwerte in der Auswahl",invalid:"Bereich prüfen",currency:"Währung",legacy:"Alter objektspezifischer Filter bleibt unverändert" },
+  es: { from:"Desde",to:"Hasta",loading:"Comprobando valores monetarios…",empty:"No hay valores monetarios",invalid:"Comprueba el rango",currency:"Moneda",legacy:"El filtro anterior se conserva" },
+  cs: { from:"Od",to:"Do",loading:"Ověřujeme peněžní hodnoty…",empty:"Žádné peněžní hodnoty",invalid:"Zkontrolujte rozsah",currency:"Měna",legacy:"Původní filtr zůstává nezměněn" },
 };
-
 
 type Copy = {
   prompt: string;
@@ -74,13 +68,13 @@ const EXTRA_LABEL: Record<LocaleCode, {
   geo: string; money: string; route: string; size: string; geoHint: string; pending: string; results: string;
   resetAll: string; unavailableTool: string; geoPick: string; remove: string;
 }> = {
-  ru: {geo:"Место",money:"Цена",route:"Маршрут",size:"Размер",geoHint:"Выберите страну, регион или город",pending:"Ищем публикации…",results:"Результаты поиска",resetAll:"Сбросить всё",unavailableTool:"Будет доступно после подключения параметров",geoPick:"Выбрать территорию",remove:"Убрать"},
-  uk: {geo:"Місце",money:"Ціна",route:"Маршрут",size:"Розмір",geoHint:"Оберіть країну, регіон або місто",pending:"Шукаємо публікації…",results:"Результати пошуку",resetAll:"Скинути все",unavailableTool:"Буде доступно після підключення параметрів",geoPick:"Обрати територію",remove:"Прибрати"},
-  en: {geo:"Place",money:"Price",route:"Route",size:"Size",geoHint:"Choose a country, region or city",pending:"Finding publications…",results:"Search results",resetAll:"Clear all",unavailableTool:"Available after parameter filters are connected",geoPick:"Choose a place",remove:"Remove"},
-  pl: {geo:"Miejsce",money:"Cena",route:"Trasa",size:"Rozmiar",geoHint:"Wybierz kraj, region lub miasto",pending:"Szukamy publikacji…",results:"Wyniki wyszukiwania",resetAll:"Wyczyść wszystko",unavailableTool:"Dostępne po podłączeniu parametrów",geoPick:"Wybierz lokalizację",remove:"Usuń"},
-  de: {geo:"Ort",money:"Preis",route:"Route",size:"Größe",geoHint:"Land, Region oder Stadt wählen",pending:"Beiträge werden gesucht…",results:"Suchergebnisse",resetAll:"Alles löschen",unavailableTool:"Nach Anschluss der Parameter verfügbar",geoPick:"Ort wählen",remove:"Entfernen"},
-  es: {geo:"Lugar",money:"Precio",route:"Ruta",size:"Tamaño",geoHint:"Elige país, región o ciudad",pending:"Buscando publicaciones…",results:"Resultados de búsqueda",resetAll:"Borrar todo",unavailableTool:"Disponible al conectar los parámetros",geoPick:"Elegir lugar",remove:"Quitar"},
-  cs: {geo:"Místo",money:"Cena",route:"Trasa",size:"Velikost",geoHint:"Vyberte zemi, region nebo město",pending:"Hledání příspěvků…",results:"Výsledky hledání",resetAll:"Vymazat vše",unavailableTool:"Dostupné po připojení parametrů",geoPick:"Vybrat místo",remove:"Odebrat"},
+  ru: {geo:"Место",money:"Деньги",route:"Маршрут",size:"Размер",geoHint:"Выберите страну, регион или город",pending:"Ищем публикации…",results:"Результаты поиска",resetAll:"Сбросить всё",unavailableTool:"Будет доступно после подключения параметров",geoPick:"Выбрать территорию",remove:"Убрать"},
+  uk: {geo:"Місце",money:"Гроші",route:"Маршрут",size:"Розмір",geoHint:"Оберіть країну, регіон або місто",pending:"Шукаємо публікації…",results:"Результати пошуку",resetAll:"Скинути все",unavailableTool:"Буде доступно після підключення параметрів",geoPick:"Обрати територію",remove:"Прибрати"},
+  en: {geo:"Place",money:"Money",route:"Route",size:"Size",geoHint:"Choose a country, region or city",pending:"Finding publications…",results:"Search results",resetAll:"Clear all",unavailableTool:"Available after parameter filters are connected",geoPick:"Choose a place",remove:"Remove"},
+  pl: {geo:"Miejsce",money:"Pieniądze",route:"Trasa",size:"Rozmiar",geoHint:"Wybierz kraj, region lub miasto",pending:"Szukamy publikacji…",results:"Wyniki wyszukiwania",resetAll:"Wyczyść wszystko",unavailableTool:"Dostępne po podłączeniu parametrów",geoPick:"Wybierz lokalizację",remove:"Usuń"},
+  de: {geo:"Ort",money:"Geld",route:"Route",size:"Größe",geoHint:"Land, Region oder Stadt wählen",pending:"Beiträge werden gesucht…",results:"Suchergebnisse",resetAll:"Alles löschen",unavailableTool:"Nach Anschluss der Parameter verfügbar",geoPick:"Ort wählen",remove:"Entfernen"},
+  es: {geo:"Lugar",money:"Dinero",route:"Ruta",size:"Tamaño",geoHint:"Elige país, región o ciudad",pending:"Buscando publicaciones…",results:"Resultados de búsqueda",resetAll:"Borrar todo",unavailableTool:"Disponible al conectar los parámetros",geoPick:"Elegir lugar",remove:"Quitar"},
+  cs: {geo:"Místo",money:"Peníze",route:"Trasa",size:"Velikost",geoHint:"Vyberte zemi, region nebo město",pending:"Hledání příspěvků…",results:"Výsledky hledání",resetAll:"Vymazat vše",unavailableTool:"Dostupné po připojení parametrů",geoPick:"Vybrat místo",remove:"Odebrat"},
 };
 
 const MAX_SELECTION = 8;
@@ -98,30 +92,29 @@ export default function SemanticFeedFilters({
   locale,
   initialObjectIds,
   hasLegacyMetric,
+  initialMoney,
   initialMetric,
 }: {
   locale: LocaleCode;
   initialObjectIds: string;
   hasLegacyMetric: boolean;
+  initialMoney: boolean;
   initialMetric?: { metric?: string; parameter?: string; min?: string; max?: string; unit?: string };
 }) {
   const router = useRouter();
   const copy = LABEL[locale];
   const extras = EXTRA_LABEL[locale];
-  const priceCopy = PRICE_COPY[locale];
+  const moneyCopy = MONEY_COPY[locale];
   const inputRef = useRef<HTMLInputElement | null>(null);
   const firstSuggestionRef = useRef<HTMLButtonElement | null>(null);
   const [isPending, startTransition] = useTransition();
   const [geoStage, setGeoStage] = useState<0 | 1 | 2>(0);
-  const [priceStage, setPriceStage] = useState<0 | 1 | 2>(hasLegacyMetric ? 1 : 0);
-  const [priceStatus, setPriceStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
-  const [priceFacets, setPriceFacets] = useState<PriceFacet[]>([]);
-  const [pricePicked, setPricePicked] = useState(
-    initialMetric?.metric && initialMetric?.parameter && initialMetric?.unit
-      ? `${initialMetric.metric}|${initialMetric.parameter}|${initialMetric.unit.toLowerCase()}` : "",
-  );
-  const [priceMin, setPriceMin] = useState(initialMetric?.min || "0");
-  const [priceMax, setPriceMax] = useState(initialMetric?.max || "100");
+  const [moneyStage, setMoneyStage] = useState<0 | 1 | 2>(initialMoney ? 1 : 0);
+  const [moneyStatus, setMoneyStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [moneyFacets, setMoneyFacets] = useState<MoneyFacet[]>([]);
+  const [moneyUnit, setMoneyUnit] = useState(initialMoney ? initialMetric?.unit?.toLowerCase() || "" : "");
+  const [moneyMin, setMoneyMin] = useState(initialMoney ? initialMetric?.min || "0" : "0");
+  const [moneyMax, setMoneyMax] = useState(initialMoney ? initialMetric?.max || "100" : "100");
   const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>(() => extractIds(initialObjectIds));
@@ -134,7 +127,7 @@ export default function SemanticFeedFilters({
   // Resolve names of applied filters even when returning via a saved URL.
   // Load only when an active filter exists; regular feed stays lightweight.
   useEffect(() => {
-    if (!initialObjectIds && !hasLegacyMetric) return;
+    if (!initialObjectIds && !hasLegacyMetric && !initialMoney) return;
     const known = cachedCatalog.get(locale);
     if (known && Date.now() - known.at < CACHE_TTL_MS) return;
     let cancelled = false;
@@ -150,7 +143,7 @@ export default function SemanticFeedFilters({
       setCatalog(entries);
     }).catch(() => { /* Explicit on-demand retry remains available. */ });
     return () => { cancelled = true; };
-  }, [initialObjectIds, hasLegacyMetric, locale]);
+  }, [initialObjectIds, hasLegacyMetric, initialMoney, locale]);
 
   async function loadCatalog() {
     if (catalog || status === "loading") return;
@@ -216,38 +209,32 @@ export default function SemanticFeedFilters({
     if (!expanded) return;
     const controller = new AbortController();
     let live = true;
-    // Defer local loading state to avoid synchronous state writes in an effect.
-    void Promise.resolve().then(() => {
-      if (live) {setPriceStatus("loading");setPriceFacets([]);}
-    });
+    void Promise.resolve().then(() => { if (live) {setMoneyStatus("loading");setMoneyFacets([]);} });
     const params = new URLSearchParams();
     if (selectedKey) params.set("on", selectedKey);
     void fetch(`/api/feed/price-facets?${params.toString()}`, {
-      method: "GET", headers: { Accept: "application/json" }, signal: controller.signal,
+      method:"GET",headers:{Accept:"application/json"},signal:controller.signal,
     }).then(async response => {
-      const payload = await response.json() as {ok?: boolean; facets?: PriceFacet[]};
-      if (!response.ok || !payload.ok || !Array.isArray(payload.facets)) throw new Error("PRICE_UNAVAILABLE");
-      return payload.facets.filter(f =>
-        UUID_RE.test(f.metricObjectId) && UUID_RE.test(f.parameterId) &&
-        /^[a-z][a-z0-9_]{0,15}$/.test(f.unit) &&
-        Number.isFinite(f.minValue) && Number.isFinite(f.maxValue),
-      );
+      const payload = await response.json() as {ok?:boolean;facets?:MoneyFacet[]};
+      if (!response.ok || !payload.ok || !Array.isArray(payload.facets)) throw new Error("MONEY_UNAVAILABLE");
+      return payload.facets.filter(f => /^[a-z][a-z0-9_]{0,15}$/.test(f.unit) &&
+        Number.isFinite(f.minValue) && Number.isFinite(f.maxValue));
     }).then(facets => {
       if (!live) return;
-      setPriceFacets(facets);
-      setPricePicked(current => facets.some(f => facetKey(f) === current)
-        ? current : facets[0] ? facetKey(facets[0]) : "");
-      setPriceStatus("ready");
-    }).catch(() => { if (live) {setPriceStatus("error");setPriceFacets([]);} });
-    return () => {live = false;controller.abort();};
+      setMoneyFacets(facets);
+      setMoneyUnit(current => facets.some(f => f.unit === current) ? current : facets[0]?.unit || "");
+      setMoneyStatus("ready");
+    }).catch(() => {if (live) {setMoneyStatus("error");setMoneyFacets([]);}});
+    return () => {live=false;controller.abort();};
   }, [expanded, selectedKey]);
 
-  const activePriceFacet = priceFacets.find(f => facetKey(f) === pricePicked) ?? priceFacets[0];
-  const priceLimit = Math.max(100, Math.ceil((activePriceFacet?.maxValue ?? 100) * 1.5));
-  const priceNumbersValid = Number.isFinite(Number(priceMin)) && Number.isFinite(Number(priceMax)) &&
-    priceMin.trim() !== "" && priceMax.trim() !== "" &&
-    Number(priceMin) >= 0 && Number(priceMax) >= Number(priceMin) &&
-    Number(priceMax) <= 1000000000;
+  const activeMoneyFacet = moneyFacets.find(f=>f.unit===moneyUnit) ?? moneyFacets[0];
+  const moneyDomainMin = Math.min(0,Math.floor(activeMoneyFacet?.minValue ?? 0));
+  const moneyDomainMax = Math.max(100,Math.ceil((activeMoneyFacet?.maxValue ?? 100)*1.5));
+  const moneyNumbersValid = moneyMin.trim()!=="" && moneyMax.trim()!=="" &&
+    /^-?\d{1,10}(?:\.\d{1,6})?$/.test(moneyMin) &&
+    /^-?\d{1,10}(?:\.\d{1,6})?$/.test(moneyMax) &&
+    Number(moneyMin)<=Number(moneyMax);
 
   const geoAvailable = catalog === null || indexed.some(entry => entry.facet === "geography");
 
@@ -270,26 +257,35 @@ export default function SemanticFeedFilters({
     inputRef.current?.focus();
   }
 
-  function navigate(ids: string[], preserveMetric = false, resetAll = false) {
+  function navigate(ids: string[], preserveAppliedMoney = false, resetAll = false) {
     const url = new URL(window.location.href);
     url.pathname = "/feed";
     url.searchParams.set("locale", locale);
-    for (const key of ["lang", "metric", "parameter", "min", "max", "unit", "on"]) {
+    for (const key of ["lang", "money", "metric", "parameter", "min", "max", "unit", "on"]) {
       url.searchParams.delete(key);
     }
-    if (ids.length > 0) url.searchParams.set("on", ids.join(","));
-    if (!resetAll && preserveMetric && hasLegacyMetric && initialMetric?.metric && initialMetric.parameter) {
+    if (ids.length) url.searchParams.set("on", ids.join(","));
+    if (!resetAll && preserveAppliedMoney && initialMoney && initialMetric?.unit) {
+      url.searchParams.set("money", "1");
+      url.searchParams.set("unit", initialMetric.unit);
+      if (initialMetric.min !== undefined) url.searchParams.set("min", initialMetric.min);
+      if (initialMetric.max !== undefined) url.searchParams.set("max", initialMetric.max);
+    } else if (!resetAll && moneyStage === 2 && activeMoneyFacet && moneyNumbersValid) {
+      url.searchParams.set("money", "1");
+      url.searchParams.set("min", moneyMin);
+      url.searchParams.set("max", moneyMax);
+      url.searchParams.set("unit", activeMoneyFacet.unit);
+    } else if (!resetAll && initialMoney && initialMetric?.unit) {
+      url.searchParams.set("money", "1");
+      url.searchParams.set("unit", initialMetric.unit);
+      if (initialMetric.min !== undefined) url.searchParams.set("min", initialMetric.min);
+      if (initialMetric.max !== undefined) url.searchParams.set("max", initialMetric.max);
+    } else if (!resetAll && hasLegacyMetric && initialMetric?.metric && initialMetric.parameter) {
       url.searchParams.set("metric", initialMetric.metric);
       url.searchParams.set("parameter", initialMetric.parameter);
       if (initialMetric.min) url.searchParams.set("min", initialMetric.min);
       if (initialMetric.max) url.searchParams.set("max", initialMetric.max);
       if (initialMetric.unit) url.searchParams.set("unit", initialMetric.unit);
-    } else if (!resetAll && !preserveMetric && priceStage === 2 && activePriceFacet && priceNumbersValid) {
-      url.searchParams.set("metric", activePriceFacet.metricObjectId);
-      url.searchParams.set("parameter", activePriceFacet.parameterId);
-      url.searchParams.set("min", priceMin);
-      url.searchParams.set("max", priceMax);
-      url.searchParams.set("unit", activePriceFacet.unit);
     }
     startTransition(() => router.push(`${url.pathname}${url.search}`));
   }
@@ -367,13 +363,13 @@ export default function SemanticFeedFilters({
                 {geoStage > 0 ? <><span>{extras.geo}</span><ChevronDown className={`h-3 w-3 ${geoStage === 2 ? "rotate-180" : ""}`} aria-hidden="true" /></> : null}
               </button>
               <button type="button" aria-label={extras.money}
-                title={priceStatus === "ready" && priceFacets.length ? extras.money : priceCopy.empty}
-                disabled={priceStatus !== "ready" || priceFacets.length === 0}
-                onClick={() => setPriceStage(current => current === 0 ? 1 : current === 1 ? 2 : 1)}
-                aria-expanded={priceStage === 2}
-                className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[12px] transition focus-visible:outline-2 focus-visible:outline-[#3b6ef8] disabled:cursor-not-allowed disabled:opacity-35 ${priceStage ? "border-[#aebfe9] bg-[#f4f7ff] text-[#315fd8]" : "border-[#dfe3f1] text-[#47516b]"}`}>
-                {priceStatus === "loading" ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Wallet className="h-4 w-4" aria-hidden="true" />}
-                {priceStage > 0 ? <><span>{extras.money}</span><ChevronDown className={`h-3 w-3 ${priceStage === 2 ? "rotate-180" : ""}`} aria-hidden="true" /></> : null}
+                title={moneyStatus === "ready" && moneyFacets.length ? extras.money : moneyCopy.empty}
+                disabled={moneyStatus !== "ready" || moneyFacets.length === 0}
+                onClick={() => setMoneyStage(current => current === 0 ? 1 : current === 1 ? 2 : 1)}
+                aria-expanded={moneyStage === 2}
+                className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[12px] transition focus-visible:outline-2 focus-visible:outline-[#3b6ef8] disabled:cursor-not-allowed disabled:opacity-35 ${moneyStage ? "border-[#aebfe9] bg-[#f4f7ff] text-[#315fd8]" : "border-[#dfe3f1] text-[#47516b]"}`}>
+                {moneyStatus === "loading" ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Wallet className="h-4 w-4" aria-hidden="true" />}
+                {moneyStage > 0 ? <><span>{extras.money}</span><ChevronDown className={`h-3 w-3 ${moneyStage === 2 ? "rotate-180" : ""}`} aria-hidden="true" /></> : null}
               </button>
               {([
                 { label: extras.route, Icon: Route },
@@ -387,57 +383,45 @@ export default function SemanticFeedFilters({
               ))}
             </div>
             {geoStage === 2 ? <p className="text-[11px] text-[#667085]">{extras.geoHint}</p> : null}
-            {priceStage === 2 && activePriceFacet ? (
+            {moneyStage === 2 && activeMoneyFacet ? (
               <div className="space-y-3 rounded-xl border border-[#dfe3f1] bg-[#fafbfe] p-3">
-                <label className="block space-y-1 text-[12px] text-[#47516b]">
-                  <span>{priceCopy.kind}</span>
-                  <select value={facetKey(activePriceFacet)}
-                    onChange={event => {
-                      setPricePicked(event.target.value);
-                      setPriceMin("0");
-                      setPriceMax("100");
-                    }}
-                    className="w-full rounded-lg border border-[#dfe3f1] bg-white px-2 py-2 text-[12px]">
-                    {priceFacets.map(facet => {
-                      const title = indexed.find(entry => entry.id === facet.metricObjectId)?.title
-                        ?? facet.metricObjectId.slice(0, 8);
-                      return <option key={facetKey(facet)} value={facetKey(facet)}>{title} · {facet.unit.toUpperCase()}</option>;
-                    })}
-                  </select>
-                </label>
+                {moneyFacets.length > 1 ? (
+                  <label className="flex items-center gap-2 text-[12px] text-[#47516b]">
+                    <span>{moneyCopy.currency}</span>
+                    <select value={activeMoneyFacet.unit}
+                      onChange={event => {setMoneyUnit(event.target.value);setMoneyMin("0");setMoneyMax("100");}}
+                      className="rounded-lg border border-[#dfe3f1] bg-white px-2 py-2 text-[12px]">
+                      {moneyFacets.map(f => <option key={f.unit} value={f.unit}>{f.unit.toUpperCase()}</option>)}
+                    </select>
+                  </label>
+                ) : <p className="text-[12px] text-[#47516b]">{activeMoneyFacet.unit.toUpperCase()}</p>}
+                <MoneyRangeSliderF324 min={moneyDomainMin} max={moneyDomainMax}
+                  low={Number(moneyMin)||0} high={Number(moneyMax)||0}
+                  lowLabel={moneyCopy.from} highLabel={moneyCopy.to}
+                  onLow={n=>setMoneyMin(String(n))} onHigh={n=>setMoneyMax(String(n))} />
                 <div className="grid grid-cols-2 gap-3">
                   <label className="space-y-1 text-[12px] text-[#47516b]">
-                    <span>{priceCopy.from}, {activePriceFacet.unit.toUpperCase()}</span>
-                    <input type="number" min="0" max="1000000000" step="0.01" value={priceMin}
-                      onChange={event => setPriceMin(event.target.value)}
+                    <span>{moneyCopy.from}, {activeMoneyFacet.unit.toUpperCase()}</span>
+                    <input type="number" step="0.01" value={moneyMin} onChange={event=>setMoneyMin(event.target.value)}
                       className="w-full rounded-lg border border-[#dfe3f1] bg-white px-2 py-2 text-[13px]" />
                   </label>
                   <label className="space-y-1 text-[12px] text-[#47516b]">
-                    <span>{priceCopy.to}, {activePriceFacet.unit.toUpperCase()}</span>
-                    <input type="number" min="0" max="1000000000" step="0.01" value={priceMax}
-                      onChange={event => setPriceMax(event.target.value)}
+                    <span>{moneyCopy.to}, {activeMoneyFacet.unit.toUpperCase()}</span>
+                    <input type="number" step="0.01" value={moneyMax} onChange={event=>setMoneyMax(event.target.value)}
                       className="w-full rounded-lg border border-[#dfe3f1] bg-white px-2 py-2 text-[13px]" />
                   </label>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <input type="range" aria-label={priceCopy.from} min="0" max={priceLimit} step="1"
-                    value={Math.max(0,Math.min(priceLimit, Number(priceMin) || 0))}
-                    onChange={event => setPriceMin(String(Math.min(Number(event.target.value),Number(priceMax)||0)))} />
-                  <input type="range" aria-label={priceCopy.to} min="0" max={priceLimit} step="1"
-                    value={Math.max(0,Math.min(priceLimit, Number(priceMax) || 0))}
-                    onChange={event => setPriceMax(String(Math.max(Number(event.target.value),Number(priceMin)||0)))} />
-                </div>
-                {!priceNumbersValid ? <p className="text-[11px] text-[#b42318]">{priceCopy.invalid}</p> : null}
+                {!moneyNumbersValid ? <p className="text-[11px] text-[#b42318]">{moneyCopy.invalid}</p> : null}
               </div>
             ) : null}
-            {priceStatus === "error" ? <p className="text-[11px] text-[#9a6a14]">{priceCopy.empty}</p> : null}
+            {moneyStatus === "error" ? <p role="alert" className="text-[11px] text-[#9a6a14]">{moneyCopy.empty}</p> : null}
+            {hasLegacyMetric ? <p className="text-[11px] text-[#7c8099]">{moneyCopy.legacy}</p> : null}
             {selectedIds.length >= MAX_SELECTION ? <p className="text-[11px] text-[#7c8099]">{copy.limit}</p> : null}
-            {hasLegacyMetric && priceStatus === "ready" && priceFacets.length === 0 ? <p className="text-[11px] text-[#9a6a14]">{copy.metric}</p> : null}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <button type="button" disabled={isPending} onClick={() => navigate([], false, true)} className="text-[12px] text-[#667085] hover:underline disabled:opacity-50">{extras.resetAll}</button>
               <div className="flex items-center gap-3">
                 <button type="button" onClick={() => setExpanded(false)} className="text-[12px] text-[#667085] hover:underline">{copy.collapse}</button>
-                <button type="button" disabled={(!selectedIds.length && !(priceStage === 2 && activePriceFacet)) || isPending || (priceStage === 2 && !priceNumbersValid)} onClick={() => navigate(selectedIds)}
+                <button type="button" disabled={(!selectedIds.length && !(moneyStage === 2 && activeMoneyFacet)) || isPending || (moneyStage === 2 && !moneyNumbersValid)} onClick={() => navigate(selectedIds)}
                   className="inline-flex items-center gap-2 rounded-xl bg-[#3b6ef8] px-3.5 py-2 text-[12px] font-semibold text-white hover:bg-[#315fd8] disabled:cursor-not-allowed disabled:opacity-40">
                   {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Search className="h-4 w-4" aria-hidden="true" />}
                   {isPending ? extras.pending : copy.apply}
@@ -454,7 +438,7 @@ export default function SemanticFeedFilters({
         </div>
       ) : null}
 
-      {(appliedIds.length > 0 || hasLegacyMetric) ? (
+      {(appliedIds.length > 0 || hasLegacyMetric || initialMoney) ? (
         <div className="rounded-xl border border-[#e2e6f0] bg-white px-3 py-2" aria-label={extras.results}>
           <div className="mb-1.5 flex items-center justify-between gap-2">
             <span className="text-[12px] font-semibold text-[#334155]">{extras.results}</span>
@@ -465,13 +449,13 @@ export default function SemanticFeedFilters({
               const entry = indexed.find(item => item.id === id);
               return (
                 <button key={id} type="button" disabled={isPending} title={entry?.path} aria-label={`${extras.remove}: ${entry?.title ?? id}`}
-                  onClick={() => navigate(appliedIds.filter(current => current !== id), hasLegacyMetric)}
+                  onClick={() => navigate(appliedIds.filter(current => current !== id), initialMoney)}
                   className="inline-flex items-center gap-1 rounded-full border border-[#cbd7fa] bg-[#f6f8ff] px-2 py-1 text-[11px] text-[#3658b7] disabled:opacity-50">
                   <span>{entry?.title ?? `${id.slice(0, 8)}…`}</span> <X className="h-3 w-3" aria-hidden="true" />
                 </button>
               );
             })}
-            {hasLegacyMetric ? <span className="rounded-full border border-[#dfe3f1] bg-[#f8faff] px-2 py-1 text-[11px] text-[#47516b]">
+            {(hasLegacyMetric || initialMoney) ? <span className="rounded-full border border-[#dfe3f1] bg-[#f8faff] px-2 py-1 text-[11px] text-[#47516b]">
               {`${initialMetric?.min || "…"}–${initialMetric?.max || "…"} ${initialMetric?.unit?.toUpperCase() ?? ""}`}
             </span> : null}
           </div>

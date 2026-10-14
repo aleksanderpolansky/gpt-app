@@ -18,6 +18,7 @@ const UNIT_RE = /^[a-z][a-z0-9_]{0,15}$/;
 type Filters = {
   on: string;
   metric: string;
+  money?: string;
   parameter: string;
   min: string;
   max: string;
@@ -44,9 +45,13 @@ async function ownerId(): Promise<string | null> {
 function validateFilters(value: unknown): Filters | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const v = value as Record<string, unknown>;
-  const names = ["on", "metric", "parameter", "min", "max", "unit"];
+  const required = ["on", "metric", "parameter", "min", "max", "unit"];
+  const names = [...required, "money"];
   if (Object.keys(v).some(key => !names.includes(key))) return null;
-  if (names.some(key => typeof v[key] !== "string")) return null;
+  if (required.some(key => typeof v[key] !== "string")) return null;
+  if (v.money !== undefined && typeof v.money !== "string") return null;
+  const money = (v.money as string | undefined)?.trim() ?? "";
+  if (money !== "" && money !== "1") return null;
   const on = (v.on as string).trim();
   const metric = (v.metric as string).trim();
   const parameter = (v.parameter as string).trim();
@@ -55,7 +60,13 @@ function validateFilters(value: unknown): Filters | null {
   const unit = (v.unit as string).trim().toLowerCase();
   const ids = on ? on.split(",").map(id => id.trim()) : [];
   if (ids.length > 8 || new Set(ids).size !== ids.length || ids.some(id => !UUID_RE.test(id))) return null;
-  if (!ids.length && !metric) return null;
+  if (!ids.length && !metric && money !== "1") return null;
+  if (money === "1") {
+    if (metric || parameter || !UNIT_RE.test(unit) || (!min && !max)) return null;
+    if ((min && !NUM_RE.test(min)) || (max && !NUM_RE.test(max))) return null;
+    if (min && max && Number(min) > Number(max)) return null;
+    return { on: ids.join(","), money, metric: "", parameter: "", min, max, unit };
+  }
   if (metric) {
     if (!UUID_RE.test(metric) || !UUID_RE.test(parameter) || !UNIT_RE.test(unit) || (!min && !max)) return null;
     if ((min && !NUM_RE.test(min)) || (max && !NUM_RE.test(max))) return null;
