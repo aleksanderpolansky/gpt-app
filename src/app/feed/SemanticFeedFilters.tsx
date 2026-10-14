@@ -112,7 +112,9 @@ export default function SemanticFeedFilters({
   const [moneyStage, setMoneyStage] = useState<0 | 1 | 2>(initialMoney ? 1 : 0);
   const [moneyStatus, setMoneyStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [moneyFacets, setMoneyFacets] = useState<MoneyFacet[]>([]);
-  const [moneyUnit, setMoneyUnit] = useState(initialMoney ? initialMetric?.unit?.toLowerCase() || "" : "");
+  const [ratesPerEur, setRatesPerEur] = useState<Record<string, number>>({});
+  const [fxDates, setFxDates] = useState<{ ecb: string; nbu: string }>({ ecb: "", nbu: "" });
+  const [moneyUnit, setMoneyUnit] = useState(initialMoney ? initialMetric?.unit?.toLowerCase() || "eur" : "eur");
   const [moneyMin, setMoneyMin] = useState(initialMoney ? initialMetric?.min || "0" : "0");
   const [moneyMax, setMoneyMax] = useState(initialMoney ? initialMetric?.max || "100" : "100");
   const [expanded, setExpanded] = useState(false);
@@ -215,14 +217,23 @@ export default function SemanticFeedFilters({
     void fetch(`/api/feed/price-facets?${params.toString()}`, {
       method:"GET",headers:{Accept:"application/json"},signal:controller.signal,
     }).then(async response => {
-      const payload = await response.json() as {ok?:boolean;facets?:MoneyFacet[]};
+      const payload = await response.json() as {
+        ok?:boolean; facets?:MoneyFacet[]; ratesPerEur?:Record<string,number>;
+        fxSources?:Array<{code:string;referenceDate:string;source:string}>;
+      };
       if (!response.ok || !payload.ok || !Array.isArray(payload.facets)) throw new Error("MONEY_UNAVAILABLE");
-      return payload.facets.filter(f => /^[a-z][a-z0-9_]{0,15}$/.test(f.unit) &&
+      const facets = payload.facets.filter(f => /^(eur|pln|uah|usd|gbp|czk)$/.test(f.unit) &&
         Number.isFinite(f.minValue) && Number.isFinite(f.maxValue));
-    }).then(facets => {
+      return {facets, rates: payload.ratesPerEur ?? {}, sources:payload.fxSources ?? []};
+    }).then(({facets,rates,sources}) => {
       if (!live) return;
       setMoneyFacets(facets);
-      setMoneyUnit(current => facets.some(f => f.unit === current) ? current : facets[0]?.unit || "");
+      setRatesPerEur(rates);
+      setFxDates({
+        ecb:sources.find(s=>s.source==="ECB_EURO_REFERENCE_RATE")?.referenceDate ?? "",
+        nbu:sources.find(s=>s.source==="NBU_EUR_UAH_REFERENCE_RATE")?.referenceDate ?? "",
+      });
+      setMoneyUnit(current => facets.some(f => f.unit === current) ? current : facets[0]?.unit || "eur");
       setMoneyStatus("ready");
     }).catch(() => {if (live) {setMoneyStatus("error");setMoneyFacets([]);}});
     return () => {live=false;controller.abort();};
@@ -230,7 +241,8 @@ export default function SemanticFeedFilters({
 
   const activeMoneyFacet = moneyFacets.find(f=>f.unit===moneyUnit) ?? moneyFacets[0];
   const moneyDomainMin = Math.min(0,Math.floor(activeMoneyFacet?.minValue ?? 0));
-  const moneyDomainMax = Math.max(100,Math.ceil((activeMoneyFacet?.maxValue ?? 100)*1.5));
+  const moneyDomainMax = Math.max(100,Math.ceil((activeMoneyFacet?.maxValue ?? 100)*1.5),
+    Number.isFinite(Number(moneyMax)) ? Math.ceil(Number(moneyMax)) : 100);
   const moneyNumbersValid = moneyMin.trim()!=="" && moneyMax.trim()!=="" &&
     /^-?\d{1,10}(?:\.\d{1,6})?$/.test(moneyMin) &&
     /^-?\d{1,10}(?:\.\d{1,6})?$/.test(moneyMax) &&
@@ -389,7 +401,18 @@ export default function SemanticFeedFilters({
                   <label className="flex items-center gap-2 text-[12px] text-[#47516b]">
                     <span>{moneyCopy.currency}</span>
                     <select value={activeMoneyFacet.unit}
-                      onChange={event => {setMoneyUnit(event.target.value);setMoneyMin("0");setMoneyMax("100");}}
+                      onChange={event => {
+                        const newUnit = event.target.value;
+                        const oldRate = ratesPerEur[activeMoneyFacet.unit.toUpperCase()];
+                        const newRate = ratesPerEur[newUnit.toUpperCase()];
+                        if (!Number.isFinite(oldRate) || !Number.isFinite(newRate) || oldRate<=0 || newRate<=0) return;
+                        const ratio = newRate / oldRate;
+                        const convert = (value:string) => Number.isFinite(Number(value)) ?
+                          String(Number((Number(value)*ratio).toFixed(2))) : value;
+                        setMoneyMin(current => convert(current));
+                        setMoneyMax(current => convert(current));
+                        setMoneyUnit(newUnit);
+                      }}
                       className="rounded-lg border border-[#dfe3f1] bg-white px-2 py-2 text-[12px]">
                       {moneyFacets.map(f => <option key={f.unit} value={f.unit}>{f.unit.toUpperCase()}</option>)}
                     </select>
@@ -411,6 +434,11 @@ export default function SemanticFeedFilters({
                       className="w-full rounded-lg border border-[#dfe3f1] bg-white px-2 py-2 text-[13px]" />
                   </label>
                 </div>
+                {fxDates.ecb && fxDates.nbu ? (
+                  <p className="text-[10px] text-[#7c8099]">
+                    {`ECB: ${fxDates.ecb} · NBU: ${fxDates.nbu} · ${locale === "ru" ? "справочные курсы" : locale === "uk" ? "довідкові курси" : locale === "pl" ? "kursy referencyjne" : "reference rates"}`}
+                  </p>
+                ) : null}
                 {!moneyNumbersValid ? <p className="text-[11px] text-[#b42318]">{moneyCopy.invalid}</p> : null}
               </div>
             ) : null}

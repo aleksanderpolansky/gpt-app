@@ -1,5 +1,6 @@
 import "server-only";
 import { supabase } from "../../../lib/supabase";
+import { getFeedFxSnapshotF325, isFeedCurrencyF325 } from "../../../lib/exchange-rates/feed-six-currency-f325";
 
 // F3.1A remains fully supported for legacy URL filters.
 // F3.2.4 adds parameter-based money search only when money=1.
@@ -43,7 +44,7 @@ export async function searchSemanticFeedF31(input: SemanticFeedQueryF31): Promis
   const isMoney = money === "1";
   const hasLegacyMetric = metric.length > 0;
   if (isMoney ? (
-    Boolean(metric || parameter) || !UNIT_RE.test(unit) || (min === null && max === null)
+    Boolean(metric || parameter) || !isFeedCurrencyF325(unit.toUpperCase()) || (min === null && max === null)
   ) : (
     (!objectIds.length && !hasLegacyMetric) ||
     (hasLegacyMetric && (!UUID_RE.test(metric) || !UUID_RE.test(parameter) || !UNIT_RE.test(unit) || (min === null && max === null))) ||
@@ -51,10 +52,12 @@ export async function searchSemanticFeedF31(input: SemanticFeedQueryF31): Promis
   )) return { messageIds: [], error: "invalid" };
 
   try {
+    const snapshot = isMoney ? await getFeedFxSnapshotF325() : null;
     const { data, error } = isMoney ? await supabase.rpc(
-      "arctor_feed_search_money_publications_f324_v1",
+      "arctor_feed_search_money_fx_f325_v1",
       { p_object_ids: objectIds, p_min_value: min, p_max_value: max,
-        p_unit_code: unit, p_limit: 20, p_before_published_at: null, p_before_message_id: null },
+        p_target_currency: unit.toUpperCase(), p_rates_per_eur: snapshot?.ratesPerEur,
+        p_limit: 20, p_before_published_at: null, p_before_message_id: null },
     ) : await supabase.rpc("arctor_feed_search_publications_f31_v1", {
       p_object_ids: objectIds, p_metric_object_id: hasLegacyMetric ? metric : null,
       p_parameter_definition_id: hasLegacyMetric ? parameter : null,
