@@ -1,5 +1,6 @@
 import AiChannels from "./AiChannels";
 import SemanticFeedFilters from "./SemanticFeedFilters";
+import SavedFeedSearchTabs from "./SavedFeedSearchTabs";
 import { Suspense } from "react";
 import { LoaderCircle } from "lucide-react";
 
@@ -78,6 +79,19 @@ export default async function GlobalFeedPage({
             {copy.subtitle}
           </p>
         </header>
+
+        <SavedFeedSearchTabs
+          locale={locale}
+          enabled={Boolean(viewer)}
+          activeFilters={{
+            on: firstSearchParam(params.on) ?? "",
+            metric: firstSearchParam(params.metric) ?? "",
+            parameter: firstSearchParam(params.parameter) ?? "",
+            min: firstSearchParam(params.min) ?? "",
+            max: firstSearchParam(params.max) ?? "",
+            unit: firstSearchParam(params.unit) ?? "",
+          }}
+        />
 
         <SemanticFeedFilters
           key={`${locale}:${firstSearchParam(params.on) ?? ""}:${firstSearchParam(params.metric) ?? ""}`}
