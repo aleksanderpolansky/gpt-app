@@ -114,6 +114,8 @@ export default function SemanticFeedFilters({
   const [moneyFacets, setMoneyFacets] = useState<MoneyFacet[]>([]);
   const [ratesPerEur, setRatesPerEur] = useState<Record<string, number>>({});
   const [fxDates, setFxDates] = useState<{ ecb: string; nbu: string }>({ ecb: "", nbu: "" });
+  const [unavailableCurrencies, setUnavailableCurrencies] = useState<string[]>([]);
+  const [usingReserveRate, setUsingReserveRate] = useState(false);
   const [moneyUnit, setMoneyUnit] = useState(initialMoney ? initialMetric?.unit?.toLowerCase() || "eur" : "eur");
   const [moneyMin, setMoneyMin] = useState(initialMoney ? initialMetric?.min || "0" : "0");
   const [moneyMax, setMoneyMax] = useState(initialMoney ? initialMetric?.max || "100" : "100");
@@ -219,27 +221,32 @@ export default function SemanticFeedFilters({
     }).then(async response => {
       const payload = await response.json() as {
         ok?:boolean; facets?:MoneyFacet[]; ratesPerEur?:Record<string,number>;
-        fxSources?:Array<{code:string;referenceDate:string;source:string}>;
+        fxSources?:Array<{code:string;referenceDate:string;source:string;fallback?:boolean}>;
+        unavailableCurrencies?:string[];
       };
       if (!response.ok || !payload.ok || !Array.isArray(payload.facets)) throw new Error("MONEY_UNAVAILABLE");
       const facets = payload.facets.filter(f => /^(eur|pln|uah|usd|gbp|czk)$/.test(f.unit) &&
         Number.isFinite(f.minValue) && Number.isFinite(f.maxValue));
-      return {facets, rates: payload.ratesPerEur ?? {}, sources:payload.fxSources ?? []};
-    }).then(({facets,rates,sources}) => {
+      return {facets, rates: payload.ratesPerEur ?? {}, sources:payload.fxSources ?? [],
+        unavailable: payload.unavailableCurrencies ?? []};
+    }).then(({facets,rates,sources,unavailable}) => {
       if (!live) return;
       setMoneyFacets(facets);
       setRatesPerEur(rates);
+      setUnavailableCurrencies(unavailable);
+      setUsingReserveRate(sources.some(s => s.fallback === true));
       setFxDates({
         ecb:sources.find(s=>s.source==="ECB_EURO_REFERENCE_RATE")?.referenceDate ?? "",
         nbu:sources.find(s=>s.source==="NBU_EUR_UAH_REFERENCE_RATE")?.referenceDate ?? "",
       });
-      setMoneyUnit(current => facets.some(f => f.unit === current) ? current : facets[0]?.unit || "eur");
+      // Do not relabel a saved PLN/UAH range as EUR when that rate is unavailable.
+      setMoneyUnit(current => current);
       setMoneyStatus("ready");
-    }).catch(() => {if (live) {setMoneyStatus("error");setMoneyFacets([]);}});
+    }).catch(() => {if (live) {setMoneyStatus("error");setMoneyFacets([]);setUnavailableCurrencies([]);setUsingReserveRate(false);}});
     return () => {live=false;controller.abort();};
   }, [expanded, selectedKey]);
 
-  const activeMoneyFacet = moneyFacets.find(f=>f.unit===moneyUnit) ?? moneyFacets[0];
+  const activeMoneyFacet = moneyFacets.find(f=>f.unit===moneyUnit);
   const moneyDomainMin = Math.min(0,Math.floor(activeMoneyFacet?.minValue ?? 0));
   const moneyDomainMax = Math.max(100,Math.ceil((activeMoneyFacet?.maxValue ?? 100)*1.5),
     Number.isFinite(Number(moneyMax)) ? Math.ceil(Number(moneyMax)) : 100);
@@ -395,6 +402,23 @@ export default function SemanticFeedFilters({
               ))}
             </div>
             {geoStage === 2 ? <p className="text-[11px] text-[#667085]">{extras.geoHint}</p> : null}
+            {moneyStage === 2 && moneyFacets.length > 0 && !activeMoneyFacet ? (
+              <div role="alert" className="rounded-xl border border-[#eacfb0] bg-[#fff9f0] p-3 text-[12px] text-[#9a6a14]">
+                {locale === "ru" ? "Для выбранной валюты сейчас нет проверенного курса. Предыдущий диапазон сохранён, но поиск недоступен." :
+                 locale === "uk" ? "Для обраної валюти немає перевіреного курсу. Попередній діапазон збережено, але пошук недоступний." :
+                 locale === "pl" ? "Brak sprawdzonego kursu wybranej waluty. Poprzedni zakres zachowano; wyszukiwanie niedostępne." :
+                 "The selected currency has no verified rate. Your range is preserved; search is unavailable."}
+                <button type="button" className="mt-2 block underline" onClick={() => {
+                  const next = moneyFacets[0];
+                  setMoneyUnit(next.unit);
+                  setMoneyMin(String(Number(next.minValue.toFixed(2))));
+                  setMoneyMax(String(Number(next.maxValue.toFixed(2))));
+                }}>{locale === "ru" ? "Выбрать доступную валюту и новый диапазон" :
+                    locale === "uk" ? "Обрати доступну валюту та новий діапазон" :
+                    locale === "pl" ? "Wybierz dostępną walutę i nowy zakres" :
+                    "Choose an available currency and reset the range"}</button>
+              </div>
+            ) : null}
             {moneyStage === 2 && activeMoneyFacet ? (
               <div className="space-y-3 rounded-xl border border-[#dfe3f1] bg-[#fafbfe] p-3">
                 {moneyFacets.length > 1 ? (
@@ -434,11 +458,23 @@ export default function SemanticFeedFilters({
                       className="w-full rounded-lg border border-[#dfe3f1] bg-white px-2 py-2 text-[13px]" />
                   </label>
                 </div>
-                {fxDates.ecb && fxDates.nbu ? (
+                {(fxDates.ecb || fxDates.nbu) ? (
                   <p className="text-[10px] text-[#7c8099]">
-                    {`ECB: ${fxDates.ecb} · NBU: ${fxDates.nbu} · ${locale === "ru" ? "справочные курсы" : locale === "uk" ? "довідкові курси" : locale === "pl" ? "kursy referencyjne" : "reference rates"}`}
+                    {[fxDates.ecb ? `ECB: ${fxDates.ecb}` : "", fxDates.nbu ? `NBU: ${fxDates.nbu}` : ""].filter(Boolean).join(" · ")}
+                    {` · ${locale === "ru" ? "справочные курсы" : locale === "uk" ? "довідкові курси" : locale === "pl" ? "kursy referencyjne" : "reference rates"}`}
                   </p>
                 ) : null}
+                {usingReserveRate ? <p role="status" className="text-[11px] text-[#9a6a14]">
+                  {locale === "ru" ? "Используется резервный официальный курс (до 7 дней)." :
+                   locale === "uk" ? "Використовується резервний офіційний курс (до 7 днів)." :
+                   locale === "pl" ? "Używany jest zapasowy kurs urzędowy (do 7 dni)." :
+                   "Using a saved official reference rate (up to 7 days old)."}
+                </p> : null}
+                {unavailableCurrencies.length > 0 ? <p role="status" className="text-[11px] text-[#9a6a14]">
+                  {locale === "ru" ? "Временно недоступные валюты" :
+                   locale === "uk" ? "Тимчасово недоступні валюти" :
+                   locale === "pl" ? "Tymczasowo niedostępne waluty" : "Temporarily unavailable currencies"}: {unavailableCurrencies.join(", ")}
+                </p> : null}
                 {!moneyNumbersValid ? <p className="text-[11px] text-[#b42318]">{moneyCopy.invalid}</p> : null}
               </div>
             ) : null}

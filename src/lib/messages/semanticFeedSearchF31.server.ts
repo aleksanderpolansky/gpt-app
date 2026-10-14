@@ -1,9 +1,10 @@
 import "server-only";
 import { supabase } from "../../../lib/supabase";
-import { getFeedFxSnapshotF325, isFeedCurrencyF325 } from "../../../lib/exchange-rates/feed-six-currency-f325";
+import { getFeedFxRatesF326 } from "../../../lib/exchange-rates/feed-six-currency-f326";
+import { isFeedCurrencyF325, type FeedCurrencyF325 } from "../../../lib/exchange-rates/feed-six-currency-f325";
 
-// F3.1A remains fully supported for legacy URL filters.
-// F3.2.4 adds parameter-based money search only when money=1.
+// F3.1A legacy filters remain supported. F326 adds partial-rate search only
+// for money=1; no changes to source facts or publication authorization.
 export type SemanticFeedQueryF31 = {
   objectIds?: string;
   metricObjectId?: string;
@@ -52,11 +53,32 @@ export async function searchSemanticFeedF31(input: SemanticFeedQueryF31): Promis
   )) return { messageIds: [], error: "invalid" };
 
   try {
-    const snapshot = isMoney ? await getFeedFxSnapshotF325() : null;
+    // First read eligible origin currencies for this exact ON selection.
+    // A EUR-origin PLN search never contacts the NBU; if UAH facts are
+    // present, UAH remains required and the search fails closed on outage.
+    let rates: Partial<Record<FeedCurrencyF325, number>> | null = null;
+    if (isMoney) {
+      const { data: facets, error: facetsError } = await supabase.rpc(
+        "arctor_feed_money_facets_f324_v1", { p_object_ids: objectIds },
+      );
+      if (facetsError || !Array.isArray(facets)) throw new Error("F326_ORIGIN_FACETS_FAILED");
+      // No eligible monetary facts: avoid all remote FX requests and return no matches.
+      if (facets.length === 0) return { messageIds: [], error: null };
+      const sourceCurrencies: FeedCurrencyF325[] = [];
+      for (const row of facets as Array<{ unit_code: string }>) {
+        const code = String(row.unit_code).toUpperCase();
+        if (!isFeedCurrencyF325(code)) throw new Error("F326_UNKNOWN_ORIGIN_UNIT");
+        sourceCurrencies.push(code as FeedCurrencyF325);
+      }
+      const snapshot = await getFeedFxRatesF326(
+        [unit.toUpperCase() as FeedCurrencyF325, ...sourceCurrencies], "strict",
+      );
+      rates = snapshot.ratesPerEur;
+    }
     const { data, error } = isMoney ? await supabase.rpc(
-      "arctor_feed_search_money_fx_f325_v1",
+      "arctor_feed_search_money_fx_f326_v1",
       { p_object_ids: objectIds, p_min_value: min, p_max_value: max,
-        p_target_currency: unit.toUpperCase(), p_rates_per_eur: snapshot?.ratesPerEur,
+        p_target_currency: unit.toUpperCase(), p_rates_per_eur: rates,
         p_limit: 20, p_before_published_at: null, p_before_message_id: null },
     ) : await supabase.rpc("arctor_feed_search_publications_f31_v1", {
       p_object_ids: objectIds, p_metric_object_id: hasLegacyMetric ? metric : null,
@@ -65,7 +87,7 @@ export async function searchSemanticFeedF31(input: SemanticFeedQueryF31): Promis
       p_limit: 20, p_before_published_at: null, p_before_message_id: null,
     });
     if (error || !Array.isArray(data)) {
-      console.error("F324_SEMANTIC_SEARCH_RPC_FAILURE", error?.code ?? "missing_data");
+      console.error("F326_SEMANTIC_SEARCH_RPC_FAILURE", error?.code ?? "missing_data");
       return { messageIds: [], error: "unavailable" };
     }
     const rows = data as SearchRow[];
@@ -74,7 +96,7 @@ export async function searchSemanticFeedF31(input: SemanticFeedQueryF31): Promis
     }
     return { messageIds: rows.map(row => row.message_object_id), error: null };
   } catch (error) {
-    console.error("F324_SEMANTIC_SEARCH_FAILED", error instanceof Error ? error.name : "unknown");
+    console.error("F326_SEMANTIC_SEARCH_FAILED", error instanceof Error ? error.message : "unknown");
     return { messageIds: [], error: "unavailable" };
   }
 }
