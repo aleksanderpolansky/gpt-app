@@ -94,11 +94,13 @@ export default async function GlobalFeedPage({
         />
 
         <SemanticFeedFilters
-          key={`${locale}:${firstSearchParam(params.on) ?? ""}:${firstSearchParam(params.metric) ?? ""}`}
+          key={`${locale}:${firstSearchParam(params.on) ?? ""}:${firstSearchParam(params.metric) ?? ""}:${firstSearchParam(params.parameter) ?? ""}:${firstSearchParam(params.min) ?? ""}:${firstSearchParam(params.max) ?? ""}:${firstSearchParam(params.unit) ?? ""}`}
           locale={locale}
           initialObjectIds={firstSearchParam(params.on) ?? ""}
           hasLegacyMetric={Boolean(params.metric)}
           initialMetric={{
+            metric: firstSearchParam(params.metric),
+            parameter: firstSearchParam(params.parameter),
             min: firstSearchParam(params.min),
             max: firstSearchParam(params.max),
             unit: firstSearchParam(params.unit),

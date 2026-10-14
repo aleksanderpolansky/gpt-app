@@ -20,6 +20,30 @@ type IndexedEntry = OntologyEntry & {
   searchText: string;
 };
 
+type PriceFacet = {
+  metricObjectId: string;
+  parameterId: string;
+  unit: string;
+  minValue: number;
+  maxValue: number;
+  publications: number;
+};
+
+function facetKey(facet: Pick<PriceFacet, "metricObjectId" | "parameterId" | "unit">) {
+  return `${facet.metricObjectId}|${facet.parameterId}|${facet.unit}`;
+}
+
+const PRICE_COPY: Record<LocaleCode, { kind: string; from: string; to: string; loading: string; empty: string; invalid: string }> = {
+  ru: { kind:"Вид цены",from:"От",to:"До",loading:"Проверяем доступные цены…",empty:"Для этой выборки нет подтверждённых ценовых фактов",invalid:"Проверьте диапазон цены" },
+  uk: { kind:"Вид ціни",from:"Від",to:"До",loading:"Перевіряємо доступні ціни…",empty:"Для цієї вибірки немає підтверджених цінових фактів",invalid:"Перевірте діапазон ціни" },
+  en: { kind:"Price type",from:"From",to:"To",loading:"Checking available prices…",empty:"No confirmed price facts for this selection",invalid:"Check the price range" },
+  pl: { kind:"Rodzaj ceny",from:"Od",to:"Do",loading:"Sprawdzamy dostępne ceny…",empty:"Brak potwierdzonych cen dla tego wyboru",invalid:"Sprawdź zakres ceny" },
+  de: { kind:"Preistyp",from:"Von",to:"Bis",loading:"Verfügbare Preise werden geprüft…",empty:"Keine bestätigten Preisdaten für diese Auswahl",invalid:"Preisbereich prüfen" },
+  es: { kind:"Tipo de precio",from:"Desde",to:"Hasta",loading:"Comprobando precios disponibles…",empty:"No hay precios confirmados para esta selección",invalid:"Comprueba el rango de precios" },
+  cs: { kind:"Typ ceny",from:"Od",to:"Do",loading:"Ověřujeme dostupné ceny…",empty:"Pro tento výběr nejsou potvrzené ceny",invalid:"Zkontrolujte rozsah ceny" },
+};
+
+
 type Copy = {
   prompt: string;
   placeholder: string;
@@ -79,15 +103,25 @@ export default function SemanticFeedFilters({
   locale: LocaleCode;
   initialObjectIds: string;
   hasLegacyMetric: boolean;
-  initialMetric?: { min?: string; max?: string; unit?: string };
+  initialMetric?: { metric?: string; parameter?: string; min?: string; max?: string; unit?: string };
 }) {
   const router = useRouter();
   const copy = LABEL[locale];
   const extras = EXTRA_LABEL[locale];
+  const priceCopy = PRICE_COPY[locale];
   const inputRef = useRef<HTMLInputElement | null>(null);
   const firstSuggestionRef = useRef<HTMLButtonElement | null>(null);
   const [isPending, startTransition] = useTransition();
   const [geoStage, setGeoStage] = useState<0 | 1 | 2>(0);
+  const [priceStage, setPriceStage] = useState<0 | 1 | 2>(hasLegacyMetric ? 1 : 0);
+  const [priceStatus, setPriceStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [priceFacets, setPriceFacets] = useState<PriceFacet[]>([]);
+  const [pricePicked, setPricePicked] = useState(
+    initialMetric?.metric && initialMetric?.parameter && initialMetric?.unit
+      ? `${initialMetric.metric}|${initialMetric.parameter}|${initialMetric.unit.toLowerCase()}` : "",
+  );
+  const [priceMin, setPriceMin] = useState(initialMetric?.min || "0");
+  const [priceMax, setPriceMax] = useState(initialMetric?.max || "100");
   const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>(() => extractIds(initialObjectIds));
@@ -176,6 +210,45 @@ export default function SemanticFeedFilters({
   }, [indexed, selectedIds]);
 
   const appliedIds = useMemo(() => extractIds(initialObjectIds), [initialObjectIds]);
+  const selectedKey = selectedIds.join(",");
+
+  useEffect(() => {
+    if (!expanded) return;
+    const controller = new AbortController();
+    let live = true;
+    // Defer local loading state to avoid synchronous state writes in an effect.
+    void Promise.resolve().then(() => {
+      if (live) {setPriceStatus("loading");setPriceFacets([]);}
+    });
+    const params = new URLSearchParams();
+    if (selectedKey) params.set("on", selectedKey);
+    void fetch(`/api/feed/price-facets?${params.toString()}`, {
+      method: "GET", headers: { Accept: "application/json" }, signal: controller.signal,
+    }).then(async response => {
+      const payload = await response.json() as {ok?: boolean; facets?: PriceFacet[]};
+      if (!response.ok || !payload.ok || !Array.isArray(payload.facets)) throw new Error("PRICE_UNAVAILABLE");
+      return payload.facets.filter(f =>
+        UUID_RE.test(f.metricObjectId) && UUID_RE.test(f.parameterId) &&
+        /^[a-z][a-z0-9_]{0,15}$/.test(f.unit) &&
+        Number.isFinite(f.minValue) && Number.isFinite(f.maxValue),
+      );
+    }).then(facets => {
+      if (!live) return;
+      setPriceFacets(facets);
+      setPricePicked(current => facets.some(f => facetKey(f) === current)
+        ? current : facets[0] ? facetKey(facets[0]) : "");
+      setPriceStatus("ready");
+    }).catch(() => { if (live) {setPriceStatus("error");setPriceFacets([]);} });
+    return () => {live = false;controller.abort();};
+  }, [expanded, selectedKey]);
+
+  const activePriceFacet = priceFacets.find(f => facetKey(f) === pricePicked) ?? priceFacets[0];
+  const priceLimit = Math.max(100, Math.ceil((activePriceFacet?.maxValue ?? 100) * 1.5));
+  const priceNumbersValid = Number.isFinite(Number(priceMin)) && Number.isFinite(Number(priceMax)) &&
+    priceMin.trim() !== "" && priceMax.trim() !== "" &&
+    Number(priceMin) >= 0 && Number(priceMax) >= Number(priceMin) &&
+    Number(priceMax) <= 1000000000;
+
   const geoAvailable = catalog === null || indexed.some(entry => entry.facet === "geography");
 
   const suggestions = useMemo(() => {
@@ -197,17 +270,27 @@ export default function SemanticFeedFilters({
     inputRef.current?.focus();
   }
 
-  function navigate(ids: string[], preserveMetric = false) {
-    // Any manually supplied F3.1B numeric filter is cleared explicitly;
-    // numeric controls are a separate upcoming stage, not a hidden condition.
+  function navigate(ids: string[], preserveMetric = false, resetAll = false) {
     const url = new URL(window.location.href);
     url.pathname = "/feed";
     url.searchParams.set("locale", locale);
-    for (const key of (preserveMetric ? ["lang", "on"] : ["lang", "metric", "parameter", "min", "max", "unit", "on"])) {
+    for (const key of ["lang", "metric", "parameter", "min", "max", "unit", "on"]) {
       url.searchParams.delete(key);
     }
     if (ids.length > 0) url.searchParams.set("on", ids.join(","));
-    // Next App Router owns the request; keep the old results on screen until ready.
+    if (!resetAll && preserveMetric && hasLegacyMetric && initialMetric?.metric && initialMetric.parameter) {
+      url.searchParams.set("metric", initialMetric.metric);
+      url.searchParams.set("parameter", initialMetric.parameter);
+      if (initialMetric.min) url.searchParams.set("min", initialMetric.min);
+      if (initialMetric.max) url.searchParams.set("max", initialMetric.max);
+      if (initialMetric.unit) url.searchParams.set("unit", initialMetric.unit);
+    } else if (!resetAll && !preserveMetric && priceStage === 2 && activePriceFacet && priceNumbersValid) {
+      url.searchParams.set("metric", activePriceFacet.metricObjectId);
+      url.searchParams.set("parameter", activePriceFacet.parameterId);
+      url.searchParams.set("min", priceMin);
+      url.searchParams.set("max", priceMax);
+      url.searchParams.set("unit", activePriceFacet.unit);
+    }
     startTransition(() => router.push(`${url.pathname}${url.search}`));
   }
 
@@ -283,8 +366,16 @@ export default function SemanticFeedFilters({
                 <Globe2 className="h-4 w-4" aria-hidden="true" />
                 {geoStage > 0 ? <><span>{extras.geo}</span><ChevronDown className={`h-3 w-3 ${geoStage === 2 ? "rotate-180" : ""}`} aria-hidden="true" /></> : null}
               </button>
+              <button type="button" aria-label={extras.money}
+                title={priceStatus === "ready" && priceFacets.length ? extras.money : priceCopy.empty}
+                disabled={priceStatus !== "ready" || priceFacets.length === 0}
+                onClick={() => setPriceStage(current => current === 0 ? 1 : current === 1 ? 2 : 1)}
+                aria-expanded={priceStage === 2}
+                className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[12px] transition focus-visible:outline-2 focus-visible:outline-[#3b6ef8] disabled:cursor-not-allowed disabled:opacity-35 ${priceStage ? "border-[#aebfe9] bg-[#f4f7ff] text-[#315fd8]" : "border-[#dfe3f1] text-[#47516b]"}`}>
+                {priceStatus === "loading" ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Wallet className="h-4 w-4" aria-hidden="true" />}
+                {priceStage > 0 ? <><span>{extras.money}</span><ChevronDown className={`h-3 w-3 ${priceStage === 2 ? "rotate-180" : ""}`} aria-hidden="true" /></> : null}
+              </button>
               {([
-                { label: extras.money, Icon: Wallet },
                 { label: extras.route, Icon: Route },
                 { label: extras.size, Icon: Ruler },
               ] as const).map(({ label, Icon }) => (
@@ -296,13 +387,57 @@ export default function SemanticFeedFilters({
               ))}
             </div>
             {geoStage === 2 ? <p className="text-[11px] text-[#667085]">{extras.geoHint}</p> : null}
+            {priceStage === 2 && activePriceFacet ? (
+              <div className="space-y-3 rounded-xl border border-[#dfe3f1] bg-[#fafbfe] p-3">
+                <label className="block space-y-1 text-[12px] text-[#47516b]">
+                  <span>{priceCopy.kind}</span>
+                  <select value={facetKey(activePriceFacet)}
+                    onChange={event => {
+                      setPricePicked(event.target.value);
+                      setPriceMin("0");
+                      setPriceMax("100");
+                    }}
+                    className="w-full rounded-lg border border-[#dfe3f1] bg-white px-2 py-2 text-[12px]">
+                    {priceFacets.map(facet => {
+                      const title = indexed.find(entry => entry.id === facet.metricObjectId)?.title
+                        ?? facet.metricObjectId.slice(0, 8);
+                      return <option key={facetKey(facet)} value={facetKey(facet)}>{title} · {facet.unit.toUpperCase()}</option>;
+                    })}
+                  </select>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="space-y-1 text-[12px] text-[#47516b]">
+                    <span>{priceCopy.from}, {activePriceFacet.unit.toUpperCase()}</span>
+                    <input type="number" min="0" max="1000000000" step="0.01" value={priceMin}
+                      onChange={event => setPriceMin(event.target.value)}
+                      className="w-full rounded-lg border border-[#dfe3f1] bg-white px-2 py-2 text-[13px]" />
+                  </label>
+                  <label className="space-y-1 text-[12px] text-[#47516b]">
+                    <span>{priceCopy.to}, {activePriceFacet.unit.toUpperCase()}</span>
+                    <input type="number" min="0" max="1000000000" step="0.01" value={priceMax}
+                      onChange={event => setPriceMax(event.target.value)}
+                      className="w-full rounded-lg border border-[#dfe3f1] bg-white px-2 py-2 text-[13px]" />
+                  </label>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <input type="range" aria-label={priceCopy.from} min="0" max={priceLimit} step="1"
+                    value={Math.max(0,Math.min(priceLimit, Number(priceMin) || 0))}
+                    onChange={event => setPriceMin(String(Math.min(Number(event.target.value),Number(priceMax)||0)))} />
+                  <input type="range" aria-label={priceCopy.to} min="0" max={priceLimit} step="1"
+                    value={Math.max(0,Math.min(priceLimit, Number(priceMax) || 0))}
+                    onChange={event => setPriceMax(String(Math.max(Number(event.target.value),Number(priceMin)||0)))} />
+                </div>
+                {!priceNumbersValid ? <p className="text-[11px] text-[#b42318]">{priceCopy.invalid}</p> : null}
+              </div>
+            ) : null}
+            {priceStatus === "error" ? <p className="text-[11px] text-[#9a6a14]">{priceCopy.empty}</p> : null}
             {selectedIds.length >= MAX_SELECTION ? <p className="text-[11px] text-[#7c8099]">{copy.limit}</p> : null}
-            {hasLegacyMetric ? <p className="text-[11px] text-[#9a6a14]">{copy.metric}</p> : null}
+            {hasLegacyMetric && priceStatus === "ready" && priceFacets.length === 0 ? <p className="text-[11px] text-[#9a6a14]">{copy.metric}</p> : null}
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <button type="button" disabled={isPending} onClick={() => navigate([])} className="text-[12px] text-[#667085] hover:underline disabled:opacity-50">{extras.resetAll}</button>
+              <button type="button" disabled={isPending} onClick={() => navigate([], false, true)} className="text-[12px] text-[#667085] hover:underline disabled:opacity-50">{extras.resetAll}</button>
               <div className="flex items-center gap-3">
                 <button type="button" onClick={() => setExpanded(false)} className="text-[12px] text-[#667085] hover:underline">{copy.collapse}</button>
-                <button type="button" disabled={!selectedIds.length || isPending} onClick={() => navigate(selectedIds)}
+                <button type="button" disabled={(!selectedIds.length && !(priceStage === 2 && activePriceFacet)) || isPending || (priceStage === 2 && !priceNumbersValid)} onClick={() => navigate(selectedIds)}
                   className="inline-flex items-center gap-2 rounded-xl bg-[#3b6ef8] px-3.5 py-2 text-[12px] font-semibold text-white hover:bg-[#315fd8] disabled:cursor-not-allowed disabled:opacity-40">
                   {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Search className="h-4 w-4" aria-hidden="true" />}
                   {isPending ? extras.pending : copy.apply}
@@ -323,7 +458,7 @@ export default function SemanticFeedFilters({
         <div className="rounded-xl border border-[#e2e6f0] bg-white px-3 py-2" aria-label={extras.results}>
           <div className="mb-1.5 flex items-center justify-between gap-2">
             <span className="text-[12px] font-semibold text-[#334155]">{extras.results}</span>
-            <button type="button" disabled={isPending} className="text-[11px] text-[#3b6ef8] hover:underline disabled:opacity-50" onClick={() => navigate([])}>{extras.resetAll}</button>
+            <button type="button" disabled={isPending} className="text-[11px] text-[#3b6ef8] hover:underline disabled:opacity-50" onClick={() => navigate([], false, true)}>{extras.resetAll}</button>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {appliedIds.map(id => {
