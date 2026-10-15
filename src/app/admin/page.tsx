@@ -1,3 +1,4 @@
+import ArctorAdminControlPanel from "./ArctorAdminControlPanel";
 import Link from "next/link";
 import { auth0 } from "../../../lib/auth0";
 import { supabase } from "../../../lib/supabase";
@@ -327,6 +328,9 @@ export default async function AdminHubPage() {
 
         {!errorMessage && appUser && platformAdmin ? (
           <>
+            <ArctorAdminControlPanel />
+            <details className="mb-10 rounded-xl border border-slate-200 bg-white p-4">
+              <summary className="cursor-pointer text-sm font-medium text-slate-600">Существующий каталог административных ссылок</summary>
             <section
               style={{
                 display: "grid",
@@ -469,6 +473,7 @@ export default async function AdminHubPage() {
                 );
               })}
             </section>
+            </details>
           </>
         ) : null}
       </div>
