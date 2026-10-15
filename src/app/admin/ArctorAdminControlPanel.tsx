@@ -1,5 +1,6 @@
 "use client";
 
+import ArctorAdminLiveRegistry from "./ArctorAdminLiveRegistry";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
@@ -191,6 +192,10 @@ export default function ArctorAdminControlPanel() {
 
   return (
     <div className="mb-10 space-y-5 text-slate-900" data-arctor-adm1="true">
+      <ArctorAdminLiveRegistry />
+      <details className="rounded-xl border border-slate-200 bg-white p-4">
+        <summary className="cursor-pointer font-medium text-slate-700">ADM-1 · архив проектных примеров (14, не записаны в Supabase)</summary>
+        <div className="mt-4 space-y-5">
       <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm md:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="max-w-2xl space-y-2">
@@ -279,6 +284,8 @@ export default function ArctorAdminControlPanel() {
         </div>}
       </section>
       <section className="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900"><FileText className="mt-0.5 h-5 w-5 shrink-0"/><div><strong>Сохранена существующая администрация:</strong> все старые страницы доступны по ссылкам выше и в разворачиваемом каталоге ниже. Этот патч не изменяет таблицы Supabase, коммерческий разбор, инструкции моделей, роли в базе или права доступа.</div></section>
+        </div>
+      </details>
     </div>
   );
 }
