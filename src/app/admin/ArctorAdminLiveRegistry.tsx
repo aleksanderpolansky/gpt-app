@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import ArctorAdminCaseActions from "./ArctorAdminCaseActions";
 import { AlertCircle, ArrowRight, ClipboardList, History, Inbox, LoaderCircle, RefreshCw, ShieldCheck } from "lucide-react";
 
 type RoleRow = {
@@ -182,7 +183,7 @@ export default function ArctorAdminLiveRegistry() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">ADM-2B.1 · постоянный реестр Supabase</p>
           <h2 className="mt-1 text-xl font-bold">Настоящие дела и должностные кабинеты</h2>
-          <p className="mt-1 text-sm text-slate-600">Только чтение. Демонстрационные дела ADM-1 отделены и не считаются зарегистрированными.</p>
+          <p className="mt-1 text-sm text-slate-600">Данные Supabase. Запись действий доступна только действующему администратору; демонстрационные дела ADM-1 отделены.</p>
         </div>
         <button type="button" onClick={refreshing} disabled={status === "loading"}
           className="inline-flex items-center gap-2 rounded-lg border border-blue-200 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 disabled:opacity-50">
@@ -201,7 +202,7 @@ export default function ArctorAdminLiveRegistry() {
           <span className="rounded-lg bg-slate-50 px-3 py-2"><strong>{roles.length}</strong> должностей в БД</span>
           <span className="rounded-lg bg-slate-50 px-3 py-2"><strong>{cases.length}</strong> реальных дел (показано)</span>
           <span className="rounded-lg bg-slate-50 px-3 py-2"><strong>{assignments.length}</strong> поручений (показано)</span>
-          <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-emerald-800"><ShieldCheck className="h-4 w-4"/>Без записи и запуска агентов</span>
+          <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-emerald-800"><ShieldCheck className="h-4 w-4"/>Агенты не запускаются</span>
         </div>
         {(data.truncated.cases || data.truncated.assignments) && <p className="text-xs text-amber-800" role="status">
           Достигнут предел выборки. Показаны не все дела или поручения; для полной выборки потребуется постраничная загрузка.
@@ -224,6 +225,7 @@ export default function ArctorAdminLiveRegistry() {
         {activeRole && <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
           <strong className="text-slate-800">{activeRole.manager_title_ru}.</strong> {activeRole.responsibility_summary_ru}
         </p>}
+        <ArctorAdminCaseActions roles={roles} cases={cases} assignments={assignments} selectedRoleCode={roleCode} onChanged={refreshing} />
         <div className="flex flex-wrap items-center gap-2 border-b pb-3">
           <button type="button" onClick={() => setView("inbox")}
             className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${view === "inbox" ? "bg-blue-100 text-blue-800" : "bg-slate-50 text-slate-700"}`}>
@@ -282,7 +284,7 @@ export default function ArctorAdminLiveRegistry() {
           </div>}
         </div>}
       </>}
-      <p className="text-xs text-slate-500">ADM-2B.1: чтение данных без записи. Создание дел, назначение исполнителей, передача и отчёты будут добавлены в ADM-2B.2 после отдельного согласования.</p>
+      <p className="text-xs text-slate-500">ADM-2B.2: ручное создание дел, поручений, отчётов и передачи; операции атомарны, история дополняется без редактирования.</p>
     </section>
   );
 }
