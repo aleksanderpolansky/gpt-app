@@ -34,6 +34,12 @@ type PageData = {
 
 const ADMIN_CARDS: AdminCard[] = [
   {
+    title: "Библиотека администратора",
+    href: "/project-knowledge/admin-library",
+    description: "Рабочие документы для администраторов и будущих ИИ-исполнителей с версиями и статусами.",
+    badge: "Knowledge",
+  },
+  {
     title: "AI Instructions",
     href: "/admin/ai-instructions",
     description:

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ArctorAdminCaseActions from "./ArctorAdminCaseActions";
+import ArctorAdminSourceLinks from "./ArctorAdminSourceLinks";
+import ArctorAdminWorkQueues from "./ArctorAdminWorkQueues";
 import { AlertCircle, ArrowRight, ClipboardList, History, Inbox, LoaderCircle, RefreshCw, ShieldCheck } from "lucide-react";
 
 type RoleRow = {
@@ -156,8 +158,8 @@ export default function ArctorAdminLiveRegistry() {
   }, []);
 
   const roles = data?.roles ?? [];
-  const cases = data?.cases ?? [];
-  const assignments = data?.assignments ?? [];
+  const cases = useMemo(() => data?.cases ?? [], [data]);
+  const assignments = useMemo(() => data?.assignments ?? [], [data]);
   const assignedIds = useMemo(() => new Set(assignments
     .filter((a) => a.recipient_role_code === roleCode && !["completed", "declined", "cancelled"].includes(a.status))
     .map((a) => a.case_id)), [assignments, roleCode]);
@@ -226,6 +228,8 @@ export default function ArctorAdminLiveRegistry() {
           <strong className="text-slate-800">{activeRole.manager_title_ru}.</strong> {activeRole.responsibility_summary_ru}
         </p>}
         <ArctorAdminCaseActions roles={roles} cases={cases} assignments={assignments} selectedRoleCode={roleCode} onChanged={refreshing} />
+        <ArctorAdminSourceLinks cases={cases} onChanged={refreshing} />
+        <ArctorAdminWorkQueues />
         <div className="flex flex-wrap items-center gap-2 border-b pb-3">
           <button type="button" onClick={() => setView("inbox")}
             className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${view === "inbox" ? "bg-blue-100 text-blue-800" : "bg-slate-50 text-slate-700"}`}>
@@ -250,6 +254,7 @@ export default function ArctorAdminLiveRegistry() {
           <p className="mt-1 text-sm text-slate-600">{item.description || "Описание не добавлено"}</p>
           <p className="mt-2 text-xs text-slate-500">Ответственное направление: {roles.find((r) => r.role_code === item.owner_role_code)?.title_ru ?? item.owner_role_code} · {displayDate(item.created_at)}</p>
           {item.next_expected_result && <p className="mt-1 text-xs text-slate-600">Ожидаемый результат: {item.next_expected_result}</p>}
+          {item.source_entity_kind && item.source_external_id && <p className="mt-1 text-xs text-slate-600">Первоисточник: {item.source_entity_kind} · {item.source_external_id.slice(0, 8)}{item.source_path?.startsWith("/") ? <> · <a href={item.source_path} className="text-blue-700 underline">Открыть раздел источника</a></> : null}</p>}
           <button type="button" onClick={() => openCase(item.id)} className="mt-3 inline-flex items-center gap-1 text-sm text-blue-700 hover:underline">
             <History className="h-4 w-4" />Открыть историю и поручения <ArrowRight className="h-3 w-3" />
           </button>
