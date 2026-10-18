@@ -334,6 +334,11 @@ export default async function AdminHubPage() {
 
         {!errorMessage && appUser && platformAdmin ? (
           <>
+            <section className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-slate-800" aria-label="ADM-5A readiness">
+              <div className="font-semibold">ADM-5A · Должностные ИИ-исполнители — подготовка</div>
+              <p className="mt-1 text-slate-700">Проверка восьми должностей, инструкций и ограничений. Только чтение; запуск ИИ и изменение данных отключены.</p>
+              <Link href="/admin/agent-readiness" className="mt-2 inline-block text-blue-700 underline">Открыть карту готовности ADM-5A →</Link>
+            </section>
             <ArctorAdminControlPanel />
             <details className="mb-10 rounded-xl border border-slate-200 bg-white p-4">
               <summary className="cursor-pointer text-sm font-medium text-slate-600">Существующий каталог административных ссылок</summary>

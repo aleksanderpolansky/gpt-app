@@ -1,0 +1,25 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import crypto from "node:crypto";
+
+const repo = path.resolve(process.argv[2] ?? ".");
+const read = (p) => fs.readFileSync(path.join(repo, p), "utf8");
+const page = read("src/app/admin/agent-readiness/page.tsx");
+const index = read("src/app/admin/page.tsx");
+const registry = read("src/lib/admin-knowledge/library.server.ts");
+const doc = read("docs/admin-library/ADR-ADM5A-001.md");
+assert.match(page, /requirePlatformAdmin\(\{ allowedRoles: \["owner", "admin", "viewer"\] \}\)/);
+assert.match(page, /arctor_admin_roles_adm2_v1/);
+assert.match(page, /agent_execution_enabled === false/);
+assert.match(page, /approvalStatus === "approved" && doc\.agentEnabled/);
+assert.match(page, /ADM5A_READ_ONLY_AGENT_READINESS_V1/);
+assert.doesNotMatch(page, /runBillableAi|fetch\s*\(|\.rpc\(|\.insert\(|\.update\(|\.delete\(|POST\(|OpenAI\(/);
+assert.match(index, /href="\/admin\/agent-readiness"/);
+assert.match(registry, /"id": "ADR-ADM5A-001"/);
+assert.match(registry, /"approvalStatus": "proposed"/);
+assert.match(registry, /"agentEnabled": false/);
+const hash = crypto.createHash("sha256").update(Buffer.from(doc,"utf8")).digest("hex").toUpperCase();
+assert.ok(registry.includes(`"sourceSha256": "${hash}"`), "document hash mismatch");
+console.log("ARCTOR_ADM5A_STATIC_QA_PASS_9");
+console.log("NO SQL. NO OPENAI. NO AGENTS.");
