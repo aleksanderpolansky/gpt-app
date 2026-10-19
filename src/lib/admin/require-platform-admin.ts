@@ -88,7 +88,7 @@ export async function requirePlatformAdmin(
       ok: false,
       status: 500,
       errorCode: "PLATFORM_ADMIN_APP_USER_LOOKUP_FAILED",
-      errorMessage: appUserError.message,
+      errorMessage: "Unable to verify platform access.",
       appUser: null,
       platformAdmin: null,
     };
@@ -122,7 +122,7 @@ export async function requirePlatformAdmin(
       ok: false,
       status: 500,
       errorCode: "PLATFORM_ADMIN_LOOKUP_FAILED",
-      errorMessage: adminError.message,
+      errorMessage: "Unable to verify platform access.",
       appUser,
       platformAdmin: null,
     };
@@ -154,6 +154,7 @@ export async function requirePlatformAdmin(
 export function platformAdminErrorResponse(
   guard: RequirePlatformAdminFailure,
   routeMarker: string,
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Keep assignment compatibility with existing typed API responses.
 ): NextResponse<any> {
   return NextResponse.json(
     {
