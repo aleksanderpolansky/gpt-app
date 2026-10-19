@@ -13,14 +13,14 @@ export type PriceRatioDecorationV2 = {
 
 const PRICE=String.raw`\d{1,6}(?:[.,]\d{1,2})?`;
 const QUANTITY=String.raw`\d{1,6}(?:[.,]\d{1,3})?`;
-const CUR=String.raw`(?:EUR|PLN|UAH|USD|GBP|CZK|€|£|₴|\$|zł|Kč|euro|euros|евро|євро|грн|грив(?:на|ни|ень|нею|ні|ен)|злот(?:ый|ых|их|их|и|их)|złoty|złotych|доллар(?:а|ов|ы|у)?|долар(?:а|ів|и|у)?|dollars?|крон(?:а|ы|у)?|корун(?:а|ы)?|korun(?:a|y)?|crowns?)`;
-const MASS=String.raw`(?:кг|kg|kilograms?|килограмм(?:а|ов|ы)?|кілограм(?:а|ів|и)?|kilogram(?:ów|y)?|г|гр|g|grams?|грамм(?:а|ов)?|грам(?:а|ів|и)?|gram(?:ów|y)?|lb|lbs|pounds?|фунт(?:а|ов|ы)?|фунт(?:а|ів|и)?|oz|ounces?)`;
-const SEP=String.raw`(?:за|per|por|pro|for|\/|на)`;
+const CUR=String.raw`(?:EUR|PLN|UAH|USD|GBP|CZK|€|£|₴|\$|zł|Kč|euro|euros|eura|евро|євро|грн|грив(?:на|ни|ень|нею|ні|ен)|злот(?:ый|ых|их|и)|złoty|złotych|доллар(?:а|ов|ы|у)?|долар(?:а|ів|и|у)?|dollars?|dolar(?:y|ów|a|u|ů|ov|em)?|dolár(?:e|ů|y|u)?|dólar(?:es)?|крон(?:а|ы|у)?|корун(?:а|ы)?|koron(?:a|y|u|ą|ami)?|korun(?:a|y|u|ů)?|kronen|coronas?|crowns?)`;
+const MASS=String.raw`(?:кг|kg|kilograms?|kilogram(?:ów|y|u|ů|em)?|kilogramm(?:s|e)?|kilogramo(?:s)?|килограмм(?:а|ов|ы)?|кілограм(?:а|ів|и)?|г|гр|g|grams?|грамм(?:а|ов)?|грам(?:а|ів|и)?|gram(?:ów|y)?|lb|lbs|pounds?|funt(?:a|ów|y)?|libr(?:a|u|y|ou)?|pfund(?:s|e)?|фунт(?:а|ов|ы)?|фунт(?:а|ів|и)?|oz|ounces?)`;
+const SEP=String.raw`(?:за|za|per|por|pro|for|\/|на)`;
 const FIRST = new RegExp(String.raw`(?<![\p{L}\p{N}.,-])(${PRICE})\s*(${CUR})\s*${SEP}\s*(?:(${QUANTITY})\s*)?(${MASS})(?![\p{L}\p{N}])`, 'giu');
 const SYMBOL_FIRST = new RegExp(String.raw`(?<![\p{L}\p{N}.,-])([€£₴$])\s*(${PRICE})\s*${SEP}\s*(?:(${QUANTITY})\s*)?(${MASS})(?![\p{L}\p{N}])`, 'giu');
-const QUANTITY_FIRST = new RegExp(String.raw`(?<![\p{L}\p{N}.,-])(${QUANTITY})\s*(${MASS})\s*(?:за|for|por|pro|=)\s*(${PRICE})\s*(${CUR})(?![\p{L}\p{N}])`, 'giu');
+const QUANTITY_FIRST = new RegExp(String.raw`(?<![\p{L}\p{N}.,-])(${QUANTITY})\s*(${MASS})\s*(?:за|za|for|por|pro|=)\s*(${PRICE})\s*(${CUR})(?![\p{L}\p{N}])`, 'giu');
 const MONEY_CODES:Readonly<Record<string,DisplayCurrencyV1>>={
-  eur:'EUR',euro:'EUR',euros:'EUR','€':'EUR',евро:'EUR',євро:'EUR',
+  eur:'EUR',euro:'EUR',euros:'EUR',eura:'EUR','€':'EUR',евро:'EUR',євро:'EUR',
   pln:'PLN','zł':'PLN',złoty:'PLN',złotych:'PLN',злотый:'PLN',злотых:'PLN',злотих:'PLN',злоти:'PLN',
   uah:'UAH','₴':'UAH',грн:'UAH',гривна:'UAH',гривни:'UAH',гривень:'UAH',гривнею:'UAH',гривні:'UAH',гривен:'UAH',
   usd:'USD',gbp:'GBP','£':'GBP',czk:'CZK','kč':'CZK',
@@ -28,10 +28,16 @@ const MONEY_CODES:Readonly<Record<string,DisplayCurrencyV1>>={
 const CURRENCY_MARK:Record<DisplayCurrencyV1,string>={EUR:'€',PLN:'zł',UAH:'₴',USD:'$',GBP:'£',CZK:'Kč'};
 const KG_PER_LB=0.45359237;
 const UNIT_KG:Readonly<Record<string,number>>={
-  kg:1,кг:1,kilogram:1,kilograms:1,килограмм:1,килограмма:1,килограммов:1,килограммы:1,
-  кілограм:1,кілограма:1,кілограмів:1,кілограми:1,kilogramów:1,kilogramy:1,
+  kg:1,кг:1,kilogram:1,kilograms:1,kilogramów:1,kilogramy:1,kilogramu:1,'kilogramů':1,kilogramem:1,
+  kilogramm:1,kilogramms:1,kilogramme:1,kilogramo:1,kilogramos:1,
+  килограмм:1,килограмма:1,килограммов:1,килограммы:1,
+  кілограм:1,кілограма:1,кілограмів:1,кілограми:1,
   g:.001,г:.001,гр:.001,gram:.001,grams:.001,грамм:.001,грамма:.001,граммов:.001,грам:.001,грама:.001,грамів:.001,грами:.001,gramów:.001,gramy:.001,
-  lb:KG_PER_LB,lbs:KG_PER_LB,pound:KG_PER_LB,pounds:KG_PER_LB,фунт:KG_PER_LB,фунта:KG_PER_LB,фунтов:KG_PER_LB,фунты:KG_PER_LB,фунтів:KG_PER_LB,фунти:KG_PER_LB,
+  lb:KG_PER_LB,lbs:KG_PER_LB,pound:KG_PER_LB,pounds:KG_PER_LB,
+  funt:KG_PER_LB,funta:KG_PER_LB,'funtów':KG_PER_LB,funty:KG_PER_LB,
+  libra:KG_PER_LB,libru:KG_PER_LB,libry:KG_PER_LB,librou:KG_PER_LB,
+  pfund:KG_PER_LB,pfunds:KG_PER_LB,pfunde:KG_PER_LB,
+  фунт:KG_PER_LB,фунта:KG_PER_LB,фунтов:KG_PER_LB,фунты:KG_PER_LB,фунтів:KG_PER_LB,фунти:KG_PER_LB,
   oz:.028349523125,ounce:.028349523125,ounces:.028349523125,
 };
 function number(input:string):number|null {
@@ -43,10 +49,10 @@ function number(input:string):number|null {
 function sourceCurrency(token:string,clause:string):DisplayCurrencyV1|null {
   const t=token.toLowerCase();
   const fixed=MONEY_CODES[t];if(fixed)return fixed;
-  if(/^(?:доллар|долар|dollar|\$)/iu.test(t))
-    return /(?:чикаго|сша|соединенн|америк|chicago|usa|united states|us dollars?|usd)/iu.test(clause)?'USD':null;
-  if(/^(?:крон|корун|korun|crown)/iu.test(t))
-    return /(?:брно|чехи|чешск|brno|czech|česk|praha|prague|prahy|czk)/iu.test(clause)?'CZK':null;
+  if(/^(?:доллар|долар|dollar|dolar|dolár|dólar|\$)/iu.test(t))
+    return /(?:чикаго|сша|соединенн|америк|chicag(?:o|u|a)|usa|united states|us dollars?|usd)/iu.test(clause)?'USD':null;
+  if(/^(?:крон|корун|koron|korun|kronen|corona|crown)/iu.test(t))
+    return /(?:брно|чехи|чешск|brno|brn(?:ě|e|ie)|brünn|czech|česk|praha|prague|prahy|czk)/iu.test(clause)?'CZK':null;
   return null;
 }
 function clauseAround(text:string,index:number,end:number):string {
