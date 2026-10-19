@@ -41,6 +41,7 @@ import {
 } from "@/i18n";
 import { UserSessionTopBarControls } from "../auth/user-session-client";
 import { InterfaceLanguageSwitcher } from "./interface-language-switcher";
+import { ReaderFormatSwitcher } from "./reader-format-switcher";
 
 type IconComponent = ElementType;
 
@@ -1294,6 +1295,7 @@ export function GlobalTopBar({
 
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
         <InterfaceLanguageSwitcher />
+        <ReaderFormatSwitcher />
 
         <a
           href={betaNoticeHref}

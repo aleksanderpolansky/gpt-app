@@ -7,6 +7,7 @@ import { Activity, CalendarPlus, ChevronLeft, MessageSquare, X } from "lucide-re
 import { AiNavigatorProvider, useAiNavigator, type AiNavigatorMode } from "./ai-navigator-provider";
 import { GlobalAiNavigator } from "./global-ai-navigator";
 import { GlobalSidebar, GlobalTopBar } from "./global-navigation";
+import { ReaderFormatProvider } from "./reader-format-provider";
 import { GlobalHelpLayer } from "../help/global-help-layer";
 
 export const ARCTOR_AI_RIGHT_RAIL_CORPORATE_MOBILE_MODES_V1 =
@@ -95,7 +96,8 @@ export function GlobalAppShell({
   }
 
   return (
-    <AiNavigatorProvider>
+    <ReaderFormatProvider>
+      <AiNavigatorProvider>
       <div
         className="flex h-screen w-screen flex-col overflow-hidden bg-[#f0f2f7]"
         style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
@@ -121,7 +123,8 @@ export function GlobalAppShell({
         />
         <GlobalHelpLayer />
       </div>
-    </AiNavigatorProvider>
+      </AiNavigatorProvider>
+    </ReaderFormatProvider>
   );
 }
 

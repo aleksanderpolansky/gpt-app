@@ -17,6 +17,7 @@ import {
   type GlobalArctorFeedItem,
 } from "@/lib/messages/globalFeed.server";
 import AiChannelFeedGroup from "./AiChannelFeedGroup";
+import ReaderConvertedText from "@/components/feed/ReaderConvertedText";
 import { getGlobalFeedCopy } from "./feedCopy";
 
 const INTL_LOCALE: Record<LocaleCode, string> = {
@@ -155,7 +156,7 @@ function GlobalFeedItemCard({
             </p>
           ) : contentText ? (
             <p className="mt-2 whitespace-pre-wrap break-words text-[13px] leading-6 text-[#555b73]">
-              {contentText}
+              <ReaderConvertedText text={contentText} locale={locale} />
             </p>
           ) : null}
 
