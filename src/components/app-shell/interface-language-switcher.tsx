@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Languages } from "lucide-react";
+import { READER_MANUAL_LOCALE_KEY_V1 } from "@/lib/reader-format/readerCountryDefaultsV1";
 
 import {
   LOCALE_META,
@@ -48,6 +49,8 @@ function navigateToLocale(locale: LocaleCode): void {
   }
 
   const url = new URL(window.location.href);
+  // Manual selection permanently overrides the one-time IP-country suggestion.
+  try { window.localStorage.setItem(READER_MANUAL_LOCALE_KEY_V1, locale); } catch { /* private browsing */ }
   url.searchParams.set("locale", locale);
   url.searchParams.delete("lang");
 

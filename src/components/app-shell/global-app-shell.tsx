@@ -8,6 +8,7 @@ import { AiNavigatorProvider, useAiNavigator, type AiNavigatorMode } from "./ai-
 import { GlobalAiNavigator } from "./global-ai-navigator";
 import { GlobalSidebar, GlobalTopBar } from "./global-navigation";
 import { ReaderFormatProvider } from "./reader-format-provider";
+import { ReaderCountryInitializer } from "./reader-country-initializer";
 import { GlobalHelpLayer } from "../help/global-help-layer";
 
 export const ARCTOR_AI_RIGHT_RAIL_CORPORATE_MOBILE_MODES_V1 =
@@ -97,6 +98,7 @@ export function GlobalAppShell({
 
   return (
     <ReaderFormatProvider>
+      <ReaderCountryInitializer />
       <AiNavigatorProvider>
       <div
         className="flex h-screen w-screen flex-col overflow-hidden bg-[#f0f2f7]"
