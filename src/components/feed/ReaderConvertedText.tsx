@@ -8,7 +8,7 @@ const LOCALES:Record<LocaleCode,string>={en:'en-GB',pl:'pl-PL',ru:'ru-RU',uk:'uk
 export default function ReaderConvertedText({text,locale}:{text:string;locale:LocaleCode}) {
   const {prefs,fx,ensureFx}=useReaderFormatV1();
   useEffect(()=>{
-    if(/(?:€|£|₴|\b(?:EUR|PLN|UAH|USD|GBP|CZK|euro|euros)\b|евро|євро|zł|Kč)/iu.test(text)) ensureFx();
+    if(/(?:€|£|₴|\$|\b(?:EUR|PLN|UAH|USD|GBP|CZK|euro|euros|dollars?)\b|евро|євро|грн|доллар|долар|крон|корун|zł|Kč)/iu.test(text)) ensureFx();
   },[text,ensureFx]);
   const parts=useMemo(()=>annotateDisplayValuesV1(text,prefs.currency,prefs.units,fx,LOCALES[locale]),[text,prefs,fx,locale]);
   return <>{parts.map((part,index)=><span key={index}>

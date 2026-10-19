@@ -1,0 +1,96 @@
+import type { DisplayCurrencyV1, MeasurementSystemV1 } from './readerFormatV1';
+
+/** READER-PRICE-V2.1/2.2: a strict, deterministic, display-only unit-price interpreter.
+ * Unknown/ambiguous money is never inferred as a fact, and original text is preserved.
+ */
+type PriceFx = {
+  ratesPerEur: Partial<Record<DisplayCurrencyV1, number>>;
+  sources: Array<{code:DisplayCurrencyV1;source:string;referenceDate:string;fallback:boolean}>;
+};
+export type PriceRatioDecorationV2 = {
+  index:number;end:number;original:string;annotation:string|null;tooltip:string|null;
+};
+
+const PRICE=String.raw`\d{1,6}(?:[.,]\d{1,2})?`;
+const QUANTITY=String.raw`\d{1,6}(?:[.,]\d{1,3})?`;
+const CUR=String.raw`(?:EUR|PLN|UAH|USD|GBP|CZK|€|£|₴|\$|zł|Kč|euro|euros|евро|євро|грн|грив(?:на|ни|ень|нею|ні|ен)|злот(?:ый|ых|их|их|и|их)|złoty|złotych|доллар(?:а|ов|ы|у)?|долар(?:а|ів|и|у)?|dollars?|крон(?:а|ы|у)?|корун(?:а|ы)?|korun(?:a|y)?|crowns?)`;
+const MASS=String.raw`(?:кг|kg|kilograms?|килограмм(?:а|ов|ы)?|кілограм(?:а|ів|и)?|kilogram(?:ów|y)?|г|гр|g|grams?|грамм(?:а|ов)?|грам(?:а|ів|и)?|gram(?:ów|y)?|lb|lbs|pounds?|фунт(?:а|ов|ы)?|фунт(?:а|ів|и)?|oz|ounces?)`;
+const SEP=String.raw`(?:за|per|por|pro|for|\/|на)`;
+const FIRST = new RegExp(String.raw`(?<![\p{L}\p{N}.,-])(${PRICE})\s*(${CUR})\s*${SEP}\s*(?:(${QUANTITY})\s*)?(${MASS})(?![\p{L}\p{N}])`, 'giu');
+const SYMBOL_FIRST = new RegExp(String.raw`(?<![\p{L}\p{N}.,-])([€£₴$])\s*(${PRICE})\s*${SEP}\s*(?:(${QUANTITY})\s*)?(${MASS})(?![\p{L}\p{N}])`, 'giu');
+const QUANTITY_FIRST = new RegExp(String.raw`(?<![\p{L}\p{N}.,-])(${QUANTITY})\s*(${MASS})\s*(?:за|for|por|pro|=)\s*(${PRICE})\s*(${CUR})(?![\p{L}\p{N}])`, 'giu');
+const MONEY_CODES:Readonly<Record<string,DisplayCurrencyV1>>={
+  eur:'EUR',euro:'EUR',euros:'EUR','€':'EUR',евро:'EUR',євро:'EUR',
+  pln:'PLN','zł':'PLN',złoty:'PLN',złotych:'PLN',злотый:'PLN',злотых:'PLN',злотих:'PLN',злоти:'PLN',
+  uah:'UAH','₴':'UAH',грн:'UAH',гривна:'UAH',гривни:'UAH',гривень:'UAH',гривнею:'UAH',гривні:'UAH',гривен:'UAH',
+  usd:'USD',gbp:'GBP','£':'GBP',czk:'CZK','kč':'CZK',
+};
+const CURRENCY_MARK:Record<DisplayCurrencyV1,string>={EUR:'€',PLN:'zł',UAH:'₴',USD:'$',GBP:'£',CZK:'Kč'};
+const KG_PER_LB=0.45359237;
+const UNIT_KG:Readonly<Record<string,number>>={
+  kg:1,кг:1,kilogram:1,kilograms:1,килограмм:1,килограмма:1,килограммов:1,килограммы:1,
+  кілограм:1,кілограма:1,кілограмів:1,кілограми:1,kilogramów:1,kilogramy:1,
+  g:.001,г:.001,гр:.001,gram:.001,grams:.001,грамм:.001,грамма:.001,граммов:.001,грам:.001,грама:.001,грамів:.001,грами:.001,gramów:.001,gramy:.001,
+  lb:KG_PER_LB,lbs:KG_PER_LB,pound:KG_PER_LB,pounds:KG_PER_LB,фунт:KG_PER_LB,фунта:KG_PER_LB,фунтов:KG_PER_LB,фунты:KG_PER_LB,фунтів:KG_PER_LB,фунти:KG_PER_LB,
+  oz:.028349523125,ounce:.028349523125,ounces:.028349523125,
+};
+function number(input:string):number|null {
+  if(!/^\d{1,6}(?:[.,]\d{1,3})?$/.test(input))return null;
+  const n=Number(input.replace(',','.'));
+  return Number.isFinite(n)&&n>0?n:null;
+}
+/** Geographical context only disambiguates generic words, never overrides an explicit ISO code. */
+function sourceCurrency(token:string,clause:string):DisplayCurrencyV1|null {
+  const t=token.toLowerCase();
+  const fixed=MONEY_CODES[t];if(fixed)return fixed;
+  if(/^(?:доллар|долар|dollar|\$)/iu.test(t))
+    return /(?:чикаго|сша|соединенн|америк|chicago|usa|united states|us dollars?|usd)/iu.test(clause)?'USD':null;
+  if(/^(?:крон|корун|korun|crown)/iu.test(t))
+    return /(?:брно|чехи|чешск|brno|czech|česk|praha|prague|prahy|czk)/iu.test(clause)?'CZK':null;
+  return null;
+}
+function clauseAround(text:string,index:number,end:number):string {
+  // Use a narrow phrase boundary to prevent a city in another offer from disambiguating money.
+  const left=text.slice(0,index);const last=Math.max(left.lastIndexOf(';'),left.lastIndexOf('\n'),left.lastIndexOf('，'),left.lastIndexOf(','));
+  const rest=text.slice(end);const first=rest.search(/[;\n，,]/u);
+  return text.slice(Math.max(0,last+1,index-110),first<0?Math.min(text.length,end+30):end+first);
+}
+function fxFactor(source:DisplayCurrencyV1,target:DisplayCurrencyV1,fx:PriceFx|null):{rate:number;tooltip:string}|null {
+  if(source===target)return {rate:1,tooltip:'Same currency; no exchange rate used'};
+  if(!fx)return null;
+  const from=fx.ratesPerEur[source],to=fx.ratesPerEur[target];
+  if(!from||!to||!Number.isFinite(from)||!Number.isFinite(to)||from<=0||to<=0)return null;
+  const refs=fx.sources.filter(item=>item.code===source||item.code===target);
+  if(source!=='EUR'&&!refs.some(item=>item.code===source))return null;
+  if(target!=='EUR'&&!refs.some(item=>item.code===target))return null;
+  return {rate:to/from,tooltip:refs.map(item=>`${item.code}: ${item.source}, ${item.referenceDate}${item.fallback?' (cached)':''}`).join('; ')};
+}
+function decoration(priceText:string,moneyText:string,qtyText:string|undefined,unitText:string,clause:string,
+    target:DisplayCurrencyV1,system:MeasurementSystemV1,fx:PriceFx|null,locale:string):{annotation:string|null;tooltip:string|null} {
+  const price=number(priceText),quantity=qtyText===undefined?1:number(qtyText);
+  const source=sourceCurrency(moneyText,clause),kg=UNIT_KG[unitText.toLowerCase()];
+  if(price===null||quantity===null||!source||!kg)return {annotation:null,tooltip:null};
+  const multiplier=fxFactor(source,target,fx);
+  if(!multiplier)return {annotation:null,tooltip:null};
+  const targetKg=system==='metric'?1:KG_PER_LB;
+  if(source===target&&Math.abs(quantity*kg-targetKg)<1e-10)return {annotation:null,tooltip:null};
+  const converted=price/(quantity*kg)*targetKg*multiplier.rate;
+  if(!Number.isFinite(converted)||converted>1e12)return {annotation:null,tooltip:null};
+  const amount=new Intl.NumberFormat(locale,{minimumFractionDigits:2,maximumFractionDigits:2}).format(converted);
+  return {annotation:`≈ ${amount} ${CURRENCY_MARK[target]}/${system==='metric'?'kg':'lb'}`,tooltip:multiplier.tooltip||null};
+}
+export function findPriceRatioAnnotationsV2(text:string,target:DisplayCurrencyV1,system:MeasurementSystemV1,fx:PriceFx|null,locale:string):PriceRatioDecorationV2[] {
+  const scan=text.slice(0,8000),out:PriceRatioDecorationV2[]=[];
+  // Do not overlap untrusted numeric fragments. Strict limited patterns are intentional.
+  for(const [index,regex] of [FIRST,SYMBOL_FIRST,QUANTITY_FIRST].entries()) {
+    regex.lastIndex=0;let m:RegExpExecArray|null;let steps=0;
+    while((m=regex.exec(scan))!==null&&steps++<100) {
+      const context=clauseAround(scan,m.index,m.index+m[0].length);
+      const [price,currency,qty,unit] = index===0?[m[1],m[2],m[3],m[4]]:
+        index===1?[m[2],m[1],m[3],m[4]]:[m[3],m[4],m[1],m[2]];
+      const result=decoration(price,currency,qty,unit,context,target,system,fx,locale);
+      out.push({index:m.index,end:m.index+m[0].length,original:m[0],...result});
+    }
+  }
+  return out.sort((a,b)=>a.index-b.index||b.end-a.end);
+}

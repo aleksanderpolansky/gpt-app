@@ -1,4 +1,5 @@
 import { type DisplayCurrencyV1, type MeasurementSystemV1, isDisplayCurrencyV1 } from './readerFormatV1';
+import { findPriceRatioAnnotationsV2 } from './priceRatioV2';
 
 export type DisplayRateSourceV1 = {code:DisplayCurrencyV1;referenceDate:string;source:string;fallback:boolean};
 export type DisplayFxSnapshotV1 = {
@@ -98,13 +99,15 @@ function annotateUnit(valueText:string,unitToken:string,system:MeasurementSystem
   return `${formattedNumber(output,digits,locale)} ${targetUnit}`;
 }
 
-type FoundMatch = {index:number;end:number;original:string;annotation:string;tooltip:string|null;priority:number};
+type FoundMatch = {index:number;end:number;original:string;annotation:string|null;tooltip:string|null;priority:number};
 /** Strict textual decorations. Ambiguous notation, unsupported units or stale FX are left unchanged. */
 export function annotateDisplayValuesV1(text:string,currency:DisplayCurrencyV1,units:MeasurementSystemV1,fx:DisplayFxSnapshotV1|null,locale='en-US'):DisplayTextPartV1[] {
   if(!text)return [];
   // Bound work even for user-generated long posts; remainder is always preserved.
   const scan=text.slice(0,8000);
   const found:FoundMatch[]=[];
+  // Price-per-weight is one semantic unit: block independent money/unit annotations within it.
+  for(const item of findPriceRatioAnnotationsV2(scan,currency,units,fx,locale)) found.push({...item,priority:3});
   const add=(m:RegExpExecArray,r:{text:string;tooltip:string|null}|null,priority:number)=>{
     if(!r)return;found.push({index:m.index,end:m.index+m[0].length,original:m[0],annotation:r.text,tooltip:r.tooltip,priority});
   };
