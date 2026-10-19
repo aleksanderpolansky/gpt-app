@@ -12,6 +12,6 @@ export default function ReaderConvertedText({text,locale}:{text:string;locale:Lo
   },[text,ensureFx]);
   const parts=useMemo(()=>annotateDisplayValuesV1(text,prefs.currency,prefs.units,fx,LOCALES[locale]),[text,prefs,fx,locale]);
   return <>{parts.map((part,index)=><span key={index}>
-    {part.original}{part.annotation?<span className="text-[#64748b]" title={part.tooltip??undefined}> ({part.annotation})</span>:null}
+    {part.original}{part.annotation?<span className="text-[#6D28D9]" title={part.tooltip??undefined}> ({part.annotation})</span>:null}
   </span>)}</>;
 }
