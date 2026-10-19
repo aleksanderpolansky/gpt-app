@@ -13,7 +13,7 @@ export type PriceRatioDecorationV2 = {
 
 const PRICE=String.raw`\d{1,6}(?:[.,]\d{1,2})?`;
 const QUANTITY=String.raw`\d{1,6}(?:[.,]\d{1,3})?`;
-const CUR=String.raw`(?:EUR|PLN|UAH|USD|GBP|CZK|€|£|₴|\$|zł|Kč|euro|euros|eura|евро|євро|грн|грив(?:на|ни|ень|нею|ні|ен)|злот(?:ый|ых|их|и)|złoty|złotych|доллар(?:а|ов|ы|у)?|долар(?:а|ів|и|у)?|dollars?|dolar(?:y|ów|a|u|ů|ov|em)?|dolár(?:e|ů|y|u)?|dólar(?:es)?|крон(?:а|ы|у)?|корун(?:а|ы)?|koron(?:a|y|u|ą|ami)?|korun(?:a|y|u|ů)?|kronen|coronas?|crowns?)`;
+const CUR=String.raw`(?:чешских\s+крон|чеських\s+крон|korony\s+czeskiej|koron\s+czeskich|koruny\s+české|české\s+koruny|EUR|PLN|UAH|USD|GBP|CZK|€|£|₴|\$|zł|Kč|euro|euros|eura|евро|євро|грн|грив(?:на|ни|ень|нею|ні|ен)|злот(?:ый|ых|их|и)|złoty|złotych|доллар(?:а|ов|ы|у)?|долар(?:а|ів|и|у)?|dollars?|dolar(?:y|ów|a|u|ů|ov|em)?|dolár(?:e|ů|y|u)?|dólar(?:es)?|крон(?:а|ы|у)?|корун(?:а|ы)?|koron(?:a|y|u|ą|ami)?|korun(?:a|y|u|ů)?|kronen|coronas?|crowns?)`;
 const MASS=String.raw`(?:кг|kg|kilograms?|kilogram(?:ów|y|u|ů|em)?|kilogramm(?:s|e)?|kilogramo(?:s)?|килограмм(?:а|ов|ы)?|кілограм(?:а|ів|и)?|г|гр|g|grams?|грамм(?:а|ов)?|грам(?:а|ів|и)?|gram(?:ów|y)?|lb|lbs|pounds?|funt(?:a|ów|y)?|libr(?:a|u|y|ou)?|pfund(?:s|e)?|фунт(?:а|ов|ы)?|фунт(?:а|ів|и)?|oz|ounces?)`;
 const SEP=String.raw`(?:за|za|per|por|pro|for|\/|на)`;
 const FIRST = new RegExp(String.raw`(?<![\p{L}\p{N}.,-])(${PRICE})\s*(${CUR})\s*${SEP}\s*(?:(${QUANTITY})\s*)?(${MASS})(?![\p{L}\p{N}])`, 'giu');
@@ -48,18 +48,32 @@ function number(input:string):number|null {
 /** Geographical context only disambiguates generic words, never overrides an explicit ISO code. */
 function sourceCurrency(token:string,clause:string):DisplayCurrencyV1|null {
   const t=token.toLowerCase();
+  if(/^(?:чешских\s+крон|чеських\s+крон|korony\s+czeskiej|koron\s+czeskich|koruny\s+české|české\s+koruny)$/iu.test(t))return 'CZK';
   const fixed=MONEY_CODES[t];if(fixed)return fixed;
   if(/^(?:доллар|долар|dollar|dolar|dolár|dólar|\$)/iu.test(t))
     return /(?:чикаго|сша|соединенн|америк|chicag(?:o|u|a)|usa|united states|us dollars?|usd)/iu.test(clause)?'USD':null;
   if(/^(?:крон|корун|koron|korun|kronen|corona|crown)/iu.test(t))
-    return /(?:брно|чехи|чешск|brno|brn(?:ě|e|ie)|brünn|czech|česk|praha|prague|prahy|czk)/iu.test(clause)?'CZK':null;
+    return /(?:брно|чехи|чешск|праг(?:а|е|и|у|ой)?|brno|brn(?:ě|e|ie)|brünn|czech|česk|praha|prague|prahy|prag(?:a|e|i|u)?|pradze|czk)/iu.test(clause)?'CZK':null;
   return null;
 }
 function clauseAround(text:string,index:number,end:number):string {
-  // Use a narrow phrase boundary to prevent a city in another offer from disambiguating money.
-  const left=text.slice(0,index);const last=Math.max(left.lastIndexOf(';'),left.lastIndexOf('\n'),left.lastIndexOf('，'),left.lastIndexOf(','));
-  const rest=text.slice(end);const first=rest.search(/[;\n，,]/u);
-  return text.slice(Math.max(0,last+1,index-110),first<0?Math.min(text.length,end+30):end+first);
+  // A store address often uses 'Chicago, Jewel-Osco — price'. Keep the city only
+  // when the comma is followed by a store-heading dash, not a separate offer.
+  // Never treat the decimal comma inside 3,99 as a phrase separator.
+  const left=text.slice(0,index);
+  const hardBreak=Math.max(left.lastIndexOf(';'),left.lastIndexOf('\n'),left.lastIndexOf('，'));
+  const candidate=left.slice(Math.max(0,hardBreak+1,index-160));
+  const comma=candidate.lastIndexOf(',');
+  let start=Math.max(0,hardBreak+1,index-160);
+  if(comma>=0){
+    const after=candidate.slice(comma+1);
+    const before=candidate.slice(0,comma);
+    const cityBefore=/(?:чикаго|chicag(?:o|u|a)|брно|brno|brn(?:ě|e|ie)|brünn|праг(?:а|е|и|у|ой)?|praha|prague|prag(?:a|e|i|u)?|pradze)/iu.test(before);
+    if(!cityBefore||!/\s[—–]\s/u.test(after))start+=comma+1;
+  }
+  const rest=text.slice(end);
+  const followingBreak=rest.search(/[;\n，]/u);
+  return text.slice(start,followingBreak<0?Math.min(text.length,end+30):end+followingBreak);
 }
 function fxFactor(source:DisplayCurrencyV1,target:DisplayCurrencyV1,fx:PriceFx|null):{rate:number;tooltip:string}|null {
   if(source===target)return {rate:1,tooltip:'Same currency; no exchange rate used'};
