@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import GovernanceDraftsClient from "./GovernanceDraftsClient";
 import { useMemo, useState } from "react";
 import {
   GOVERNANCE_DOMAINS_V1, GOVERNANCE_LAYERS_V1, GOVERNANCE_WORKFLOW_STAGES_V1,
@@ -41,7 +42,7 @@ export default function GovernanceClient() {
 
   return <div className="space-y-6">
     <header className="rounded-2xl border border-slate-700 bg-slate-900 p-5">
-      <p className="text-xs font-bold uppercase tracking-wider text-cyan-300">ARCTor · AI Governance · MVP 1</p>
+      <p className="text-xs font-bold uppercase tracking-wider text-cyan-300">ARCTor · AI Governance · MVP 2</p>
       <h1 className="mt-2 text-2xl font-bold text-white">Единый реестр направлений, правил и ИИ-исполнителей</h1>
       <p className="mt-2 text-sm text-slate-300">Сначала карта применимости и безопасная симуляция. Эта страница не исполняет ИИ, не списывает AI EUR и не записывает факты.</p>
       <div className="mt-4 flex flex-wrap gap-2 text-sm">
@@ -78,7 +79,7 @@ export default function GovernanceClient() {
 
     <section className="rounded-2xl border border-violet-700 bg-slate-900/70 p-5" id="rule-sandbox">
       <h2 className="text-lg font-bold">3 · Конструктор черновика и симулятор</h2>
-      <p className="mt-2 text-sm text-slate-300">Формула: событие → область применения → точное совпадение/фраза → предлагаемое действие. Нет сохранения в БД, реальных записей или вызова модели.</p>
+      <p className="mt-2 text-sm text-slate-300">Формула: событие → область применения → точное совпадение/фраза → предлагаемое действие. Этот симулятор не сохраняет данные, не создаёт факты и не вызывает модель.</p>
       <div className="mt-3 flex flex-wrap gap-2">
         <button type="button" onClick={() => loadSample("activity_phrase")} className="rounded-lg bg-violet-700 px-3 py-2 text-sm text-white">Пример «один» → активность</button>
         <button type="button" onClick={() => loadSample("publication_price_marker")} className="rounded-lg border border-violet-500 px-3 py-2 text-sm text-violet-100">Пример цены за килограмм</button>
@@ -108,5 +109,6 @@ export default function GovernanceClient() {
         <p className="mt-2 text-xs text-amber-200">JSON — лишь описание правила. Его нельзя импортировать как исполняемый скрипт; подключение к runtime требует отдельной проверки и релиза.</p>
       </div>
     </section>
+    <GovernanceDraftsClient draft={draft} onLoad={(rule) => { setDraft(rule); setTestDomain(rule.kind === "activity_phrase" ? "personal_activities" : "publications"); setTestInputMode(rule.inputMode); setTestLocale(rule.locale); setSourceText(rule.phrase); setCopied(false); }} />
   </div>;
 }
