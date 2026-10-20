@@ -34,6 +34,12 @@ type PageData = {
 
 const ADMIN_CARDS: AdminCard[] = [
   {
+    title: "AI Governance · реестр процессов",
+    href: "/admin/ai-governance",
+    description: "Направления обработки, уровни системных и персональных правил, безопасный симулятор без ИИ и списаний.",
+    badge: "AI Governance",
+  },
+  {
     title: "Библиотека администратора",
     href: "/project-knowledge/admin-library",
     description: "Рабочие документы для администраторов и будущих ИИ-исполнителей с версиями и статусами.",

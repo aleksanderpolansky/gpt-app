@@ -1,0 +1,22 @@
+import type { Metadata } from "next";
+import { requirePlatformAdmin } from "@/lib/admin/require-platform-admin";
+import GovernanceClient from "./GovernanceClient";
+
+export const metadata: Metadata = {
+  title: "AI Governance & Workflow Registry | ARCTor",
+  description: "Read-only AI processing map and safe rule dry-run for administrators.",
+};
+export const dynamic = "force-dynamic";
+
+export default async function GovernanceRegistryPage() {
+  const guard = await requirePlatformAdmin({allowedRoles: ["owner", "admin", "viewer"]});
+  if (!guard.ok) {
+    return <main className="min-h-screen bg-slate-950 p-8 text-slate-100">
+      <h1 className="text-2xl font-semibold">ARCTor AI Governance</h1>
+      <p className="mt-3 text-red-300">Доступ к внутреннему реестру ограничен.</p>
+    </main>;
+  }
+  return <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-100">
+    <div className="mx-auto max-w-6xl"><GovernanceClient /></div>
+  </main>;
+}
