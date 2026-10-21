@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { requirePlatformAdmin } from "@/lib/admin/require-platform-admin";
+import { normalizeAiProcessingLocale } from "@/lib/ai/processingInstructions.server";
 import GovernanceClient from "./GovernanceClient";
+import GovernanceRuntimeEvidence from "./GovernanceRuntimeEvidence";
 
 export const metadata: Metadata = {
   title: "AI Governance & Workflow Registry | ARCTor",
@@ -8,7 +10,9 @@ export const metadata: Metadata = {
 };
 export const dynamic = "force-dynamic";
 
-export default async function GovernanceRegistryPage() {
+type PageProps = { searchParams: Promise<{ locale?: string }> };
+
+export default async function GovernanceRegistryPage({ searchParams }: PageProps) {
   const guard = await requirePlatformAdmin({allowedRoles: ["owner", "admin", "viewer"]});
   if (!guard.ok) {
     return <main className="min-h-screen bg-slate-950 p-8 text-slate-100">
@@ -16,7 +20,11 @@ export default async function GovernanceRegistryPage() {
       <p className="mt-3 text-red-300">Доступ к внутреннему реестру ограничен.</p>
     </main>;
   }
+  const locale = normalizeAiProcessingLocale((await searchParams)?.locale ?? "ru");
   return <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-100">
-    <div className="mx-auto max-w-6xl"><GovernanceClient /></div>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <GovernanceClient />
+      <GovernanceRuntimeEvidence localeCode={locale} />
+    </div>
   </main>;
 }
