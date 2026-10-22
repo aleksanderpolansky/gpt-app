@@ -4,7 +4,6 @@ import {
   type SemanticFeedQueryF31,
 } from "@/lib/messages/semanticFeedSearchF31.server";
 import { channelWords } from "@/lib/ai-channels/copy";
-import { Suspense } from "react";
 import Link from "next/link";
 
 import type { LocaleCode } from "@/i18n";
@@ -12,7 +11,6 @@ import HidePublicationButton from "@/components/messages/HidePublicationButton";
 import PublicationComments from "@/components/messages/PublicationComments";
 import {
   getGlobalArctorFeed,
-  localizeGlobalArctorFeedItems,
   readCachedGlobalArctorFeedItemContent,
   type GlobalArctorFeedItem,
 } from "@/lib/messages/globalFeed.server";
@@ -185,29 +183,6 @@ function GlobalFeedItemCard({
   );
 }
 
-async function PendingGlobalFeedItem({
-  item,
-  locale,
-  localizationPromise,
-  personalizationMode,
-}: {
-  item: GlobalArctorFeedItem;
-  locale: LocaleCode;
-  localizationPromise: Promise<Map<string, string>>;
-  personalizationMode?: "hide" | "restore" | null;
-}) {
-  const localizedById = await localizationPromise;
-
-  return (
-    <GlobalFeedItemCard
-      item={item}
-      locale={locale}
-      contentText={localizedById.get(item.id) ?? item.sourceContentText}
-      personalizationMode={personalizationMode}
-    />
-  );
-}
-
 export default async function GlobalFeedContent({
   locale,
   hiddenMessageObjectIds = [],
@@ -288,30 +263,14 @@ export default async function GlobalFeedContent({
     );
   }
 
+  // P3.6.A: viewing a publication must never trigger an LLM call.
+  // Reuse a revision-matched cached translation or show the unchanged original.
+  // Reader-facing unit/FX annotations remain deterministic and display-only.
   const cachedContentById = new Map<string, string>();
-  const pendingItems: GlobalArctorFeedItem[] = [];
-
   for (const item of result.items) {
-    const cached = readCachedGlobalArctorFeedItemContent({
-      locale,
-      item,
-    });
-
-    if (cached) {
-      cachedContentById.set(item.id, cached);
-    } else if (item.sourceContentText) {
-      pendingItems.push(item);
-    }
+    const cached = readCachedGlobalArctorFeedItemContent({ locale, item });
+    if (cached) cachedContentById.set(item.id, cached);
   }
-
-  const pendingIds = new Set(pendingItems.map((item) => item.id));
-  const localizationPromise =
-    pendingItems.length > 0
-      ? localizeGlobalArctorFeedItems({
-          locale,
-          items: pendingItems,
-        })
-      : Promise.resolve(new Map<string, string>());
   const personalizationMode =
     canPersonalize ? (mode === "hidden" ? "restore" : "hide") : null;
 
@@ -324,39 +283,14 @@ export default async function GlobalFeedContent({
         }
         const item = entry.item;
         const cached = cachedContentById.get(item.id);
-
-        if (cached || !pendingIds.has(item.id)) {
-          return (
-            <GlobalFeedItemCard
-              key={item.id}
-              item={item}
-              locale={locale}
-              contentText={cached ?? item.sourceContentText}
-              personalizationMode={personalizationMode}
-            />
-          );
-        }
-
         return (
-          <Suspense
+          <GlobalFeedItemCard
             key={item.id}
-            fallback={
-              <GlobalFeedItemCard
-                item={item}
-                locale={locale}
-                contentText={null}
-                pendingLabel={copy.translating}
-                personalizationMode={personalizationMode}
-              />
-            }
-          >
-            <PendingGlobalFeedItem
-              item={item}
-              locale={locale}
-              localizationPromise={localizationPromise}
-              personalizationMode={personalizationMode}
-            />
-          </Suspense>
+            item={item}
+            locale={locale}
+            contentText={cached ?? item.sourceContentText}
+            personalizationMode={personalizationMode}
+          />
         );
       })}
     </div>
