@@ -14,6 +14,7 @@ import {
 import { supabase } from "../../../../lib/supabase";
 import { getPublicationAuthorOptionForUser } from "@/lib/messages/publicationAuthors.server";
 import { processPublicFeedMessageV1 } from "@/lib/activity/commercialFeedActivityBridge.server";
+import { extractPublicationValueEvidenceV1 } from "@/lib/reader-format/priceRatioV2";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -424,6 +425,14 @@ export async function POST(request: Request) {
         profile_id: author.profileId,
         organization_id: author.organizationId,
         surface: "feed",
+        publicationValueEvidenceV1: {
+          schemaVersion: 1,
+          evidenceStatus: "source_derived_unverified",
+          origin: "original_publication_text",
+          extractor: "READER_PRICE_RATIO_V2_STRICT",
+          sourceSha256: createHash("sha256").update(contentText, "utf8").digest("hex"),
+          priceRatios: extractPublicationValueEvidenceV1(contentText),
+        },
       },
     },
   );

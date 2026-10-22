@@ -99,6 +99,62 @@ function decoration(priceText:string,moneyText:string,qtyText:string|undefined,u
   const amount=new Intl.NumberFormat(locale,{minimumFractionDigits:2,maximumFractionDigits:2}).format(converted);
   return {annotation:`≈ ${amount} ${CURRENCY_MARK[target]}/${system==='metric'?'kg':'lb'}`,tooltip:multiplier.tooltip||null};
 }
+// P3.6.B1: extraction uses the SAME strict patterns as reader price annotations.
+// This is unverified source-derived metadata, never a confirmed offer/fact or FX conversion.
+export type PublicationPriceSourceEvidenceV1 = {
+  sourceFragment: string;
+  start: number;
+  end: number;
+  currencyCode: DisplayCurrencyV1;
+  amount: number;
+  quantity: number;
+  sourceUnit: string;
+  quantityKg: number;
+  sourceCurrencyPerKg: number;
+};
+
+export function extractPublicationValueEvidenceV1(text: string): PublicationPriceSourceEvidenceV1[] {
+  const scan = text.slice(0, 5000);
+  const candidates: PublicationPriceSourceEvidenceV1[] = [];
+  for (const [patternIndex, regex] of [FIRST, SYMBOL_FIRST, QUANTITY_FIRST].entries()) {
+    regex.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    let steps = 0;
+    while ((match = regex.exec(scan)) !== null && steps++ < 100) {
+      if (match.index > 0 && /[\d.,-]/.test(scan[match.index - 1])) continue;
+      const [priceToken, currencyToken, quantityToken, unitToken] =
+        patternIndex === 0 ? [match[1], match[2], match[3], match[4]] :
+        patternIndex === 1 ? [match[2], match[1], match[3], match[4]] :
+        [match[3], match[4], match[1], match[2]];
+      const amount = number(priceToken);
+      const quantity = quantityToken === undefined ? 1 : number(quantityToken);
+      const factorKg = UNIT_KG[unitToken.toLowerCase()];
+      const context = clauseAround(scan, match.index, match.index + match[0].length);
+      const currencyCode = sourceCurrency(currencyToken, context);
+      if (amount === null || quantity === null || !factorKg || !currencyCode) continue;
+      const kg = quantity * factorKg;
+      if (!Number.isFinite(kg) || kg <= 0) continue;
+      const pricePerKg = amount / kg;
+      if (!Number.isFinite(pricePerKg) || pricePerKg <= 0 || pricePerKg > 1_000_000_000) continue;
+      candidates.push({
+        sourceFragment: match[0], start: match.index,
+        end: match.index + match[0].length, currencyCode, amount, quantity,
+        sourceUnit: unitToken.toLowerCase(),
+        quantityKg: Number(kg.toFixed(9)),
+        sourceCurrencyPerKg: Number(pricePerKg.toFixed(6)),
+      });
+    }
+  }
+  candidates.sort((a,b) => a.start - b.start || b.end - a.end);
+  const result: PublicationPriceSourceEvidenceV1[] = [];
+  for (const candidate of candidates) {
+    if (result.some((saved) => candidate.start < saved.end && saved.start < candidate.end)) continue;
+    result.push(candidate);
+    if (result.length >= 24) break;
+  }
+  return result;
+}
+
 export function findPriceRatioAnnotationsV2(text:string,target:DisplayCurrencyV1,system:MeasurementSystemV1,fx:PriceFx|null,locale:string):PriceRatioDecorationV2[] {
   const scan=text.slice(0,8000),out:PriceRatioDecorationV2[]=[];
   // Do not overlap untrusted numeric fragments. Strict limited patterns are intentional.
