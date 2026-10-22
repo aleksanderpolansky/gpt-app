@@ -29,6 +29,10 @@ import {
 } from "@/lib/activity/pp3/activityRecurrenceMaterializer.server";
 import { normalizeQuickCaptureTemporalMode } from "@/lib/activity/quickCaptureTemporalMode";
 import {
+  parseP34RuleSelection,
+  resolveP34ConfirmedActivity,
+} from "@/lib/ai/actorScopedActivityExecutor.server";
+import {
   analyzeBasicActivityIntakeV1,
   markBasicActivityIntakeFailureV1,
 } from "@/lib/activity/activity-basic-intake-analysis.server";
@@ -100,6 +104,7 @@ type SubmitBody = {
   clientRequestId?: unknown;
   temporalDirection?: unknown;
   projectContextId?: unknown;
+  scopedRule?: unknown;
 };
 
 type ParsedSubmitBody = {
@@ -655,7 +660,24 @@ export async function POST(request: Request) {
     );
   }
 
-  const sourceText = inputText || imageOnlySourceText(locale, temporalDirection);
+  // Validate the opt-in envelope and same-origin request before the idempotency lookup.
+  // Ordinary Quick Capture requests are unaffected.
+  const p34Selection = body.scopedRule === undefined ? null : parseP34RuleSelection(body.scopedRule);
+  if (body.scopedRule !== undefined) {
+    // P3.4 is deliberately limited to one completed activity, no recurrence executor.
+    if (temporalDirection !== "past") {
+      return NextResponse.json({ ok: false, error: "P34_PAST_ONLY" }, { status: 400 });
+    }
+    if (!p34Selection || imageFile || !inputText) {
+      return NextResponse.json({ ok: false, error: "P34_INVALID_SELECTION" }, { status: 400 });
+    }
+    if (!request.headers.get("origin") || request.headers.get("origin") !== new URL(request.url).origin) {
+      return NextResponse.json({ ok: false, error: "P34_ORIGIN_MISMATCH" }, { status: 403 });
+    }
+  }
+
+  let sourceText = inputText || imageOnlySourceText(locale, temporalDirection);
+  let scopedRuleProvenance: Record<string, unknown> | null = null;
   const idempotencyKey = `activity_ai_lab_quick_capture:${clientRequestId}`;
   const requestReportedAt = new Date().toISOString();
 
@@ -665,6 +687,13 @@ export async function POST(request: Request) {
   });
 
   if (signal) {
+    // A retried personal rule must belong to the SAME actor and original command.
+    if (p34Selection && (
+      text(asRecord(signal.metadata_json).actorId) !== personActor.id ||
+      text(asRecord(signal.raw_payload).inputText) !== inputText
+    )) {
+      return NextResponse.json({ ok: false, error: "P34_IDEMPOTENCY_SCOPE_CONFLICT" }, { status: 409 });
+    }
     const existing = await readReviewFirstReceipt(signal.id, appUser.id);
     if (existing?.result) {
       const existingActivityEventId = existing.primaryActivityEventId;
@@ -695,12 +724,34 @@ export async function POST(request: Request) {
     }
   }
 
+  // P3.4 is opt-in. A normal Quick Capture request follows the original path.
+  // Resolve AFTER the existing idempotent receipt short circuit, BEFORE any new write.
+  if (p34Selection) {
+    try {
+      const matched = await resolveP34ConfirmedActivity({
+        actor: { appUserId: appUser.id, actorId: personActor.id },
+        originalText: inputText,
+        locale,
+        selection: p34Selection,
+      });
+      sourceText = matched.expandedText;
+      scopedRuleProvenance = matched.provenance;
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "P34_RULE_RESOLUTION_FAILED";
+      const safe = ["P34_RULE_NOT_FOUND_FOR_ACTIVE_ACTOR", "P34_REVISION_CHANGED",
+        "P34_RULE_DISABLED", "P34_INVALID_STORED_RULE", "P34_RULE_DOES_NOT_MATCH"].includes(reason)
+        ? reason : "P34_RULE_RESOLUTION_FAILED";
+      return NextResponse.json({ ok: false, error: safe }, { status: safe === "P34_RULE_RESOLUTION_FAILED" ? 503 : 409 });
+    }
+  }
+
   if (!signal) {
     const created = await createDurableQuickCaptureSignal({
       userId: appUser.id,
       actorId: personActor.id,
       clientRequestId,
-      inputText: sourceText,
+      // Durable receipt retains the literal user's original command.
+      inputText: scopedRuleProvenance ? inputText : sourceText,
       locale,
       timeZone,
       temporalDirection,
@@ -841,6 +892,7 @@ export async function POST(request: Request) {
         quickCaptureReviewStatus: "pending",
         quickCaptureSourceMessageText: inputText || null,
         quickCaptureSourceTextKind: inputText ? "user_text" : "system_image_placeholder",
+        ...(scopedRuleProvenance ? { quickCaptureScopedRuleProvenance: scopedRuleProvenance } : {}),
         quickCaptureImageEvidence: imageEvidence,
         quickCaptureSourceSegmentId: "capture_1",
         quickCaptureSourceSignalId: signal.id,

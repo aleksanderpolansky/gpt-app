@@ -14,6 +14,9 @@ export default function ScopedRulesPage() {
       <div className="mb-4 rounded-xl border border-blue-200 bg-white p-3 text-sm">
         <Link href="/settings/ai-processing/scoped-rules/simulate?locale=ru" className="font-semibold text-blue-700 underline">Открыть симулятор P3.3 — проверка и сравнение редакций (без записи)</Link>
       </div>
+      <div className="mb-4 rounded-xl border border-green-200 bg-white p-3 text-sm">
+        <Link href="/settings/ai-processing/scoped-rules/execute?locale=ru" className="font-semibold text-green-800 underline">P3.4 — проверить правило и подтвердить добавление сырой активности</Link>
+      </div>
       <ScopedRulesClient />
     </div>
   </main>;
