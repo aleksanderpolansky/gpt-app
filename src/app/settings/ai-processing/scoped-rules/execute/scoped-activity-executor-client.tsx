@@ -13,6 +13,12 @@ type Sim = { ok: boolean; errorCode?: string; revision?: number; cases?: Array<{
 type Receipt = { ok?: boolean; error?: string; signalId?: string; duplicate?: boolean;
   result?: { activityEventId?: string; [key: string]: unknown } };
 type Preview = { originalText: string; proposedText: string; ruleCode: string; revision: number; localeCode: string };
+type P35Quote = { ok: boolean; maximumReservedEur: number; availableEur: number; canAfford: boolean;
+  modelName: string; tierCode: string; quoteHash: string; contextPackHash: string };
+type P35Result = { ok: boolean; decision: { decision: "suggest" | "clarify";
+  suggestedRawActivity: string; evidence: string[]; unknowns: string[]; explanation: string };
+  billing: { debitEur: number; reservationEur: number; usageEventId: string; modelName: string };
+  audit: { contextPackHash: string; contextManifestId: string; instructionRefsHash: string } };
 
 const inputClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm";
 async function readP34Catalog(): Promise<Catalog> {
@@ -32,6 +38,11 @@ export default function ScopedActivityExecutorClient() {
   const [message, setMessage] = useState("Загрузка правил активного профиля...");
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const requestId = useRef("");
+  const paidRequestId = useRef("");
+  const [fallbackEligible, setFallbackEligible] = useState(false);
+  const [fallbackQuote, setFallbackQuote] = useState<P35Quote | null>(null);
+  const [fallbackConsent, setFallbackConsent] = useState(false);
+  const [fallbackResult, setFallbackResult] = useState<P35Result | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,7 +54,52 @@ export default function ScopedActivityExecutorClient() {
   }, []);
 
   const selected = rules.find((r) => r.rule_code === ruleCode);
-  function invalidateProposal() { setPreview(null); setReceipt(null); requestId.current = ""; }
+  function invalidateProposal() {
+    setPreview(null); setReceipt(null); requestId.current = "";
+    setFallbackEligible(false); setFallbackQuote(null); setFallbackConsent(false);
+    setFallbackResult(null); paidRequestId.current = "";
+  }
+  function p35Body(action: "quote" | "resolve") {
+    if (!selected) throw new Error("P35_RULE_REQUIRED");
+    return { action, ruleCode: selected.rule_code, expectedRevision: selected.current_revision,
+      originalText: originalText.trim(), locale: selected.document_json.localeCode,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" };
+  }
+  async function p35Post(body: object) {
+    const response = await fetch("/api/ai-processing/scoped-rules/llm-fallback", {
+      method: "POST", credentials: "same-origin", cache: "no-store",
+      headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+    const value = await response.json() as { ok?: boolean; errorCode?: string };
+    if (!response.ok || !value.ok) throw new Error(value.errorCode ?? "P35_UNAVAILABLE");
+    return value;
+  }
+  async function quoteFallback() {
+    setBusy(true); setFallbackConsent(false); setFallbackQuote(null);
+    setMessage("Проверяем контекст, модель и доступный бюджет — без вызова ИИ...");
+    try {
+      const result = await p35Post(p35Body("quote")) as P35Quote;
+      setFallbackQuote(result);
+      setMessage(result.canAfford ? "Предварительная оценка готова. Платного вызова ещё не было." :
+        "Недостаточно доступных AI EUR для резервирования. Вызов заблокирован.");
+    } catch (e) { setMessage(e instanceof Error ? e.message : "P35_QUOTE_UNAVAILABLE"); }
+    finally { setBusy(false); }
+  }
+  async function confirmPaidFallback() {
+    if (!fallbackQuote || !fallbackQuote.canAfford || !fallbackConsent || busy) return;
+    if (!paidRequestId.current) paidRequestId.current = `p35:${crypto.randomUUID()}`;
+    setBusy(true); setMessage("Выполняется один платный вызов через AI Billing Gateway...");
+    try {
+      const result = await p35Post({ ...p35Body("resolve"),
+        explicitConsent: true, quoteHash: fallbackQuote.quoteHash,
+        approvedMaxEur: fallbackQuote.maximumReservedEur, operationId: paidRequestId.current,
+      }) as P35Result;
+      setFallbackResult(result);
+      setMessage("Предложение ИИ получено. Ничего не записано в журнал активностей или факты.");
+    } catch (e) {
+      setMessage(`${e instanceof Error ? e.message : "P35_UNAVAILABLE"}. Не создавай новый платный запрос при сетевой ошибке: проверь журнал AI Billing.`);
+    } finally { setBusy(false); }
+  }
   async function showProposal() {
     if (!selected || selected.status !== "draft" || selected.document_json.inputMode !== "text_activity") return;
     setBusy(true); invalidateProposal(); setMessage("Проверяем правило на сервере...");
@@ -62,6 +118,7 @@ export default function ScopedActivityExecutorClient() {
       if (!response.ok || !data.ok) throw new Error(data.errorCode ?? "P34_PREVIEW_FAILED");
       const c = data.cases?.[0];
       if (!c?.previewMatch || !c.proposedRawActivity) {
+        setFallbackEligible(c?.reason === "NO_MATCH");
         setMessage(`Правило не применимо: ${c?.reason ?? "NO_MATCH"}. Ничего не записано.`);
         return;
       }
@@ -129,6 +186,46 @@ export default function ScopedActivityExecutorClient() {
       <p className="text-sm text-slate-600">{message}</p>
       {selected && selected.document_json.inputMode !== "text_activity" && <p className="text-xs text-amber-700">В P3.4 подключён только текстовый маршрут. Голосовая команда не исполняется.</p>}
     </section>
+    {fallbackEligible && selected?.status === "draft" && !preview && <section
+      className="rounded-2xl border border-amber-300 bg-white p-5 space-y-3">
+      <h2 className="text-lg font-semibold">P3.5 · Неоднозначное сообщение — необязательная помощь ИИ</h2>
+      <p className="text-sm text-slate-700">Точное правило не сработало. Сначала оцени стоимость бесплатно.
+        Вызов модели возможен только с твоего отдельного согласия и за AI EUR текущего владельца.</p>
+      {!fallbackQuote && !fallbackResult && <button type="button" disabled={busy}
+        onClick={() => void quoteFallback()} className="rounded-lg border border-amber-600 px-4 py-2 text-sm font-semibold disabled:opacity-50">
+        Бесплатно оценить стоимость ИИ-подсказки</button>}
+      {fallbackQuote && !fallbackResult && <div className="space-y-2 rounded-lg bg-amber-50 p-3 text-sm">
+        <p><b>Модель:</b> {fallbackQuote.modelName} · {fallbackQuote.tierCode}</p>
+        <p><b>Максимальный резерв:</b> {fallbackQuote.maximumReservedEur.toFixed(6)} EUR.
+          <b> Доступно:</b> {fallbackQuote.availableEur.toFixed(6)} EUR.</p>
+        <p className="text-xs">Это верхняя граница предварительного резерва, не обещание точной конечной стоимости.
+          Результат — только предложение, без записи активности и фактов.</p>
+        <label className="flex items-start gap-2"><input type="checkbox" checked={fallbackConsent}
+          onChange={(e) => setFallbackConsent(e.target.checked)} />
+          <span>Я разрешаю один платный AI-запрос с резервом не более указанной суммы.</span></label>
+        <button type="button" disabled={busy || !fallbackConsent || !fallbackQuote.canAfford}
+          onClick={() => void confirmPaidFallback()}
+          className="rounded-lg bg-amber-700 px-4 py-2 font-semibold text-white disabled:opacity-50">
+          Разрешить платный анализ</button>
+      </div>}
+      {fallbackResult && <div className="space-y-2 rounded-lg border border-slate-200 p-3 text-sm">
+        <p><b>Решение модели:</b> {fallbackResult.decision.decision === "suggest" ? "предложение" : "нужно уточнение"}</p>
+        {fallbackResult.decision.suggestedRawActivity && <div>
+          <p><b>Возможный текст сырой активности:</b> {fallbackResult.decision.suggestedRawActivity}</p>
+          <button type="button" className="mt-2 rounded border px-3 py-1"
+            onClick={() => void navigator.clipboard.writeText(fallbackResult.decision.suggestedRawActivity)}>
+            Скопировать для ручного ввода в журнал</button>
+        </div>}
+        <p><b>Обоснование:</b> {fallbackResult.decision.explanation}</p>
+        <p><b>Неизвестно:</b> {fallbackResult.decision.unknowns.join("; ") || "—"}</p>
+        <p><b>Источник:</b> {fallbackResult.decision.evidence.join("; ") || "—"}</p>
+        <p><b>Списано:</b> {fallbackResult.billing.debitEur.toFixed(6)} EUR · {fallbackResult.billing.modelName}</p>
+        <p className="break-all text-xs text-slate-500">Usage: {fallbackResult.billing.usageEventId} ·
+          Context: {fallbackResult.audit.contextPackHash}</p>
+        <p className="text-xs text-red-700">Никакая активность не записана. Копия — только текст,
+          обычная запись потребует отдельного действия в журнале.</p>
+      </div>}
+    </section>}
     {preview && <section className="rounded-2xl border border-blue-200 bg-white p-5 space-y-3">
       <h2 className="text-lg font-semibold">2. Распознано → предложено</h2>
       <p className="text-xs text-slate-500">{preview.ruleCode} · v{preview.revision} · {preview.localeCode}</p>
