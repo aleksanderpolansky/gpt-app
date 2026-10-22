@@ -63,28 +63,33 @@ export default function AiProcessingSettingsClient() {
     return action === "restore_default" ? ui.settings.restoreDefaultAction : ui.settings.saveCustomAction;
   }
 
-  async function load(nextLocale = localeCode) {
-    setStatus("loading");
-    setMessage(null);
-    try {
-      const response = await fetch(`/api/ai-processing/preferences?locale=${encodeURIComponent(nextLocale)}`, { credentials: "include", headers: { Accept: "application/json" } });
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+    void fetch(`/api/ai-processing/preferences?locale=${encodeURIComponent(localeCode)}`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    }).then(async (response) => {
       const payload = (await response.json().catch(() => null)) as PreferencePayload | null;
-      if (!response.ok || !payload?.actor || !payload.effective) throw new Error(ui.settings.loadError);
+      if (!response.ok || !payload?.actor || !payload.effective) {
+        throw new Error("P32_SETTINGS_PREF_READ_FAILED");
+      }
+      return payload;
+    }).then((payload) => {
+      if (cancelled) return;
       setSnapshot(payload);
       setDraft(payload.selectedPreference?.custom_instruction_text ?? "");
       setMaxLength(payload.maxLength ?? 20_000);
       setStatus("idle");
-    } catch {
+      setMessage(null);
+    }).catch(() => {
+      if (cancelled) return;
       setStatus("error");
       setMessage(ui.settings.loadError);
-    }
-  }
-
-  useEffect(() => {
-    void load(localeCode);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localeCode]);
-
+    });
+    return () => { cancelled = true; controller.abort(); };
+  }, [localeCode, ui.settings.loadError]);
   async function save() {
     if (!draft.trim()) { setMessage(ui.settings.enterBeforeSave); return; }
     setStatus("saving");
@@ -124,6 +129,11 @@ export default function AiProcessingSettingsClient() {
 
   return (
     <div className="space-y-5">
+      <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+        <h2 className="text-lg font-bold text-[#1a1d2e]">Персональные структурированные правила · P3.2</h2>
+        <p className="mt-2 text-sm text-[#52607a]">Условия и сокращения только для активного профиля. Пока — сохранение черновиков без применения к активностям.</p>
+        <a href="/settings/ai-processing/scoped-rules" className="mt-3 inline-block rounded-xl bg-[#315ee7] px-4 py-2 text-sm font-bold text-white">Открыть редактор черновиков →</a>
+      </section>
       <header className="mb-6">
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#315ee7]">{ui.settings.eyebrow}</p>
         <h1 className="mt-2 text-3xl font-black">{ui.settings.title}</h1>
@@ -138,7 +148,7 @@ export default function AiProcessingSettingsClient() {
 
         <label className="mt-5 block max-w-xs text-xs font-extrabold uppercase tracking-[0.14em] text-[#667091]">
           {ui.settings.ruleLanguage}
-          <select value={localeCode} onChange={(event) => setLocaleCode(event.target.value as RuleLocale)} className="mt-2 w-full rounded-xl border border-[#cbd7ff] bg-white px-3 py-2 text-sm font-semibold text-[#1a1d2e]">
+          <select value={localeCode} onChange={(event) => { setStatus("loading"); setMessage(null); setLocaleCode(event.target.value as RuleLocale); }} className="mt-2 w-full rounded-xl border border-[#cbd7ff] bg-white px-3 py-2 text-sm font-semibold text-[#1a1d2e]">
             {RULE_LOCALES.map((locale) => <option key={locale} value={locale}>{getAiProcessingInstructionLanguageLabel(locale, interfaceLocale)}</option>)}
           </select>
         </label>
