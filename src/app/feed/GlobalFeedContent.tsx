@@ -70,12 +70,14 @@ function GlobalFeedItemCard({
   contentText,
   pendingLabel,
   personalizationMode,
+  viewerOwnerUserId,
 }: {
   item: GlobalArctorFeedItem;
   locale: LocaleCode;
   contentText: string | null;
   pendingLabel?: string;
   personalizationMode?: "hide" | "restore" | null;
+  viewerOwnerUserId?: string | null;
 }) {
   const copy = getGlobalFeedCopy(locale);
   const profileHref = buildProfileHref(item, locale);
@@ -148,6 +150,11 @@ function GlobalFeedItemCard({
             ) : null}
           </div>
 
+          {viewerOwnerUserId && item.ownerUserId === viewerOwnerUserId ? (
+            <Link href={`/feed/edit/${encodeURIComponent(item.id)}?locale=${locale}`} className="mt-2 inline-block text-xs text-blue-600 underline">
+              {{ ru: "Редактировать", pl: "Edytuj", uk: "Редагувати", en: "Edit", de: "Bearbeiten", es: "Editar", cs: "Upravit" }[locale]}
+            </Link>
+          ) : null}
           {pendingLabel ? (
             <p className="mt-2 text-[12px] leading-6 text-[#a4a9bd]">
               {pendingLabel}
@@ -188,6 +195,7 @@ export default async function GlobalFeedContent({
   hiddenMessageObjectIds = [],
   mode = "feed",
   canPersonalize = false,
+  viewerOwnerUserId = null,
   emptyLabel,
   semanticQuery,
 }: {
@@ -195,6 +203,7 @@ export default async function GlobalFeedContent({
   hiddenMessageObjectIds?: string[];
   mode?: "feed" | "hidden";
   canPersonalize?: boolean;
+  viewerOwnerUserId?: string | null;
   emptyLabel?: string;
   semanticQuery?: SemanticFeedQueryF31;
 }) {
@@ -290,6 +299,7 @@ export default async function GlobalFeedContent({
             locale={locale}
             contentText={cached ?? item.sourceContentText}
             personalizationMode={personalizationMode}
+            viewerOwnerUserId={viewerOwnerUserId}
           />
         );
       })}

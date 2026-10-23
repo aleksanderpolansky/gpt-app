@@ -140,6 +140,7 @@ export default async function GlobalFeedPage({
             locale={locale}
             hiddenMessageObjectIds={viewer?.hiddenMessageObjectIds ?? []}
             canPersonalize={Boolean(viewer)}
+            viewerOwnerUserId={viewer?.ownerUserId ?? null}
             semanticQuery={semanticQuery}
           />
         </Suspense>

@@ -56,6 +56,7 @@ type PublicProfileRow = {
 
 export type GlobalArctorFeedItem = {
   id: string;
+  ownerUserId: string | null;
   sourceContentText: string | null;
   languageCode: string | null;
   publishedAt: string;
@@ -406,6 +407,7 @@ export async function getGlobalArctorFeed(input: {
       return [
         {
           id: message.id,
+          ownerUserId: message.owner_user_id,
           sourceContentText: message.content_text,
           languageCode: message.language_code,
           publishedAt: message.activated_at ?? message.created_at,
