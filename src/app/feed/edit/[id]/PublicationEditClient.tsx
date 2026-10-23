@@ -32,8 +32,24 @@ const LABEL: Record<LocaleCode, {
   cs: { title: "Editor příspěvku", original: "Publikovaný originál", draft: "Navržený text", save: "Uložit verzi ke kontrole", warning: "Toto je návrh změny. Původní příspěvek, související aktivity a fakta zůstávají beze změny.", history: "Návrhy a verze", back: "Zpět na příspěvky", success: "Návrh uložen. Příspěvek se nezměnil.", loading: "Načítání…", apply: "Použít tuto verzi", reviewImpact: "Rozumím: související aktivity vyžadují kontrolu; starý signál nelze znovu zpracovat", applied: "Příspěvek aktualizován. Související aktivity vyžadují kontrolu." },
 };
 
+
+// P3.6.B2.3.B2: the administrator authorizes a single manual_review replay in
+// Supabase; a UI control never authorizes or resets a job itself.
+const REBUILD_COPY: Record<LocaleCode, {
+  heading: string; confirm: string; create: string; resume: string; authorized: string; success: string;
+}> = {
+  ru: { heading: "Восстановление по применённой редакции", confirm: "Подтверждаю создание отдельного RAW-сигнала и активности без анализа и записи фактов.", create: "Создать RAW-сигнал и активность", resume: "Выполнить разрешённое однократное восстановление", authorized: "Администратор разрешил одну попытку восстановления. Старый сигнал не будет запущен повторно.", success: "Новый RAW-сигнал и активность созданы. Анализ и факты требуют отдельной проверки." },
+  pl: { heading: "Odtworzenie z zatwierdzonej wersji", confirm: "Potwierdzam utworzenie osobnego sygnału RAW i aktywności bez analizy i zapisu faktów.", create: "Utwórz sygnał RAW i aktywność", resume: "Wykonaj autoryzowane jednorazowe odtworzenie", authorized: "Administrator zezwolił na jedną próbę odtworzenia. Poprzedni sygnał nie zostanie uruchomiony ponownie.", success: "Utworzono nowy sygnał RAW i aktywność. Analiza i fakty wymagają osobnej kontroli." },
+  uk: { heading: "Відновлення зі застосованої редакції", confirm: "Підтверджую створення окремого RAW-сигналу й активності без аналізу та запису фактів.", create: "Створити RAW-сигнал і активність", resume: "Виконати дозволене одноразове відновлення", authorized: "Адміністратор дозволив одну спробу відновлення. Старий сигнал не запускатиметься повторно.", success: "Новий RAW-сигнал та активність створено. Аналіз і факти потребують окремої перевірки." },
+  en: { heading: "Rebuild from applied revision", confirm: "I confirm creation of a separate RAW signal and activity, without analysis or fact writing.", create: "Create RAW signal and activity", resume: "Run authorized one-time rebuild", authorized: "An administrator authorized one rebuild attempt. The old signal will not be retried.", success: "New RAW signal and activity created. Analysis and facts require separate review." },
+  de: { heading: "Wiederherstellung aus übernommener Version", confirm: "Ich bestätige die Erstellung eines separaten RAW-Signals und einer Aktivität ohne Analyse oder Faktenschreibung.", create: "RAW-Signal und Aktivität erstellen", resume: "Autorisierte einmalige Wiederherstellung ausführen", authorized: "Ein Administrator hat einen Wiederherstellungsversuch freigegeben. Das alte Signal wird nicht erneut ausgeführt.", success: "Neues RAW-Signal und neue Aktivität erstellt. Analyse und Fakten müssen gesondert geprüft werden." },
+  es: { heading: "Reconstrucción desde la revisión aplicada", confirm: "Confirmo crear una señal RAW y una actividad independientes, sin análisis ni registro de hechos.", create: "Crear señal RAW y actividad", resume: "Ejecutar la reconstrucción única autorizada", authorized: "Un administrador autorizó un intento de reconstrucción. No se reprocesará la señal anterior.", success: "Nueva señal RAW y actividad creadas. El análisis y los hechos requieren otra revisión." },
+  cs: { heading: "Obnovení ze schválené revize", confirm: "Potvrzuji vytvoření samostatného RAW signálu a aktivity bez analýzy a zápisu faktů.", create: "Vytvořit RAW signál a aktivitu", resume: "Spustit povolené jednorázové obnovení", authorized: "Správce povolil jeden pokus o obnovení. Původní signál se znovu nezpracuje.", success: "Nový RAW signál a aktivita byly vytvořeny. Analýza a fakta vyžadují samostatnou kontrolu." },
+};
+
 export default function PublicationEditClient({ id, locale }: { id: string; locale: LocaleCode }) {
   const t = LABEL[locale];
+  const rt = REBUILD_COPY[locale];
   const [source, setSource] = useState<LoadResponse | null>(null);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -43,7 +59,7 @@ export default function PublicationEditClient({ id, locale }: { id: string; loca
   const [confirmReview, setConfirmReview] = useState(false);
   const [applyBusy, setApplyBusy] = useState(false);
   const [applyNotice, setApplyNotice] = useState("");
-  const [rebuildState, setRebuildState] = useState<{ appliedEdits: { id: string; proposal_id: string; requires_commercial_rebuild: boolean }[]; jobs: { id: string; applied_edit_id: string; status: string; activity_event_id: string | null }[] } | null>(null);
+  const [rebuildState, setRebuildState] = useState<{ appliedEdits: { id: string; proposal_id: string; requires_commercial_rebuild: boolean }[]; jobs: { id: string; applied_edit_id: string; status: string; activity_event_id: string | null; raw_signal_id: string | null; error_code: string | null }[] } | null>(null);
   const [rebuildConfirm, setRebuildConfirm] = useState(false);
   const [rebuildBusy, setRebuildBusy] = useState(false);
   const [rebuildNotice, setRebuildNotice] = useState("");
@@ -97,7 +113,7 @@ export default function PublicationEditClient({ id, locale }: { id: string; loca
       });
       const result = await response.json() as { ok?: boolean; error?: string };
       if (!response.ok || !result.ok) throw new Error(result.error ?? `HTTP ${response.status}`);
-      setRebuildNotice(locale === "pl" ? "Nowy sygnał RAW i aktywność utworzone; analiza wymaga osobnej kontroli." : "Новые RAW-сигнал и активность созданы; анализ требует отдельного подтверждения.");
+      setRebuildNotice(rt.success);
       setRebuildConfirm(false);
       const state = await fetch(`/api/publications/${encodeURIComponent(id)}/rebuild`, { cache: "no-store" });
       const payload = await state.json();
@@ -148,12 +164,19 @@ export default function PublicationEditClient({ id, locale }: { id: string; loca
           <ul className="space-y-2 text-sm">{(source.proposals ?? []).map(p => <li key={p.id} className="rounded-lg border p-2">v{p.revision} · {p.status} · {new Date(p.created_at).toLocaleString(locale)} · {p.linked_activities_at_request}<button type="button" disabled={!confirmReview || applyBusy || p.status === "applied"} onClick={() => void applyRevision(p.id)} className="ml-3 rounded-md border border-blue-600 px-3 py-2 text-blue-700 disabled:opacity-40">{t.apply}</button></li>)}</ul>
           {rebuildState?.appliedEdits.filter(a => a.requires_commercial_rebuild).map(a => {
             const existing = rebuildState.jobs.find(j => j.applied_edit_id === a.id);
+            // No replay on arbitrary manual_review. Only the exact DBA-issued,
+            // one-time authorization marker can reveal the retry control.
+            const manualAuthorized = existing?.status === "manual_review" &&
+              existing.raw_signal_id == null && existing.activity_event_id == null &&
+              existing.error_code === "P36B23_RAW_CREATE_FAILED|P36B23_ADMIN_REARM_AUTHORIZED_ONCE";
             return <div key={a.id} className="rounded-lg border border-amber-300 p-3 text-sm">
-              <p className="font-semibold">{locale === "pl" ? "Odtworzenie z zatwierdzonej wersji" : "Пересоздание по применённой версии"} · {a.id.slice(0,8)}</p>
-              {existing ? <p>RAW / activity: {existing.status} · {existing.activity_event_id ?? "—"}</p> : <>
-                <label className="my-2 flex gap-2"><input type="checkbox" checked={rebuildConfirm} onChange={e => setRebuildConfirm(e.target.checked)} />{locale === "pl" ? "Potwierdzam utworzenie nowego sygnału RAW bez analizy i bez zapisu faktów." : "Подтверждаю создание нового RAW-сигнала без анализа и записи фактов."}</label>
-                <button type="button" disabled={!rebuildConfirm || rebuildBusy} onClick={() => void rebuildAppliedRevision(a.id)} className="rounded border border-amber-600 px-3 py-2 disabled:opacity-40">{locale === "pl" ? "Utwórz nowy sygnał i aktywność" : "Создать новый RAW-сигнал и активность"}</button>
-              </>}
+              <p className="font-semibold">{rt.heading} · {a.id.slice(0,8)}</p>
+              {existing ? <p>RAW / activity: {existing.status} · {existing.activity_event_id ?? "—"}</p> : null}
+              {manualAuthorized ? <p role="note" className="mt-2 text-amber-800">{rt.authorized}</p> : null}
+              {(!existing || manualAuthorized) ? <>
+                <label className="my-2 flex gap-2"><input type="checkbox" checked={rebuildConfirm} onChange={e => setRebuildConfirm(e.target.checked)} />{rt.confirm}</label>
+                <button type="button" disabled={!rebuildConfirm || rebuildBusy} onClick={() => void rebuildAppliedRevision(a.id)} className="rounded border border-amber-600 px-3 py-2 disabled:opacity-40">{manualAuthorized ? rt.resume : rt.create}</button>
+              </> : null}
             </div>;
           })}
           {rebuildNotice ? <p role="status">{rebuildNotice}</p> : null}

@@ -56,7 +56,8 @@ export async function createCommercialPublicationRevisionEvidenceV1(input: Input
     const source = await createRawActivitySignal({
       userId: input.ownerUserId,
       sourceType: "system_event",
-      sourceEventId: claim.messageObjectId,
+      // A revision is a distinct source event; the publication ID is retained as provenance.
+      sourceEventId: `publication_revision:${claim.appliedEditId}`,
       idempotencyKey: claim.idempotencyKey,
       rawPayload: {
         contract: "ARCTOR_P36B23_REBUILD_EVIDENCE_V1",
@@ -113,6 +114,9 @@ export async function createCommercialPublicationRevisionEvidenceV1(input: Input
         },
         commercialFeedPublicationV1: {
           contract: "ARCTOR_P36B23_REBUILD_EVIDENCE_V1",
+          // Basic intake uses this metadata guard to select commercial-only templates.
+          activityContextCode: "commercial",
+          analyticsVisibilityCode: "public",
           sourceMessageObjectId: claim.messageObjectId, rawSignalId,
           actorResolutionStatus: "resolved_author_actor",
           creatorActorId: claim.creatorActorId, actingAsActorId: claim.authorActorId,
