@@ -21,15 +21,15 @@ type LoadResponse = {
 };
 type Receipt = { id: string; revision: number; linked_activities: number; outcome: string };
 const LABEL: Record<LocaleCode, {
-  title: string; original: string; draft: string; save: string; warning: string; history: string; back: string; success: string; loading: string;
+  title: string; original: string; draft: string; save: string; warning: string; history: string; back: string; success: string; loading: string; apply: string; reviewImpact: string; applied: string;
 }> = {
-  ru: { title: "Редактор публикации", original: "Опубликованный оригинал", draft: "Предлагаемый текст", save: "Сохранить версию для проверки", warning: "Это предварительное изменение. Исходная публикация, связанные активности и факты не меняются. Применение после проверки зависимостей — отдельный шаг.", history: "Предложения и версии", back: "Вернуться в ленту", success: "Предложение сохранено. Исходная публикация не изменена.", loading: "Загрузка…" },
-  pl: { title: "Edytor publikacji", original: "Oryginalna publikacja", draft: "Proponowany tekst", save: "Zapisz wersję do weryfikacji", warning: "To propozycja zmiany. Opublikowany tekst, powiązane aktywności i fakty pozostają bez zmian.", history: "Propozycje i wersje", back: "Powrót do aktualności", success: "Propozycja zapisana. Publikacja nie została zmieniona.", loading: "Ładowanie…" },
-  uk: { title: "Редактор публікації", original: "Опублікований оригінал", draft: "Запропонований текст", save: "Зберегти версію для перевірки", warning: "Це пропозиція зміни. Оригінал, пов'язані активності та факти не змінюються.", history: "Пропозиції та версії", back: "До стрічки", success: "Пропозицію збережено. Публікацію не змінено.", loading: "Завантаження…" },
-  en: { title: "Publication editor", original: "Published original", draft: "Proposed text", save: "Save version for review", warning: "This is a proposed edit. The live publication, related activities and facts remain unchanged.", history: "Proposals and revisions", back: "Back to feed", success: "Proposal saved. Publication unchanged.", loading: "Loading…" },
-  de: { title: "Beitrag bearbeiten", original: "Veröffentlichter Originaltext", draft: "Vorgeschlagener Text", save: "Version zur Prüfung speichern", warning: "Dies ist ein Änderungsvorschlag. Beitrag, verknüpfte Aktivitäten und Fakten bleiben unverändert.", history: "Vorschläge und Versionen", back: "Zurück zum Feed", success: "Vorschlag gespeichert. Beitrag unverändert.", loading: "Laden…" },
-  es: { title: "Editar publicación", original: "Original publicado", draft: "Texto propuesto", save: "Guardar versión para revisión", warning: "Es una propuesta de cambio. La publicación, las actividades vinculadas y los hechos no cambian.", history: "Propuestas y versiones", back: "Volver al feed", success: "Propuesta guardada. Publicación sin cambios.", loading: "Cargando…" },
-  cs: { title: "Editor příspěvku", original: "Publikovaný originál", draft: "Navržený text", save: "Uložit verzi ke kontrole", warning: "Toto je návrh změny. Původní příspěvek, související aktivity a fakta zůstávají beze změny.", history: "Návrhy a verze", back: "Zpět na příspěvky", success: "Návrh uložen. Příspěvek se nezměnil.", loading: "Načítání…" },
+  ru: { title: "Редактор публикации", original: "Опубликованный оригинал", draft: "Предлагаемый текст", save: "Сохранить версию для проверки", warning: "Это предварительное изменение. Исходная публикация, связанные активности и факты не меняются. Применение после проверки зависимостей — отдельный шаг.", history: "Предложения и версии", back: "Вернуться в ленту", success: "Предложение сохранено. Исходная публикация не изменена.", loading: "Загрузка…", apply: "Применить эту ревизию", reviewImpact: "Понимаю: связанные коммерческие активности требуют проверки, старый сигнал нельзя повторно обработать", applied: "Публикация обновлена. Связанные активности ожидают проверки куратора." },
+  pl: { title: "Edytor publikacji", original: "Oryginalna publikacja", draft: "Proponowany tekst", save: "Zapisz wersję do weryfikacji", warning: "To propozycja zmiany. Opublikowany tekst, powiązane aktywności i fakty pozostają bez zmian.", history: "Propozycje i wersje", back: "Powrót do aktualności", success: "Propozycja zapisana. Publikacja nie została zmieniona.", loading: "Ładowanie…", apply: "Zastosuj tę wersję", reviewImpact: "Rozumiem: powiązane aktywności wymagają ponownej kontroli; starego sygnału nie należy uruchamiać ponownie", applied: "Publikacja zmieniona. Powiązane aktywności wymagają kontroli." },
+  uk: { title: "Редактор публікації", original: "Опублікований оригінал", draft: "Запропонований текст", save: "Зберегти версію для перевірки", warning: "Це пропозиція зміни. Оригінал, пов'язані активності та факти не змінюються.", history: "Пропозиції та версії", back: "До стрічки", success: "Пропозицію збережено. Публікацію не змінено.", loading: "Завантаження…", apply: "Застосувати цю версію", reviewImpact: "Розумію: пов'язані активності потребують перевірки, старий сигнал не можна повторно обробляти", applied: "Публікацію оновлено. Пов'язані активності потребують перевірки." },
+  en: { title: "Publication editor", original: "Published original", draft: "Proposed text", save: "Save version for review", warning: "This is a proposed edit. The live publication, related activities and facts remain unchanged.", history: "Proposals and revisions", back: "Back to feed", success: "Proposal saved. Publication unchanged.", loading: "Loading…", apply: "Apply selected revision", reviewImpact: "I understand that linked commercial activities require review and old signal analysis must not be retried", applied: "Publication updated. Linked commercial activities require curator review." },
+  de: { title: "Beitrag bearbeiten", original: "Veröffentlichter Originaltext", draft: "Vorgeschlagener Text", save: "Version zur Prüfung speichern", warning: "Dies ist ein Änderungsvorschlag. Beitrag, verknüpfte Aktivitäten und Fakten bleiben unverändert.", history: "Vorschläge und Versionen", back: "Zurück zum Feed", success: "Vorschlag gespeichert. Beitrag unverändert.", loading: "Laden…", apply: "Version übernehmen", reviewImpact: "Verstanden: verbundene Aktivitäten müssen geprüft werden; altes Signal nicht erneut verarbeiten", applied: "Beitrag aktualisiert. Verbundene Aktivitäten müssen geprüft werden." },
+  es: { title: "Editar publicación", original: "Original publicado", draft: "Texto propuesto", save: "Guardar versión para revisión", warning: "Es una propuesta de cambio. La publicación, las actividades vinculadas y los hechos no cambian.", history: "Propuestas y versiones", back: "Volver al feed", success: "Propuesta guardada. Publicación sin cambios.", loading: "Cargando…", apply: "Aplicar esta versión", reviewImpact: "Entiendo: las actividades vinculadas requieren revisión y no se debe reprocesar la señal anterior", applied: "Publicación actualizada. Las actividades vinculadas requieren revisión." },
+  cs: { title: "Editor příspěvku", original: "Publikovaný originál", draft: "Navržený text", save: "Uložit verzi ke kontrole", warning: "Toto je návrh změny. Původní příspěvek, související aktivity a fakta zůstávají beze změny.", history: "Návrhy a verze", back: "Zpět na příspěvky", success: "Návrh uložen. Příspěvek se nezměnil.", loading: "Načítání…", apply: "Použít tuto verzi", reviewImpact: "Rozumím: související aktivity vyžadují kontrolu; starý signál nelze znovu zpracovat", applied: "Příspěvek aktualizován. Související aktivity vyžadují kontrolu." },
 };
 
 export default function PublicationEditClient({ id, locale }: { id: string; locale: LocaleCode }) {
@@ -40,6 +40,9 @@ export default function PublicationEditClient({ id, locale }: { id: string; loca
   const [notice, setNotice] = useState("");
   const [loadError, setLoadError] = useState("");
   const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [confirmReview, setConfirmReview] = useState(false);
+  const [applyBusy, setApplyBusy] = useState(false);
+  const [applyNotice, setApplyNotice] = useState("");
   useEffect(() => {
     let alive = true;
     fetch(`/api/publications/${encodeURIComponent(id)}/edit`, { cache: "no-store" })
@@ -75,6 +78,26 @@ export default function PublicationEditClient({ id, locale }: { id: string; loca
     }
   }
 
+  async function applyRevision(proposalId: string) {
+    if (applyBusy || !confirmReview) return;
+    setApplyBusy(true);
+    setApplyNotice("");
+    try {
+      const response = await fetch(`/api/publications/${encodeURIComponent(id)}/apply`, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ proposalId, confirmCommercialReview: true }),
+      });
+      const result = await response.json() as { ok?: boolean; error?: string };
+      if (!response.ok || !result.ok) throw new Error(result.error ?? `HTTP ${response.status}`);
+      setApplyNotice(t.applied);
+      setConfirmReview(false);
+      const fresh = await fetch(`/api/publications/${encodeURIComponent(id)}/edit`, { cache: "no-store" });
+      const state = await fresh.json() as LoadResponse;
+      if (fresh.ok && state.ok) { setSource(state); setDraft(state.originalText ?? ""); }
+    } catch (error) { setApplyNotice(error instanceof Error ? error.message : "APPLY_FAILED"); }
+    finally { setApplyBusy(false); }
+  }
+
   return (
     <main className="mx-auto max-w-[780px] px-4 py-6 text-[#273047]">
       <Link href={`/feed?locale=${locale}`} className="text-sm text-blue-600 underline">← {t.back}</Link>
@@ -92,7 +115,9 @@ export default function PublicationEditClient({ id, locale }: { id: string; loca
           {notice ? <p role="status" className="text-sm">{notice}</p> : null}
           {receipt ? <p className="text-xs">ID {receipt.id} · v{receipt.revision} · linked activities: {receipt.linked_activities} · {receipt.outcome}</p> : null}
           <h2 className="pt-4 font-semibold">{t.history}</h2>
-          <ul className="space-y-2 text-sm">{(source.proposals ?? []).map(p => <li key={p.id} className="rounded-lg border p-2">v{p.revision} · {p.status} · {new Date(p.created_at).toLocaleString(locale)} · {p.linked_activities_at_request}</li>)}</ul>
+          <label className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm"><input type="checkbox" checked={confirmReview} onChange={event => setConfirmReview(event.target.checked)} />{t.reviewImpact}</label>
+          {applyNotice ? <p role="status" className="text-sm">{applyNotice}</p> : null}
+          <ul className="space-y-2 text-sm">{(source.proposals ?? []).map(p => <li key={p.id} className="rounded-lg border p-2">v{p.revision} · {p.status} · {new Date(p.created_at).toLocaleString(locale)} · {p.linked_activities_at_request}<button type="button" disabled={!confirmReview || applyBusy || p.status === "applied"} onClick={() => void applyRevision(p.id)} className="ml-3 rounded-md border border-blue-600 px-3 py-2 text-blue-700 disabled:opacity-40">{t.apply}</button></li>)}</ul>
         </form>
       ) : null}
     </main>

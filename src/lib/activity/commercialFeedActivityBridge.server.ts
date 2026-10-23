@@ -870,6 +870,11 @@ export async function retryCommercialFeedActivityV1(activityEventId: string) {
   if (!event || !event.source_message_object_id) {
     throw new Error("COMMERCIAL_RETRY_EVENT_NOT_FOUND");
   }
+  // A revised publication must never replay its former raw signal.
+  const supersededMeta = record(event.metadata_json);
+  if (supersededMeta.publicationSourceSupersededV1) {
+    throw new Error("COMMERCIAL_SOURCE_REVISION_SUPERSEDED_REBUILD_REQUIRED");
+  }
   if (event.commercial_processing_status === "auto_processed") {
     return { ok: true, status: "already_processed" as const };
   }

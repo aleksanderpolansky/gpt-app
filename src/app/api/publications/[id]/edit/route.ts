@@ -69,12 +69,19 @@ export async function GET(_request: Request, { params }: Context) {
     .order("revision", { ascending: false })
     .limit(10);
   if (error) return fail(503, "P36B2_DATABASE_CONTRACT_NOT_INSTALLED");
+  const { data: applied, error: appliedError } = await supabase
+    .from("message_object_applied_edits_v1")
+    .select("proposal_id")
+    .eq("message_object_id", id)
+    .eq("owner_user_id", source.ownerUserId!);
+  if (appliedError) return fail(503, "P36B22_DATABASE_CONTRACT_NOT_INSTALLED");
+  const appliedProposalIds = new Set((applied ?? []).map(entry => entry.proposal_id));
   return NextResponse.json({
     ok: true,
     originalText: source.row.content_text ?? "",
     languageCode: source.row.language_code,
     updatedAt: source.row.updated_at,
-    proposals: data ?? [],
+    proposals: (data ?? []).map(entry => ({ ...entry, status: appliedProposalIds.has(entry.id) ? "applied" : entry.status })),
     mode: "PROPOSAL_ONLY_NO_CANONICAL_UPDATE",
   }, { headers: { "cache-control": "no-store" } });
 }
