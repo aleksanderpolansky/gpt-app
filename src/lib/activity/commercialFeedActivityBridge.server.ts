@@ -831,6 +831,16 @@ export async function analyzeCommercialFeedActivityV1(
 export async function processPublicFeedMessageV1(input: {
   messageObjectId: string;
 }) {
+  // Never re-analyse the historical RAW signal when a publication revision
+  // has superseded it. P3.6.B2.3 uses its own revision-scoped signal.
+  const { data: superseded, error: supersededError } = await supabase
+    .from("activity_events")
+    .select("id,metadata_json")
+    .eq("source_message_object_id", input.messageObjectId);
+  if (supersededError) throw new Error(`COMMERCIAL_SOURCE_GUARD_FAILED:${supersededError.message}`);
+  if ((superseded ?? []).some(event => Boolean(record(event.metadata_json).publicationSourceSupersededV1))) {
+    return { ok: true, skipped: true, reason: "SUPERSEDED_ORIGINAL_SIGNAL_REBUILD_REQUIRED" };
+  }
   const receipt =
     await ensureCommercialFeedActivityV1(
       input,

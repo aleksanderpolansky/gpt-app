@@ -43,6 +43,10 @@ export default function PublicationEditClient({ id, locale }: { id: string; loca
   const [confirmReview, setConfirmReview] = useState(false);
   const [applyBusy, setApplyBusy] = useState(false);
   const [applyNotice, setApplyNotice] = useState("");
+  const [rebuildState, setRebuildState] = useState<{ appliedEdits: { id: string; proposal_id: string; requires_commercial_rebuild: boolean }[]; jobs: { id: string; applied_edit_id: string; status: string; activity_event_id: string | null }[] } | null>(null);
+  const [rebuildConfirm, setRebuildConfirm] = useState(false);
+  const [rebuildBusy, setRebuildBusy] = useState(false);
+  const [rebuildNotice, setRebuildNotice] = useState("");
   useEffect(() => {
     let alive = true;
     fetch(`/api/publications/${encodeURIComponent(id)}/edit`, { cache: "no-store" })
@@ -53,6 +57,10 @@ export default function PublicationEditClient({ id, locale }: { id: string; loca
       })
       .then((result) => { if (alive) { setSource(result); setDraft(result.originalText ?? ""); } })
       .catch((error: unknown) => { if (alive) setLoadError(error instanceof Error ? error.message : "LOAD_FAILED"); });
+    fetch(`/api/publications/${encodeURIComponent(id)}/rebuild`, { cache: "no-store" })
+      .then(async response => { const payload = await response.json(); return response.ok && payload.ok ? payload : null; })
+      .then(payload => { if (alive && payload) setRebuildState(payload); })
+      .catch(() => null);
     return () => { alive = false; };
   }, [id]);
 
@@ -76,6 +84,26 @@ export default function PublicationEditClient({ id, locale }: { id: string; loca
     } finally {
       setBusy(false);
     }
+  }
+
+  async function rebuildAppliedRevision(appliedEditId: string) {
+    if (rebuildBusy || !rebuildConfirm) return;
+    setRebuildBusy(true);
+    setRebuildNotice("");
+    try {
+      const response = await fetch(`/api/publications/${encodeURIComponent(id)}/rebuild`, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ appliedEditId, confirmRevisionRebuild: true }),
+      });
+      const result = await response.json() as { ok?: boolean; error?: string };
+      if (!response.ok || !result.ok) throw new Error(result.error ?? `HTTP ${response.status}`);
+      setRebuildNotice(locale === "pl" ? "Nowy sygnał RAW i aktywność utworzone; analiza wymaga osobnej kontroli." : "Новые RAW-сигнал и активность созданы; анализ требует отдельного подтверждения.");
+      setRebuildConfirm(false);
+      const state = await fetch(`/api/publications/${encodeURIComponent(id)}/rebuild`, { cache: "no-store" });
+      const payload = await state.json();
+      if (state.ok && payload.ok) setRebuildState(payload);
+    } catch (error) { setRebuildNotice(error instanceof Error ? error.message : "REBUILD_FAILED"); }
+    finally { setRebuildBusy(false); }
   }
 
   async function applyRevision(proposalId: string) {
@@ -118,6 +146,17 @@ export default function PublicationEditClient({ id, locale }: { id: string; loca
           <label className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm"><input type="checkbox" checked={confirmReview} onChange={event => setConfirmReview(event.target.checked)} />{t.reviewImpact}</label>
           {applyNotice ? <p role="status" className="text-sm">{applyNotice}</p> : null}
           <ul className="space-y-2 text-sm">{(source.proposals ?? []).map(p => <li key={p.id} className="rounded-lg border p-2">v{p.revision} · {p.status} · {new Date(p.created_at).toLocaleString(locale)} · {p.linked_activities_at_request}<button type="button" disabled={!confirmReview || applyBusy || p.status === "applied"} onClick={() => void applyRevision(p.id)} className="ml-3 rounded-md border border-blue-600 px-3 py-2 text-blue-700 disabled:opacity-40">{t.apply}</button></li>)}</ul>
+          {rebuildState?.appliedEdits.filter(a => a.requires_commercial_rebuild).map(a => {
+            const existing = rebuildState.jobs.find(j => j.applied_edit_id === a.id);
+            return <div key={a.id} className="rounded-lg border border-amber-300 p-3 text-sm">
+              <p className="font-semibold">{locale === "pl" ? "Odtworzenie z zatwierdzonej wersji" : "Пересоздание по применённой версии"} · {a.id.slice(0,8)}</p>
+              {existing ? <p>RAW / activity: {existing.status} · {existing.activity_event_id ?? "—"}</p> : <>
+                <label className="my-2 flex gap-2"><input type="checkbox" checked={rebuildConfirm} onChange={e => setRebuildConfirm(e.target.checked)} />{locale === "pl" ? "Potwierdzam utworzenie nowego sygnału RAW bez analizy i bez zapisu faktów." : "Подтверждаю создание нового RAW-сигнала без анализа и записи фактов."}</label>
+                <button type="button" disabled={!rebuildConfirm || rebuildBusy} onClick={() => void rebuildAppliedRevision(a.id)} className="rounded border border-amber-600 px-3 py-2 disabled:opacity-40">{locale === "pl" ? "Utwórz nowy sygnał i aktywność" : "Создать новый RAW-сигнал и активность"}</button>
+              </>}
+            </div>;
+          })}
+          {rebuildNotice ? <p role="status">{rebuildNotice}</p> : null}
         </form>
       ) : null}
     </main>
