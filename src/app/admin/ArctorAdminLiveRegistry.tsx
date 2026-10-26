@@ -227,6 +227,16 @@ export default function ArctorAdminLiveRegistry() {
         {activeRole && <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
           <strong className="text-slate-800">{activeRole.manager_title_ru}.</strong> {activeRole.responsibility_summary_ru}
         </p>}
+        {roleCode === "semantic" && <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm">
+          <p className="font-semibold text-blue-900">Семантическая модель · системные объекты наблюдения</p>
+          <p className="mt-1 text-xs text-blue-700">Добавление системных ОН доступно только подтверждённым владельцам/администраторам платформы. Назначение должности само по себе не выдаёт право записи.</p>
+          <a className="mt-2 inline-block rounded-lg bg-blue-600 px-3 py-2 font-semibold text-white" href="/admin/system-observation-objects?locale=ru">+ Добавить системный ОН</a>
+        </div>}
+        {roleCode === "semantic" && <div data-onto-ai-admin-link="v1" className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm">
+          <strong className="block text-indigo-950">Главный куратор модели · ИИ-исследование онтологии</strong>
+          <p className="mt-1 text-indigo-800">Четыре исследовательских этапа. Внешний чат или API. Без создания ОН.</p>
+          <a href="/admin/ontology-research?locale=ru" className="mt-2 inline-flex rounded-lg bg-indigo-700 px-3 py-2 font-semibold text-white">Открыть исследовательский конструктор →</a>
+        </div>}
         <ArctorAdminCaseActions roles={roles} cases={cases} assignments={assignments} selectedRoleCode={roleCode} onChanged={refreshing} />
         <ArctorAdminSourceLinks cases={cases} onChanged={refreshing} />
         <ArctorAdminWorkQueues />

@@ -34,6 +34,12 @@ type PageData = {
 
 const ADMIN_CARDS: AdminCard[] = [
   {
+    title: "Системные объекты наблюдения · Главный куратор модели",
+    href: "/admin/system-observation-objects",
+    description: "Создание корневых, промежуточных и листовых системных ОН. На текущем этапе право записи ограничено действующими owner/admin.",
+    badge: "Semantic model",
+  },
+  {
     title: "AI Governance · реестр процессов",
     href: "/admin/ai-governance",
     description: "Направления обработки, уровни системных и персональных правил, безопасный симулятор без ИИ и списаний.",
