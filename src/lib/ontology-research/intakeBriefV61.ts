@@ -1,5 +1,13 @@
 import type {OntoLocale} from "@/lib/ontology-research/ontologyResearchV1";
 
+export const ONTO_INTAKE_SCHEMA: Record<string,unknown> = {
+  type:"object",additionalProperties:false,
+  properties:{
+    researchTask:{type:"string"},searchTerms:{type:"array",items:{type:"string"}},
+    needsClarification:{type:"boolean"},clarificationQuestions:{type:"array",items:{type:"string"}},
+    assumptions:{type:"array",items:{type:"string"}},
+  },required:["researchTask","searchTerms","needsClarification","clarificationQuestions","assumptions"],
+};
 export type IntakeResponse = {
   researchTask:string;
   searchTerms:string[];
@@ -38,6 +46,7 @@ export function buildIntakePrompt(topic:string,locale:OntoLocale):string {
       "Define the boundaries and concrete purpose of an OBSERVATION OBJECT (ON)-only ontology study for this topic.",
       "Do not assume that a typical activity exists. Do not design typical activities, parameters, formulas, metrics, effects, predictions, workflow statuses or activity routing.",
       "Research only which observable entities/phenomena/states/processes may deserve an ON; actual existing ON will be verified LATER against ARCTor's database.",
+      "Consider THREE complementary perspectives on the same situation: Systems and Structures; Actions and Processes; States and Needs. They are not three mandatory new ON. Separate structural hierarchy from semantic or causal relations.",
       "Do not claim any ON exists, is missing, or has a UUID. Do not invent parent nodes or specific database facts.",
       "If the short topic is ambiguous (for example organs vs food, person vs product), set needsClarification=true and return targeted clarificationQuestions, do not assume a meaning.",
       "Write researchTask as a coherent specific assignment that a moderator can review/edit. No more than 2000 characters. If clarification is needed, set researchTask to a tentative clarification request, not a resolved ontology decision.",

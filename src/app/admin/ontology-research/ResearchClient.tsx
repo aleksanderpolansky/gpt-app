@@ -3,6 +3,7 @@ import {useMemo,useState} from "react";
 import {OntologyProposalHandoffV5} from "./OntologyProposalHandoffV5";
 import {ON_ONLY_DEFAULT_SEARCH_SCRIPT,ON_ONLY_GUIDE} from "@/lib/ontology-research/onOnlyGuideV6";
 import {buildIntakePrompt,parseIntakeResponse,INTAKE_COPY} from "@/lib/ontology-research/intakeBriefV61";
+import {buildReviewPrompt,parseReviewResponse,type ReviewKind,type ReviewResult} from "@/lib/ontology-research/reviewV61";
 import {buildResearchSessionExport,parseResearchStageAnswer,readableResearchItem} from "@/lib/ontology-research/researchResultV4";
 import {LABELS,ONTO_AI_PILOT_CONTRACT,RESEARCH_STAGES,composeOntoPrompt,
   type OntoLocale,type ResearchStage,type ResearchContext,type ContextMode} from "@/lib/ontology-research/ontologyResearchV1";
@@ -10,6 +11,11 @@ import { DEFAULT_SEARCH_OPTIONS, normalizeExtraTerms, searchOptionParams, sugges
   type OntoResearchSearchOptions } from "@/lib/ontology-research/researchSearchStrategyV3";
 
 type Quote={prompt:string;quoteHash:string;approvedMaxEur:number;canAfford:boolean;availableEur:number;modelName:string;operationId:string};
+function safeReviewReference(input:{locale:OntoLocale;kind:ReviewKind;originalPrompt:string;answer:string}):string{
+  try{return buildReviewPrompt(input);}catch{return "";}
+}
+type AuxiliaryKind="intake"|"reviewIntake"|"reviewStage";
+type AuxiliaryQuote=Quote&{kind:AuxiliaryKind};
 type ApiReply={ok?:boolean;errorCode?:string;mode?:string;quoteHash?:string;estimatedMaxEur?:number;canAfford?:boolean;
   availableEur?:number;modelName?:string;answer?:string;billedEur?:number;usageEventId?:string};
 type SearchUiLabels = { toggle: string; allLanguages: string; paths: string; definitions: string; templates: string;
@@ -40,6 +46,11 @@ export default function ResearchClient({locale,canUseApi}:{locale:OntoLocale;can
   const [intakePrompt,setIntakePrompt]=useState("");
   const [intakeReply,setIntakeReply]=useState("");
   const [intakeStatus,setIntakeStatus]=useState("");
+  const [intakeMode,setIntakeMode]=useState<"external"|"api">("external");
+  const [auxQuote,setAuxQuote]=useState<AuxiliaryQuote|null>(null);
+  const [reviewReport,setReviewReport]=useState<ReviewResult|null>(null);
+  const [reviewKindUsed,setReviewKindUsed]=useState<"intake"|"research"|null>(null);
+  const [reviewSource,setReviewSource]=useState("");
   const [searchOptions,setSearchOptions]=useState<OntoResearchSearchOptions>(DEFAULT_SEARCH_OPTIONS);
   const [extraTermsText,setExtraTermsText]=useState("");
   const [searchScript,setSearchScript]=useState(ON_ONLY_DEFAULT_SEARCH_SCRIPT);
@@ -82,6 +93,71 @@ export default function ResearchClient({locale,canUseApi}:{locale:OntoLocale;can
     [locale,stage,objective,search,context,answers,searchScript,details,contextMode]);
   const liveQuote=quote?.prompt===prompt?quote:null;
   const result=summarizeResponse(drafts[stage]??answers[stage]??"");
+  const stageAnswer=drafts[stage]??answers[stage]??"";
+  function buildAuxiliary(kind:AuxiliaryKind):{stage:"intake"|"review";prompt:string;payload:Record<string,string>}{
+    if(kind==="intake"){
+      if(!intakePrompt||intakePrompt!==buildIntakePrompt(shortTopic,locale))throw new Error("STEP0_PROMPT_STALE");
+      return {stage:"intake",prompt:intakePrompt,payload:{intakeTopic:shortTopic}};
+    }
+    const reviewKind:ReviewKind=kind==="reviewIntake"?"intake":"research";
+    const originalPrompt=reviewKind==="intake"?intakePrompt:prompt;
+    const answer=reviewKind==="intake"?intakeReply:stageAnswer;
+    const parsed=reviewKind==="intake"?parseIntakeResponse(answer):parseResearchStageAnswer(answer);
+    if(!parsed.ok)throw new Error("VALID_JSON_ANSWER_REQUIRED_BEFORE_REVIEW");
+    const reviewPrompt=buildReviewPrompt({locale,kind:reviewKind,originalPrompt,answer});
+    return {stage:"review",prompt:reviewPrompt,payload:{reviewKind,reviewOriginalPrompt:originalPrompt,reviewAnswer:answer}};
+  }
+  function getAuxQuote(kind:AuxiliaryKind):AuxiliaryQuote|null{
+    try{const p=buildAuxiliary(kind).prompt;return auxQuote?.kind===kind&&auxQuote.prompt===p?auxQuote:null;}
+    catch{return null;}
+  }
+  async function runAuxiliary(kind:AuxiliaryKind,action:"quote"|"run"){
+    const tell=(message:string)=>kind==="reviewStage"?setNotice(message):setIntakeStatus(message);
+    if(!canUseApi){tell("Only platform owner/admin can spend AI EUR.");return;}
+    let request:ReturnType<typeof buildAuxiliary>;
+    try{request=buildAuxiliary(kind);}catch(e){tell(e instanceof Error?e.message:"INVALID_INPUT");return;}
+    if(request.prompt.length>24000){tell("API_PROMPT_EXCEEDS_24000_CHARACTERS");return;}
+    const current=getAuxQuote(kind);
+    if(action==="run"&&(!current||!current.canAfford)){
+      tell("REQUEST_VALID_AFFORDABLE_QUOTE_FIRST");return;
+    }
+    if(action==="run"&&!window.confirm(`Paid ONTO-AI ${kind}: approve up to ${current?.approvedMaxEur} EUR? No ON will be written.`))return;
+    setBusy(true);tell("");
+    try{
+      const body={mode:action,stage:request.stage,locale,prompt:request.prompt,...request.payload,
+        ...(action==="run"&&current?{quoteHash:current.quoteHash,approvedMaxEur:current.approvedMaxEur,operationId:current.operationId}:{})};
+      const response=await fetch("/api/admin/ontology-research/model",{method:"POST",
+        headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify(body)});
+      const data:ApiReply=await response.json().catch(()=>({}));
+      if(!response.ok||!data.ok)throw new Error(data.errorCode||`HTTP_${response.status}`);
+      if(action==="quote"){
+        if(typeof data.quoteHash!=="string"||typeof data.estimatedMaxEur!=="number")throw new Error("QUOTE_INVALID");
+        setAuxQuote({kind,prompt:request.prompt,quoteHash:data.quoteHash,
+          approvedMaxEur:data.estimatedMaxEur,canAfford:!!data.canAfford,
+          availableEur:data.availableEur??0,modelName:data.modelName??"nano",
+          operationId:`onto-ai:${crypto.randomUUID()}`});
+        tell("QUOTE_READY_NO_AI_CALL_NO_ON_WRITES");
+      }else{
+        if(typeof data.answer!=="string")throw new Error("AI_ANSWER_MISSING");
+        if(kind==="intake"){
+          // Keep manual moderator decision: user must still click Apply.
+          const parsed=parseIntakeResponse(data.answer);
+          if(!parsed.ok)throw new Error(`AI_INTAKE_RESULT_INVALID:${parsed.error}`);
+          setIntakeReply(JSON.stringify(parsed.value,null,2));
+          setReviewReport(null);setReviewSource("");setReviewKindUsed(null);
+        }else{
+          const parsed=parseReviewResponse(data.answer);
+          if(!parsed.ok)throw new Error(`AI_REVIEW_RESULT_INVALID:${parsed.error}`);
+          setReviewReport(parsed.value);setReviewKindUsed(kind==="reviewIntake"?"intake":"research");
+          setReviewSource(request.prompt);
+        }
+        setAuxQuote(null);
+        tell(`AI EUR billed: ${data.billedEur??"?"}; usage ${data.usageEventId??"?"}. No ON written.`);
+      }
+    }catch(e){tell(`Stopped: ${e instanceof Error?e.message:"UNKNOWN"}`);}
+    finally{setBusy(false);}
+  }
+
   const suggestedTerms=suggestedSearchQueries(result);
   async function inspect(kind:"on"|"template",id:string){
     if(!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id)){setDetailError("INVALID_UUID");return;}
@@ -126,7 +202,14 @@ export default function ResearchClient({locale,canUseApi}:{locale:OntoLocale;can
       if(RESEARCH_STAGES.some(x=>x===item.stage))setStage(item.stage as ResearchStage);
       // Always refresh the database evidence; never trust imported catalog snapshot.
       if(item.contextMode==="full"||item.contextMode==="compact")setContextMode(item.contextMode);
-      setContext(null);setDetails([]);setQuote(null);setSessionEpoch(x=>x+1);
+      setContext(null);setDetails([]);setQuote(null);setAuxQuote(null);setSessionEpoch(x=>x+1);
+      if(item.reviewReport&&typeof item.reviewReport==="object"){
+        const validated=parseReviewResponse(JSON.stringify(item.reviewReport));
+        if(validated.ok&&typeof item.reviewSource==="string"&&item.reviewSource.length<=24000&&
+           (item.reviewKindUsed==="intake"||item.reviewKindUsed==="research")){
+          setReviewReport(validated.value);setReviewSource(item.reviewSource);setReviewKindUsed(item.reviewKindUsed);
+        }else{setReviewReport(null);setReviewSource("");setReviewKindUsed(null);}
+      }else{setReviewReport(null);setReviewSource("");setReviewKindUsed(null);}
       setNotice(guide.needContext+" "+guide.saveHint);
     }catch(error){setNotice(error instanceof Error?error.message:"SESSION_IMPORT_FAILED");}
   }
@@ -141,7 +224,7 @@ export default function ResearchClient({locale,canUseApi}:{locale:OntoLocale;can
   }
   function exportSession(){
     const data=JSON.parse(buildResearchSessionExport({objective,search,answers,drafts}));
-    const json=JSON.stringify({...data,stage,searchOptions,extraTermsText,searchScript,contextMode,shortTopic,intakePrompt,intakeReply},null,2);
+    const json=JSON.stringify({...data,stage,searchOptions,extraTermsText,searchScript,contextMode,shortTopic,intakePrompt,intakeReply,reviewReport,reviewKindUsed,reviewSource},null,2);
     const blob=new Blob([json],{type:"application/json;charset=utf-8"});
     const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download="ARCTOR_ONTO_AI_LOCAL_SESSION.json";a.click();
@@ -151,12 +234,13 @@ export default function ResearchClient({locale,canUseApi}:{locale:OntoLocale;can
     if((Object.keys(answers).length||Object.keys(drafts).length)&&!window.confirm(guide.confirmReset))return;
     setObjective("");setSearch("");setShortTopic("");setIntakePrompt("");setIntakeReply("");setIntakeStatus("");
     setContext(null);setContextError("");setDetails([]);setDetailId("");setDetailError("");
-    setAnswers({});setDrafts({});setStage("questions");setQuote(null);setMode("external");
+    setAnswers({});setDrafts({});setStage("questions");setQuote(null);setMode("external");setIntakeMode("external");
+    setAuxQuote(null);setReviewReport(null);setReviewKindUsed(null);setReviewSource("");
     setExtraTermsText("");setSearchOptions(DEFAULT_SEARCH_OPTIONS);setSearchScript(ON_ONLY_DEFAULT_SEARCH_SCRIPT);
     setContextMode("compact");setNotice("");setSessionEpoch(x=>x+1);
   }
   function prepareIntake(){
-    try {setIntakePrompt(buildIntakePrompt(shortTopic,locale));setIntakeReply("");setIntakeStatus("");}
+    try {setIntakePrompt(buildIntakePrompt(shortTopic,locale));setIntakeReply("");setIntakeStatus("");setAuxQuote(null);setReviewReport(null);}
     catch {setIntakeStatus(intake.needTopic);}
   }
   async function copyIntake(){
@@ -254,7 +338,7 @@ export default function ResearchClient({locale,canUseApi}:{locale:OntoLocale;can
       <p className="text-sm text-slate-700">{intake.explanation}</p>
       <label className="block text-sm font-semibold">{intake.briefLabel}
         <input className={`${ctl} mt-1`} value={shortTopic} maxLength={180} placeholder={intake.briefPlaceholder}
-          onChange={e=>{setShortTopic(e.target.value);setIntakePrompt("");setIntakeReply("");setIntakeStatus(intake.changed);}} />
+          onChange={e=>{setShortTopic(e.target.value);setIntakePrompt("");setIntakeReply("");setIntakeStatus(intake.changed);setAuxQuote(null);setReviewReport(null);}} />
       </label>
       <p className="text-xs text-slate-600">{intake.briefHint}</p>
       <button type="button" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
@@ -264,12 +348,36 @@ export default function ResearchClient({locale,canUseApi}:{locale:OntoLocale;can
           <textarea className={`${ctl} mt-1 font-mono text-xs`} readOnly rows={7} value={intakePrompt} />
         </label>
         <button type="button" className="rounded-lg border border-blue-600 px-3 py-2 text-sm text-blue-700" onClick={()=>void copyIntake()}>{intake.copy}</button>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2 text-sm">
+          <p className="font-semibold">{locale==="ru"?"Исполнитель шага 0":"Step 0 executor"}</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={()=>{setIntakeMode("external");setAuxQuote(null);}} className={`rounded px-3 py-2 ${intakeMode==="external"?"bg-blue-600 text-white":"bg-white border"}`}>{LABELS[locale].external}</button>
+            <button type="button" onClick={()=>{setIntakeMode("api");setAuxQuote(null);}} className={`rounded px-3 py-2 ${intakeMode==="api"?"bg-blue-600 text-white":"bg-white border"}`}>{LABELS[locale].billable}</button>
+          </div>
+          {intakeMode==="api"&&<div className="space-y-2">
+            <p>{locale==="ru"?"Тот же самый текст задания. Сначала бесплатная смета, затем отдельное подтверждение расходов.":"Same prompt. Free quote first, explicit paid confirmation before execution."}</p>
+            <button type="button" disabled={busy||!canUseApi} className="rounded bg-slate-800 px-3 py-2 text-white disabled:opacity-40" onClick={()=>void runAuxiliary("intake","quote")}>{labels.quote}</button>
+            {getAuxQuote("intake")&&<p>{getAuxQuote("intake")?.approvedMaxEur} EUR · {getAuxQuote("intake")?.modelName} · {getAuxQuote("intake")?.canAfford?"Balance OK":"Insufficient funds"}</p>}
+            <button type="button" disabled={busy||!getAuxQuote("intake")?.canAfford} className="rounded bg-orange-600 px-3 py-2 text-white disabled:opacity-40" onClick={()=>void runAuxiliary("intake","run")}>{labels.apiRun}</button>
+          </div>}
+        </div>
         <p className="text-sm text-slate-700">{intake.steps}</p>
         <label className="block text-sm font-semibold">{intake.pasteLabel}
           <textarea className={`${ctl} mt-1 font-mono text-xs`} rows={6} value={intakeReply} maxLength={32000}
             onChange={e=>{setIntakeReply(e.target.value);setIntakeStatus("");}} />
         </label>
         <button type="button" disabled={!intakeReply.trim()} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40" onClick={applyIntake}>{intake.apply}</button>
+        <div className="rounded-lg border border-blue-200 p-3 space-y-2 text-sm">
+          <p className="font-semibold">{locale==="ru"?"Независимая проверка ответа внешнего ИИ (необязательно)":"Optional independent AI review"}</p>
+          <p className="text-xs text-slate-600">{locale==="ru"?"Без вызова API проверка JSON выполняется кнопкой применения. Отдельная содержательная рецензия платная и ничего не утверждает автоматически.":"JSON parsing is local; paid review does not approve the content."}</p>
+          <button type="button" disabled={busy||!parseIntakeResponse(intakeReply).ok} className="rounded bg-slate-800 px-3 py-2 text-white disabled:opacity-40" onClick={()=>void runAuxiliary("reviewIntake","quote")}>{locale==="ru"?"Рассчитать цену рецензии":"Quote review"}</button>
+          {getAuxQuote("reviewIntake")&&<span className="ml-2">{getAuxQuote("reviewIntake")?.approvedMaxEur} EUR · {getAuxQuote("reviewIntake")?.modelName}</span>}
+          <button type="button" disabled={busy||!getAuxQuote("reviewIntake")?.canAfford} className="ml-2 rounded bg-orange-600 px-3 py-2 text-white disabled:opacity-40" onClick={()=>void runAuxiliary("reviewIntake","run")}>{locale==="ru"?"Проверить внутренним ИИ":"Run internal AI review"}</button>
+        </div>
+        {reviewKindUsed==="intake"&&reviewReport&&reviewSource===safeReviewReference({locale,kind:"intake",originalPrompt:intakePrompt,answer:intakeReply})&&<section className="rounded border p-3 text-sm space-y-1" aria-label="Independent AI review"><b>{reviewReport.assessment}: {reviewReport.summary}</b>
+          <p>{reviewReport.issues.join(" | ")}</p><p>{reviewReport.recommendations.join(" | ")}</p><p>{reviewReport.evidenceGaps.join(" | ")}</p>
+          <p className="text-xs text-amber-900">{locale==="ru"?"Рецензия — рекомендация ИИ, не проверка базы и не решение модератора.":"AI review is not a catalog verification or approval."}</p>
+        </section>}
       </div>}
       <p role="status" className="text-sm text-blue-900">{intakeStatus||intake.free}</p>
     </section>
@@ -405,6 +513,16 @@ export default function ResearchClient({locale,canUseApi}:{locale:OntoLocale;can
         <textarea rows={9} className={`${ctl} mt-1 font-mono text-xs`} value={drafts[stage]??answers[stage]??""}
           onChange={e=>setDrafts(p=>({...p,[stage]:e.target.value}))}/>
       </label>
+      <div className="rounded-lg border border-blue-200 bg-white p-3 space-y-2 text-sm">
+        <p className="font-semibold">{locale==="ru"?"Независимое рецензирование вставленного ответа внутренней моделью":"Independent internal model review of pasted reply"}</p>
+        <p className="text-xs text-slate-600">{locale==="ru"?"Один и тот же исследовательский запрос доступен внешнему и встроенному ИИ. Рецензия отдельная, платная, не заменяет ответ и не создаёт ОН.":"Same research task in both contours. Optional paid review neither applies nor approves anything."}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" disabled={busy||!parseResearchStageAnswer(stageAnswer).ok} className="rounded bg-slate-800 px-3 py-2 text-white disabled:opacity-40" onClick={()=>void runAuxiliary("reviewStage","quote")}>{locale==="ru"?"Рассчитать стоимость проверки":"Quote review"}</button>
+          {getAuxQuote("reviewStage")&&<span>{getAuxQuote("reviewStage")?.approvedMaxEur} EUR · {getAuxQuote("reviewStage")?.modelName}</span>}
+          <button type="button" disabled={busy||!getAuxQuote("reviewStage")?.canAfford} className="rounded bg-orange-600 px-3 py-2 text-white disabled:opacity-40" onClick={()=>void runAuxiliary("reviewStage","run")}>{locale==="ru"?"Проверить внутренним ИИ":"Run internal AI review"}</button>
+        </div>
+        {reviewKindUsed==="research"&&reviewReport&&reviewSource===safeReviewReference({locale,kind:"research",originalPrompt:prompt,answer:stageAnswer})&&<div className="rounded bg-slate-50 p-2"><b>{reviewReport.assessment}: {reviewReport.summary}</b><p>{reviewReport.issues.join(" | ")}</p><p>{reviewReport.recommendations.join(" | ")}</p><p>{reviewReport.evidenceGaps.join(" | ")}</p><p className="text-xs text-amber-900">Review is advice, not database verification or curator approval.</p></div>}
+      </div>
       {suggestedTerms.length>0&&<div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm">
         <h3 className="mb-2 font-semibold">{searchLabels.proposed}</h3>
         <div className="space-y-2">{suggestedTerms.map(term=><div key={term} className="flex flex-wrap items-center justify-between gap-2">

@@ -3,6 +3,8 @@ import {createHash} from "node:crypto";
 import {NextResponse} from "next/server";
 import {platformAdminErrorResponse,requirePlatformAdmin} from "@/lib/admin/require-platform-admin";
 import {ONTO_AI_PILOT_CONTRACT,ONTO_RESULT_SCHEMA,ONTO_SYSTEM,validLocale,validStage} from "@/lib/ontology-research/ontologyResearchV1";
+import {buildIntakePrompt,ONTO_INTAKE_SCHEMA} from "@/lib/ontology-research/intakeBriefV61";
+import {buildReviewPrompt,ONTO_REVIEW_SCHEMA,type ReviewKind} from "@/lib/ontology-research/reviewV61";
 import {getNavigatorModelDefinition} from "../../../../../../lib/ai/navigatorModelCatalog";
 import {readActiveModelPriceSnapshot,calculateAiUsageCostEur,readAiWalletAccess} from "@/lib/ai-billing/runtime";
 import {runBillableAiJson} from "@/lib/ai-billing/gateway.server";
@@ -15,14 +17,28 @@ const BASE_OUTPUT_TOKENS=1100;
 const DESIGN_OUTPUT_TOKENS=3500;
 const MAX_QUOTE_EUR=0.025;
 const ROUTE="/api/admin/ontology-research/model";
-type Payload={mode:"quote"|"run";prompt:string;locale:string;stage:string;quoteHash?:string;approvedMaxEur?:number;operationId?:string};
+type Payload={mode:"quote"|"run";prompt:string;locale:string;stage:string;
+  intakeTopic?:string;reviewKind?:ReviewKind;reviewOriginalPrompt?:string;reviewAnswer?:string;
+  quoteHash?:string;approvedMaxEur?:number;operationId?:string};
 function failure(errorCode:string,status=400){return NextResponse.json({ok:false,contract:ONTO_AI_PILOT_CONTRACT,errorCode},{status,headers:H});}
 function validPayload(value:unknown):value is Payload {
   if(!value||typeof value!=="object"||Array.isArray(value))return false;
   const v=value as Record<string,unknown>;
-  return (v.mode==="quote"||v.mode==="run")&&validLocale(v.locale)&&validStage(v.stage)&&
-    typeof v.prompt==="string"&&v.prompt.length>=30&&v.prompt.length<=24000 &&
-    v.prompt.includes("CURRENT STAGE: "+v.stage) && v.prompt.includes("Output only a JSON object");
+  if((v.mode!=="quote"&&v.mode!=="run")||!validLocale(v.locale)||
+     typeof v.prompt!=="string"||v.prompt.length<30||v.prompt.length>24000)return false;
+  if(v.stage==="intake"){
+    if(typeof v.intakeTopic!=="string"||v.intakeTopic.length<2||v.intakeTopic.length>180)return false;
+    try{return buildIntakePrompt(v.intakeTopic,v.locale)===v.prompt;}catch{return false;}
+  }
+  if(v.stage==="review"){
+    if((v.reviewKind!=="intake"&&v.reviewKind!=="research")||
+      typeof v.reviewOriginalPrompt!=="string"||typeof v.reviewAnswer!=="string")return false;
+    try{return buildReviewPrompt({locale:v.locale,kind:v.reviewKind,
+      originalPrompt:v.reviewOriginalPrompt,answer:v.reviewAnswer})===v.prompt;}
+    catch{return false;}
+  }
+  return validStage(v.stage)&&v.prompt.includes("CURRENT STAGE: "+v.stage)&&
+    v.prompt.includes("Output only a JSON object");
 }
 export async function POST(request:Request){
   const guard=await requirePlatformAdmin({allowedRoles:["owner","admin"]});
@@ -31,10 +47,15 @@ export async function POST(request:Request){
   if(!request.headers.get("content-type")?.startsWith("application/json"))return failure("JSON_REQUIRED",415);
   const input:unknown=await request.json().catch(()=>null);
   if(!validPayload(input))return failure("INVALID_RESEARCH_REQUEST");
-  const outputTokens=input.stage==="design"||input.stage==="critique"?DESIGN_OUTPUT_TOKENS:BASE_OUTPUT_TOKENS;
+  const outputTokens=input.stage==="design"||input.stage==="critique"?DESIGN_OUTPUT_TOKENS:
+    input.stage==="intake"?2600:BASE_OUTPUT_TOKENS;
   const model=getNavigatorModelDefinition("nano");
   if(!model?.modelName||model.tierCode!=="nano")return failure("NANO_MODEL_UNAVAILABLE",503);
-  const schema={name:SCHEMA_NAME,schema:ONTO_RESULT_SCHEMA,strict:true};
+  const selectedSchema=input.stage==="intake"?ONTO_INTAKE_SCHEMA:
+    input.stage==="review"?ONTO_REVIEW_SCHEMA:ONTO_RESULT_SCHEMA;
+  const schema={name:input.stage==="intake"?"arctor_onto_ai_intake_v61":
+    input.stage==="review"?"arctor_onto_ai_review_v61":SCHEMA_NAME,
+    schema:selectedSchema,strict:true};
   const serialized=ONTO_SYSTEM+input.prompt+JSON.stringify(schema);
   const inputTokens=Buffer.byteLength(serialized,"utf8")+500; // conservative reserve upper bound for UTF-8 tokenization
   if(inputTokens>MAX_INPUT_TOKENS)return failure("RESEARCH_CONTEXT_TOO_LARGE",413);
@@ -62,7 +83,7 @@ export async function POST(request:Request){
       preflightSafetyMultiplier:1.25,
       providerRequest:{system:ONTO_SYSTEM,user:input.prompt,structuredOutput:schema,
         maxOutputTokens:outputTokens,outputTokenCeiling:outputTokens,requestTimeoutMs:30000,maxRetries:0,store:false},
-      reason:"Explicitly approved read-only ONTO-AI admin research pilot",
+      reason:"Explicitly approved ON-only ontology research or independent review",
       requestMetadata:{contract:ONTO_AI_PILOT_CONTRACT,stage:input.stage,locale:input.locale,
         explicitApproval:true,writeOntologies:false},
     });
