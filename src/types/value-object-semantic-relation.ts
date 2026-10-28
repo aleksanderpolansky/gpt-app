@@ -32,6 +32,10 @@ export interface ValueObjectRelationTypeDto {
   contractVersion: number;
   displayOrder: number;
   status: "active" | "inactive" | "future" | string;
+  allowedSourceFacetCodes?: string[];
+  allowedTargetFacetCodes?: string[];
+  allowedSourceNodeRoles?: string[];
+  allowedTargetNodeRoles?: string[];
 }
 
 export interface ValueObjectRelationCandidateDto {

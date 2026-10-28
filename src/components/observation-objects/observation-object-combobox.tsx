@@ -21,6 +21,7 @@ type Props = {
   emptyLabel: string;
   ariaLabel: string;
   disabled?: boolean;
+  moreLabel?: string;
 };
 
 function normalizeSearchText(value: string | null | undefined) {
@@ -65,11 +66,13 @@ export function ObservationObjectCombobox({
   emptyLabel,
   ariaLabel,
   disabled = false,
+  moreLabel = "Show 80 more",
 }: Props) {
   const listboxId = useId();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
+  const [displayLimit, setDisplayLimit] = useState(80);
   const selected = options.find((option) => option.id === value) ?? null;
   const normalizedQuery = normalizeSearchText(query);
 
@@ -84,7 +87,7 @@ export function ObservationObjectCombobox({
       .map((item) => item.option);
   }, [normalizedQuery, options]);
 
-  const visible = filtered.slice(0, 80);
+  const visible = filtered.slice(0, displayLimit);
   const currentIndex = visible.length ? Math.min(activeIndex, visible.length - 1) : -1;
   const inputValue = open ? query : selected?.title ?? "";
 
@@ -92,6 +95,7 @@ export function ObservationObjectCombobox({
     onChange(option.id);
     setQuery(option.title);
     setActiveIndex(0);
+    setDisplayLimit(80);
     setOpen(false);
   }
 
@@ -110,14 +114,15 @@ export function ObservationObjectCombobox({
         onFocus={() => {
           setQuery("");
           setActiveIndex(0);
+          setDisplayLimit(80);
           setOpen(true);
         }}
         onBlur={() => setOpen(false)}
         onChange={(event) => {
           setQuery(event.target.value);
           setActiveIndex(0);
+          setDisplayLimit(80);
           setOpen(true);
-          if (value) onChange("");
         }}
         onKeyDown={(event) => {
           if (event.key === "Escape") {
@@ -180,8 +185,13 @@ export function ObservationObjectCombobox({
                 );
               })}
               {filtered.length > visible.length ? (
-                <div className="px-3 py-2 text-right text-[10px] text-[#9ca3af]">{visible.length} / {filtered.length}</div>
-              ) : null}
+                <div className="flex items-center justify-between gap-2 border-t px-3 py-2">
+                  <span className="text-xs text-[#65708d]">{visible.length} / {filtered.length}</span>
+                  <button type="button" onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => setDisplayLimit((n) => n + 80)}
+                    className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-blue-700">{moreLabel}</button>
+                </div>
+              ) : <div className="px-3 py-2 text-right text-xs text-[#65708d]">{visible.length} / {filtered.length}</div>}
             </>
           ) : (
             <div className="px-3 py-3 text-sm text-[#727991]">{emptyLabel}</div>

@@ -139,6 +139,10 @@ function toRelationTypeDto(row: RelationTypeRow): ValueObjectRelationTypeDto {
     contractVersion: row.contract_version,
     displayOrder: row.display_order,
     status: row.status,
+    allowedSourceFacetCodes: row.allowed_source_facet_codes ?? [],
+    allowedTargetFacetCodes: row.allowed_target_facet_codes ?? [],
+    allowedSourceNodeRoles: row.allowed_source_node_roles ?? [],
+    allowedTargetNodeRoles: row.allowed_target_node_roles ?? [],
   };
 }
 
@@ -288,11 +292,11 @@ function endpointCompatibilitySnapshot(input: {
     sourceRole,
     targetRole,
     facetCompatible:
-      (sourceFacets.length === 0 || sourceFacets.includes(sourceFacet)) &&
-      (targetFacets.length === 0 || targetFacets.includes(targetFacet)),
+      sourceFacets.includes(sourceFacet) &&
+      targetFacets.includes(targetFacet),
     nodeRoleCompatible:
-      (sourceRoles.length === 0 || sourceRoles.includes(sourceRole)) &&
-      (targetRoles.length === 0 || targetRoles.includes(targetRole)),
+      sourceRoles.includes(sourceRole) &&
+      targetRoles.includes(targetRole),
     enforcementMode: "api_hard_prewrite_guard",
   };
 }

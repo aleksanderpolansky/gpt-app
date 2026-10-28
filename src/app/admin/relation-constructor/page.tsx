@@ -37,6 +37,12 @@ type CatalogResponse = {
   error?: string;
 };
 
+type PairPreview = {
+  ok?: boolean; error?: string; sourceId?: string; targetId?: string;
+  structure?: "source_parent_of_target" | "target_parent_of_source" | "none";
+  relations?: Array<{ id: string; relationTypeCode: string; sourceValueObjectId: string;
+    targetValueObjectId: string; status: string }>;
+};
 type CreateResponse = {
   ok?: boolean;
   relation?: {
@@ -273,6 +279,19 @@ const EDIT_COPY: Record<
   },
 };
 
+const ARI_UI: Record<LocaleCode, { all: string; branch: string; role: string; more: string; notice: string; duplicate: string }> = {
+  ru: { all: "Все", branch: "Ветка", role: "Уровень ОН", more: "Показать ещё 80", notice: "Техническая допустимость связи не доказывает её смысловую правильность.", duplicate: "Такая связь уже существует. Повторное сохранение заблокировано." },
+  en: { all: "All", branch: "Branch", role: "ON role", more: "Show 80 more", notice: "Technical compatibility is not semantic evidence.", duplicate: "This relation exists already. Duplicate save is blocked." },
+  pl: { all: "Wszystkie", branch: "Gałąź", role: "Poziom ON", more: "Pokaż kolejne 80", notice: "Zgodność techniczna nie dowodzi sensu relacji.", duplicate: "Ta relacja już istnieje." },
+  uk: { all: "Усі", branch: "Гілка", role: "Рівень ОН", more: "Показати ще 80", notice: "Технічна допустимість не доводить змістовності зв’язку.", duplicate: "Такий зв’язок уже існує." },
+  de: { all: "Alle", branch: "Zweig", role: "ON-Ebene", more: "80 weitere anzeigen", notice: "Technische Zulässigkeit beweist keine semantische Richtigkeit.", duplicate: "Diese Verbindung existiert bereits." },
+  es: { all: "Todos", branch: "Rama", role: "Nivel ON", more: "Mostrar 80 más", notice: "La compatibilidad técnica no prueba la relevancia semántica.", duplicate: "Esta relación ya existe." },
+  cs: { all: "Vše", branch: "Větev", role: "Úroveň ON", more: "Dalších 80", notice: "Technická přípustnost nedokazuje významovou správnost.", duplicate: "Tato vazba již existuje." },
+};
+const FACET_NAMES: Record<string, string> = {
+  systems_structures: "Системы и структуры", actions_processes: "Действия и процессы",
+  states_needs: "Состояния и потребности",
+};
 export default function RelationConstructorPage() {
   const [locale] = useState<LocaleCode>(() =>
     typeof window === "undefined"
@@ -290,9 +309,16 @@ export default function RelationConstructorPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [editingRelationId, setEditingRelationId] = useState("");
+  const [sourceFacetFilter, setSourceFacetFilter] = useState("");
+  const [sourceRoleFilter, setSourceRoleFilter] = useState("");
+  const [targetFacetFilter, setTargetFacetFilter] = useState("");
+  const [targetRoleFilter, setTargetRoleFilter] = useState("");
+  const [pairPreview, setPairPreview] = useState<PairPreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const copy = COPY[locale] ?? COPY.en;
   const editCopy = EDIT_COPY[locale] ?? EDIT_COPY.en;
+  const ariCopy = ARI_UI[locale] ?? ARI_UI.en;
   const isEditing = Boolean(editingRelationId);
 
   const fetchCatalog = useCallback(async (): Promise<CatalogResponse> => {
@@ -361,14 +387,20 @@ export default function RelationConstructorPage() {
     };
   }, [fetchCatalog]);
 
-  const targetObjects = useMemo(
-    () => objects.filter((item) => item.id !== sourceValueObjectId),
-    [objects, sourceValueObjectId],
-  );
+  const facetOptions = useMemo(() => Array.from(new Set(objects.map((x) => x.facetCode)
+    .filter((x): x is string => Boolean(x)))).sort(), [objects]);
+  const sourceObjects = useMemo(() => objects.filter((x) =>
+    (!sourceFacetFilter || x.facetCode === sourceFacetFilter) &&
+    (!sourceRoleFilter || x.nodeRoleCode === sourceRoleFilter)), [objects, sourceFacetFilter, sourceRoleFilter]);
+  const targetObjects = useMemo(() => objects.filter((x) =>
+    x.id !== sourceValueObjectId &&
+    (!targetFacetFilter || x.facetCode === targetFacetFilter) &&
+    (!targetRoleFilter || x.nodeRoleCode === targetRoleFilter)),
+    [objects, sourceValueObjectId, targetFacetFilter, targetRoleFilter]);
 
   const sourceComboboxOptions = useMemo(
     () =>
-      objects.map((item) => ({
+      sourceObjects.map((item) => ({
         id: item.id,
         title: item.title,
         description: item.description,
@@ -377,7 +409,7 @@ export default function RelationConstructorPage() {
         canonicalKey: item.canonicalKey,
         meta: item.nodeRoleCode,
       })),
-    [objects],
+    [sourceObjects],
   );
 
   const targetComboboxOptions = useMemo(
@@ -394,6 +426,40 @@ export default function RelationConstructorPage() {
     [targetObjects],
   );
 
+  const selectedSource = useMemo(() => objects.find((x) => x.id === sourceValueObjectId) ?? null, [objects, sourceValueObjectId]);
+  const selectedTarget = useMemo(() => objects.find((x) => x.id === targetValueObjectId) ?? null, [objects, targetValueObjectId]);
+  const allowedRelationTypes = useMemo(() => relationTypes.filter((type) =>
+    selectedSource && selectedTarget &&
+    (type.allowedSourceFacetCodes ?? []).includes(selectedSource.facetCode ?? "") &&
+    (type.allowedTargetFacetCodes ?? []).includes(selectedTarget.facetCode ?? "") &&
+    (type.allowedSourceNodeRoles ?? []).includes(selectedSource.nodeRoleCode ?? "") &&
+    (type.allowedTargetNodeRoles ?? []).includes(selectedTarget.nodeRoleCode ?? "")),
+    [relationTypes, selectedSource, selectedTarget]);
+  useEffect(() => {
+    if (relationTypeCode && !allowedRelationTypes.some((x) => x.relationTypeCode === relationTypeCode)) {
+      setRelationTypeCode("");
+    }
+  }, [relationTypeCode, allowedRelationTypes]);
+  useEffect(() => {
+    if (!sourceValueObjectId || !targetValueObjectId) {
+      setPairPreview(null); setPreviewLoading(false); return;
+    }
+    const controller = new AbortController();
+    setPreviewLoading(true); setPairPreview(null);
+    const params = new URLSearchParams({ sourceId: sourceValueObjectId, targetId: targetValueObjectId });
+    void fetch("/api/admin/relation-constructor/inspect?" + params.toString(),
+      { signal: controller.signal, cache: "no-store" })
+      .then(async (response) => {
+        const payload = await response.json() as PairPreview;
+        if (!response.ok || payload.ok !== true) throw new Error(payload.error || "Preview failed");
+        return payload;
+      })
+      .then((data) => { if (!controller.signal.aborted) setPairPreview(data); })
+      .catch((error: unknown) => { if (!controller.signal.aborted) setPairPreview({ ok: false, error: String(error) }); })
+      .finally(() => { if (!controller.signal.aborted) setPreviewLoading(false); });
+    return () => controller.abort();
+  }, [sourceValueObjectId, targetValueObjectId]);
+
   const selectedRelationType = useMemo(
     () =>
       relationTypes.find(
@@ -402,7 +468,16 @@ export default function RelationConstructorPage() {
     [relationTypeCode, relationTypes],
   );
 
+  const existingSameType = Boolean(relationTypeCode && pairPreview?.relations?.some((relation) =>
+    relation.status === "active" && relation.relationTypeCode === relationTypeCode &&
+    (relation.sourceValueObjectId === sourceValueObjectId && relation.targetValueObjectId === targetValueObjectId ||
+      (selectedRelationType?.directionalityCode === "symmetric" && relation.sourceValueObjectId === targetValueObjectId && relation.targetValueObjectId === sourceValueObjectId)) &&
+    relation.id !== editingRelationId));
   const canSave =
+    !previewLoading && pairPreview?.ok === true &&
+    pairPreview?.sourceId === sourceValueObjectId && pairPreview?.targetId === targetValueObjectId &&
+    !existingSameType &&
+    allowedRelationTypes.some((x) => x.relationTypeCode === relationTypeCode) &&
     Boolean(sourceValueObjectId) &&
     Boolean(targetValueObjectId) &&
     Boolean(relationTypeCode) &&
@@ -481,11 +556,22 @@ export default function RelationConstructorPage() {
               <span className="text-sm font-semibold text-[#30344b]">
                 1. {copy.source}
               </span>
-              <ObservationObjectCombobox
+              <div className="flex flex-wrap gap-2">
+                <select aria-label={ariCopy.branch} value={sourceFacetFilter} onChange={(e) => { setSourceFacetFilter(e.target.value); setSourceValueObjectId(""); setTargetValueObjectId(""); setRelationTypeCode(""); }} className="rounded-lg border px-2 py-1 text-xs">
+                  <option value="">{ariCopy.branch}: {ariCopy.all}</option>
+                  {facetOptions.map((facet) => <option key={facet} value={facet}>{locale === "ru" ? (FACET_NAMES[facet] ?? facet) : facet}</option>)}
+                </select>
+                <select aria-label={ariCopy.role} value={sourceRoleFilter} onChange={(e) => { setSourceRoleFilter(e.target.value); setSourceValueObjectId(""); setTargetValueObjectId(""); setRelationTypeCode(""); }} className="rounded-lg border px-2 py-1 text-xs">
+                  <option value="">{ariCopy.role}: {ariCopy.all}</option>
+                  {(["root", "intermediate", "leaf"] as const).map((role) => <option key={role} value={role}>{role}</option>)}
+                </select>
+              </div>
+              <ObservationObjectCombobox moreLabel={ariCopy.more}
                 value={sourceValueObjectId}
                 onChange={(value) => {
                   setSourceValueObjectId(value);
                   setTargetValueObjectId("");
+                  setRelationTypeCode("");
                   setSuccess(false);
                 }}
                 options={sourceComboboxOptions}
@@ -500,10 +586,21 @@ export default function RelationConstructorPage() {
               <span className="text-sm font-semibold text-[#30344b]">
                 2. {copy.target}
               </span>
-              <ObservationObjectCombobox
+              <div className="flex flex-wrap gap-2">
+                <select aria-label={ariCopy.branch} value={targetFacetFilter} onChange={(e) => { setTargetFacetFilter(e.target.value); setTargetValueObjectId(""); setRelationTypeCode(""); }} className="rounded-lg border px-2 py-1 text-xs">
+                  <option value="">{ariCopy.branch}: {ariCopy.all}</option>
+                  {facetOptions.map((facet) => <option key={facet} value={facet}>{locale === "ru" ? (FACET_NAMES[facet] ?? facet) : facet}</option>)}
+                </select>
+                <select aria-label={ariCopy.role} value={targetRoleFilter} onChange={(e) => { setTargetRoleFilter(e.target.value); setTargetValueObjectId(""); setRelationTypeCode(""); }} className="rounded-lg border px-2 py-1 text-xs">
+                  <option value="">{ariCopy.role}: {ariCopy.all}</option>
+                  {(["root", "intermediate", "leaf"] as const).map((role) => <option key={role} value={role}>{role}</option>)}
+                </select>
+              </div>
+              <ObservationObjectCombobox moreLabel={ariCopy.more}
                 value={targetValueObjectId}
                 onChange={(value) => {
                   setTargetValueObjectId(value);
+                  setRelationTypeCode("");
                   setSuccess(false);
                 }}
                 options={targetComboboxOptions}
@@ -515,6 +612,17 @@ export default function RelationConstructorPage() {
               />
             </label>
 
+            {sourceValueObjectId && targetValueObjectId ? (
+              <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-3 text-sm">
+                <b>{locale === "ru" ? "Предварительная проверка пары (только чтение)" : "Pair preview (read only)"}</b>
+                {previewLoading ? <p>{locale === "ru" ? "Проверка…" : "Checking…"}</p> : null}
+                {pairPreview?.ok === false ? <p className="text-red-700">{pairPreview.error}. {locale === "ru" ? "Создание связи заблокировано." : "Save blocked."}</p> : null}
+                {pairPreview?.ok && pairPreview.structure !== "none" ? <p className="text-amber-800">{locale === "ru" ? "Эти ОН уже связаны прямой структурной иерархией." : "Direct parent-child relation exists."}</p> : null}
+                {pairPreview?.ok && !pairPreview.relations?.length ? <p>{locale === "ru" ? "Прямых системных связей этой пары не найдено." : "No direct system links for this pair."}</p> : null}
+                {pairPreview?.relations?.map((rel) => <p key={rel.id}>{rel.relationTypeCode} · {rel.status} · <Link className="text-blue-700 underline" href={"/admin/relation-constructor?relationId=" + encodeURIComponent(rel.id) + "&locale=" + locale}>#{rel.id.slice(0,8)}</Link></p>)}
+                <p className="mt-2 text-xs text-slate-600">{ariCopy.notice}</p>
+              </div>
+            ) : null}
             <label className="grid gap-2">
               <span className="text-sm font-semibold text-[#30344b]">
                 3. {copy.relation}
@@ -528,12 +636,14 @@ export default function RelationConstructorPage() {
                 className="h-11 rounded-xl border border-[#d8dced] bg-white px-3 text-sm text-[#30344b] outline-none focus:border-[#3b6ef8]"
               >
                 <option value="">{copy.relationPlaceholder}</option>
-                {relationTypes.map((item) => (
+                {allowedRelationTypes.map((item) => (
                   <option key={item.relationTypeCode} value={item.relationTypeCode}>
                     {resolveSemanticRelationTitle(item, locale, "outgoing")}
                   </option>
                 ))}
               </select>
+              {sourceValueObjectId && targetValueObjectId && allowedRelationTypes.length === 0 ? <p className="text-xs text-amber-700">{locale === "ru" ? "Для этой пары реестр не разрешает ни одного вида связей." : "No permitted relationship types for this pair."}</p> : null}
+              {existingSameType ? <p className="text-xs text-amber-700">{ariCopy.duplicate}</p> : null}
               {selectedRelationType ? (
                 <span className="text-xs leading-5 text-[#7c8099]">
                   {resolveSemanticRelationDescription(
