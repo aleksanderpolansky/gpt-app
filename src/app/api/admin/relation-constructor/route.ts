@@ -155,7 +155,6 @@ async function loadCatalog(localeValue: unknown) {
       .is("owner_user_id", null)
       .is("owner_actor_id", null)
       .eq("status", "active")
-      .eq("ontology_node_role_code", "leaf")
       .order("title", { ascending: true })
       .limit(5000),
     supabase
@@ -234,8 +233,12 @@ async function loadRelationEndpoints(sourceId: string, targetId: string) {
       throw new Error(`RELATION_CONSTRUCTOR_${label}_NOT_AVAILABLE`);
     }
 
-    if (row.ontology_node_role_code !== "leaf") {
-      throw new Error(`RELATION_CONSTRUCTOR_${label}_NOT_LEAF`);
+    if (
+      row.ontology_node_role_code !== "root" &&
+      row.ontology_node_role_code !== "intermediate" &&
+      row.ontology_node_role_code !== "leaf"
+    ) {
+      throw new Error(`RELATION_CONSTRUCTOR_${label}_ROLE_INVALID`);
     }
   }
 
@@ -290,7 +293,7 @@ function endpointCompatibilitySnapshot(input: {
     nodeRoleCompatible:
       (sourceRoles.length === 0 || sourceRoles.includes(sourceRole)) &&
       (targetRoles.length === 0 || targetRoles.includes(targetRole)),
-    enforcementMode: "curator_manual_advisory_only",
+    enforcementMode: "api_hard_prewrite_guard",
   };
 }
 
@@ -650,6 +653,16 @@ export async function POST(request: Request) {
       target,
       relationType,
     });
+    if (
+      registryCompatibility.facetCompatible !== true ||
+      registryCompatibility.nodeRoleCompatible !== true
+    ) {
+      return errorResponse(
+        "RELATION_CONSTRUCTOR_ENDPOINT_TYPE_NOT_ALLOWED",
+        "The relation type does not allow these endpoint facets or node roles",
+        409,
+      );
+    }
 
     const rationaleLogId = await beginCuratorRationaleLog({
       guard,
@@ -737,7 +750,7 @@ export async function POST(request: Request) {
     const status =
       message.includes("NOT_AVAILABLE") ||
       message.includes("NOT_WRITABLE") ||
-      message.includes("NOT_LEAF")
+      message.includes("ROLE_INVALID")
         ? 409
         : 500;
     return errorResponse("RELATION_CONSTRUCTOR_POST_FAILED", message, status);
@@ -824,6 +837,22 @@ export async function PUT(request: Request) {
       loadWritableRelationType(relationTypeCode),
     ]);
 
+    const registryCompatibility = endpointCompatibilitySnapshot({
+      source,
+      target,
+      relationType,
+    });
+    if (
+      registryCompatibility.facetCompatible !== true ||
+      registryCompatibility.nodeRoleCompatible !== true
+    ) {
+      return errorResponse(
+        "RELATION_CONSTRUCTOR_ENDPOINT_TYPE_NOT_ALLOWED",
+        "The relation type does not allow these endpoint facets or node roles",
+        409,
+      );
+    }
+
     let writeSourceId = source.id;
     let writeTargetId = target.id;
     if (relationType.directionality_code === "symmetric") {
@@ -896,7 +925,7 @@ export async function PUT(request: Request) {
     const status =
       message.includes("NOT_AVAILABLE") ||
       message.includes("NOT_WRITABLE") ||
-      message.includes("NOT_LEAF") ||
+      message.includes("ROLE_INVALID") ||
       message.includes("duplicate key")
         ? 409
         : 500;
