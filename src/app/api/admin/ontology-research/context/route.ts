@@ -5,6 +5,8 @@ import { localizeGlobalSystemValueObject } from "@/lib/reality-core/global-syste
 import { resolveLocalizedContentFieldsStrict } from "@/lib/localization/contentLocalization";
 import { ARCTOR_TYPICAL_ACTIVITY_METADATA_V1 } from "@/lib/activity/typical-activity-catalog.server";
 import { normalizeContextQuery } from "@/lib/ontology-research/contextSearchV2";
+import { explainAri02LexicalMatch, type Ari02SearchField } from "@/lib/ontology-research/ari02SearchDiagnostics";
+import { evaluateAri02Enhanced, type Ari02EnhancedCandidate } from "@/lib/ontology-research/ari02EnhancedSearch";
 import { parseSearchOptions, scoreSearchCandidate } from "@/lib/ontology-research/researchSearchStrategyV3";
 import {
   ONTO_AI_PILOT_CONTRACT, ONTO_LOCALES, validLocale,
@@ -118,7 +120,9 @@ export async function GET(request: Request) {
   if (term.length < 2 || term.length > 180) {
     return NextResponse.json({ok:false,errorCode:"SEARCH_TERM_2_TO_180_REQUIRED"},{status:400,headers:HEADERS});
   }
+  const startedAt = performance.now();
   try {
+    const catalogStartAt = performance.now();
     const [snapshot, templateResponse] = await Promise.all([
       loadSystemOnSnapshot(),
       supabase.from("activity_templates")
@@ -129,6 +133,7 @@ export async function GET(request: Request) {
         .contains("default_metadata_json", ARCTOR_TYPICAL_ACTIVITY_METADATA_V1)
         .order("id", { ascending: true }).range(0, MAX_TEMPLATES - 1),
     ]);
+    const catalogLoadedAt = performance.now();
     if (templateResponse.error) throw new Error(`TEMPLATE_CATALOG_QUERY_FAILED:${templateResponse.error.code ?? "DB"}`);
     const rows = snapshot.rows;
     const templates = (templateResponse.data ?? []) as TemplateRow[];
@@ -161,6 +166,55 @@ export async function GET(request: Request) {
     }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score || a.id.localeCompare(b.id));
     const selectedTemplates: TypicalCandidate[] = templateScored.slice(0, MAX_MATCHED_TEMPLATES)
       .map(x=>({id:x.id,title:x.title,group:x.group}));
+    const scoredAt = performance.now();
+    const diagnosticsRequested = url.searchParams.get("diagnostics") === "1";
+    const diagnosticResults = diagnosticsRequested ? onScored.slice(0, options.maxOnMatches).map((candidate, index) => {
+      const row = byId.get(candidate.id);
+      if (!row) throw new Error("ARI02_ROW_NOT_IN_SNAPSHOT");
+      const codes = options.allLocales ? ONTO_LOCALES : [locale];
+      const fields: Ari02SearchField[] = [
+        {field:"title",locale:"db",value:row.title ?? ""},
+        ...codes.map(code => ({field:"title" as const,locale:code,value:localizedOn(row,code).title})),
+        ...(options.includePaths ? codes.map(code => ({field:"path" as const,locale:code,value:fullPath(row,byId,code)})) : []),
+        {field:"canonical_key",locale:"db",value:row.canonical_key ?? ""},
+        ...(options.includeDefinitions ? [
+          {field:"definition" as const,locale:"db",value:row.description ?? ""},
+          ...codes.map(code => ({field:"definition" as const,locale:code,value:localizedOn(row,code).description})),
+        ] : []),
+      ];
+      const explanation = explainAri02LexicalMatch(terms, fields);
+      return {rank:index+1,id:candidate.id,title:candidate.title,path:candidate.path,
+        role:candidate.role,score:candidate.score,bestEvidence:explanation.bestEvidence,
+        topEvidence:explanation.topEvidence,scoreParity:explanation.score===candidate.score};
+    }) : [];
+    const enhancedRequested = diagnosticsRequested && url.searchParams.get("experimental") === "ari02_2";
+    const experimental = enhancedRequested ? evaluateAri02Enhanced(term, rows.map((row): Ari02EnhancedCandidate => ({
+      id: row.id,
+      title: localizedOn(row, locale).title,
+      path: fullPath(row, byId, "ru"),
+      role: row.ontology_node_role_code ?? "unknown",
+      titleVariants: [
+        {locale:"db", text:row.title ?? ""},
+        ...(options.allLocales ? ONTO_LOCALES : [locale]).map(code => ({locale:code, text:localizedOn(row,code).title})),
+      ],
+    })), options.maxOnMatches) : undefined;
+    const baselineComparison = experimental ? {
+      oldMatched: onScored.length,
+      newMatched: experimental.totalMatched,
+      oldTopTitles: onScored.slice(0, 10).map(x => x.title),
+      newTopTitles: experimental.rows.slice(0, 10).map(x => x.title),
+      oldTopWithoutNewTitleMatch: onScored.slice(0, 10)
+        .filter(x => !experimental.rows.some(r => r.id === x.id)).map(x => x.title),
+      note: "Different heuristics, not measured precision/recall; gold-label dataset required.",
+    } : undefined;
+    const tracedAt = performance.now();
+    const ms = (n:number) => Math.round(n*100)/100;
+    const diagnostics = diagnosticsRequested ? {
+      version:"ARCTOR_ARI_02_1_READ_ONLY_SEARCH_TRACE_V1",
+      totalMs:ms(tracedAt-startedAt), catalogLoadMs:ms(catalogLoadedAt-catalogStartAt),
+      scoringMs:ms(scoredAt-catalogLoadedAt),traceMs:ms(tracedAt-scoredAt),
+      results:diagnosticResults, experimental, baselineComparison,
+    } : undefined;
     const incomplete = snapshot.total === null || snapshot.total > rows.length;
     const templateTruncated = templateResponse.count === null || templateResponse.count > templates.length;
     const noMatch = ontology.length === 0 && selectedTemplates.length === 0;
@@ -173,6 +227,7 @@ export async function GET(request: Request) {
         matchedTemplates:templateScored.length,onTruncated:onScored.length>ontology.length,
         templateTruncated:templateScored.length>selectedTemplates.length},
       catalogTotals:{ontology:snapshot.total,templates:templateResponse.count},
+      diagnostics,
       warnings:warningStrings(locale,noMatch,incomplete,templateTruncated),
       dbWritesPerformed:false,aiCallsPerformed:false},{headers:HEADERS});
   } catch (error) {

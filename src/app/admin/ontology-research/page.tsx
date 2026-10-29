@@ -13,6 +13,7 @@ export default async function OntologyResearchPage({searchParams}:{searchParams:
   const locale=validLocale(rawLocale)?rawLocale:"ru";
   return <main className="mx-auto max-w-6xl space-y-4 px-4 py-8">
     <Link className="text-sm text-blue-600 underline" href={`/admin?locale=${locale}`}>← Admin hub · Семантическая модель</Link>
+    <Link className="inline-block rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm text-blue-700" href={`/admin/ontology-research/diagnostics?locale=${locale}`}>ARI-02 · Диагностика и сравнение поиска ОН</Link>
     <ResearchClient locale={locale} canUseApi={guard.platformAdmin.role!=="viewer"}/>
   </main>;
 }
