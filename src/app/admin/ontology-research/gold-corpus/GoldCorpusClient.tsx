@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import GoldErrorAuditPanel from "./GoldErrorAuditPanel";
 import Ari02BenchmarkPanel from "./Ari02BenchmarkPanel";
 import { ARI02_GOLD_VERSION, emptyCase, emptyCorpus, importDiagnosticReport, parseGoldCorpus,
-  countJudged, precisionTen, recallTwenty, uuidRegex,
+  countJudged, precisionTen, recallTwenty, normalizedGoldQuery, uuidRegex,
   type GoldCorpus, type GoldCase, type Relevance, type EngineKey, type ErrorKind } from "@/lib/ontology-research/ari02GoldCorpusV1";
 
 const grades: Array<[string,Relevance|null]> = [
@@ -37,6 +37,8 @@ export default function GoldCorpusClient(){
   function updateField<K extends keyof GoldCase>(key:K,value:GoldCase[K]){editCase(c=>({...c,[key]:value}));}
   function addCase(){
     const q=newQuery.trim();if(q.length<2||q.length>180){setMessage("Запрос: 2–180 символов.");return;}
+    const existing=corpus.cases.filter(c=>c.locale===newLocale && normalizedGoldQuery(c.query)===normalizedGoldQuery(q));
+    if(existing.length){setSelected(existing[0].id);setMessage("Такой запрос уже есть в корпусе (в том числе с другим написанием е/ё). Дубликат не создан.");return;}
     const c=emptyCase(q,newLocale);setCorpus(prev=>({...prev,cases:[...prev.cases,c]}));
     setSelected(c.id);setNewQuery("");setMessage("Запрос добавлен без разметки.");
   }
@@ -50,7 +52,9 @@ export default function GoldCorpusClient(){
         setMessage(`Восстановлено ${loaded.cases.length} сценариев. Это локальная копия, БД не изменялась.`);
       } else {
         const incoming=importDiagnosticReport(parsed);
-        const found=corpus.cases.find(c=>c.query.toLocaleLowerCase()===incoming.query.toLocaleLowerCase() && c.locale===incoming.locale);
+        const matches=corpus.cases.filter(c=>c.locale===incoming.locale && normalizedGoldQuery(c.query)===normalizedGoldQuery(incoming.query));
+        if(matches.length>1){setMessage("Импорт остановлен: несколько существующих сценариев эквивалентны запросу. Сначала объедините их вручную, сохранив оценки.");return;}
+        const found=matches[0];
         const target=found??emptyCase(incoming.query,incoming.locale);
         setCorpus(prev=>({...prev,cases:found
           ? prev.cases.map(c=>c.id===found.id?{...c,runs:incoming.runs}:c)
@@ -129,7 +133,15 @@ export default function GoldCorpusClient(){
           <button type="button" className={`rounded-lg border px-4 py-2 ${engine==="baseline"?"bg-blue-600 text-white":""}`} onClick={()=>setEngine("baseline")}>Действующий поиск ({current.runs.baseline.length})</button>
           <button type="button" className={`rounded-lg border px-4 py-2 ${engine==="experimental"?"bg-blue-600 text-white":""}`} onClick={()=>setEngine("experimental")}>Эксперимент ARI-02.2 ({current.runs.experimental.length})</button>
         </div>
-        <p className="text-sm">Оценено {checked.judged} из {checked.total}. {p===null?"Precision@10: ещё не рассчитан (не все показанные топ-10 размечены).":`Предварительный Precision@10: ${(p*100).toFixed(1)}%.`} {r===null?"Recall@20: пока нельзя рассчитать без независимо подтверждённого списка релевантных UUID.":`Оценка Recall@20 в границах ручного эталона: ${(r*100).toFixed(1)}%.`}</p>
+        <p className="text-sm">Оценено {checked.judged} из {checked.total}. {p===null?"Precision@10: N/A (нужны не менее 10 результатов и ручные оценки всех первых 10).":`Предварительный Precision@10: ${(p*100).toFixed(1)}%.`} {r===null?"Recall@20: N/A без подтверждённой полноты независимого эталона в ограниченной области (SCOPE_COMPLETE_V1).":`Оценка Recall@20 в границах ручного эталона: ${(r*100).toFixed(1)}%.`}</p>
+        <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm">
+          <b>Единые правила оценки:</b> 0 — объект не подходит по смыслу; 1 — только фон или возможная смысловая связь;
+          2 — самостоятельный релевантный компонент исследования ситуации, но не её точный эквивалент;
+          3 — прямое точное соответствие предмету запроса. Для составных ситуаций компонент может получить 2,
+          хотя не совпадает со всей фразой. Сначала учитывайте назначение сценария (purpose) и выбранную плоскость.
+          Тип узла intermediate/leaf оценивается отдельно от релевантности: релевантность ещё не разрешает запись факта.
+          Имеющиеся ручные оценки этот патч не меняет.
+        </p>
         {!listed.length?<p className="rounded-lg border border-amber-200 p-3 text-sm">Нет импортированной выдачи для этого режима. Это НЕ доказательство отсутствия ОН.</p>
         :<div className="overflow-x-auto"><table className="w-full min-w-[800px] border-collapse text-sm"><thead><tr className="border-b bg-slate-100"><th className="p-2 text-left">ОН и доказательство</th><th className="p-2 text-left">Релевантность</th><th className="p-2 text-left">Ошибка и пояснение</th></tr></thead>
         <tbody>{listed.map(row=><tr key={row.id} className="border-b align-top"><td className="p-2"><b>{row.rank}. {row.title}</b><div className="text-xs text-slate-500">{row.role} · {row.score} баллов</div><div className="text-xs">{row.path}</div><code className="text-xs">{row.id}</code></td>

@@ -95,16 +95,20 @@ export function parseGoldCorpus(raw:unknown): GoldCorpus {
   }
   return {contract:ARI02_GOLD_VERSION,exportedAt:string(root.exportedAt,100),annotationMethod:"human_review_not_db_proof",cases};
 }
+/** Equivalent user spelling for import matching, not an ontology identity rule. */
+export function normalizedGoldQuery(query: string): string {
+  return query.normalize("NFKC").toLocaleLowerCase().replace(/ё/g,"е").replace(/\s+/g," ").trim();
+}
 export function countJudged(c:GoldCase,engine:EngineKey) {
   const items=c.runs[engine];return {total:items.length,judged:items.filter(x=>c.judgments[x.id]?.grade!==null && c.judgments[x.id]?.grade!==undefined).length};
 }
 export function precisionTen(c:GoldCase,engine:EngineKey):number|null {
   const top=c.runs[engine].slice(0,10);
-  if (!top.length || top.some(x=>c.judgments[x.id]?.grade===null || c.judgments[x.id]?.grade===undefined)) return null;
+  if (top.length!==10 || top.some(x=>c.judgments[x.id]?.grade===null || c.judgments[x.id]?.grade===undefined)) return null;
   return top.filter(x=>(c.judgments[x.id]?.grade??0)>=2).length/10;
 }
 export function recallTwenty(c:GoldCase,engine:EngineKey):number|null {
-  if(c.catalogCheck!=="scoped_checked" || !c.knownRelevantEvidence.trim() || !c.knownRelevantIds.length) return null;
+  if(c.catalogCheck!=="scoped_checked" || !/^SCOPE_COMPLETE_V1:\s*\S[\s\S]{29,}/i.test(c.knownRelevantEvidence.trim()) || !c.knownRelevantIds.length) return null;
   const found = new Set(c.runs[engine].slice(0,20).map(x=>x.id));
   return c.knownRelevantIds.filter(id=>found.has(id)).length/c.knownRelevantIds.length;
 }

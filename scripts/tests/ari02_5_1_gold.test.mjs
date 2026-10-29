@@ -1,0 +1,35 @@
+/** Independent regression fixture: node scripts/tests/ari02_5_1_gold.test.mjs */
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import ts from 'typescript';
+const file='src/lib/ontology-research/ari02GoldCorpusV1.ts';
+const raw=fs.readFileSync(file,'utf8');
+const compiled=ts.transpileModule(raw,{fileName:file,reportDiagnostics:true,
+  compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}});
+assert.equal(compiled.diagnostics?.length??0,0,'TypeScript compile diagnostics');
+const exports={};
+new Function('exports','require',compiled.outputText)(exports,()=>{throw Error('UNEXPECTED_IMPORT');});
+const norm=exports.normalizedGoldQuery;
+assert.equal(norm('ПРОГУЛКА с ребенком'),norm('прогулка с ребёнком'));
+assert.equal(norm('  прогулка    с ребёнком '),norm('прогулка с ребенком'));
+assert.notEqual(norm('прогулка с другом'),norm('прогулка с ребёнком'));
+const c=exports.emptyCorpus().cases[0];
+const id=n=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
+const row=(n)=>({id:id(n),title:`Object ${n}`,path:'',role:'leaf',rank:n,score:100-n});
+c.runs.experimental=[row(1)];
+c.judgments[id(1)]={grade:1,errorKind:'other',note:''};
+assert.equal(exports.precisionTen(c,'experimental'),null,'short list must not imply 0.0%');
+c.runs.experimental=Array.from({length:10},(_,i)=>row(i+1));
+assert.equal(exports.precisionTen(c,'experimental'),null,'missing labels must be N/A');
+for(let i=2;i<=10;i++)c.judgments[id(i)]={grade:i<5?2:0,errorKind:'none',note:''};
+assert.equal(exports.precisionTen(c,'experimental'),3/10);
+c.knownRelevantIds=[id(2),id(3)];
+c.catalogCheck='scoped_checked';
+c.knownRelevantEvidence='checked by moderator';
+assert.equal(exports.recallTwenty(c,'experimental'),null,'insufficient attestation');
+c.knownRelevantEvidence='SCOPE_COMPLETE_V1: explicitly reviewed all items in the stated bounded facet and included omitted UUID';
+assert.equal(exports.recallTwenty(c,'experimental'),1);
+const saved=exports.parseGoldCorpus({contract:exports.ARI02_GOLD_VERSION,exportedAt:'',annotationMethod:'test',cases:[c]});
+assert.equal(saved.cases[0].judgments[id(1)].grade,1,'manual grade preserved');
+assert.equal(saved.cases[0].runs.experimental.length,10);
+console.log('ARI-02.5.1 Gold fixtures: PASS (e/ё normalization, P@10, scoped recall, judge preservation)');
