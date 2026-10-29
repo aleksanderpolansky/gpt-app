@@ -1,0 +1,51 @@
+/** Run via node scripts/tests/ari02_5_benchmark.test.mjs; uses project's installed TypeScript. */
+import fs from "node:fs";
+import assert from "node:assert/strict";
+import ts from "typescript";
+const file="src/lib/ontology-research/ari02BenchmarkV1.ts";
+const raw=fs.readFileSync(file,"utf8");
+const compiled=ts.transpileModule(raw,{fileName:file,compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}});
+assert.equal(compiled.diagnostics?.length??0,0);
+const exports={};
+// Transpilation erases type-only import: no production dependency or network access.
+new Function("exports","require",compiled.outputText)(exports,()=>{throw Error("UNEXPECTED_RUNTIME_IMPORT");});
+const id=n=>`00000000-0000-4000-8000-${String(n).padStart(12,"0")}`;
+const rows=(n=10)=>Array.from({length:n},(_,i)=>({id:id(i+1),title:`Object ${i+1}`,role:"leaf",path:"",rank:i+1,score:0}));
+const c={id:"a",query:"Object 1",locale:"en",perspective:"mixed",purpose:"",notes:"",catalogCheck:"not_checked",
+  knownRelevantIds:[],knownRelevantEvidence:"",unresolvedConcepts:[],runs:{baseline:rows(),experimental:rows()},judgments:{}};
+const corpus={contract:"ARCTOR_ARI_02_3_GOLD_ANNOTATION_V1",exportedAt:"",annotationMethod:"human_review_not_db_proof",cases:[c]};
+let m=exports.assessAri02Case(c,"experimental");
+assert.equal(m.p10.value,null,"unjudged must be N/A");
+assert.equal(m.pooledNdcg10.value,null,"unjudged pool must be N/A");
+assert.equal(m.scopedRecall20.value,null,"unverified gold must be N/A");
+for(let i=1;i<=10;i++)c.judgments[id(i)]={grade:i<=5?3:0,errorKind:"none",note:"manually judged"};
+m=exports.assessAri02Case(c,"experimental");
+assert.equal(m.p10.value,.5);
+assert.equal(m.pooledNdcg10.value,1,"perfect ordering within pooled grades");
+assert.equal(m.exactRetention10.value,1);
+c.judgments[id(10)]={grade:null,errorKind:"none",note:""};
+assert.equal(exports.assessAri02Case(c,"experimental").p10.value,null,"null is not negative");
+c.judgments[id(10)].grade=0;
+c.runs.experimental=rows(4);
+assert.equal(exports.assessAri02Case(c,"experimental").p10.value,null,"short list depth is uncertain");
+c.runs.experimental=rows();
+c.catalogCheck="scoped_checked";c.knownRelevantIds=[id(1),id(2),id(11)];
+c.knownRelevantEvidence="Reviewed independently";
+assert.equal(exports.assessAri02Case(c,"experimental").scopedRecall20.value,null,"scoped_checked without completeness attestation is insufficient");
+c.knownRelevantEvidence="SCOPE_COMPLETE_V1: manually checked full active ontology under scoped facet, including absent IDs";
+assert.equal(exports.assessAri02Case(c,"experimental").scopedRecall20.value,2/3);
+const summary=exports.buildAri02Benchmark(corpus,"experimental");
+assert.equal(summary.p10.eligible,1);
+assert.equal(summary.scopedRecall20.eligible,1);
+assert.equal(summary.top10Judgments.coverage,1);
+assert.equal(exports.timingPercentiles([],"totalMs").p95,null);
+const samples=[10,20,30,40,50].map(totalMs=>({query:"child",locale:"en",batchId:"A",catalogKey:"740/740",totalMs,catalogLoadMs:0,scoringMs:0,traceMs:0}));
+let stats=exports.timingPercentiles(samples,"totalMs");
+assert.equal(stats.p50,30);assert.equal(stats.p95,48);
+stats=exports.timingPercentiles(samples.slice(0,4),"totalMs");assert.equal(stats.p50,null);
+stats=exports.timingPercentiles([...samples,{...samples[0],batchId:"B"}],"totalMs");assert.equal(stats.p50,null);
+const rawTiming={ok:true,query:"child",locale:"en",catalogTotals:{ontology:740},scanned:{ontology:740},
+  diagnostics:{version:"ARCTOR_ARI_02_1_READ_ONLY_SEARCH_TRACE_V1",totalMs:40,catalogLoadMs:20,scoringMs:10,traceMs:5}};
+assert.equal(exports.parseAri02TimingReport(rawTiming,"S").catalogKey,"740/740");
+assert.throws(()=>exports.parseAri02TimingReport({...rawTiming,diagnostics:{...rawTiming.diagnostics,totalMs:"40"}},"S"));
+console.log("ARI-02.5 benchmark fixture: PASS (unjudged/short/pool/recall/latency/bad-input)");

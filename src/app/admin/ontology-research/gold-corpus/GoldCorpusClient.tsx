@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import GoldErrorAuditPanel from "./GoldErrorAuditPanel";
+import Ari02BenchmarkPanel from "./Ari02BenchmarkPanel";
 import { ARI02_GOLD_VERSION, emptyCase, emptyCorpus, importDiagnosticReport, parseGoldCorpus,
   countJudged, precisionTen, recallTwenty, uuidRegex,
   type GoldCorpus, type GoldCase, type Relevance, type EngineKey, type ErrorKind } from "@/lib/ontology-research/ari02GoldCorpusV1";
@@ -155,6 +156,7 @@ export default function GoldCorpusClient(){
       </section>
     </>}
     <GoldErrorAuditPanel corpus={corpus} selectedCaseId={current?.id??""} onSelectCase={setSelected} />
+      <Ari02BenchmarkPanel corpus={corpus} />
     <p className="text-xs text-slate-600">Предварительные показатели не заменяют научную оценку: эталон может быть неполным, оценки выполняет человек, выборка не репрезентативна. ARI-02.5 добавит полноценные агрегаты, nDCG и p50/p95.</p>
   </div>;
 }
