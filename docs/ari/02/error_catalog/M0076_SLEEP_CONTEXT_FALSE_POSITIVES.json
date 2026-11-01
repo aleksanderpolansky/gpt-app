@@ -1,0 +1,106 @@
+{
+  "contract": "ARCTOR_ARI_M0076_CONTEXT_MISMATCH_DEFECTS_V1",
+  "registrationStep": "M-0076",
+  "roadmapId": "ARI-02.07.02",
+  "createdUtc": "2026-11-01T09:35:52.560Z",
+  "status": "OPEN_UNFIXED_REVIEW_PENDING",
+  "query": "продолжительность сна",
+  "locale": "ru",
+  "sourceStep": "M-0070",
+  "sourceGitSha": "689e14039211edb2daec219b82c8e31c5d22f5ee",
+  "diagnosticVersion": "ARCTOR_ARI_02_1_READ_ONLY_SEARCH_TRACE_V1",
+  "source": {
+    "rawFile": "ARCTOR_ARI02_SEARCH_TRACE_1793301768049.json",
+    "rawSha256": "EB986D75EA1B26B33FF8E444AC9887CBEBA2D805632D87C432D2414DDA01990C",
+    "indexSha256": "DD405609D608F1832D12FA21E7157D53CC6937700E86E380465E813B4A8EA23D",
+    "baselineFile": "M0070_PAIR03_BASELINE.json",
+    "baselineSha256": "31E1C7562F6C78537907D09208397F6DD6C41BB20639B548A0ACF9412DBA2DCA",
+    "experimentalFile": "M0070_PAIR03_EXPERIMENTAL.json",
+    "experimentalSha256": "558FC9ADCAE0B55E97C7A80A5B127A2D7C9B03B1A7E0AE0B90CFF27037E16EF7",
+    "comparabilityFile": "M0070_PAIR03_COMPARABILITY.json",
+    "comparabilitySha256": "317F5D367698721CE8DAE52EB0833FFC19ED9B070A0487EEB1F6CC0AE8650AA4"
+  },
+  "catalog": {
+    "observedScanned": 740,
+    "observedTotal": 740,
+    "sameInMemoryCatalogWithinRequest": true,
+    "crossRequestContentFingerprint": false
+  },
+  "searchModes": {
+    "affected": "ARI-02.2_BASELINE_LEXICAL",
+    "notObservedIn": "ARI-02.2_EXPERIMENTAL",
+    "notTested": "ARI-03_INDEXED_LOOKUP"
+  },
+  "cases": [
+    {
+      "defectId": "ARI02-CONTEXT-SLEEP-STAIRS-001",
+      "status": "OPEN_UNFIXED",
+      "class": "CONTEXTUALLY_IRRELEVANT_LEXICAL_DEFINITION_MATCH",
+      "observed": {
+        "mode": "baseline",
+        "rank": 6,
+        "id": "40d541fc-9d68-5951-a918-fc34f0aff0af",
+        "title": "Подъём по лестнице",
+        "path": "Действия и процессы › Деятельность человека › Физическая активность › Локомоторная активность › Движение по лестнице › Подъём по лестнице",
+        "role": "leaf",
+        "score": 3,
+        "evidence": {
+          "term": "продолжительность сна",
+          "field": "definition",
+          "locale": "ru",
+          "score": 3,
+          "excerpt": "Подъём человека вверх по лестнице как единый эпизод физической активности. Объект используется для фиксации параметров, относящихся ко всему эпизоду подъёма, включая его продолжите"
+        }
+      },
+      "experimental": {
+        "idPresent": false
+      },
+      "expected": {
+        "reason": "Query about sleep duration should not return locomotor exercise unrelated to sleep duration.",
+        "action": "Suppress contextually irrelevant locomotion entries or clearly qualify them; exact relevance needs curator confirmation."
+      }
+    },
+    {
+      "defectId": "ARI02-CONTEXT-SLEEP-WALK-DURATION-001",
+      "status": "OPEN_UNFIXED",
+      "class": "CONTEXTUALLY_IRRELEVANT_LEXICAL_DEFINITION_MATCH",
+      "observed": {
+        "mode": "baseline",
+        "rank": 8,
+        "id": "6a0529b6-fe94-55da-bcd1-c38cf3665ada",
+        "title": "Длительность ходьбы",
+        "path": "Действия и процессы › Деятельность человека › Физическая активность › Локомоторная активность › Ходьба › Длительность ходьбы",
+        "role": "leaf",
+        "score": 3,
+        "evidence": {
+          "term": "продолжительность сна",
+          "field": "definition",
+          "locale": "ru",
+          "score": 3,
+          "excerpt": "Продолжительность эпизода ходьбы по определённому временному контракту. Если неизвестно, включены ли остановки, эта неопределённость сохраняется."
+        }
+      },
+      "experimental": {
+        "idPresent": false
+      },
+      "expected": {
+        "reason": "Query about sleep duration should not return locomotor exercise unrelated to sleep duration.",
+        "action": "Suppress contextually irrelevant locomotion entries or clearly qualify them; exact relevance needs curator confirmation."
+      }
+    }
+  ],
+  "reproducibility": {
+    "method": "REPLAY_VERIFIED_FROZEN_REAL_HTTP_TRACE",
+    "freshLiveRequest": false,
+    "independentHumanGoldJudgments": false,
+    "automatedChecksPassed": true
+  },
+  "scope": {
+    "underlyingDatabaseDefectProven": false,
+    "experimentalRankingDefectProven": false,
+    "indexedSearchDefectProven": false,
+    "realRecall20": "N/A",
+    "independentCatalogCompleteness": false
+  },
+  "nextAction": "Keep cases OPEN; curator to adjudicate, implement regression fixtures later at M-0081; do not modify code or database at M-0076."
+}

@@ -1,0 +1,57 @@
+{
+  "contract": "ARCTOR_ARI02_ERROR_CLASSES_V1",
+  "roadmapStep": "M-0078",
+  "classificationPolicy": {
+    "source": "Only evidence-backed classifications can become CONFIRMED; absence of evidence means UNDETERMINED.",
+    "allowMultipleClasses": true,
+    "candidateIsNotConfirmed": true,
+    "doNotInferDefectFromEmptyResults": true,
+    "noChangeToSearchRanking": true,
+    "indexedSearchNotAssessed": true,
+    "unknownClassStatus": "UNDETERMINED_NOT_AN_ADDITIONAL_CLASS"
+  },
+  "classes": [
+    {
+      "code": "wrong_facet",
+      "ru": "Неверный аспект объекта",
+      "definition": "Выдан ОН из нерелевантного ракурса или аспекта для конкретного запроса; путать с нерелевантным соседним понятием нельзя.",
+      "requiredEvidence": ["query", "locale", "search_mode", "ranked_uuid", "facet_of_query", "facet_of_result", "source_sha256", "human_review_or_explicit_rule"],
+      "counterexample": "Совпадение по одинаковому слову внутри описания само по себе не доказывает wrong_facet."
+    },
+    {
+      "code": "wrong_sense",
+      "ru": "Неверное значение или смысл",
+      "definition": "Результат относится к другому смыслу запроса, включая контекстно нерелевантное употребление общего термина; фактическую релевантность требуется проверять.",
+      "requiredEvidence": ["query", "locale", "search_mode", "ranked_uuid", "relevance_reason", "source_sha256", "human_review_or_explicit_rule"],
+      "counterexample": "Общий родитель выше точного названия может быть ошибкой ранжирования, но не обязательно wrong_sense."
+    },
+    {
+      "code": "translation",
+      "ru": "Ошибка перевода или локализации",
+      "definition": "Проверенная лексема, перевод или алиас приводит к неправильному/отсутствующему совпадению для заданной локали.",
+      "requiredEvidence": ["query", "locale", "expected_translation_or_alias", "observed_locale_behavior", "ranked_uuid_or_missing_uuid", "source_sha256"],
+      "counterexample": "Отсутствие одного результата без проверки локализованных полей и области поиска не доказывает translation."
+    },
+    {
+      "code": "path_only",
+      "ru": "Совпадение только по пути предков",
+      "definition": "Релевантным ошибочно признан ОН только из-за названия предка или структурного пути, без подтверждения релевантности самого ОН.",
+      "requiredEvidence": ["query", "ranked_uuid", "match_field_path", "own_title_and_definition_check", "source_sha256"],
+      "counterexample": "Подходящий родительский путь может быть полезной подсказкой, но не доказательством релевантности листового ОН."
+    },
+    {
+      "code": "duplicate",
+      "ru": "Повтор одной сущности в выдаче",
+      "definition": "Один и тот же UUID повторён в ранжированной выдаче или доказано, что несколько UUID относятся к одной идентичной сущности в заданном scope.",
+      "requiredEvidence": ["query", "search_mode", "result_uuid_list_or_identity_evidence", "source_sha256", "deduplication_scope"],
+      "counterexample": "Похожие названия разных магазинов сами по себе не являются дублем."
+    },
+    {
+      "code": "truncation",
+      "ru": "Неполная область поиска или скрытая обрезка",
+      "definition": "Источник ограничил выборку кандидатов или результаты так, что вывод о полноте либо отсутствии ОН недопустим.",
+      "requiredEvidence": ["query", "scope", "limit_or_offset", "reported_total_or_truncated_flag", "source_sha256"],
+      "counterexample": "Возврат не более 20 элементов на страницу сам по себе не ошибка, когда доступна корректная пагинация."
+    }
+  ]
+}

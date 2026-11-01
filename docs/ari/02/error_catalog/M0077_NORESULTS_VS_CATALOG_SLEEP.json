@@ -1,0 +1,72 @@
+{
+  "contract": "ARCTOR_ARI_M0077_HISTORICAL_NORESULTS_REGISTRY_V1",
+  "registrationStep": "M-0077",
+  "roadmapId": "ARI-02.07.03",
+  "defectId": "ARI02-HISTORICAL-NORESULTS-CATALOG-SON-001",
+  "status": "OPEN_HISTORICAL_REPRODUCTION_PENDING",
+  "query": "сон",
+  "locale": "ru",
+  "historical": {
+    "source": "SOURCE_ONTO_AI_Handoff_20261026.md",
+    "sourceSha256": "743A5DE11D3238955F1896DC963A22168AE8C863E7DDB8AE2E857C2E529401C0",
+    "quotedFact": "V2 described eliminating previously empty search results for «сон».",
+    "reportedLegacyGeneration": "ONTO-AI prior to V2",
+    "exactOldGitSha": "UNKNOWN",
+    "oldHttpResponseCaptured": false,
+    "oldRankedUuids": [],
+    "olderCatalogFingerprint": "UNKNOWN"
+  },
+  "catalogEvidence": {
+    "sourceStep": "M-0070",
+    "rawTrace": "ARCTOR_ARI02_SEARCH_TRACE_1793301747560.json",
+    "rawSha256": "02E05BD8E485141CD09DE42A6D7CFB6514DA4AA88826980A75CCA773E2FA8C54",
+    "diagnosticVersion": "ARCTOR_ARI_02_1_READ_ONLY_SEARCH_TRACE_V1",
+    "sourceGitSha": "689e14039211edb2daec219b82c8e31c5d22f5ee",
+    "query": "сон",
+    "locale": "ru",
+    "catalogScanned": 740,
+    "catalogTotalReported": 740,
+    "baselineResults": 7,
+    "experimentalResults": 2,
+    "identifiedExistingObject": {
+      "id": "a876134c-367b-5b3f-8f04-4752031b63d4",
+      "title": "Сон",
+      "path": "Действия и процессы › Физиологические процессы › Сон",
+      "baselineRank": 1,
+      "experimentalRank": 1
+    },
+    "sameCatalogWithinCurrentResponse": true,
+    "verifiedSameCatalogAsHistoricalFailure": false,
+    "independentCatalogCompleteness": false
+  },
+  "observedVsExpected": {
+    "historicalReported": "An earlier ontology-search implementation returned no candidates for «сон», according to a dated handoff (not a raw log).",
+    "currentObserved": "M0070 returns Сон UUID as first result in both modes.",
+    "expected": "For a permitted existing ontology object, search should show the match or explicitly state tested scope/partial result; absence must not be asserted from an empty or truncated search.",
+    "rootCause": "UNKNOWN_NOT_PROVEN",
+    "possibleClasses": [
+      "VERSION_DRIFT",
+      "FILTER_OR_SCOPE_GAP",
+      "SEARCH_COVERAGE"
+    ],
+    "classesNotValidated": true
+  },
+  "verification": {
+    "currentExactUuidAndRanksVerified": true,
+    "historicalEmptyHttpResponseVerified": false,
+    "sideBySideSameSnapshotReproduction": false,
+    "oldExactVersionKnown": false,
+    "readOnlySourceHashesVerified": true,
+    "reproductionCriterionMet": false,
+    "independentGold": false
+  },
+  "scope": {
+    "registrationOnly": true,
+    "notProofOfCurrentBug": true,
+    "notProofOfIndexedSearchBug": true,
+    "noAlgorithmChange": true,
+    "realRecall20": "N/A"
+  },
+  "followup": "Seek original zero-result HTTP response, timestamp, exact version, actor/permissions, filters, query and UUID; if unavailable retain OPEN_HISTORICAL_REPRODUCTION_PENDING. Never mark reproduced/closed without primary evidence.",
+  "registeredUtc": "2026-11-01T09:58:06.146Z"
+}

@@ -1,0 +1,57 @@
+{
+  "contract": "ARCTOR_ARI_M0078_CLASSIFICATION_REVIEW_V1",
+  "step": "M-0078",
+  "note": "The taxonomy is implemented; existing cases are registered, but semantic class assertions are not independently adjudicated.",
+  "records": [
+    {
+      "defectId": "ARI02-RANK-EXACT-NIGHT-SLEEP-001",
+      "registrationStep": "M-0075",
+      "observedDefect": "GENERIC_OVER_EXACT_TITLE_RANKING_INVERSION",
+      "sourceMode": "ARI-02.2_EXPERIMENTAL",
+      "classesConfirmed": [],
+      "candidateClasses": [],
+      "classificationStatus": "UNDETERMINED",
+      "why": "The exact-title rank inversion is proven on frozen HTTP trace; none of the six M0078 classes follows automatically from it.",
+      "reproduction": "FROZEN_HTTP_TRACE_REPLAY_VERIFIED",
+      "goldCaseLinkStatus": "PENDING_M0079"
+    },
+    {
+      "defectId": "ARI02-CONTEXT-SLEEP-STAIRS-001",
+      "registrationStep": "M-0076",
+      "observedDefect": "CONTEXTUALLY_IRRELEVANT_LEXICAL_DEFINITION_MATCH",
+      "sourceMode": "ARI-02.2_BASELINE_LEXICAL",
+      "classesConfirmed": [],
+      "candidateClasses": ["wrong_sense"],
+      "classificationStatus": "CANDIDATE_REVIEW_REQUIRED",
+      "why": "Stairs matched the generic duration term in definition for sleep-duration query; independent curator semantic judgment is pending.",
+      "reproduction": "FROZEN_HTTP_TRACE_REPLAY_VERIFIED",
+      "goldCaseLinkStatus": "PENDING_M0079"
+    },
+    {
+      "defectId": "ARI02-CONTEXT-SLEEP-WALK-DURATION-001",
+      "registrationStep": "M-0076",
+      "observedDefect": "CONTEXTUALLY_IRRELEVANT_LEXICAL_DEFINITION_MATCH",
+      "sourceMode": "ARI-02.2_BASELINE_LEXICAL",
+      "classesConfirmed": [],
+      "candidateClasses": ["wrong_sense"],
+      "classificationStatus": "CANDIDATE_REVIEW_REQUIRED",
+      "why": "Walking duration matches a general duration expression but is not sleep duration; independent curator semantic judgment is pending.",
+      "reproduction": "FROZEN_HTTP_TRACE_REPLAY_VERIFIED",
+      "goldCaseLinkStatus": "PENDING_M0079"
+    },
+    {
+      "defectId": "ARI02-HISTORICAL-NORESULTS-CATALOG-SON-001",
+      "registrationStep": "M-0077",
+      "observedDefect": "HISTORICAL_NO_RESULTS_REPORTED_WITHOUT_PRIMARY_TRACE",
+      "sourceMode": "UNKNOWN_OLDER_ONTO_AI",
+      "classesConfirmed": [],
+      "candidateClasses": [],
+      "classificationStatus": "UNDETERMINED",
+      "why": "Original empty HTTP response, historic actor, query scope and catalog state are not available. No root-cause class can be assigned.",
+      "reproduction": "HISTORICAL_REPORT_ONLY_NOT_REPRODUCED",
+      "goldCaseLinkStatus": "PENDING_M0079"
+    }
+  ],
+  "realRecall20": "N/A",
+  "indexedSearchAffected": "NOT_TESTED"
+}

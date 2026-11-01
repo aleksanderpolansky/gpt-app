@@ -1,0 +1,80 @@
+{
+  "contract": "ARCTOR_ARI_M0075_EXACT_QUERY_INVERSION_DEFECT_V1",
+  "defectId": "ARI02-RANK-EXACT-NIGHT-SLEEP-001",
+  "createdUtc": "2026-11-01T09:28:16.878Z",
+  "status": "OPEN_UNFIXED",
+  "sourceStep": "M-0070",
+  "registrationStep": "M-0075",
+  "searchMode": "ARI-02.2_EXPERIMENTAL",
+  "query": "ночной сон",
+  "locale": "ru",
+  "diagnosticVersion": "ARCTOR_ARI_02_1_READ_ONLY_SEARCH_TRACE_V1",
+  "sourceGitSha": "689e14039211edb2daec219b82c8e31c5d22f5ee",
+  "rawSource": {
+    "filename": "ARCTOR_ARI02_SEARCH_TRACE_1793301726490.json",
+    "sha256": "6312D088F407D3CD94920732AFB3F80982797D4C3F6179752F3D68DCBB91C4C3"
+  },
+  "frozenPair": {
+    "baselineFile": "M0070_PAIR01_BASELINE.json",
+    "baselineSha256": "D32A400EF4702B109F2575EEA468F14476927EAB7154EBB355C057BA868AA775",
+    "experimentalFile": "M0070_PAIR01_EXPERIMENTAL.json",
+    "experimentalSha256": "0CE46DC0F0F977B67B9E98C9DBEB6430B38609C21D042D882A2B40036B312B5E",
+    "indexSha256": "DD405609D608F1832D12FA21E7157D53CC6937700E86E380465E813B4A8EA23D"
+  },
+  "catalog": {
+    "observedScanned": 740,
+    "withinRequestSameInMemoryCatalog": true,
+    "acrossRequestsContentFingerprint": false
+  },
+  "observed": {
+    "baseline": [
+      {
+        "rank": 1,
+        "id": "bf6b8ca1-97b4-56c3-a115-f76e2e7fec5a",
+        "title": "Ночной сон",
+        "score": 120
+      },
+      {
+        "rank": 2,
+        "id": "a876134c-367b-5b3f-8f04-4752031b63d4",
+        "title": "Сон",
+        "score": 18
+      }
+    ],
+    "experimental": [
+      {
+        "rank": 1,
+        "id": "a876134c-367b-5b3f-8f04-4752031b63d4",
+        "title": "Сон",
+        "score": 120
+      },
+      {
+        "rank": 2,
+        "id": "bf6b8ca1-97b4-56c3-a115-f76e2e7fec5a",
+        "title": "Ночной сон",
+        "score": 43
+      }
+    ]
+  },
+  "expected": {
+    "exactTitleId": "bf6b8ca1-97b4-56c3-a115-f76e2e7fec5a",
+    "exactTitle": "Ночной сон",
+    "preferredRank": 1,
+    "genericParentId": "a876134c-367b-5b3f-8f04-4752031b63d4",
+    "policy": "Exact specific title should precede broader parent on the exact phrase query, pending curator sign-off"
+  },
+  "reason": "Experimental ranking places generic parent Сон above exact title Ночной сон for the exact Russian query; observed scores 120 vs 43 within experimental only.",
+  "reproducibility": {
+    "mode": "REPLAY_VERIFIED_FROZEN_REAL_HTTP_TRACE",
+    "freshLiveReproduction": false,
+    "automatedChecksPassed": true,
+    "independentHumanJudgment": false
+  },
+  "scope": {
+    "isDatabaseDefectProven": false,
+    "newIndexedSearchAffectedProven": false,
+    "realRecall20": "N/A",
+    "qualityCertified": false
+  },
+  "nextAction": "Keep OPEN; separately investigate scoring and re-test under a matched catalog snapshot; do not modify production in M-0075."
+}
