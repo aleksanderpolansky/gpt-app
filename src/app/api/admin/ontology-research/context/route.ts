@@ -5,6 +5,7 @@ import { localizeGlobalSystemValueObject } from "@/lib/reality-core/global-syste
 import { resolveLocalizedContentFieldsStrict } from "@/lib/localization/contentLocalization";
 import { ARCTOR_TYPICAL_ACTIVITY_METADATA_V1 } from "@/lib/activity/typical-activity-catalog.server";
 import { normalizeContextQuery } from "@/lib/ontology-research/contextSearchV2";
+import { rankAri03ProductionGlobalOn } from "@/lib/ontology-research/ari03ProductionSearchV1.server";
 import { explainAri02LexicalMatch, type Ari02SearchField } from "@/lib/ontology-research/ari02SearchDiagnostics";
 import { evaluateAri02Enhanced, type Ari02EnhancedCandidate } from "@/lib/ontology-research/ari02EnhancedSearch";
 import { parseSearchOptions, scoreSearchCandidate } from "@/lib/ontology-research/researchSearchStrategyV3";
@@ -152,8 +153,17 @@ export async function GET(request: Request) {
       return { id: row.id, title: localized.title, role: row.ontology_node_role_code ?? "unknown",
         path: fullPath(row, byId, locale), description: localized.description.slice(0, 300), score };
     }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score || a.id.localeCompare(b.id));
-    const ontology: OntoCandidate[] = onScored.slice(0, options.maxOnMatches)
-      .map(x=>({id:x.id,title:x.title,role:x.role,path:x.path,description:x.description}));
+    // ARCTOR_M0146_ARI03_FULL_DEFAULT_V1
+    const ari03Report = await rankAri03ProductionGlobalOn({
+      query:term, locale, rows, lexical:onScored, limit:options.maxOnMatches,
+    });
+    const ari03Ontology: OntoCandidate[] = ari03Report.ids.map(id=>{
+      const row=byId.get(id);
+      if(!row)return null;
+      const localized=localizedOn(row,locale);
+      return {id:row.id,title:localized.title,role:row.ontology_node_role_code ?? 'unknown',
+        path:fullPath(row,byId,locale),description:localized.description.slice(0,300)};
+    }).filter((x):x is OntoCandidate=>x!==null);
     const templateScored = (options.includeTemplates ? templates : []).map(row => {
       const localizedTitles = (options.allLocales ? ONTO_LOCALES : [locale]).map(code => localizedTemplateTitle(row, code));
       const title = localizedTemplateTitle(row, locale);
@@ -217,19 +227,19 @@ export async function GET(request: Request) {
     } : undefined;
     const incomplete = snapshot.total === null || snapshot.total > rows.length;
     const templateTruncated = templateResponse.count === null || templateResponse.count > templates.length;
-    const noMatch = ontology.length === 0 && selectedTemplates.length === 0;
+    const noMatch = ari03Ontology.length === 0 && selectedTemplates.length === 0;
     return NextResponse.json({ok:true,contract:ONTO_AI_PILOT_CONTRACT,
-      query:normalizeContextQuery(term),locale,ontology,templates:selectedTemplates,
+      query:normalizeContextQuery(term),locale,ontology:ari03Ontology,templates:selectedTemplates,
       scanned:{ontology:rows.length,templates:templates.length},coverage:"partial",
       searchDetails: {terms,options:{allLocales:options.allLocales,includePaths:options.includePaths,
         includeDefinitions:options.includeDefinitions,includeTemplates:options.includeTemplates,
         maxOnMatches:options.maxOnMatches},matchedOn:onScored.length,
-        matchedTemplates:templateScored.length,onTruncated:onScored.length>ontology.length,
+        matchedTemplates:templateScored.length,onTruncated:onScored.length>ari03Ontology.length,
         templateTruncated:templateScored.length>selectedTemplates.length},
       catalogTotals:{ontology:snapshot.total,templates:templateResponse.count},
-      diagnostics,
-      warnings:warningStrings(locale,noMatch,incomplete,templateTruncated),
-      dbWritesPerformed:false,aiCallsPerformed:false},{headers:HEADERS});
+      diagnostics, ari03: ari03Report,
+      warnings:[...warningStrings(locale,noMatch,incomplete,templateTruncated),...(ari03Report.fullHybridReady ? [] : ['ARI-03 vector index unavailable: lexical fallback, NOT full hybrid search.'])],
+      dbWritesPerformed:false,aiCallsPerformed:ari03Report.embeddingAttempted},{headers:HEADERS});
   } catch (error) {
     console.error("ONTO_AI_CONTEXT_READ_FAILED", error instanceof Error ? error.message : "UNKNOWN");
     return NextResponse.json({ok:false,errorCode:"ONTO_AI_CONTEXT_READ_FAILED"},{status:503,headers:HEADERS});

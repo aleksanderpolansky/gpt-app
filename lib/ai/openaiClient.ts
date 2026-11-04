@@ -435,3 +435,16 @@ export async function runAiJson<T = unknown>({
 
   return result.parsed;
 }
+
+// ARCTOR_M0146_ARI03_EMBEDDING_TRANSPORT_V1
+/** Scoped paid provider operation for M-0146, through the existing authorized transport. */
+export async function createArctorAri03Embedding(text:string,model:'text-embedding-3-small'):Promise<number[]> {
+  if(!AI_ENABLED)throw new Error('ARI03_AI_DISABLED');
+  if(!text.trim()||text.length>12000)throw new Error('ARI03_QUERY_INVALID');
+  const response=await openai.embeddings.create({model,input:text,encoding_format:'float'},
+    {timeout:15000,maxRetries:1});
+  const result=response.data[0]?.embedding;
+  if(!Array.isArray(result)||result.length!==1536||!result.every(Number.isFinite))
+    throw new Error('ARI03_EMBEDDING_INVALID');
+  return result;
+}

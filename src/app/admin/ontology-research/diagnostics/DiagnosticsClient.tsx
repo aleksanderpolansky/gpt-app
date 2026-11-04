@@ -25,6 +25,11 @@ type SearchResponse = {
   searchDetails?: { terms: string[]; matchedOn: number; onTruncated: boolean };
   catalogTotals?: { ontology: number | null; templates: number | null };
   warnings?: string[];
+  // ARCTOR_M0146_ARI03_DIAGNOSTICS_V1
+  ontology?: Array<{id:string;title:string;role:string;path:string;description:string}>;
+  ari03?: {status:string;fullHybridReady:boolean;reason:string|null;indexedCount:number;catalogCount:number;
+    vectorHitCount:number;lexicalHitCount:number;rankerContract:string|null;model:string;
+    ranked:Array<{id:string;rank:number;lexicalRank:number|null;vectorRank:number|null;matchKind:string|null}>};
   diagnostics?: {
     version: string; totalMs: number; catalogLoadMs: number; scoringMs: number;
     traceMs: number; results: DiagnosticRow[];
@@ -87,12 +92,12 @@ export default function DiagnosticsClient({ locale }: { locale: OntoLocale }) {
   return (
     <section className="space-y-5">
       <header className="rounded-2xl border bg-white p-5">
-        <h1 className="text-xl font-bold">ARI-02.2 · Сравнение поиска ОН</h1>
+        <h1 className="text-xl font-bold">ARI-03 · Семантический поиск ОН — сравнение с ARI-02</h1>
         <a className="mt-2 inline-block rounded-lg border border-blue-300 px-3 py-2 text-sm text-blue-700" href={`/admin/ontology-research/gold-corpus?locale=${locale}`}>ARI-02.3 · Эталонный корпус и ручная разметка →</a>
         <p className="mt-2 text-sm text-slate-600">
           Использует действующий алгоритм и тот же системный каталог. Только чтение.
           Результаты — лексические совпадения, не доказательство полноты онтологии.
-          Вызовов ИИ, записи в БД и создания ОН здесь нет. Новый экспериментальный режим не меняет поиск в конструкторе ОН.
+          ARI-03 использует OpenAI embeddings для запроса и серверный векторный индекс. Это оплачиваемая операция при готовом индексе. Поиск только читает БД, не создаёт ОН.
         </p>
       </header>
       <section className="space-y-3 rounded-2xl border bg-white p-5">
@@ -137,6 +142,21 @@ export default function DiagnosticsClient({ locale }: { locale: OntoLocale }) {
             Для оценки Precision/Recall потребуется эталонная ручная разметка.</p>
           {result.warnings?.map((w, i) => <p key={i} className="text-slate-600">{w}</p>)}
         </section>
+        {result.ari03 && <section className="space-y-2 rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm">
+          <h2 className="text-lg font-bold">ARI-03 · Текущий поиск в конструкторе ОН</h2>
+          <p><strong>Режим:</strong> {result.ari03.status}.
+            <strong> Векторов:</strong> {result.ari03.indexedCount}/{result.ari03.catalogCount}.
+            <strong> Кандидатов из вектора:</strong> {result.ari03.vectorHitCount}.
+            <strong> Лексических:</strong> {result.ari03.lexicalHitCount}.</p>
+          {!result.ari03.fullHybridReady && <p className="font-bold text-red-700">Индекс ещё не готов: {result.ari03.reason}. Выдан старый лексический fallback, НЕ полноценный гибрид.</p>}
+          <div className="overflow-x-auto rounded border bg-white"><table className="w-full min-w-[700px] text-left">
+            <thead className="border-b bg-indigo-100"><tr><th className="p-2">#</th><th className="p-2">Объект и путь</th><th className="p-2">Источник</th></tr></thead>
+            <tbody>{(result.ontology??[]).map((on,i)=><tr key={on.id} className="border-b">
+              <td className="p-2">{i+1}</td><td className="p-2"><strong>{on.title}</strong><div className="text-xs text-slate-600">{on.path}</div><div className="text-xs">{on.id}</div></td>
+              <td className="p-2">{result.ari03?.ranked[i]?.matchKind??'RRF'} · lexical #{result.ari03?.ranked[i]?.lexicalRank??'—'} · vector #{result.ari03?.ranked[i]?.vectorRank??'—'}</td>
+            </tr>)}</tbody></table></div>
+          {!result.ontology?.length && <p>Ничего не найдено. Это не подтверждает отсутствие ОН в онтологии.</p>}
+        </section>}
         {trace.experimental && <section className="space-y-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm">
           <h2 className="text-lg font-bold">ARI-02.2 · Экспериментальная выдача (не применяется к созданию ОН)</h2>
           <p>{trace.experimental.disclaimer}</p>
