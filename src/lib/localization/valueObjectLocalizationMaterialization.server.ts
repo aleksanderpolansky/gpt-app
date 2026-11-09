@@ -198,15 +198,18 @@ async function writeLegacyEnvelope(input: {
   envelope: LocalizedContentEnvelope;
 }) {
   const metadata = asRecord(input.row.metadata_json);
+  const updatedMetadata = {
+    ...metadata,
+    localizedContent: input.envelope,
+    contentLocalizationRuntime: ARCTOR_CONTENT_LOCALIZATION_RUNTIME,
+  };
+  // X04-010: Do not issue a legacy write if the JSON value is identical.
+  if (JSON.stringify(metadata) === JSON.stringify(updatedMetadata)) {
+    return;
+  }
   const { error } = await supabase
     .from("value_objects")
-    .update({
-      metadata_json: {
-        ...metadata,
-        localizedContent: input.envelope,
-        contentLocalizationRuntime: ARCTOR_CONTENT_LOCALIZATION_RUNTIME,
-      },
-    })
+    .update({ metadata_json: updatedMetadata })
     .eq("id", input.row.id)
     .eq("owner_user_id", input.row.owner_user_id)
     .eq("owner_actor_id", input.row.owner_actor_id);

@@ -665,7 +665,17 @@ async function writeEntityMetadata(input: {
   table: LocalizableEntityTable;
   entityId: string;
   metadata: JsonRecord;
+  previousMetadata?: JsonRecord;
 }) {
+  // X04-010: Skip a provable no-op, but never skip a changed localization.
+  // Preserve the existing two-stage human-first/AI-second write semantics.
+  // A false negative (different key order) merely causes a harmless update.
+  if (
+    input.previousMetadata !== undefined &&
+    JSON.stringify(input.metadata) === JSON.stringify(input.previousMetadata)
+  ) {
+    return;
+  }
   const { error } = await supabase
     .from(input.table)
     .update({ metadata_json: input.metadata })
@@ -703,6 +713,7 @@ export async function localizeEntityContent(input: {
   await writeEntityMetadata({
     table: input.table,
     entityId: input.entityId,
+    previousMetadata: metadata,
     metadata: {
       ...metadata,
       localizedContent: humanEnvelope,
@@ -732,6 +743,11 @@ export async function localizeEntityContent(input: {
     await writeEntityMetadata({
       table: input.table,
       entityId: input.entityId,
+      previousMetadata: {
+        ...metadata,
+        localizedContent: humanEnvelope,
+        contentLocalizationRuntime: ARCTOR_CONTENT_LOCALIZATION_RUNTIME,
+      },
       metadata: {
         ...metadata,
         localizedContent: merged,
@@ -771,6 +787,7 @@ export async function persistHumanLocalizedEntityContent(input: {
   await writeEntityMetadata({
     table: input.table,
     entityId: input.entityId,
+    previousMetadata: metadata,
     metadata: { ...metadata, localizedContent: humanEnvelope, contentLocalizationRuntime: ARCTOR_CONTENT_LOCALIZATION_RUNTIME },
   });
   return { ok: true as const, manualPersisted: true as const, aiLocalized: false as const, locale, warning: null };
