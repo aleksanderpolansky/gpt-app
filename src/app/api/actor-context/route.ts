@@ -63,7 +63,7 @@ export async function GET() {
   if (!session?.user?.sub) {
     return NextResponse.json(
       { ok: false, error: "NOT_AUTHENTICATED" },
-      { status: 401 },
+      { status: 401, headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
   }
 
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
   if (!session?.user?.sub) {
     return NextResponse.json(
       { ok: false, error: "NOT_AUTHENTICATED" },
-      { status: 401 },
+      { status: 401, headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
   }
 

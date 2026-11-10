@@ -207,7 +207,7 @@ async function resolveRouteActorContext(): Promise<
       actorContext: null,
       errorResponse: NextResponse.json(
         { ok: false, error: "Not authenticated" },
-        { status: 401 },
+        { status: 401, headers: { "Cache-Control": "private, no-store, max-age=0" } },
       ),
     };
   }
