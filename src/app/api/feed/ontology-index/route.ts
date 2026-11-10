@@ -3,6 +3,11 @@ import { NextResponse } from "next/server";
 import { normalizeLocale } from "@/i18n";
 import { localizeGlobalSystemValueObject } from "@/lib/reality-core/global-system-value-object-localization";
 import { supabase } from "../../../../../lib/supabase";
+import {
+  isPublicSystemIndexRowV1,
+  isPublicSystemSearchQueryV1,
+  projectPublicParentIdV1,
+} from "@/lib/ontology/globalSearchPrivacyGuardV1";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +23,11 @@ type GlobalObservationObject = {
   parent_value_object_id: string | null;
   ontology_node_role_code: string | null;
   metadata_json: Record<string, unknown> | null;
+  scope_code: string | null;
+  origin_type_code: string | null;
+  owner_user_id: string | null;
+  owner_actor_id: string | null;
+  status: string | null;
 };
 
 type PublicCatalogEntry = {
@@ -29,7 +39,14 @@ type PublicCatalogEntry = {
 };
 
 export async function GET(request: Request) {
-  const locale = normalizeLocale(new URL(request.url).searchParams.get("locale"));
+  const params = new URL(request.url).searchParams;
+  if (!isPublicSystemSearchQueryV1(params)) {
+    return NextResponse.json(
+      { ok: false, error: "PUBLIC_INDEX_PARAMETERS_NOT_ALLOWED" },
+      { status: 400, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+  const locale = normalizeLocale(params.get("locale"));
   const entries: PublicCatalogEntry[] = [];
   let totalRead = 0;
   const allParents = new Map<string, string | null>();
@@ -39,8 +56,11 @@ export async function GET(request: Request) {
     for (let offset = 0; offset < MAX_ITEMS; offset += PAGE_SIZE) {
       const { data, error } = await supabase
         .from("value_objects")
-        .select("id,title,canonical_key,parent_value_object_id,ontology_node_role_code,metadata_json")
+        .select("id,title,canonical_key,parent_value_object_id,ontology_node_role_code,metadata_json,scope_code,origin_type_code,owner_user_id,owner_actor_id,status")
         .eq("scope_code", "global")
+        .eq("origin_type_code", "system_model")
+        .is("owner_user_id", null)
+        .is("owner_actor_id", null)
         .eq("status", "active")
         .order("id", { ascending: true })
         .range(offset, offset + PAGE_SIZE - 1);
@@ -51,6 +71,14 @@ export async function GET(request: Request) {
       }
 
       const rows = (data ?? []) as GlobalObservationObject[];
+      // Defense in depth if a query/RPC/client adapter changes unexpectedly.
+      // Never expose even the IDs of owner-bearing or non-system rows.
+      if (rows.some((row) => !isPublicSystemIndexRowV1(row))) {
+        return NextResponse.json(
+          { ok: false, error: "PUBLIC_INDEX_SCOPE_VIOLATION" },
+          { status: 503, headers: { "Cache-Control": "no-store" } },
+        );
+      }
       totalRead += rows.length;
       for (const row of rows) {
         allParents.set(row.id, row.parent_value_object_id);
@@ -100,8 +128,16 @@ export async function GET(request: Request) {
       return false;
     };
 
+    const exposedIds = new Set(entries.map((entry) => entry.id));
     return NextResponse.json(
-      { ok: true, entries: entries.map(entry => ({ ...entry, facet: isGeography(entry.id) ? "geography" : null })) },
+      {
+        ok: true,
+        entries: entries.map((entry) => ({
+          ...entry,
+          parentId: projectPublicParentIdV1(entry.parentId, exposedIds),
+          facet: isGeography(entry.id) ? "geography" : null,
+        })),
+      },
       { headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=300" } },
     );
   } catch (error) {
