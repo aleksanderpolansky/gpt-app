@@ -36,6 +36,7 @@ import type {
   ValueObjectSemanticRelationLocale,
 } from "@/types/value-object-semantic-relation";
 import { ValueObjectSemanticRelationsManager } from "./value-object-semantic-relations-manager";
+import { ValueObjectGraphNeighborsPanel } from "./value-object-graph-neighbors-panel";
 import {
   ValueObjectRelationshipCoverageReview,
   type CoverageSnapshot,
@@ -59,6 +60,8 @@ type Props = {
   canCreateChildren: boolean;
   canCreateLeaf: boolean;
   canManageRelations: boolean;
+  isGlobalSystemObject: boolean;
+  graphEligible: boolean;
 };
 
 type Density = "normal" | "compact" | "dense" | "fixed";
@@ -1157,10 +1160,13 @@ function RelationshipMapInner({
   canCreateChildren,
   canCreateLeaf,
   canManageRelations,
+  isGlobalSystemObject,
+  graphEligible,
 }: Props) {
   const copy = COPY[locale];
   const searchParams = useSearchParams();
   const [relationData, setRelationData] = useState<ValueObjectSemanticRelationListResponse>();
+  const [graphRevision, setGraphRevision] = useState(0);
   const [coverageData, setCoverageData] = useState<CoverageSnapshot | null>(null);
   const [coverageAvailable, setCoverageAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -1216,7 +1222,7 @@ function RelationshipMapInner({
   }, [copy.error, fetchRelations]);
 
   const fetchCoverage = useCallback(async () => {
-    if (!canManageRelations) {
+    if (!canManageRelations || !isGlobalSystemObject) {
       setCoverageData(null);
       setCoverageAvailable(false);
       return;
@@ -1247,7 +1253,7 @@ function RelationshipMapInner({
       setCoverageData(null);
       setCoverageAvailable(false);
     }
-  }, [canManageRelations, locale, valueObjectId]);
+  }, [canManageRelations, isGlobalSystemObject, locale, valueObjectId]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -1583,7 +1589,7 @@ function RelationshipMapInner({
           <p className="mt-2 text-[12px] leading-5 text-[#6b7280]">{copy.description}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {canManageRelations ? (
+          {canManageRelations && isGlobalSystemObject ? (
             <Link
               href={`/admin/relation-constructor?sourceValueObjectId=${encodeURIComponent(valueObjectId)}&locale=${encodeURIComponent(locale)}`}
               className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
@@ -1591,6 +1597,19 @@ function RelationshipMapInner({
               <Plus size={15} />
               {copy.addRelation}
             </Link>
+          ) : canManageRelations ? (
+            <button
+              type="button"
+              onClick={() => {
+                const preferred = zones.find((zone) => zone.key === "semantic:related_to:symmetric")
+                  ?? zones.find((zone) => zone.kind === "semantic");
+                if (preferred) expandZone(preferred.key);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
+            >
+              <Plus size={15} />
+              {copy.addRelation}
+            </button>
           ) : null}
           {showDetailedMap ? (
             <>
@@ -1637,6 +1656,10 @@ function RelationshipMapInner({
           )}
         </div>
       </div>
+
+      {graphEligible ? (
+        <ValueObjectGraphNeighborsPanel valueObjectId={valueObjectId} locale={locale} revision={graphRevision} />
+      ) : null}
 
       {coverageAvailable ? (
         <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl border border-[#e5e7eb] bg-[#f8fafc] px-3 py-2.5">
@@ -1906,7 +1929,14 @@ function RelationshipMapInner({
                 ) : expandedZone.kind === "semantic" && canManageRelations ? (
                   <>
                     <div className="mb-3 text-[12px] font-bold text-[#111827]">{copy.relationManagement}</div>
-                    <ValueObjectSemanticRelationsManager valueObjectId={valueObjectId} locale={locale} />
+                    <ValueObjectSemanticRelationsManager
+                      valueObjectId={valueObjectId}
+                      locale={locale}
+                      onMutation={() => {
+                        void retryRelations();
+                        setGraphRevision((current) => current + 1);
+                      }}
+                    />
                     <Link
                       prefetch={false}
                       href={buildLocaleHref("/value-objects/new/root", locale)}

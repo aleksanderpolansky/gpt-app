@@ -18,6 +18,7 @@ import type {
 type Props = {
   valueObjectId: string;
   locale: ValueObjectSemanticRelationLocale;
+  onMutation?: () => void;
 };
 
 type Copy = {
@@ -199,6 +200,7 @@ function createIdempotencyKey(action: string) {
 export function ValueObjectSemanticRelationsManager({
   valueObjectId,
   locale,
+  onMutation,
 }: Props) {
   const copy = COPY[locale];
   const [data, setData] = useState<ValueObjectSemanticRelationListResponse>();
@@ -297,6 +299,7 @@ export function ValueObjectSemanticRelationsManager({
       }
 
       await load();
+      onMutation?.();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Unknown relation write error",
@@ -336,6 +339,7 @@ export function ValueObjectSemanticRelationsManager({
       }
 
       await load();
+      onMutation?.();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Unknown relation status error",

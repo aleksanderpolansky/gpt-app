@@ -1863,6 +1863,8 @@ export default async function ValueObjectDetailPage({
           canCreateChildren={isStructural}
           canCreateLeaf={isIntermediate}
           canManageRelations={canManageRelations}
+          isGlobalSystemObject={isGlobalSystemObject}
+          graphEligible={valueObject.status === "active" && (isGlobalSystemObject || valueObject.scope_code === "actor")}
         />
 
         {isGlobalSystemObject && isIntermediate && canManageRelations ? (
