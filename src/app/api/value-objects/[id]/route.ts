@@ -921,7 +921,7 @@ async function persistDraftPublicProfileImage(
   });
 }
 
-export async function GET(request: Request, context: ValueObjectRouteContext) {
+async function sec06ReadValueObjectGET(request: Request, context: ValueObjectRouteContext) {
   const { id: rawId } = await context.params;
   const valueObjectId = normalizeValueObjectId(rawId);
 
@@ -967,6 +967,18 @@ export async function GET(request: Request, context: ValueObjectRouteContext) {
     },
     editContract: buildEditContract(),
   });
+}
+
+// SEC06-P0-CACHE-01: apply private cache policy to successful AND rejected reads.
+export async function GET(request: Request, context: ValueObjectRouteContext) {
+  const response = await sec06ReadValueObjectGET(request, context);
+  response.headers.set("Cache-Control", "private, no-store, max-age=0");
+  const vary = response.headers.get("Vary");
+  if (!vary) response.headers.set("Vary", "Cookie");
+  else if (!vary.split(",").some((v) => v.trim().toLowerCase() === "cookie")) {
+    response.headers.set("Vary", vary + ", Cookie");
+  }
+  return response;
 }
 
 export async function PATCH(request: Request, context: ValueObjectRouteContext) {

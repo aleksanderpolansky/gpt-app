@@ -308,7 +308,7 @@ async function resolveAuthenticatedFactsContext(): Promise<AuthenticatedFactsCon
   }
 }
 
-export async function GET(request: Request) {
+async function sec06ReadFactsGET(request: Request) {
   const context = await resolveAuthenticatedFactsContext();
 
   if (!context.ok) {
@@ -993,4 +993,16 @@ export async function GET(request: Request) {
     },
     { status: 200 },
   );
+}
+
+// SEC06-P0-CACHE-04: apply private cache policy to successful AND rejected reads.
+export async function GET(request: Request) {
+  const response = await sec06ReadFactsGET(request);
+  response.headers.set("Cache-Control", "private, no-store, max-age=0");
+  const vary = response.headers.get("Vary");
+  if (!vary) response.headers.set("Vary", "Cookie");
+  else if (!vary.split(",").some((v) => v.trim().toLowerCase() === "cookie")) {
+    response.headers.set("Vary", vary + ", Cookie");
+  }
+  return response;
 }
