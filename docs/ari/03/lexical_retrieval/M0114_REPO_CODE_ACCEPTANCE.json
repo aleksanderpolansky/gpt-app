@@ -1,0 +1,40 @@
+{
+  "contract": "ARCTOR_ARI_M0114_HOMONYM_POLYSEMY_REVIEW_V1",
+  "step": "M-0114",
+  "roadmapId": "ARI-03.04.04",
+  "acceptedAtUtc": "2026-11-02T17:20:27.943Z",
+  "previousModuleSha256": "7DFBD77794837F746EFF456CE7731361F778F8CDF58EB7BCFCD10CC2E1FA3A9A",
+  "newModuleSha256": "614C90E5DB8664FD1F689AFBCC236E0A2157383539576EF32611745C94BD54ED",
+  "newTestSha256": "9EFD3DFD9CC7E1B996189F860EBDD0C18CF75BB2489DE06EC8E979A7FC963585",
+  "lexicalSha256": "B12161EDAD77221607928B44F14045F975F304D9437C0208B29FC1AD44B514AD",
+  "locales": [
+    "en",
+    "pl",
+    "es",
+    "de",
+    "cs",
+    "uk",
+    "ru"
+  ],
+  "policy": "EVIDENCE_BACKED_SENSE_DISCRIMINATORS_UNRESOLVED_NO_AUTO_UUID",
+  "senseEvidenceOnly": true,
+  "unresolvedForCollision": true,
+  "sevenLocalesPreserved": true,
+  "nonEquivalentUuidNotMerged": true,
+  "autoUuidSelection": false,
+  "sourceBindingsChanged": false,
+  "tests": {
+    "new": 80,
+    "regression": 352,
+    "total": 432,
+    "failed": 0,
+    "skipped": 0
+  },
+  "liveDb": false,
+  "apiModified": false,
+  "sql": false,
+  "paidAI": false,
+  "commitPushDeploy": false,
+  "searchEnabled": false,
+  "nextStep": "M-0115"
+}

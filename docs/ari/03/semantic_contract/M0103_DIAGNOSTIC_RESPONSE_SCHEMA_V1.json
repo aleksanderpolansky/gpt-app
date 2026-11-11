@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arctor.app/contracts/ari/m0103-unresolved-tokens-rationale-v1",
+  "title": "ARCTor M0103 unresolved tokens and safe rationale diagnostic envelope (DESIGN ONLY)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "mode",
+    "query",
+    "outcome",
+    "diagnosticsStatus",
+    "unresolvedTokens",
+    "candidateRationales",
+    "selectionState",
+    "catalogSnapshotHash",
+    "translationVersion"
+  ],
+  "properties": {
+    "mode": {
+      "const": "suggest_by_text"
+    },
+    "query": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "locale"
+      ],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "locale": {
+          "enum": [
+            "en",
+            "pl",
+            "es",
+            "de",
+            "cs",
+            "uk",
+            "ru",
+            "und"
+          ]
+        }
+      }
+    },
+    "outcome": {
+      "enum": [
+        "candidate",
+        "ambiguous",
+        "no_match",
+        "blocked"
+      ]
+    },
+    "diagnosticsStatus": {
+      "enum": [
+        "complete",
+        "partial",
+        "unavailable"
+      ]
+    },
+    "unresolvedTokens": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text",
+          "startUtf16",
+          "endUtf16",
+          "reason"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "startUtf16": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 512
+          },
+          "endUtf16": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 512
+          },
+          "reason": {
+            "enum": [
+              "NO_VERIFIED_DIRECT_MATCH",
+              "NO_VERIFIED_ALIAS",
+              "NOT_EVALUATED_LIMIT",
+              "UNSUPPORTED_TOKENIZATION",
+              "NO_VERIFIED_LOCALE_TEXT"
+            ]
+          }
+        }
+      }
+    },
+    "candidateRationales": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "valueObjectId",
+          "sourceVerified",
+          "authorizationVerified",
+          "matchClass",
+          "reasonCode",
+          "safeExplanation",
+          "selectionState"
+        ],
+        "properties": {
+          "valueObjectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceVerified": {
+            "const": true
+          },
+          "authorizationVerified": {
+            "const": true
+          },
+          "matchClass": {
+            "enum": [
+              "exact",
+              "alias",
+              "partial",
+              "lexical",
+              "ancestor_expansion"
+            ]
+          },
+          "reasonCode": {
+            "enum": [
+              "VERIFIED_STRICT_TITLE",
+              "VERIFIED_FULL_ALIAS",
+              "VERIFIED_PARTIAL_TITLE",
+              "VERIFIED_LEXICAL_TITLE",
+              "VERIFIED_STRUCTURAL_ANCESTOR"
+            ]
+          },
+          "safeExplanation": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "selectionState": {
+            "const": "UNCONFIRMED"
+          },
+          "ancestorDepth": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          }
+        }
+      }
+    },
+    "selectionState": {
+      "const": "UNCONFIRMED"
+    },
+    "catalogSnapshotHash": {
+      "type": "string",
+      "pattern": "^sha256:v1:[a-f0-9]{64}$"
+    },
+    "translationVersion": {
+      "type": "string",
+      "pattern": "^derived-sha256-v1:[a-f0-9]{64}$"
+    }
+  },
+  "x-contract": "ARCTOR_ARI_M0103_DIAGNOSTIC_RATIONALE_DESIGN_V1",
+  "x-invariants": {
+    "utf16_span_matches_original_text": true,
+    "unresolved_must_be_evidence_based": true,
+    "unverified_must_not_be_reported_as_verified_missing": true,
+    "partial_coverage_never_claims_complete_resolution": true,
+    "rationale_provenance_per_candidate": true,
+    "rationale_must_not_leak_private_names_uuids_or_hidden_paths": true,
+    "blocked_existence_indistinguishable_from_missing": true,
+    "never_auto_select": true,
+    "no_llm_invented_causes": true,
+    "no_fabricated_probability": true,
+    "verified_structural_ancestor_separate_reason": true,
+    "not_an_authorization_decision": true,
+    "no_sql_or_runtime_integration": true
+  },
+  "x-next_step": "M-0104: CODE tests for exact/partial/root/leaf/ties; runtime acceptance not implied"
+}

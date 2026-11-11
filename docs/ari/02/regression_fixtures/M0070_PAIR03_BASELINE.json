@@ -1,0 +1,96 @@
+{
+  "contract": "ARCTOR_ARI_M0070_FROZEN_BASELINE_V1",
+  "sourceFile": "ARCTOR_ARI02_SEARCH_TRACE_1793301768049.json",
+  "sourceSha256": "EB986D75EA1B26B33FF8E444AC9887CBEBA2D805632D87C432D2414DDA01990C",
+  "coProducedWithinOneHttpResponse": true,
+  "query": "продолжительность сна",
+  "locale": "ru",
+  "diagnosticVersion": "ARCTOR_ARI_02_1_READ_ONLY_SEARCH_TRACE_V1",
+  "catalogTotal": 740,
+  "catalogScanned": 740,
+  "sameInMemorySnapshotWithinThisRequest": true,
+  "contentFingerprintAvailable": false,
+  "guarantee": "Same source response contains both modes; application source computes both on one loaded rows array. No cross-request catalog content checksum.",
+  "rows": [
+    {
+      "rank": 1,
+      "id": "45d472b0-88fe-5642-b7d0-cbe2502c4ca9",
+      "title": "Продолжительность глубокого сна",
+      "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Продолжительность глубокого сна",
+      "role": "leaf",
+      "score": 48
+    },
+    {
+      "rank": 2,
+      "id": "607c0db7-d29d-5b5f-89a4-8317bb37fc62",
+      "title": "Продолжительность лёгкого сна",
+      "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Продолжительность лёгкого сна",
+      "role": "leaf",
+      "score": 48
+    },
+    {
+      "rank": 3,
+      "id": "84d2f41f-4068-518a-b9d9-047b0d0e0762",
+      "title": "Продолжительность ночного сна",
+      "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Продолжительность ночного сна",
+      "role": "leaf",
+      "score": 48
+    },
+    {
+      "rank": 4,
+      "id": "a620cf08-9cdb-5c7a-b428-721f356e2d8e",
+      "title": "Продолжительность REM-сна",
+      "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Продолжительность REM-сна",
+      "role": "leaf",
+      "score": 48
+    },
+    {
+      "rank": 5,
+      "id": "33f459f9-295e-5295-9eaa-fb1bb9fcffac",
+      "title": "Состояние сна",
+      "path": "Состояния и потребности › Состояния › Функциональные состояния › Состояние сна",
+      "role": "intermediate",
+      "score": 18
+    },
+    {
+      "rank": 6,
+      "id": "40d541fc-9d68-5951-a918-fc34f0aff0af",
+      "title": "Подъём по лестнице",
+      "path": "Действия и процессы › Деятельность человека › Физическая активность › Локомоторная активность › Движение по лестнице › Подъём по лестнице",
+      "role": "leaf",
+      "score": 3
+    },
+    {
+      "rank": 7,
+      "id": "5bd7f40c-4ed9-57b8-b904-f067d309666f",
+      "title": "Количество пробуждений",
+      "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Количество пробуждений",
+      "role": "leaf",
+      "score": 3
+    },
+    {
+      "rank": 8,
+      "id": "6a0529b6-fe94-55da-bcd1-c38cf3665ada",
+      "title": "Длительность ходьбы",
+      "path": "Действия и процессы › Деятельность человека › Физическая активность › Локомоторная активность › Ходьба › Длительность ходьбы",
+      "role": "leaf",
+      "score": 3
+    },
+    {
+      "rank": 9,
+      "id": "a876134c-367b-5b3f-8f04-4752031b63d4",
+      "title": "Сон",
+      "path": "Действия и процессы › Физиологические процессы › Сон",
+      "role": "intermediate",
+      "score": 3
+    },
+    {
+      "rank": 10,
+      "id": "bf6b8ca1-97b4-56c3-a115-f76e2e7fec5a",
+      "title": "Ночной сон",
+      "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон",
+      "role": "intermediate",
+      "score": 3
+    }
+  ]
+}

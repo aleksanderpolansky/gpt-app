@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arctor.app/contracts/ari/m0101-full-phrase-priority-v1",
+  "title": "ARCTor M0101 full expression exact match dominance (design only)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mode", "query", "eligibleCandidates", "priorityRule", "selectionState"],
+  "properties": {
+    "mode": {"const": "suggest_by_text"},
+    "query": {
+      "type": "object", "additionalProperties": false,
+      "required": ["text", "locale"],
+      "properties": {
+        "text": {"type":"string", "minLength":1, "maxLength":512},
+        "locale": {"enum": ["en","pl","es","de","cs","uk","ru","und"]}
+      }
+    },
+    "eligibleCandidates": {
+      "type": "array", "maxItems": 20,
+      "items": {
+        "type":"object", "additionalProperties":false,
+        "required":["valueObjectId", "evidenceClass", "authorizationVerified", "sourceVerified", "localeVerified", "activeVerified"],
+        "properties": {
+          "valueObjectId":{"type":"string", "format":"uuid"},
+          "evidenceClass":{"enum":["strict_title_full_phrase", "strict_alias_full_phrase", "token_partial", "lexical_partial", "soft_fold_candidate", "other_retrieval_candidate"]},
+          "authorizationVerified":{"const":true},
+          "sourceVerified":{"const":true},
+          "localeVerified":{"const":true},
+          "activeVerified":{"const":true}
+        }
+      }
+    },
+    "priorityRule": {"const": "FULL_STRICT_TITLE_THEN_VERIFIED_FULL_ALIAS_BEFORE_TOKEN_OR_PARTIAL"},
+    "selectionState":{"const":"UNCONFIRMED"}
+  },
+  "x-contract":"ARCTOR_ARI_M0101_FULL_PHRASE_PRIORITY_DESIGN_V1",
+  "x-invariants": {
+    "full_expression_before_token": true,
+    "strict_title_before_verified_alias": true,
+    "never_treat_soft_fold_as_exact": true,
+    "alias_requires_verified_target": true,
+    "privacy_filter_before_ranking": true,
+    "no_inferred_translation": true,
+    "same_phrase_multiple_uuid_requires_clarification": true,
+    "exact_uuid_lookup_unchanged": true,
+    "never_auto_select_or_merge_on": true
+  },
+  "x-future_work": ["M0102 controlled ancestor expansion", "API implementation", "owner-private isolation E2E", "quality benchmark"]
+}

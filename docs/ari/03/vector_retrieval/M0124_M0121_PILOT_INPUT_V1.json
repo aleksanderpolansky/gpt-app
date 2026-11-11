@@ -1,0 +1,159 @@
+{
+  "contract": "ARCTOR_M0121_OWNER_APPROVED_TWO_MODEL_PILOT_RESULT_V1",
+  "status": "PROVISIONAL_TWO_REAL_MODELS_EVALUATED_NOT_FINAL_ARI_ACCEPTANCE",
+  "modelsCompared": 2,
+  "source": "OWNER_LOCAL_API_APPROVAL_AND_OWNER_ATTESTED_SQL_EDITOR",
+  "approvalText": "AUTHORIZE_18_GLOBAL_ON_TEXTS_AND_MAX_0.01_USD",
+  "budgetUSD": 0.01,
+  "actualRateEstimateUSD": 0.00013440000000000001,
+  "usage": [
+    {
+      "model": "text-embedding-3-small",
+      "promptTokens": 896,
+      "estimatedAtPublishedRatesUSD": 0.00001792,
+      "dimension": 1536
+    },
+    {
+      "model": "text-embedding-3-large",
+      "promptTokens": 896,
+      "estimatedAtPublishedRatesUSD": 0.00011648000000000001,
+      "dimension": 3072
+    }
+  ],
+  "exactSanityQueries": 18,
+  "semanticOwnerApproved": 18,
+  "queriesCompared": 36,
+  "candidatesCompared": 18,
+  "goldHash": "C8381BD8D547761749CB32CF5F97DAA6F169E500E836BF64CBB2AB7AF25690E0",
+  "runDateUtc": "2026-11-03T10:44:57.069Z",
+  "models": {
+    "text-embedding-3-small": {
+      "dimensions": 1536,
+      "queries": 36,
+      "recallAt1": 0.9166666666666666,
+      "recallAt5": 1,
+      "mrrAt5": 0.9398148148148149,
+      "ndcgAt5": 0.9544820310040775,
+      "perLocale": {
+        "ru": {
+          "queries": 30,
+          "recallAt1": 0.9666666666666667,
+          "recallAt5": 1,
+          "mrrAt5": 0.975,
+          "ndcgAt5": 0.9810225519357798
+        },
+        "en": {
+          "queries": 1,
+          "recallAt1": 1,
+          "recallAt5": 1,
+          "mrrAt5": 1,
+          "ndcgAt5": 1
+        },
+        "pl": {
+          "queries": 1,
+          "recallAt1": 1,
+          "recallAt5": 1,
+          "mrrAt5": 1,
+          "ndcgAt5": 1
+        },
+        "es": {
+          "queries": 1,
+          "recallAt1": 1,
+          "recallAt5": 1,
+          "mrrAt5": 1,
+          "ndcgAt5": 1
+        },
+        "de": {
+          "queries": 1,
+          "recallAt1": 1,
+          "recallAt5": 1,
+          "mrrAt5": 1,
+          "ndcgAt5": 1
+        },
+        "cs": {
+          "queries": 1,
+          "recallAt1": 0,
+          "recallAt5": 1,
+          "mrrAt5": 0.25,
+          "ndcgAt5": 0.43067655807339306
+        },
+        "uk": {
+          "queries": 1,
+          "recallAt1": 0,
+          "recallAt5": 1,
+          "mrrAt5": 0.3333333333333333,
+          "ndcgAt5": 0.5
+        }
+      }
+    },
+    "text-embedding-3-large": {
+      "dimensions": 3072,
+      "queries": 36,
+      "recallAt1": 0.9444444444444444,
+      "recallAt5": 1,
+      "mrrAt5": 0.9652777777777778,
+      "ndcgAt5": 0.9739335086568014,
+      "perLocale": {
+        "ru": {
+          "queries": 30,
+          "recallAt1": 0.9333333333333333,
+          "recallAt5": 1,
+          "mrrAt5": 0.9583333333333334,
+          "ndcgAt5": 0.9687202103881617
+        },
+        "en": {
+          "queries": 1,
+          "recallAt1": 1,
+          "recallAt5": 1,
+          "mrrAt5": 1,
+          "ndcgAt5": 1
+        },
+        "pl": {
+          "queries": 1,
+          "recallAt1": 1,
+          "recallAt5": 1,
+          "mrrAt5": 1,
+          "ndcgAt5": 1
+        },
+        "es": {
+          "queries": 1,
+          "recallAt1": 1,
+          "recallAt5": 1,
+          "mrrAt5": 1,
+          "ndcgAt5": 1
+        },
+        "de": {
+          "queries": 1,
+          "recallAt1": 1,
+          "recallAt5": 1,
+          "mrrAt5": 1,
+          "ndcgAt5": 1
+        },
+        "cs": {
+          "queries": 1,
+          "recallAt1": 1,
+          "recallAt5": 1,
+          "mrrAt5": 1,
+          "ndcgAt5": 1
+        },
+        "uk": {
+          "queries": 1,
+          "recallAt1": 1,
+          "recallAt5": 1,
+          "mrrAt5": 1,
+          "ndcgAt5": 1
+        }
+      }
+    }
+  },
+  "privacyRLSProven": false,
+  "independentGoldProven": false,
+  "productionSearchEnabled": false,
+  "privateVectorFilesNotInResultZip": true,
+  "ledgerUnchanged": "EC2239924A88CA72E9D74B50586409FCB0E0F0392B5F5C2615A9098FCC5D66F4",
+  "notes": [
+    "Model outputs are real if local API receipts are genuine; service pricing may change",
+    "18 exact-title queries are not representative seven-language quality",
+    "No model should be shipped from this test alone"
+  ]
+}

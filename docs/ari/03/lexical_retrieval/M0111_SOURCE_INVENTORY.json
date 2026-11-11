@@ -1,0 +1,173 @@
+{
+  "contract": "ARCTOR_ARI_M0111_SOURCE_INVENTORY_V1",
+  "locales": [
+    "en",
+    "pl",
+    "es",
+    "de",
+    "cs",
+    "uk",
+    "ru"
+  ],
+  "entries": [
+    {
+      "concept": "child",
+      "locale": "en",
+      "alias": "child",
+      "sourcePath": "src/lib/ontology-research/ari02EnhancedSearch.ts",
+      "sourceConcept": "child",
+      "verifiedAs": "LITERAL_PRESENT_IN_REPOSITORY_DICTIONARY",
+      "ontologyBinding": "NOT_VERIFIED",
+      "curatorApproval": "NOT_VERIFIED",
+      "goldCaseId": "pilot-05"
+    },
+    {
+      "concept": "walking",
+      "locale": "en",
+      "alias": "walking",
+      "sourcePath": "src/lib/ontology-research/ari02EnhancedSearch.ts",
+      "sourceConcept": "walking",
+      "verifiedAs": "LITERAL_PRESENT_IN_REPOSITORY_DICTIONARY",
+      "ontologyBinding": "NOT_VERIFIED",
+      "curatorApproval": "NOT_VERIFIED",
+      "goldCaseId": null
+    },
+    {
+      "concept": "child",
+      "locale": "pl",
+      "alias": "dziecko",
+      "sourcePath": "src/lib/ontology-research/ari02EnhancedSearch.ts",
+      "sourceConcept": "child",
+      "verifiedAs": "LITERAL_PRESENT_IN_REPOSITORY_DICTIONARY",
+      "ontologyBinding": "NOT_VERIFIED",
+      "curatorApproval": "NOT_VERIFIED",
+      "goldCaseId": "pilot-07"
+    },
+    {
+      "concept": "walking",
+      "locale": "pl",
+      "alias": "chodzenie",
+      "sourcePath": "src/lib/ontology-research/ari02EnhancedSearch.ts",
+      "sourceConcept": "walking",
+      "verifiedAs": "LITERAL_PRESENT_IN_REPOSITORY_DICTIONARY",
+      "ontologyBinding": "NOT_VERIFIED",
+      "curatorApproval": "NOT_VERIFIED",
+      "goldCaseId": null
+    },
+    {
+      "concept": "child",
+      "locale": "es",
+      "alias": "niño",
+      "sourcePath": "src/lib/ontology-research/ari02EnhancedSearch.ts",
+      "sourceConcept": "child",
+      "verifiedAs": "LITERAL_PRESENT_IN_REPOSITORY_DICTIONARY",
+      "ontologyBinding": "NOT_VERIFIED",
+      "curatorApproval": "NOT_VERIFIED",
+      "goldCaseId": "pilot-08"
+    },
+    {
+      "concept": "walking",
+      "locale": "es",
+      "alias": "caminar",
+      "sourcePath": "src/lib/ontology-research/ari02EnhancedSearch.ts",
+      "sourceConcept": "walking",
+      "verifiedAs": "LITERAL_PRESENT_IN_REPOSITORY_DICTIONARY",
+      "ontologyBinding": "NOT_VERIFIED",
+      "curatorApproval": "NOT_VERIFIED",
+      "goldCaseId": null
+    },
+    {
+      "concept": "child",
+      "locale": "de",
+      "alias": "kind",
+      "sourcePath": "src/lib/ontology-research/ari02EnhancedSearch.ts",
+      "sourceConcept": "child",
+      "verifiedAs": "LITERAL_PRESENT_IN_REPOSITORY_DICTIONARY",
+      "ontologyBinding": "NOT_VERIFIED",
+      "curatorApproval": "NOT_VERIFIED",
+      "goldCaseId": "pilot-09"
+    },
+    {
+      "concept": "walking",
+      "locale": "de",
+      "alias": "gehen",
+      "sourcePath": "src/lib/ontology-research/ari02EnhancedSearch.ts",
+      "sourceConcept": "walking",
+      "verifiedAs": "LITERAL_PRESENT_IN_REPOSITORY_DICTIONARY",
+      "ontologyBinding": "NOT_VERIFIED",
+      "curatorApproval": "NOT_VERIFIED",
+      "goldCaseId": null
+    },
+    {
+      "concept": "child",
+      "locale": "cs",
+      "alias": "dítě",
+      "sourcePath": "src/lib/ontology-research/ari02EnhancedSearch.ts",
+      "sourceConcept": "child",
+      "verifiedAs": "LITERAL_PRESENT_IN_REPOSITORY_DICTIONARY",
+      "ontologyBinding": "NOT_VERIFIED",
+      "curatorApproval": "NOT_VERIFIED",
+      "goldCaseId": "pilot-11"
+    },
+    {
+      "concept": "walking",
+      "locale": "cs",
+      "alias": "chůze",
+      "sourcePath": "src/lib/ontology-research/ari02EnhancedSearch.ts",
+      "sourceConcept": "walking",
+      "verifiedAs": "LITERAL_PRESENT_IN_REPOSITORY_DICTIONARY",
+      "ontologyBinding": "NOT_VERIFIED",
+      "curatorApproval": "NOT_VERIFIED",
+      "goldCaseId": null
+    },
+    {
+      "concept": "child",
+      "locale": "uk",
+      "alias": "дитина",
+      "sourcePath": "src/lib/ontology-research/ari02EnhancedSearch.ts",
+      "sourceConcept": "child",
+      "verifiedAs": "LITERAL_PRESENT_IN_REPOSITORY_DICTIONARY",
+      "ontologyBinding": "NOT_VERIFIED",
+      "curatorApproval": "NOT_VERIFIED",
+      "goldCaseId": "pilot-10"
+    },
+    {
+      "concept": "walking",
+      "locale": "uk",
+      "alias": "ходіння",
+      "sourcePath": "src/lib/ontology-research/ari02EnhancedSearch.ts",
+      "sourceConcept": "walking",
+      "verifiedAs": "LITERAL_PRESENT_IN_REPOSITORY_DICTIONARY",
+      "ontologyBinding": "NOT_VERIFIED",
+      "curatorApproval": "NOT_VERIFIED",
+      "goldCaseId": null
+    },
+    {
+      "concept": "child",
+      "locale": "ru",
+      "alias": "ребёнок",
+      "sourcePath": "src/lib/ontology-research/ari02EnhancedSearch.ts",
+      "sourceConcept": "child",
+      "verifiedAs": "LITERAL_PRESENT_IN_REPOSITORY_DICTIONARY",
+      "ontologyBinding": "NOT_VERIFIED",
+      "curatorApproval": "NOT_VERIFIED",
+      "goldCaseId": "pilot-02"
+    },
+    {
+      "concept": "walking",
+      "locale": "ru",
+      "alias": "ходьба",
+      "sourcePath": "src/lib/ontology-research/ari02EnhancedSearch.ts",
+      "sourceConcept": "walking",
+      "verifiedAs": "LITERAL_PRESENT_IN_REPOSITORY_DICTIONARY",
+      "ontologyBinding": "NOT_VERIFIED",
+      "curatorApproval": "NOT_VERIFIED",
+      "goldCaseId": null
+    }
+  ],
+  "notes": [
+    "Слова проверяются только по фактическому репозиторному словарю ARI-02; это не подтверждение соответствия конкретному UUID в Supabase.",
+    "26-case Gold Corpus относится к человеческой оценке запросов и не доказывает каталоговую эквивалентность.",
+    "Ни одна запись не становится production alias без подтверждения куратора и авторизованного списка UUID."
+  ]
+}

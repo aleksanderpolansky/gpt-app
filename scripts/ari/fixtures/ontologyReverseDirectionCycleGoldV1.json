@@ -1,0 +1,1351 @@
+{
+  "contract": "ARCTOR_ARI_04_06_06_REVERSE_CYCLE_GOLD_V1",
+  "size": 72,
+  "groups": 6,
+  "cases": [
+    {
+      "id": "M0192-DIRECT_REVERSE_NOT_DUPLICATE-01",
+      "group": "DIRECT_REVERSE_NOT_DUPLICATE",
+      "index": 1,
+      "kind": "canonical",
+      "candidate_type": "supports",
+      "existing_type": "supports",
+      "candidate_from": "A",
+      "candidate_to": "B",
+      "existing_from": "B",
+      "existing_to": "A",
+      "expected_disposition": "NO_DUPLICATE_DETECTED",
+      "expected_code": null
+    },
+    {
+      "id": "M0192-DIRECT_REVERSE_NOT_DUPLICATE-02",
+      "group": "DIRECT_REVERSE_NOT_DUPLICATE",
+      "index": 2,
+      "kind": "canonical",
+      "candidate_type": "influences",
+      "existing_type": "influences",
+      "candidate_from": "A",
+      "candidate_to": "B",
+      "existing_from": "B",
+      "existing_to": "A",
+      "expected_disposition": "NO_DUPLICATE_DETECTED",
+      "expected_code": null
+    },
+    {
+      "id": "M0192-DIRECT_REVERSE_NOT_DUPLICATE-03",
+      "group": "DIRECT_REVERSE_NOT_DUPLICATE",
+      "index": 3,
+      "kind": "canonical",
+      "candidate_type": "depends_on",
+      "existing_type": "depends_on",
+      "candidate_from": "A",
+      "candidate_to": "B",
+      "existing_from": "B",
+      "existing_to": "A",
+      "expected_disposition": "NO_DUPLICATE_DETECTED",
+      "expected_code": null
+    },
+    {
+      "id": "M0192-DIRECT_REVERSE_NOT_DUPLICATE-04",
+      "group": "DIRECT_REVERSE_NOT_DUPLICATE",
+      "index": 4,
+      "kind": "canonical",
+      "candidate_type": "classified_as",
+      "existing_type": "classified_as",
+      "candidate_from": "A",
+      "candidate_to": "B",
+      "existing_from": "B",
+      "existing_to": "A",
+      "expected_disposition": "NO_DUPLICATE_DETECTED",
+      "expected_code": null
+    },
+    {
+      "id": "M0192-DIRECT_REVERSE_NOT_DUPLICATE-05",
+      "group": "DIRECT_REVERSE_NOT_DUPLICATE",
+      "index": 5,
+      "kind": "canonical",
+      "candidate_type": "supports",
+      "existing_type": "supports",
+      "candidate_from": "A",
+      "candidate_to": "B",
+      "existing_from": "B",
+      "existing_to": "A",
+      "expected_disposition": "NO_DUPLICATE_DETECTED",
+      "expected_code": null
+    },
+    {
+      "id": "M0192-DIRECT_REVERSE_NOT_DUPLICATE-06",
+      "group": "DIRECT_REVERSE_NOT_DUPLICATE",
+      "index": 6,
+      "kind": "canonical",
+      "candidate_type": "influences",
+      "existing_type": "influences",
+      "candidate_from": "A",
+      "candidate_to": "B",
+      "existing_from": "B",
+      "existing_to": "A",
+      "expected_disposition": "NO_DUPLICATE_DETECTED",
+      "expected_code": null
+    },
+    {
+      "id": "M0192-DIRECT_REVERSE_NOT_DUPLICATE-07",
+      "group": "DIRECT_REVERSE_NOT_DUPLICATE",
+      "index": 7,
+      "kind": "canonical",
+      "candidate_type": "depends_on",
+      "existing_type": "depends_on",
+      "candidate_from": "A",
+      "candidate_to": "B",
+      "existing_from": "B",
+      "existing_to": "A",
+      "expected_disposition": "NO_DUPLICATE_DETECTED",
+      "expected_code": null
+    },
+    {
+      "id": "M0192-DIRECT_REVERSE_NOT_DUPLICATE-08",
+      "group": "DIRECT_REVERSE_NOT_DUPLICATE",
+      "index": 8,
+      "kind": "canonical",
+      "candidate_type": "classified_as",
+      "existing_type": "classified_as",
+      "candidate_from": "A",
+      "candidate_to": "B",
+      "existing_from": "B",
+      "existing_to": "A",
+      "expected_disposition": "NO_DUPLICATE_DETECTED",
+      "expected_code": null
+    },
+    {
+      "id": "M0192-DIRECT_REVERSE_NOT_DUPLICATE-09",
+      "group": "DIRECT_REVERSE_NOT_DUPLICATE",
+      "index": 9,
+      "kind": "canonical",
+      "candidate_type": "supports",
+      "existing_type": "supports",
+      "candidate_from": "A",
+      "candidate_to": "B",
+      "existing_from": "B",
+      "existing_to": "A",
+      "expected_disposition": "NO_DUPLICATE_DETECTED",
+      "expected_code": null
+    },
+    {
+      "id": "M0192-DIRECT_REVERSE_NOT_DUPLICATE-10",
+      "group": "DIRECT_REVERSE_NOT_DUPLICATE",
+      "index": 10,
+      "kind": "canonical",
+      "candidate_type": "influences",
+      "existing_type": "influences",
+      "candidate_from": "A",
+      "candidate_to": "B",
+      "existing_from": "B",
+      "existing_to": "A",
+      "expected_disposition": "NO_DUPLICATE_DETECTED",
+      "expected_code": null
+    },
+    {
+      "id": "M0192-DIRECT_REVERSE_NOT_DUPLICATE-11",
+      "group": "DIRECT_REVERSE_NOT_DUPLICATE",
+      "index": 11,
+      "kind": "canonical",
+      "candidate_type": "depends_on",
+      "existing_type": "depends_on",
+      "candidate_from": "A",
+      "candidate_to": "B",
+      "existing_from": "B",
+      "existing_to": "A",
+      "expected_disposition": "NO_DUPLICATE_DETECTED",
+      "expected_code": null
+    },
+    {
+      "id": "M0192-DIRECT_REVERSE_NOT_DUPLICATE-12",
+      "group": "DIRECT_REVERSE_NOT_DUPLICATE",
+      "index": 12,
+      "kind": "canonical",
+      "candidate_type": "classified_as",
+      "existing_type": "classified_as",
+      "candidate_from": "A",
+      "candidate_to": "B",
+      "existing_from": "B",
+      "existing_to": "A",
+      "expected_disposition": "NO_DUPLICATE_DETECTED",
+      "expected_code": null
+    },
+    {
+      "id": "M0192-REVERSE_ALIAS_CANONICAL-01",
+      "group": "REVERSE_ALIAS_CANONICAL",
+      "index": 1,
+      "kind": "canonical",
+      "candidate_type": "prerequisite_for",
+      "existing_type": "depends_on",
+      "candidate_from": "A",
+      "candidate_to": "B",
+      "existing_from": "B",
+      "existing_to": "A",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "DUPLICATE_REVERSE_ALIAS"
+    },
+    {
+      "id": "M0192-REVERSE_ALIAS_CANONICAL-02",
+      "group": "REVERSE_ALIAS_CANONICAL",
+      "index": 2,
+      "kind": "canonical",
+      "candidate_type": "prerequisite_for",
+      "existing_type": "depends_on",
+      "candidate_from": "B",
+      "candidate_to": "C",
+      "existing_from": "C",
+      "existing_to": "B",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "DUPLICATE_REVERSE_ALIAS"
+    },
+    {
+      "id": "M0192-REVERSE_ALIAS_CANONICAL-03",
+      "group": "REVERSE_ALIAS_CANONICAL",
+      "index": 3,
+      "kind": "canonical",
+      "candidate_type": "prerequisite_for",
+      "existing_type": "depends_on",
+      "candidate_from": "C",
+      "candidate_to": "D",
+      "existing_from": "D",
+      "existing_to": "C",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "DUPLICATE_REVERSE_ALIAS"
+    },
+    {
+      "id": "M0192-REVERSE_ALIAS_CANONICAL-04",
+      "group": "REVERSE_ALIAS_CANONICAL",
+      "index": 4,
+      "kind": "canonical",
+      "candidate_type": "prerequisite_for",
+      "existing_type": "depends_on",
+      "candidate_from": "A",
+      "candidate_to": "B",
+      "existing_from": "B",
+      "existing_to": "A",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "DUPLICATE_REVERSE_ALIAS"
+    },
+    {
+      "id": "M0192-REVERSE_ALIAS_CANONICAL-05",
+      "group": "REVERSE_ALIAS_CANONICAL",
+      "index": 5,
+      "kind": "canonical",
+      "candidate_type": "prerequisite_for",
+      "existing_type": "depends_on",
+      "candidate_from": "B",
+      "candidate_to": "C",
+      "existing_from": "C",
+      "existing_to": "B",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "DUPLICATE_REVERSE_ALIAS"
+    },
+    {
+      "id": "M0192-REVERSE_ALIAS_CANONICAL-06",
+      "group": "REVERSE_ALIAS_CANONICAL",
+      "index": 6,
+      "kind": "canonical",
+      "candidate_type": "prerequisite_for",
+      "existing_type": "depends_on",
+      "candidate_from": "C",
+      "candidate_to": "D",
+      "existing_from": "D",
+      "existing_to": "C",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "DUPLICATE_REVERSE_ALIAS"
+    },
+    {
+      "id": "M0192-REVERSE_ALIAS_CANONICAL-07",
+      "group": "REVERSE_ALIAS_CANONICAL",
+      "index": 7,
+      "kind": "canonical",
+      "candidate_type": "prerequisite_for",
+      "existing_type": "depends_on",
+      "candidate_from": "A",
+      "candidate_to": "B",
+      "existing_from": "B",
+      "existing_to": "A",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "DUPLICATE_REVERSE_ALIAS"
+    },
+    {
+      "id": "M0192-REVERSE_ALIAS_CANONICAL-08",
+      "group": "REVERSE_ALIAS_CANONICAL",
+      "index": 8,
+      "kind": "canonical",
+      "candidate_type": "prerequisite_for",
+      "existing_type": "depends_on",
+      "candidate_from": "B",
+      "candidate_to": "C",
+      "existing_from": "C",
+      "existing_to": "B",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "DUPLICATE_REVERSE_ALIAS"
+    },
+    {
+      "id": "M0192-REVERSE_ALIAS_CANONICAL-09",
+      "group": "REVERSE_ALIAS_CANONICAL",
+      "index": 9,
+      "kind": "canonical",
+      "candidate_type": "prerequisite_for",
+      "existing_type": "depends_on",
+      "candidate_from": "C",
+      "candidate_to": "D",
+      "existing_from": "D",
+      "existing_to": "C",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "DUPLICATE_REVERSE_ALIAS"
+    },
+    {
+      "id": "M0192-REVERSE_ALIAS_CANONICAL-10",
+      "group": "REVERSE_ALIAS_CANONICAL",
+      "index": 10,
+      "kind": "canonical",
+      "candidate_type": "prerequisite_for",
+      "existing_type": "depends_on",
+      "candidate_from": "A",
+      "candidate_to": "B",
+      "existing_from": "B",
+      "existing_to": "A",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "DUPLICATE_REVERSE_ALIAS"
+    },
+    {
+      "id": "M0192-REVERSE_ALIAS_CANONICAL-11",
+      "group": "REVERSE_ALIAS_CANONICAL",
+      "index": 11,
+      "kind": "canonical",
+      "candidate_type": "prerequisite_for",
+      "existing_type": "depends_on",
+      "candidate_from": "B",
+      "candidate_to": "C",
+      "existing_from": "C",
+      "existing_to": "B",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "DUPLICATE_REVERSE_ALIAS"
+    },
+    {
+      "id": "M0192-REVERSE_ALIAS_CANONICAL-12",
+      "group": "REVERSE_ALIAS_CANONICAL",
+      "index": 12,
+      "kind": "canonical",
+      "candidate_type": "prerequisite_for",
+      "existing_type": "depends_on",
+      "candidate_from": "C",
+      "candidate_to": "D",
+      "existing_from": "D",
+      "existing_to": "C",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "DUPLICATE_REVERSE_ALIAS"
+    },
+    {
+      "id": "M0192-SYMMETRIC_REVERSE_DUPLICATE-01",
+      "group": "SYMMETRIC_REVERSE_DUPLICATE",
+      "index": 1,
+      "kind": "symmetric",
+      "candidate_type": "related_to",
+      "existing_type": "related_to",
+      "candidate_from": "A",
+      "candidate_to": "B",
+      "existing_from": "B",
+      "existing_to": "A",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "SYMMETRIC_REVERSE_DUPLICATE"
+    },
+    {
+      "id": "M0192-SYMMETRIC_REVERSE_DUPLICATE-02",
+      "group": "SYMMETRIC_REVERSE_DUPLICATE",
+      "index": 2,
+      "kind": "symmetric",
+      "candidate_type": "conflicts_with",
+      "existing_type": "conflicts_with",
+      "candidate_from": "C",
+      "candidate_to": "D",
+      "existing_from": "D",
+      "existing_to": "C",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "SYMMETRIC_REVERSE_DUPLICATE"
+    },
+    {
+      "id": "M0192-SYMMETRIC_REVERSE_DUPLICATE-03",
+      "group": "SYMMETRIC_REVERSE_DUPLICATE",
+      "index": 3,
+      "kind": "symmetric",
+      "candidate_type": "same_subject_as",
+      "existing_type": "same_subject_as",
+      "candidate_from": "B",
+      "candidate_to": "D",
+      "existing_from": "D",
+      "existing_to": "B",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "SYMMETRIC_REVERSE_DUPLICATE"
+    },
+    {
+      "id": "M0192-SYMMETRIC_REVERSE_DUPLICATE-04",
+      "group": "SYMMETRIC_REVERSE_DUPLICATE",
+      "index": 4,
+      "kind": "symmetric",
+      "candidate_type": "related_to",
+      "existing_type": "related_to",
+      "candidate_from": "A",
+      "candidate_to": "B",
+      "existing_from": "B",
+      "existing_to": "A",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "SYMMETRIC_REVERSE_DUPLICATE"
+    },
+    {
+      "id": "M0192-SYMMETRIC_REVERSE_DUPLICATE-05",
+      "group": "SYMMETRIC_REVERSE_DUPLICATE",
+      "index": 5,
+      "kind": "symmetric",
+      "candidate_type": "conflicts_with",
+      "existing_type": "conflicts_with",
+      "candidate_from": "C",
+      "candidate_to": "D",
+      "existing_from": "D",
+      "existing_to": "C",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "SYMMETRIC_REVERSE_DUPLICATE"
+    },
+    {
+      "id": "M0192-SYMMETRIC_REVERSE_DUPLICATE-06",
+      "group": "SYMMETRIC_REVERSE_DUPLICATE",
+      "index": 6,
+      "kind": "symmetric",
+      "candidate_type": "same_subject_as",
+      "existing_type": "same_subject_as",
+      "candidate_from": "B",
+      "candidate_to": "D",
+      "existing_from": "D",
+      "existing_to": "B",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "SYMMETRIC_REVERSE_DUPLICATE"
+    },
+    {
+      "id": "M0192-SYMMETRIC_REVERSE_DUPLICATE-07",
+      "group": "SYMMETRIC_REVERSE_DUPLICATE",
+      "index": 7,
+      "kind": "symmetric",
+      "candidate_type": "related_to",
+      "existing_type": "related_to",
+      "candidate_from": "A",
+      "candidate_to": "B",
+      "existing_from": "B",
+      "existing_to": "A",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "SYMMETRIC_REVERSE_DUPLICATE"
+    },
+    {
+      "id": "M0192-SYMMETRIC_REVERSE_DUPLICATE-08",
+      "group": "SYMMETRIC_REVERSE_DUPLICATE",
+      "index": 8,
+      "kind": "symmetric",
+      "candidate_type": "conflicts_with",
+      "existing_type": "conflicts_with",
+      "candidate_from": "C",
+      "candidate_to": "D",
+      "existing_from": "D",
+      "existing_to": "C",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "SYMMETRIC_REVERSE_DUPLICATE"
+    },
+    {
+      "id": "M0192-SYMMETRIC_REVERSE_DUPLICATE-09",
+      "group": "SYMMETRIC_REVERSE_DUPLICATE",
+      "index": 9,
+      "kind": "symmetric",
+      "candidate_type": "same_subject_as",
+      "existing_type": "same_subject_as",
+      "candidate_from": "B",
+      "candidate_to": "D",
+      "existing_from": "D",
+      "existing_to": "B",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "SYMMETRIC_REVERSE_DUPLICATE"
+    },
+    {
+      "id": "M0192-SYMMETRIC_REVERSE_DUPLICATE-10",
+      "group": "SYMMETRIC_REVERSE_DUPLICATE",
+      "index": 10,
+      "kind": "symmetric",
+      "candidate_type": "related_to",
+      "existing_type": "related_to",
+      "candidate_from": "A",
+      "candidate_to": "B",
+      "existing_from": "B",
+      "existing_to": "A",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "SYMMETRIC_REVERSE_DUPLICATE"
+    },
+    {
+      "id": "M0192-SYMMETRIC_REVERSE_DUPLICATE-11",
+      "group": "SYMMETRIC_REVERSE_DUPLICATE",
+      "index": 11,
+      "kind": "symmetric",
+      "candidate_type": "conflicts_with",
+      "existing_type": "conflicts_with",
+      "candidate_from": "C",
+      "candidate_to": "D",
+      "existing_from": "D",
+      "existing_to": "C",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "SYMMETRIC_REVERSE_DUPLICATE"
+    },
+    {
+      "id": "M0192-SYMMETRIC_REVERSE_DUPLICATE-12",
+      "group": "SYMMETRIC_REVERSE_DUPLICATE",
+      "index": 12,
+      "kind": "symmetric",
+      "candidate_type": "same_subject_as",
+      "existing_type": "same_subject_as",
+      "candidate_from": "B",
+      "candidate_to": "D",
+      "existing_from": "D",
+      "existing_to": "B",
+      "expected_disposition": "BLOCKED",
+      "expected_code": "SYMMETRIC_REVERSE_DUPLICATE"
+    },
+    {
+      "id": "M0192-TWO_EDGE_CYCLE-01",
+      "group": "TWO_EDGE_CYCLE",
+      "index": 1,
+      "kind": "cycle",
+      "type": "depends_on",
+      "context": "baseline",
+      "edge_status": "verified",
+      "strict": true,
+      "edges": [
+        [
+          "B",
+          "A"
+        ]
+      ],
+      "expected_code": "DEPENDENCY_CYCLE",
+      "expected_severity": "BLOCK",
+      "expected_path": [
+        "A",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-TWO_EDGE_CYCLE-02",
+      "group": "TWO_EDGE_CYCLE",
+      "index": 2,
+      "kind": "cycle",
+      "type": "classified_as",
+      "context": "baseline",
+      "edge_status": "active",
+      "strict": true,
+      "edges": [
+        [
+          "B",
+          "A"
+        ]
+      ],
+      "expected_code": "CLASSIFICATION_CYCLE",
+      "expected_severity": "BLOCK",
+      "expected_path": [
+        "A",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-TWO_EDGE_CYCLE-03",
+      "group": "TWO_EDGE_CYCLE",
+      "index": 3,
+      "kind": "cycle",
+      "type": "depends_on",
+      "context": "baseline",
+      "edge_status": "proposed",
+      "strict": false,
+      "edges": [
+        [
+          "B",
+          "A"
+        ]
+      ],
+      "expected_code": "DEPENDENCY_CYCLE",
+      "expected_severity": "REVIEW",
+      "expected_path": [
+        "A",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-TWO_EDGE_CYCLE-04",
+      "group": "TWO_EDGE_CYCLE",
+      "index": 4,
+      "kind": "cycle",
+      "type": "classified_as",
+      "context": "baseline",
+      "edge_status": "verified",
+      "strict": false,
+      "edges": [
+        [
+          "B",
+          "A"
+        ]
+      ],
+      "expected_code": "CLASSIFICATION_CYCLE",
+      "expected_severity": "REVIEW",
+      "expected_path": [
+        "A",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-TWO_EDGE_CYCLE-05",
+      "group": "TWO_EDGE_CYCLE",
+      "index": 5,
+      "kind": "cycle",
+      "type": "depends_on",
+      "context": "baseline",
+      "edge_status": "active",
+      "strict": true,
+      "edges": [
+        [
+          "B",
+          "A"
+        ]
+      ],
+      "expected_code": "DEPENDENCY_CYCLE",
+      "expected_severity": "BLOCK",
+      "expected_path": [
+        "A",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-TWO_EDGE_CYCLE-06",
+      "group": "TWO_EDGE_CYCLE",
+      "index": 6,
+      "kind": "cycle",
+      "type": "classified_as",
+      "context": "baseline",
+      "edge_status": "proposed",
+      "strict": true,
+      "edges": [
+        [
+          "B",
+          "A"
+        ]
+      ],
+      "expected_code": "CLASSIFICATION_CYCLE",
+      "expected_severity": "REVIEW",
+      "expected_path": [
+        "A",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-TWO_EDGE_CYCLE-07",
+      "group": "TWO_EDGE_CYCLE",
+      "index": 7,
+      "kind": "cycle",
+      "type": "depends_on",
+      "context": "baseline",
+      "edge_status": "verified",
+      "strict": false,
+      "edges": [
+        [
+          "B",
+          "A"
+        ]
+      ],
+      "expected_code": "DEPENDENCY_CYCLE",
+      "expected_severity": "REVIEW",
+      "expected_path": [
+        "A",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-TWO_EDGE_CYCLE-08",
+      "group": "TWO_EDGE_CYCLE",
+      "index": 8,
+      "kind": "cycle",
+      "type": "classified_as",
+      "context": "baseline",
+      "edge_status": "active",
+      "strict": false,
+      "edges": [
+        [
+          "B",
+          "A"
+        ]
+      ],
+      "expected_code": "CLASSIFICATION_CYCLE",
+      "expected_severity": "REVIEW",
+      "expected_path": [
+        "A",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-TWO_EDGE_CYCLE-09",
+      "group": "TWO_EDGE_CYCLE",
+      "index": 9,
+      "kind": "cycle",
+      "type": "depends_on",
+      "context": "baseline",
+      "edge_status": "proposed",
+      "strict": true,
+      "edges": [
+        [
+          "B",
+          "A"
+        ]
+      ],
+      "expected_code": "DEPENDENCY_CYCLE",
+      "expected_severity": "REVIEW",
+      "expected_path": [
+        "A",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-TWO_EDGE_CYCLE-10",
+      "group": "TWO_EDGE_CYCLE",
+      "index": 10,
+      "kind": "cycle",
+      "type": "classified_as",
+      "context": "baseline",
+      "edge_status": "verified",
+      "strict": true,
+      "edges": [
+        [
+          "B",
+          "A"
+        ]
+      ],
+      "expected_code": "CLASSIFICATION_CYCLE",
+      "expected_severity": "BLOCK",
+      "expected_path": [
+        "A",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-TWO_EDGE_CYCLE-11",
+      "group": "TWO_EDGE_CYCLE",
+      "index": 11,
+      "kind": "cycle",
+      "type": "depends_on",
+      "context": "baseline",
+      "edge_status": "active",
+      "strict": false,
+      "edges": [
+        [
+          "B",
+          "A"
+        ]
+      ],
+      "expected_code": "DEPENDENCY_CYCLE",
+      "expected_severity": "REVIEW",
+      "expected_path": [
+        "A",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-TWO_EDGE_CYCLE-12",
+      "group": "TWO_EDGE_CYCLE",
+      "index": 12,
+      "kind": "cycle",
+      "type": "classified_as",
+      "context": "baseline",
+      "edge_status": "proposed",
+      "strict": false,
+      "edges": [
+        [
+          "B",
+          "A"
+        ]
+      ],
+      "expected_code": "CLASSIFICATION_CYCLE",
+      "expected_severity": "REVIEW",
+      "expected_path": [
+        "A",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-THREE_EDGE_CYCLE-01",
+      "group": "THREE_EDGE_CYCLE",
+      "index": 1,
+      "kind": "cycle",
+      "type": "depends_on",
+      "context": "baseline",
+      "edge_status": "verified",
+      "strict": true,
+      "edges": [
+        [
+          "B",
+          "C"
+        ],
+        [
+          "C",
+          "A"
+        ]
+      ],
+      "expected_code": "DEPENDENCY_CYCLE",
+      "expected_severity": "BLOCK",
+      "expected_path": [
+        "A",
+        "B",
+        "C",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-THREE_EDGE_CYCLE-02",
+      "group": "THREE_EDGE_CYCLE",
+      "index": 2,
+      "kind": "cycle",
+      "type": "classified_as",
+      "context": "baseline",
+      "edge_status": "active",
+      "strict": true,
+      "edges": [
+        [
+          "B",
+          "C"
+        ],
+        [
+          "C",
+          "A"
+        ]
+      ],
+      "expected_code": "CLASSIFICATION_CYCLE",
+      "expected_severity": "BLOCK",
+      "expected_path": [
+        "A",
+        "B",
+        "C",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-THREE_EDGE_CYCLE-03",
+      "group": "THREE_EDGE_CYCLE",
+      "index": 3,
+      "kind": "cycle",
+      "type": "depends_on",
+      "context": "baseline",
+      "edge_status": "proposed",
+      "strict": false,
+      "edges": [
+        [
+          "B",
+          "C"
+        ],
+        [
+          "C",
+          "A"
+        ]
+      ],
+      "expected_code": "DEPENDENCY_CYCLE",
+      "expected_severity": "REVIEW",
+      "expected_path": [
+        "A",
+        "B",
+        "C",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-THREE_EDGE_CYCLE-04",
+      "group": "THREE_EDGE_CYCLE",
+      "index": 4,
+      "kind": "cycle",
+      "type": "classified_as",
+      "context": "baseline",
+      "edge_status": "verified",
+      "strict": false,
+      "edges": [
+        [
+          "B",
+          "C"
+        ],
+        [
+          "C",
+          "A"
+        ]
+      ],
+      "expected_code": "CLASSIFICATION_CYCLE",
+      "expected_severity": "REVIEW",
+      "expected_path": [
+        "A",
+        "B",
+        "C",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-THREE_EDGE_CYCLE-05",
+      "group": "THREE_EDGE_CYCLE",
+      "index": 5,
+      "kind": "cycle",
+      "type": "depends_on",
+      "context": "baseline",
+      "edge_status": "active",
+      "strict": true,
+      "edges": [
+        [
+          "B",
+          "C"
+        ],
+        [
+          "C",
+          "A"
+        ]
+      ],
+      "expected_code": "DEPENDENCY_CYCLE",
+      "expected_severity": "BLOCK",
+      "expected_path": [
+        "A",
+        "B",
+        "C",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-THREE_EDGE_CYCLE-06",
+      "group": "THREE_EDGE_CYCLE",
+      "index": 6,
+      "kind": "cycle",
+      "type": "classified_as",
+      "context": "baseline",
+      "edge_status": "proposed",
+      "strict": true,
+      "edges": [
+        [
+          "B",
+          "C"
+        ],
+        [
+          "C",
+          "A"
+        ]
+      ],
+      "expected_code": "CLASSIFICATION_CYCLE",
+      "expected_severity": "REVIEW",
+      "expected_path": [
+        "A",
+        "B",
+        "C",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-THREE_EDGE_CYCLE-07",
+      "group": "THREE_EDGE_CYCLE",
+      "index": 7,
+      "kind": "cycle",
+      "type": "depends_on",
+      "context": "baseline",
+      "edge_status": "verified",
+      "strict": false,
+      "edges": [
+        [
+          "B",
+          "C"
+        ],
+        [
+          "C",
+          "A"
+        ]
+      ],
+      "expected_code": "DEPENDENCY_CYCLE",
+      "expected_severity": "REVIEW",
+      "expected_path": [
+        "A",
+        "B",
+        "C",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-THREE_EDGE_CYCLE-08",
+      "group": "THREE_EDGE_CYCLE",
+      "index": 8,
+      "kind": "cycle",
+      "type": "classified_as",
+      "context": "baseline",
+      "edge_status": "active",
+      "strict": false,
+      "edges": [
+        [
+          "B",
+          "C"
+        ],
+        [
+          "C",
+          "A"
+        ]
+      ],
+      "expected_code": "CLASSIFICATION_CYCLE",
+      "expected_severity": "REVIEW",
+      "expected_path": [
+        "A",
+        "B",
+        "C",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-THREE_EDGE_CYCLE-09",
+      "group": "THREE_EDGE_CYCLE",
+      "index": 9,
+      "kind": "cycle",
+      "type": "depends_on",
+      "context": "baseline",
+      "edge_status": "proposed",
+      "strict": true,
+      "edges": [
+        [
+          "B",
+          "C"
+        ],
+        [
+          "C",
+          "A"
+        ]
+      ],
+      "expected_code": "DEPENDENCY_CYCLE",
+      "expected_severity": "REVIEW",
+      "expected_path": [
+        "A",
+        "B",
+        "C",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-THREE_EDGE_CYCLE-10",
+      "group": "THREE_EDGE_CYCLE",
+      "index": 10,
+      "kind": "cycle",
+      "type": "classified_as",
+      "context": "baseline",
+      "edge_status": "verified",
+      "strict": true,
+      "edges": [
+        [
+          "B",
+          "C"
+        ],
+        [
+          "C",
+          "A"
+        ]
+      ],
+      "expected_code": "CLASSIFICATION_CYCLE",
+      "expected_severity": "BLOCK",
+      "expected_path": [
+        "A",
+        "B",
+        "C",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-THREE_EDGE_CYCLE-11",
+      "group": "THREE_EDGE_CYCLE",
+      "index": 11,
+      "kind": "cycle",
+      "type": "depends_on",
+      "context": "baseline",
+      "edge_status": "active",
+      "strict": false,
+      "edges": [
+        [
+          "B",
+          "C"
+        ],
+        [
+          "C",
+          "A"
+        ]
+      ],
+      "expected_code": "DEPENDENCY_CYCLE",
+      "expected_severity": "REVIEW",
+      "expected_path": [
+        "A",
+        "B",
+        "C",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-THREE_EDGE_CYCLE-12",
+      "group": "THREE_EDGE_CYCLE",
+      "index": 12,
+      "kind": "cycle",
+      "type": "classified_as",
+      "context": "baseline",
+      "edge_status": "proposed",
+      "strict": false,
+      "edges": [
+        [
+          "B",
+          "C"
+        ],
+        [
+          "C",
+          "A"
+        ]
+      ],
+      "expected_code": "CLASSIFICATION_CYCLE",
+      "expected_severity": "REVIEW",
+      "expected_path": [
+        "A",
+        "B",
+        "C",
+        "A"
+      ]
+    },
+    {
+      "id": "M0192-GUARD_NO_FALSE_BLOCK-01",
+      "group": "GUARD_NO_FALSE_BLOCK",
+      "index": 1,
+      "kind": "guard",
+      "type": "depends_on",
+      "variant": "unconnected",
+      "edges": [
+        [
+          "B",
+          "C"
+        ]
+      ],
+      "other_context": null,
+      "edge_status": null,
+      "other_polarity": null,
+      "expected": "NONE"
+    },
+    {
+      "id": "M0192-GUARD_NO_FALSE_BLOCK-02",
+      "group": "GUARD_NO_FALSE_BLOCK",
+      "index": 2,
+      "kind": "guard",
+      "type": "depends_on",
+      "variant": "wrong_orientation",
+      "edges": [
+        [
+          "A",
+          "C"
+        ],
+        [
+          "C",
+          "B"
+        ]
+      ],
+      "other_context": null,
+      "edge_status": null,
+      "other_polarity": null,
+      "expected": "NONE"
+    },
+    {
+      "id": "M0192-GUARD_NO_FALSE_BLOCK-03",
+      "group": "GUARD_NO_FALSE_BLOCK",
+      "index": 3,
+      "kind": "guard",
+      "type": "depends_on",
+      "variant": "context_mismatch",
+      "edges": [
+        [
+          "B",
+          "A"
+        ]
+      ],
+      "other_context": "separate",
+      "edge_status": null,
+      "other_polarity": null,
+      "expected": "NONE"
+    },
+    {
+      "id": "M0192-GUARD_NO_FALSE_BLOCK-04",
+      "group": "GUARD_NO_FALSE_BLOCK",
+      "index": 4,
+      "kind": "guard",
+      "type": "depends_on",
+      "variant": "rejected_edge",
+      "edges": [
+        [
+          "B",
+          "A"
+        ]
+      ],
+      "other_context": null,
+      "edge_status": "rejected",
+      "other_polarity": null,
+      "expected": "NONE"
+    },
+    {
+      "id": "M0192-GUARD_NO_FALSE_BLOCK-05",
+      "group": "GUARD_NO_FALSE_BLOCK",
+      "index": 5,
+      "kind": "guard",
+      "type": "depends_on",
+      "variant": "inactive_edge",
+      "edges": [
+        [
+          "B",
+          "A"
+        ]
+      ],
+      "other_context": null,
+      "edge_status": "inactive",
+      "other_polarity": null,
+      "expected": "NONE"
+    },
+    {
+      "id": "M0192-GUARD_NO_FALSE_BLOCK-06",
+      "group": "GUARD_NO_FALSE_BLOCK",
+      "index": 6,
+      "kind": "guard",
+      "type": "depends_on",
+      "variant": "explicit_denial",
+      "edges": [
+        [
+          "B",
+          "A"
+        ]
+      ],
+      "other_context": null,
+      "edge_status": null,
+      "other_polarity": "deny",
+      "expected": "NONE"
+    },
+    {
+      "id": "M0192-GUARD_NO_FALSE_BLOCK-07",
+      "group": "GUARD_NO_FALSE_BLOCK",
+      "index": 7,
+      "kind": "guard",
+      "type": "depends_on",
+      "variant": "disjoint_time",
+      "edges": [
+        [
+          "B",
+          "A"
+        ]
+      ],
+      "other_context": null,
+      "edge_status": null,
+      "other_polarity": null,
+      "expected": "NONE"
+    },
+    {
+      "id": "M0192-GUARD_NO_FALSE_BLOCK-08",
+      "group": "GUARD_NO_FALSE_BLOCK",
+      "index": 8,
+      "kind": "guard",
+      "type": "depends_on",
+      "variant": "disjoint_time_3",
+      "edges": [
+        [
+          "B",
+          "C"
+        ],
+        [
+          "C",
+          "A"
+        ]
+      ],
+      "other_context": null,
+      "edge_status": null,
+      "other_polarity": null,
+      "expected": "NONE"
+    },
+    {
+      "id": "M0192-GUARD_NO_FALSE_BLOCK-09",
+      "group": "GUARD_NO_FALSE_BLOCK",
+      "index": 9,
+      "kind": "guard",
+      "type": "depends_on",
+      "variant": "proposed_reverse",
+      "edges": [
+        [
+          "B",
+          "A"
+        ]
+      ],
+      "other_context": null,
+      "edge_status": "proposed",
+      "other_polarity": null,
+      "expected": "REVIEW"
+    },
+    {
+      "id": "M0192-GUARD_NO_FALSE_BLOCK-10",
+      "group": "GUARD_NO_FALSE_BLOCK",
+      "index": 10,
+      "kind": "guard",
+      "type": "depends_on",
+      "variant": "missing_acyclic_policy",
+      "edges": [
+        [
+          "B",
+          "A"
+        ]
+      ],
+      "other_context": null,
+      "edge_status": "verified",
+      "other_polarity": null,
+      "expected": "REVIEW"
+    },
+    {
+      "id": "M0192-GUARD_NO_FALSE_BLOCK-11",
+      "group": "GUARD_NO_FALSE_BLOCK",
+      "index": 11,
+      "kind": "guard",
+      "type": "depends_on",
+      "variant": "partial_time",
+      "edges": [
+        [
+          "B",
+          "A"
+        ]
+      ],
+      "other_context": null,
+      "edge_status": "verified",
+      "other_polarity": null,
+      "expected": "REVIEW"
+    },
+    {
+      "id": "M0192-GUARD_NO_FALSE_BLOCK-12",
+      "group": "GUARD_NO_FALSE_BLOCK",
+      "index": 12,
+      "kind": "guard",
+      "type": "depends_on",
+      "variant": "pairwise_not_common",
+      "edges": [
+        [
+          "B",
+          "C"
+        ],
+        [
+          "C",
+          "A"
+        ]
+      ],
+      "other_context": null,
+      "edge_status": "verified",
+      "other_polarity": null,
+      "expected": "REVIEW"
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "contract": "ARCTOR_ARI_M0097_QUERY_REQUEST_DESIGN_V1",
+  "step": "M-0097",
+  "roadmapId": "ARI-03.02.01",
+  "acceptedAtUtc": "2026-11-02T11:13:25.860Z",
+  "evidenceLevel": "DESIGN_ONLY_PINNED_M0096_SNAPSHOT_PLUS_SCHEMA_AND_VALIDATOR",
+  "inputFields": [
+    "text",
+    "locale",
+    "actorScope",
+    "intent",
+    "limit",
+    "filters"
+  ],
+  "fieldCount": 6,
+  "locales": [
+    "en",
+    "pl",
+    "es",
+    "de",
+    "cs",
+    "uk",
+    "ru",
+    "und"
+  ],
+  "supportedExplicitUnknownLocale": "und",
+  "intents": [
+    "identify",
+    "suggest",
+    "explore"
+  ],
+  "actorScope": [
+    "global_only",
+    "global_and_own"
+  ],
+  "limit": {
+    "min": 1,
+    "max": 20,
+    "integer": true
+  },
+  "filterFields": [
+    "rootObjectId",
+    "parentObjectId",
+    "objectKindCodes",
+    "nodeRoleCodes"
+  ],
+  "noArbitraryOwnerId": true,
+  "actorScopeNeverAuthorizesPrivateData": true,
+  "requiresServerDerivedActorForPrivate": true,
+  "unknownPrivateScopeExcluded": true,
+  "serviceRoleMustEnforceTenantPredicate": true,
+  "matchStagesNotInputIntent": [
+    "exact",
+    "alias",
+    "partial",
+    "lexical",
+    "vector",
+    "graph"
+  ],
+  "resultContractDeferredTo": "M-0098",
+  "exactUuidLookupDeferredTo": "M-0099",
+  "normalizationDeferredTo": "M-0100",
+  "ambiguousOutcomePolicy": "CANDIDATES_PLUS_QUESTION_NOT_AUTO_SELECT",
+  "sourceCatalogHash": "sha256:v1:e68d4c397e6d7286cc883c219470869d586933c98a66362be92886f88f16299f",
+  "sourceTranslationVersion": "derived-sha256-v1:b2b7110d065d5e215aeef7069cff8312a8553ba9d6f4b50febd3ae35bdb111c2",
+  "sourceM0096ReceiptSha256": "DEBD88F3A2D5751FCA23D87C6F298ABC290A9B705014FF96957C2C71F4F28C37",
+  "sourceM0096SnapshotSha256": "B27AA2B9A5311466ECA36ED154BEDA5B979F440D7584650C046B32C4FA3EBEE6",
+  "schemaSha256": "625A72B77E84D3EE90B1B9FDA14E304A9B87FFBC9F42A84F700BAA84A283B776",
+  "designTsSha256": "A1B7898E4515A703D5613158005305BA10FE3FF570DC6FACF396FEF58820024D",
+  "validationReferenceSha256": "29F8446D17D6129ECA24C541061878B00DAB965110B9E1543AD18F1ABCBBE481",
+  "indexableApproved": 0,
+  "indexedSearchActivated": false,
+  "privacyIsolationE2ETested": false,
+  "translationIdentityJoinVerified": false,
+  "brokenAliasTargetsOpen": 89,
+  "commercialRootDuplicateGroupsOpen": 2,
+  "searchQuality": "INCONCLUSIVE",
+  "implementationInProduction": false,
+  "sourceChanged": false,
+  "sqlExecuted": false,
+  "sqlWrite": false,
+  "commitPushDeploy": false
+}

@@ -1,0 +1,44 @@
+'use strict';
+const {test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs'),path=require('node:path');
+const R=require(process.env.ARCTOR_M0140_RUNNER_PATH||path.join(__dirname,'../ari/M0140_SLEEP_DURATION_REVIEW.cjs'));
+const modulePath=process.env.ARCTOR_M0140_HYBRID_PATH||path.join(process.cwd(),'src/lib/ontology-research/hybridRankerV1.ts');
+const goldPath=process.env.ARCTOR_M0140_GOLD_PATH||path.join(__dirname,'../ari/M0140_OWNER_APPROVED_EXACT_GOLD_18.json');
+const H=R.loadHybrid(modulePath);
+const gold=JSON.parse(fs.readFileSync(goldPath,'utf8'));const before=JSON.stringify(gold);const result=R.execute(modulePath,goldPath);
+const all=R.CASES,uuid=x=>x.id;
+function ranked(c,opts={}){const r=R.runCase(gold,H,c,opts);assert.equal(r.ok,true,JSON.stringify(r));assert.equal(r.orderVerified,true);return r;}
+const a=R.genericAmbiguity(gold,'Продолжительность сна');
+test('contract',()=>assert.equal(R.CONTRACT,'ARCTOR_ARI03_M0140_SLEEP_EPISODE_PHASE_DISTINCTION_REVIEW_V1'));
+test('four approved sleep measurements',()=>assert.equal(all.length,4));
+test('owner Gold 18 distinct candidates',()=>assert.equal(gold.candidates.length,18));
+test('approved source validates',()=>assert.equal(R.validateGold(gold),true));
+test('unique target UUID',()=>assert.equal(new Set(all.map(uuid)).size,4));
+test('approved Russian exact queries anchored to each UUID',()=>all.forEach(c=>assert.equal(gold.queries.find(q=>q.query===c.query).relevantOnIds[0],c.id)));
+test('whole episode English definition anchored',()=>assert.match(gold.candidates.find(x=>x.uuid===all[0].id).definition,/total duration/i));
+test('phase definitions qualified within episode',()=>all.slice(1).forEach(c=>assert.match(gold.candidates.find(x=>x.uuid===c.id).definition,/within a night-sleep episode/i)));
+test('generic query is not an owner-approved exact gold label',()=>assert.equal(gold.queries.some(q=>q.query==='Продолжительность сна'),false));
+test('generic requires clarification',()=>assert.equal(a.requiresClarification,true));
+test('generic does not force a target UUID',()=>assert.equal(a.forcedTargetUuid,null));
+test('generic has four named alternatives',()=>assert.deepEqual(new Set(a.options.map(x=>x.onId)),new Set(all.map(uuid))));
+test('generic not misrepresented as owner-approved',()=>assert.equal(a.ownerApprovedExactLabel,false));
+test('other unrelated text not treated as generic query',()=>assert.equal(R.genericAmbiguity(gold,'Количество шагов').requiresClarification,false));
+test('review reports exactly four expected records',()=>assert.equal(result.cases.length,4));
+test('review confirms four exact rank1 and no cross-target top',()=>assert.equal(result.exactRankOne,true));
+for(const c of all){
+ test(`${c.kind}: exact title rank first`,()=>assert.equal(ranked(c).candidates[0].onId,c.id));
+ test(`${c.kind}: scope global system`,()=>assert.equal(ranked(c).candidates[0].scope.kind,'global_system'));
+ test(`${c.kind}: all UUID distinct after merging two sources`,()=>assert.equal(new Set(ranked(c).candidates.map(x=>x.onId)).size,18));
+ test(`${c.kind}: finalRank 1`,()=>assert.equal(ranked(c).candidates[0].finalRank,1));
+ test(`${c.kind}: canonical title match priority=2`,()=>{const x=ranked(c).candidates[0];assert.equal(x.matchKind,'canonical_title');assert.equal(x.matchPriority,2)});
+ test(`${c.kind}: missing exact evidence does not promote last-ranked target`,()=>assert.notEqual(ranked(c,{evidence:[]}).candidates[0].onId,c.id));
+ test(`${c.kind}: query suffix prevents exact boost`,()=>assert.equal(ranked(c,{query:c.query+' доп.'}).candidates.some(x=>x.matchPriority>0),false));
+ test(`${c.kind}: wrong locale evidence does not promote`,()=>assert.notEqual(ranked(c,{evidence:[R.evidence(c,{locale:'pl'})]}).candidates[0].onId,c.id));
+ test(`${c.kind}: unverified alias not promoted`,()=>assert.notEqual(ranked(c,{evidence:[R.evidence(c,{kind:'alias',status:'pending'})]}).candidates[0].onId,c.id));
+ test(`${c.kind}: revoked alias not promoted`,()=>assert.notEqual(ranked(c,{evidence:[R.evidence(c,{kind:'alias',status:'revoked'})]}).candidates[0].onId,c.id));
+ test(`${c.kind}: reverse other candidates remains target first`,()=>assert.equal(ranked(c,{reverse:true}).candidates[0].onId,c.id));
+ test(`${c.kind}: no graph expansion`,()=>assert.equal(ranked(c).graphCandidatesAdded,0));
+ test(`${c.kind}: approved exact title matches case`,()=>assert.equal(gold.queries.find(q=>q.relevantOnIds.includes(c.id)).query,c.query));
+ test(`${c.kind}: no other sleep duration UUID wins`,()=>assert.equal(all.filter(x=>x.id!==c.id).some(x=>ranked(c).candidates[0].onId===x.id),false));
+ test(`${c.kind}: target is last in both initial sources`,()=>{const inp=R.input(gold,c);assert.equal(inp.lexical[17].onId,c.id);assert.equal(inp.vector[17].onId,c.id)});
+ test(`${c.kind}: review is read-only, Gold unchanged`,()=>assert.equal(JSON.stringify(gold),before));
+}

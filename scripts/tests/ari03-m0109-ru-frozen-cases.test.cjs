@@ -1,0 +1,71 @@
+'use strict';
+/** M-0109: read-only tests against the ORIGINAL 26-case human-reviewed pilot snapshot.
+ * No attempt to label unreviewed cases as ground-truth catalog IDs or to assert grammar equivalence.
+ */
+const test=require('node:test'),assert=require('node:assert/strict');
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),Module=require('node:module');
+const REPO=path.resolve(__dirname,'../..');
+const fixture=path.join(__dirname,'fixtures','ari03-m0109-frozen-gold-26.json');
+const goldBytes=fs.readFileSync(fixture);
+const SHA='7CA99591991AE86177F3B4C910AEC06B5EA2D83860CB64D6BE8CA4BF8D0374C9';
+const sha=x=>crypto.createHash('sha256').update(x).digest('hex').toUpperCase();
+const gold=JSON.parse(goldBytes.toString('utf8'));
+const cases=new Map(gold.cases.map(c=>[c.id,c]));
+const ts=require(path.join(REPO,'node_modules','typescript'));
+const source=path.join(REPO,'src/lib/ontology-research/lexicalRetrievalV1.ts');
+const js=ts.transpileModule(fs.readFileSync(source,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+const compiled=new Module(source,module);compiled.filename=source;compiled.paths=Module._nodeModulePaths(path.dirname(source));compiled._compile(js,source);
+const run=compiled.exports.retrieveWeightedLexicalV1;
+const norm=compiled.exports.strictLexicalNormalizeV1;
+const id=n=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
+const v=(text,locale='ru')=>({locale,text});
+const obj=(n,title,extra={})=>({id:id(n),role:'leaf',titles:[v(title)],...extra});
+const query=(q,objects,opts={})=>run({query:q,locale:'ru',limit:20,authorizedCandidates:objects,...opts});
+const single=(q,obj1)=>query(q,[obj1]);
+const noProof=r=>{assert.equal(r.scope.absenceProven,false);assert.equal(r.scope.catalogCoverage,'UNVERIFIED_INPUT_ONLY');assert.equal(r.autoSelected,false);assert.equal(r.authorizationVerifiedByScorer,false);};
+const matched=(r,n,cls)=>{const x=r.results.find(h=>h.id===id(n));assert.ok(x,`Missing synthetic candidate ${n}`);if(cls)assert.equal(x.matchClass,cls);return x;};
+const alias=(n,t,verification=true)=>({locale:'ru',text:t,targetId:id(n),registry:'concept_aliases',registryStatus:'published',targetResolved:verification,curatorVerified:verification});
+
+// Exact source freeze; these assertions cannot turn unreviewed source judgments into validated gold.
+test('M0109 frozen source SHA is identical to original ARI02.6 26-case snapshot',()=>assert.equal(sha(goldBytes),SHA));
+test('M0109 frozen source has 26 unique case identifiers',()=>{assert.equal(gold.cases.length,26);assert.equal(cases.size,26);});
+test('M0109 human annotation explicitly NOT catalog-completeness evidence',()=>{assert.equal(gold.annotationMethod,'human_review_not_db_proof');assert.ok(gold.cases.every(c=>c.catalogCheck!=='exhaustive_verified'));});
+test('M0109 frozen query night sleep preserved verbatim',()=>assert.equal(cases.get('sleep-ari026-night').query,'ночной сон'));
+test('M0109 frozen query sleep duration preserved verbatim',()=>assert.equal(cases.get('sleep-ari026-duration').query,'продолжительность сна'));
+test('M0109 frozen query прогулка с ребёнком preserved verbatim',()=>assert.equal(cases.get('pilot-01').query,'прогулка с ребёнком'));
+test('M0109 frozen query дети preserved verbatim',()=>assert.equal(cases.get('pilot-03').query,'дети'));
+test('M0109 frozen query state of calm preserved verbatim',()=>assert.equal(cases.get('pilot-21').query,'состояние спокойствия'));
+test('M0109 preserves unreviewed sleep judgments',()=>{for(const key of ['pilot-23','sleep-ari026-night','sleep-ari026-duration'])assert.deepEqual(cases.get(key).judgments,{});});
+
+test('M0109 exact ночной сон outranks Сон parent and path-only rows',()=>{let r=query(cases.get('sleep-ari026-night').query,[obj(1,'Сон'),obj(2,'Ночной сон'),obj(3,'Восстановление',{paths:[v('Действия и процессы > Ночной сон')]})]);assert.equal(r.results[0].id,id(2));matched(r,2,'exact_title');noProof(r);});
+test('M0109 exact Сон in frozen pilot-23 is exact candidate',()=>matched(single(cases.get('pilot-23').query,obj(1,'Сон')),1,'exact_title'));
+test('M0109 frozen ходьба is direct exact title',()=>matched(single(cases.get('pilot-12').query,obj(1,'Ходьба')),1,'exact_title'));
+test('M0109 frozen состояние спокойствия is exact phrase',()=>matched(single(cases.get('pilot-21').query,obj(1,'Состояние спокойствия')),1,'exact_title'));
+test('M0109 frozen усталость matches own title only',()=>matched(single(cases.get('pilot-22').query,obj(1,'Усталость')),1,'exact_title'));
+test('M0109 frozen безопасность matches exact own title',()=>matched(single(cases.get('pilot-24').query,obj(1,'Безопасность')),1,'exact_title'));
+test('M0109 frozen ребёнок matches exact canonical title with ё',()=>matched(single(cases.get('pilot-02').query,obj(1,'Ребёнок')),1,'exact_title'));
+test('M0109 frozen игра exact remains ambiguous by object ID',()=>{const r=query(cases.get('pilot-19').query,[obj(1,'Игра'),obj(2,'Игра')]);assert.equal(r.totalMatched,2);assert.deepEqual(r.results.map(x=>x.id),[id(1),id(2)]);noProof(r);});
+test('M0109 frozen прогулка exact does not expand to ходьба',()=>{const r=query(cases.get('pilot-15').query,[obj(1,'Прогулка'),obj(2,'Ходьба')]);assert.equal(r.totalMatched,1);matched(r,1,'exact_title');noProof(r);});
+test('M0109 frozen ребёнок does not become Человек merely by relationship',()=>{let r=query(cases.get('pilot-02').query,[obj(1,'Человек'),obj(2,'Ребёнок')]);assert.equal(r.totalMatched,1);matched(r,2,'exact_title');});
+test('M0109 frozen прогулка с ребёнком exact compound is matchable',()=>matched(single(cases.get('pilot-01').query,obj(1,'Прогулка с ребёнком')),1,'exact_title'));
+test('M0109 frozen присмотр за ребёнком exact compound is matchable',()=>matched(single(cases.get('pilot-18').query,obj(1,'Присмотр за ребёнком')),1,'exact_title'));
+test('M0109 frozen совместное пребывание exact compound is matchable',()=>matched(single(cases.get('pilot-20').query,obj(1,'Совместное пребывание')),1,'exact_title'));
+test('M0109 frozen продолжительность сна finds longer own-title phrase as partial',()=>matched(single(cases.get('sleep-ari026-duration').query,obj(1,'Продолжительность ночного сна')),1,'partial_title'));
+test('M0109 duration exact outranks partial phase titles',()=>{const r=query(cases.get('sleep-ari026-duration').query,[obj(1,'Продолжительность ночного сна'),obj(2,'Продолжительность сна')]);assert.equal(r.results[0].id,id(2));matched(r,2,'exact_title');});
+test('M0109 frozen ходить пешком is not silently equated to Ходьба',()=>{const r=single(cases.get('pilot-13').query,obj(1,'Ходьба'));assert.equal(r.totalMatched,0);noProof(r);});
+test('M0109 frozen дети is not silently equated to ребёнок',()=>{const r=single(cases.get('pilot-03').query,obj(1,'Ребёнок'));assert.equal(r.totalMatched,0);noProof(r);});
+test('M0109 inflected ночного сна does not silently equal Ночной сон',()=>{const r=single('ночного сна',obj(1,'Ночной сон'));assert.equal(r.totalMatched,0);noProof(r);});
+test('M0109 ё and е distinctions stay strict under existing contract',()=>{assert.notEqual(norm('ребёнок'),norm('ребенок'));assert.equal(single('ребенок',obj(1,'Ребёнок')).totalMatched,0);});
+test('M0109 родительного падежа ребёнка does not silently equal ребёнок',()=>assert.equal(single('ребёнка',obj(1,'Ребёнок')).totalMatched,0));
+test('M0109 hypothetical stress: дома vs дом is not implicit stem match',()=>assert.equal(single('дома',obj(1,'Дом')).totalMatched,0));
+test('M0109 ложные частичные подстроки do not match сон and сонливость',()=>assert.equal(single('сон',obj(1,'Сонливость')).totalMatched,0));
+test('M0109 no separate token evidence falsely matches lengthy compound',()=>{const r=single('продолжительность сна',obj(1,'Продолжительность работы'));assert.equal(r.totalMatched,0);noProof(r);});
+test('M0109 reversed compound order is word-aware but lower than exact title',()=>{const r=query('сна продолжительность',[obj(1,'Продолжительность сна'),obj(2,'Сна продолжительность')]);assert.equal(r.results[0].id,id(2));matched(r,1,'partial_title');matched(r,2,'exact_title');});
+test('M0109 description alone cannot outrank partial own title',()=>{const r=query('продолжительность сна',[obj(1,'Продолжительность ночного сна'),obj(2,'Длительность',{descriptions:[v('продолжительность сна')]})]);assert.equal(r.results[0].id,id(1));matched(r,1,'partial_title');matched(r,2,'description_match');});
+test('M0109 path alone cannot prove relation or identity',()=>{const r=single('ночной сон',obj(1,'Ходьба',{paths:[v('Ночной сон')]}));matched(r,1,'path_only');noProof(r);});
+test('M0109 verified inflected alias can match ONLY with externally trusted evidence',()=>{const r=single('ночного сна',obj(1,'Ночной сон',{aliases:[alias(1,'ночного сна')]}));matched(r,1,'verified_exact_alias');noProof(r);});
+test('M0109 unverified inflected alias cannot match',()=>{const r=single('ночного сна',obj(1,'Ночной сон',{aliases:[alias(1,'ночного сна',false)]}));assert.equal(r.totalMatched,0);noProof(r);});
+test('M0109 transliteration and foreign-language terms not invented',()=>assert.equal(single('night sleep',obj(1,'Ночной сон')).totalMatched,0));
+test('M0109 zero matches remains input-only absence not proven',()=>noProof(single('неизвестное слово',obj(1,'Сон'))));
+test('M0109 first page with exact compound keeps hasMoreWithinInput semantics',()=>{const r=query('продолжительность сна',[obj(1,'Продолжительность сна'),obj(2,'Продолжительность ночного сна')],{limit:1});assert.equal(r.results[0].id,id(1));assert.equal(r.page.hasMoreWithinInput,true);noProof(r);});
+test('M0109 candidate UUIDs remain distinct for same normalized title',()=>{const r=query('ночной сон',[obj(1,'Ночной сон'),obj(2,'ночной сон')]);assert.deepEqual(r.results.map(x=>x.id),[id(1),id(2)]);noProof(r);});

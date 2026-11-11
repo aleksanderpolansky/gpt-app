@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arctor.app/contracts/ari/m0100-text-normalization-v1",
+  "title": "ARCTor M-0100 Unicode normalization design contract",
+  "description": "DESIGN ONLY; candidate keys never assign or merge ON UUIDs; authorization is external and mandatory.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["text", "locale", "mode"],
+  "properties": {
+    "text": {"type":"string", "minLength":1,"maxLength":512},
+    "locale": {"type":"string", "enum":["en","pl","es","de","cs","uk","ru","und"]},
+    "mode": {"const":"suggest_by_text"}
+  },
+  "$defs": {
+    "normalizedKeys": {
+      "type": "object", "additionalProperties": false,
+      "required": ["strictKey", "candidateOnlyKeys", "candidateMode", "identityResolution", "sourceLocale"],
+      "properties": {
+        "strictKey": {"type":"string", "minLength":1},
+        "candidateOnlyKeys": {"type":"array","maxItems":2,"uniqueItems":true,"items":{"type":"string", "minLength":1}},
+        "candidateMode": {"const":"RECALL_ONLY_NOT_EXACT"},
+        "identityResolution": {"const":"NEVER_AUTO_SELECT_OR_MERGE"},
+        "sourceLocale": {"type":"string", "enum":["en","pl","es","de","cs","uk","ru","und"]}
+      }
+    }
+  },
+  "x-contract": "ARCTOR_ARI_M0100_UNICODE_NORMALIZATION_DESIGN_V1",
+  "x-preserved-strict-differences": ["ru:ё vs е", "accented vs non-accented", "literal punctuation", "cross-locale", "semantic homonyms"],
+  "x-permitted-soft-fold-languages": ["en","pl","es","de","cs","ru"],
+  "x-unknown-locale-soft-fold": false,
+  "x-key-format": "<explicit-locale>::<unicode-NFC-whitespace-collapsed-locale-lowercase>",
+  "x-identity": "UUID is authoritative; normalization is retrieval evidence only and cannot create ON, change namespace, or bypass ACL",
+  "x-required-gates": ["server_identity","owner_privacy","version_snapshot","explicit_locale","non_auto_selection"],
+  "x-deferred": ["M-0101 full phrase priority", "M-0102 ancestor expansion", "runtime integration", "tenant E2E"]
+}

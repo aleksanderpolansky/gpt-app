@@ -1,0 +1,40 @@
+{
+  "contract": "ARCTOR_ARI_M0115_SEVEN_LOCALE_FORMS_REVIEW_V1",
+  "step": "M-0115",
+  "roadmapId": "ARI-03.04.05",
+  "acceptedAtUtc": "2026-11-02T17:34:56.649Z",
+  "moduleSha256": "614C90E5DB8664FD1F689AFBCC236E0A2157383539576EF32611745C94BD54ED",
+  "lexicalSha256": "B12161EDAD77221607928B44F14045F975F304D9437C0208B29FC1AD44B514AD",
+  "newTestSha256": "C3687330B6C94EE84F7858070764E62D733A5A66E64EDBBB341B112C6B87F4CF",
+  "locales": [
+    "en",
+    "pl",
+    "es",
+    "de",
+    "cs",
+    "uk",
+    "ru"
+  ],
+  "policy": "FROZEN_EXPLICIT_VERIFIED_LEXICAL_FORMS_NO_AUTOMATIC_MORPHOLOGY",
+  "testOnly": true,
+  "sourceCodeChanged": false,
+  "sevenLocalesPreserved": true,
+  "unverifiedFormsNotInferred": true,
+  "ambiguousUuidNotMerged": true,
+  "autoUuidSelection": false,
+  "scopeAuthorizationExternal": true,
+  "tests": {
+    "new": 91,
+    "regression": 432,
+    "total": 523,
+    "failed": 0,
+    "skipped": 0
+  },
+  "liveDb": false,
+  "apiModified": false,
+  "sql": false,
+  "paidAI": false,
+  "commitPushDeploy": false,
+  "searchEnabled": false,
+  "nextStep": "M-0116"
+}

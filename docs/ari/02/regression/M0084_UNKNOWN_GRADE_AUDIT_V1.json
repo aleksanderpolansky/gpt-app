@@ -1,0 +1,141 @@
+{
+  "contract": "ARCTOR_ARI_M0084_UNKNOWN_GRADE_GUARD_V1",
+  "step": "M-0084",
+  "roadmapId": "ARI-02.08.03",
+  "sourceGoldSha256": "E5073D25DEA44D91FC67A01B727C9427740FC7E5C13528281DA965DFD5A17916",
+  "goldCases": 156,
+  "syntheticCases": 10,
+  "requiredComparableCases": 10,
+  "unknownGradeForms": [
+    "missing",
+    "null",
+    "grade_4",
+    "grade_minus_one"
+  ],
+  "comparisonRuns": [
+    {
+      "engine": "baseline",
+      "variant": "ten_fully_graded_control",
+      "gate": "PASS",
+      "comparable": 10,
+      "blocking": 0
+    },
+    {
+      "engine": "baseline",
+      "variant": "missing",
+      "gate": "INCONCLUSIVE",
+      "comparable": 9,
+      "unknownCaseP10": null,
+      "blocking": 0,
+      "labels": 9
+    },
+    {
+      "engine": "baseline",
+      "variant": "null",
+      "gate": "INCONCLUSIVE",
+      "comparable": 9,
+      "unknownCaseP10": null,
+      "blocking": 0,
+      "labels": 9
+    },
+    {
+      "engine": "baseline",
+      "variant": "grade_4",
+      "gate": "INCONCLUSIVE",
+      "comparable": 9,
+      "unknownCaseP10": null,
+      "blocking": 0,
+      "labels": 9
+    },
+    {
+      "engine": "baseline",
+      "variant": "grade_minus_one",
+      "gate": "INCONCLUSIVE",
+      "comparable": 9,
+      "unknownCaseP10": null,
+      "blocking": 0,
+      "labels": 9
+    },
+    {
+      "engine": "baseline",
+      "variant": "one_sided_known_grade_removed",
+      "gate": "FAIL",
+      "integrityIssue": "GRADE_CHANGED_OR_REMOVED",
+      "blocking": 1
+    },
+    {
+      "engine": "experimental",
+      "variant": "ten_fully_graded_control",
+      "gate": "PASS",
+      "comparable": 10,
+      "blocking": 0
+    },
+    {
+      "engine": "experimental",
+      "variant": "missing",
+      "gate": "INCONCLUSIVE",
+      "comparable": 9,
+      "unknownCaseP10": null,
+      "blocking": 0,
+      "labels": 9
+    },
+    {
+      "engine": "experimental",
+      "variant": "null",
+      "gate": "INCONCLUSIVE",
+      "comparable": 9,
+      "unknownCaseP10": null,
+      "blocking": 0,
+      "labels": 9
+    },
+    {
+      "engine": "experimental",
+      "variant": "grade_4",
+      "gate": "INCONCLUSIVE",
+      "comparable": 9,
+      "unknownCaseP10": null,
+      "blocking": 0,
+      "labels": 9
+    },
+    {
+      "engine": "experimental",
+      "variant": "grade_minus_one",
+      "gate": "INCONCLUSIVE",
+      "comparable": 9,
+      "unknownCaseP10": null,
+      "blocking": 0,
+      "labels": 9
+    },
+    {
+      "engine": "experimental",
+      "variant": "one_sided_known_grade_removed",
+      "gate": "FAIL",
+      "integrityIssue": "GRADE_CHANGED_OR_REMOVED",
+      "blocking": 1
+    }
+  ],
+  "realGoldIdentical": [
+    {
+      "engine": "baseline",
+      "gate": "INCONCLUSIVE",
+      "comparableP10": 3,
+      "comparableR20": 0,
+      "blocking": 0
+    },
+    {
+      "engine": "experimental",
+      "gate": "INCONCLUSIVE",
+      "comparableP10": 0,
+      "comparableR20": 0,
+      "blocking": 0
+    }
+  ],
+  "interpretation": "PASS for synthetic fully graded comparator control, INCONCLUSIVE for partial unknown labels, FAIL for one-sided loss of a previously known grade. Neither result certifies live search quality.",
+  "qualityGate": "INCONCLUSIVE_GOLD_COVERAGE",
+  "independentHumanGold": false,
+  "realRecall20": "N/A",
+  "mutatedSourceGold": false,
+  "dbWrites": 0,
+  "aiApiCalls": 0,
+  "indexedSearchTested": false
+}

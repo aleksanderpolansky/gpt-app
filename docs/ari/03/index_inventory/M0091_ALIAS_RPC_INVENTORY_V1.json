@@ -1,0 +1,128 @@
+{
+  "contract": "ARCTOR_ARI_M0091_ALIAS_RPC_INVENTORY_V1",
+  "step": "M-0091",
+  "roadmap": "ARI-03.01.02",
+  "evidenceLevel": "USER_EXPORTED_LIVE_SQL_READONLY_INDEPENDENT_DB_ATTESTATION_ABSENT",
+  "sourceCapturedAtUtc": "2026-11-02T08:28:32.027519",
+  "sqlSha256": "AC8652C12DF94C2BD16B56AECDF0314F188866C2A0C74FB68394900662B926DA",
+  "rawExportSha256": "F1240DAF4FECE0A91C87A8776EA40D3D9D0B3A20A474EA3243E5F219D10FA5D4",
+  "priorSchemaExportSha256": "B336EABA701D31EDBD95DFE33E3A8CF1F12122B42E855BCF7DE8B4FB21CD93AD",
+  "aliasCount": 89,
+  "voAliasCount": 89,
+  "approvedPublishedCount": 89,
+  "missingNormalized": 0,
+  "missingTargets": 89,
+  "explicitGlobalUnowned": 0,
+  "historicalReference": 89,
+  "deltaFromHistorical": 0,
+  "statusCounts": {
+    "published": 89
+  },
+  "localeCounts": {
+    "en": 44,
+    "ru": 45
+  },
+  "conceptCounts": {
+    "value_object": 89
+  },
+  "sourceCounts": {
+    "system_seed": 89
+  },
+  "scopeCounts": {
+    "MISSING_VO_TARGET": 89
+  },
+  "rpcMetadata": [
+    {
+      "name": "get_global_value_object_recognition_candidates_v1",
+      "signature": "p_query_text text, p_locale text, p_semantic_tags jsonb, p_limit integer",
+      "returns": "jsonb",
+      "volatility": "s",
+      "securityDefiner": true,
+      "bodyMd5": "fced0483f06c49b60619d99028a63615",
+      "anonExecute": false,
+      "authenticatedExecute": false,
+      "serviceRoleExecute": true,
+      "settings": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "get_value_object_alias_profile_v1",
+      "signature": "p_owner_user_id uuid, p_owner_actor_id uuid, p_value_object_id uuid",
+      "returns": "jsonb",
+      "volatility": "s",
+      "securityDefiner": true,
+      "bodyMd5": "027a145fb5f20a0a19bca8c5c9721ada",
+      "anonExecute": false,
+      "authenticatedExecute": false,
+      "serviceRoleExecute": true,
+      "settings": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "manage_value_object_alias_v1",
+      "signature": "p_owner_user_id uuid, p_owner_actor_id uuid, p_created_by_actor_id uuid, p_value_object_id uuid, p_action text, p_payload jsonb",
+      "returns": "jsonb",
+      "volatility": "v",
+      "securityDefiner": true,
+      "bodyMd5": "67e880c7d9e629eeb4e7cabd7fbb47b2",
+      "anonExecute": false,
+      "authenticatedExecute": false,
+      "serviceRoleExecute": true,
+      "settings": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "recognize_global_value_object_text_v1",
+      "signature": "p_query_text text, p_locale text, p_root_canonical_key text, p_facet_code text, p_limit integer",
+      "returns": "jsonb",
+      "volatility": "s",
+      "securityDefiner": true,
+      "bodyMd5": "7d157ff69dd82debedc42104296b31ed",
+      "anonExecute": false,
+      "authenticatedExecute": false,
+      "serviceRoleExecute": true,
+      "settings": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "recognize_value_object_text_v1",
+      "signature": "p_owner_user_id uuid, p_owner_actor_id uuid, p_query_text text, p_locale text",
+      "returns": "jsonb",
+      "volatility": "s",
+      "securityDefiner": true,
+      "bodyMd5": "fa3ec95e4df2feb5eb8df7382e66bcf9",
+      "anonExecute": false,
+      "authenticatedExecute": false,
+      "serviceRoleExecute": true,
+      "settings": [
+        "search_path=public, pg_temp"
+      ]
+    }
+  ],
+  "expectedRecognitionRPCs": [
+    {
+      "name": "recognize_global_value_object_text_v1",
+      "present": true
+    },
+    {
+      "name": "recognize_value_object_text_v1",
+      "present": true
+    }
+  ],
+  "collisionGroupCount": 0,
+  "indexableApproved": 0,
+  "rpcBehaviorVerified": false,
+  "sourceLocaleScopeVerification": "METADATA_ONLY_NOT_PERMISSIONS_E2E",
+  "aliasRowsInPublicReport": 0,
+  "aliasTextsExposed": false,
+  "dbContentWrites": false,
+  "rpcCalled": false,
+  "indexActivated": false,
+  "indexedSearchStillOff": true,
+  "searchQuality": "INCONCLUSIVE",
+  "limitation": "Routines are only inspected via metadata and hashed function body; no live semantic correctness test, no row-level RLS isolation test; global scope not inferred when ambiguous."
+}

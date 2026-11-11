@@ -1,0 +1,30 @@
+{
+  "contract": "ARCTOR_M0120_EMBEDDING_STORAGE_REVIEW_V1",
+  "step": "M-0120",
+  "roadmapId": "ARI-03.05.03",
+  "atUtc": "2026-11-02T19:24:59.317Z",
+  "mode": "DESIGN",
+  "draftSchemaSpecSha256": "93224A84D840F5CFF9DBB70C3FDB6C48968C969518A1C013AA7AD73C659BA138",
+  "draftDocumentSha256": "50380B67D47490CC775F96C23588C34CECE8CD66017E540269BFA400FAEC4409",
+  "previousModuleSha256": "771B6F8A5C2B8C303C477861A7803C4E0C0B0D13CB8007E4A8B4A21A8148C8F4",
+  "pgvectorInstalled": false,
+  "sourcePkVerifiedLive": false,
+  "rlsVerifiedLive": false,
+  "realSqlMigration": false,
+  "liveE2E": false,
+  "modelQualityCompared": false,
+  "costGateApproved": false,
+  "lexicalFallbackRequired": true,
+  "sql": false,
+  "embeddingCalls": false,
+  "dbWrites": false,
+  "commitPushDeploy": false,
+  "tests": {
+    "new": 93,
+    "regressions": 757,
+    "total": 850,
+    "failed": 0,
+    "skipped": 0
+  },
+  "nextStep": "M-0121"
+}

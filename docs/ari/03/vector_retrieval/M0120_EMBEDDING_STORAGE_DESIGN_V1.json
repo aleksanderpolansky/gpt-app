@@ -1,0 +1,169 @@
+{
+  "contract": "ARCTOR_M0120_EMBEDDING_STORAGE_DRAFT_V1",
+  "roadmapId": "ARI-03.05.03",
+  "status": "DESIGN_ONLY_NOT_MIGRATION",
+  "requiresApprovalBeforeSQL": true,
+  "previousUnitContract": "ARCTOR_EMBEDDING_UNIT_DRAFT_V1",
+  "proposedTable": "public.on_embedding_store_v1",
+  "sourceTableExpected": "public.value_objects",
+  "sourceFkRequiresVerification": true,
+  "pgvectorInstalledAtInventory": false,
+  "pgvectorAvailableAtInventory": true,
+  "locales": [
+    "en",
+    "pl",
+    "es",
+    "de",
+    "cs",
+    "uk",
+    "ru"
+  ],
+  "fields": [
+    {
+      "name": "id",
+      "pgType": "uuid",
+      "nullable": false,
+      "purpose": "technical immutable row id"
+    },
+    {
+      "name": "on_id",
+      "pgType": "uuid",
+      "nullable": false,
+      "purpose": "source ON uuid; FK target pending live schema verification"
+    },
+    {
+      "name": "locale",
+      "pgType": "text",
+      "nullable": false,
+      "purpose": "strict seven-locale code"
+    },
+    {
+      "name": "ontology_version",
+      "pgType": "text",
+      "nullable": false,
+      "purpose": "versioned approved definition"
+    },
+    {
+      "name": "dictionary_version",
+      "pgType": "text",
+      "nullable": false,
+      "purpose": "versioned approved aliases"
+    },
+    {
+      "name": "scope_kind",
+      "pgType": "text",
+      "nullable": false,
+      "purpose": "global_system or owner_private"
+    },
+    {
+      "name": "owner_actor_id",
+      "pgType": "uuid",
+      "nullable": true,
+      "purpose": "non-null only when owner_private"
+    },
+    {
+      "name": "model_id",
+      "pgType": "text",
+      "nullable": false,
+      "purpose": "embedding model provider/name family"
+    },
+    {
+      "name": "model_version",
+      "pgType": "text",
+      "nullable": false,
+      "purpose": "immutable embedding model release"
+    },
+    {
+      "name": "embedding_dimensions",
+      "pgType": "integer",
+      "nullable": false,
+      "purpose": "size of vector; model-specific, not hardcoded"
+    },
+    {
+      "name": "embedding",
+      "pgType": "vector",
+      "nullable": false,
+      "purpose": "pgvector value; extension not installed"
+    },
+    {
+      "name": "content_sha256",
+      "pgType": "text",
+      "nullable": false,
+      "purpose": "hash of approved canonical input text"
+    },
+    {
+      "name": "source_ids",
+      "pgType": "jsonb",
+      "nullable": false,
+      "purpose": "provenance identifiers; data classification required"
+    },
+    {
+      "name": "review_status",
+      "pgType": "text",
+      "nullable": false,
+      "purpose": "approved evidence for source content"
+    },
+    {
+      "name": "state",
+      "pgType": "text",
+      "nullable": false,
+      "purpose": "draft ready stale revoked lifecycle"
+    },
+    {
+      "name": "created_at",
+      "pgType": "timestamptz",
+      "nullable": false,
+      "purpose": "storage audit creation"
+    },
+    {
+      "name": "updated_at",
+      "pgType": "timestamptz",
+      "nullable": false,
+      "purpose": "storage audit update"
+    }
+  ],
+  "uniquenessComponents": [
+    "on_id",
+    "locale",
+    "ontology_version",
+    "dictionary_version",
+    "scope_kind",
+    "owner_actor_id",
+    "model_id",
+    "model_version",
+    "content_sha256"
+  ],
+  "dimensionsPolicy": "enforce vector_dims(embedding) = embedding_dimensions and compare only identical model_id,model_version,dimensions",
+  "scopePolicy": "global_system requires owner_actor_id IS NULL; owner_private requires owner_actor_id IS NOT NULL",
+  "dataPolicies": {
+    "tenantIsolation": "DENY_BY_DEFAULT_RLS_AND_AUTHORIZED_SERVER_ONLY",
+    "anon": "DENY",
+    "authenticatedDirect": "DENY",
+    "serviceRole": "serverOnlyAfterCallerAuthorization",
+    "sourceIds": "provenance metadata no secrets",
+    "globalOnly": "never merge private and system rows",
+    "privateScope": "ownerActorId from verified authorized caller only"
+  },
+  "indexesProposed": [
+    "identity_btree",
+    "scope_owner_btree",
+    "model_dimensions_btree",
+    "content_sha256_btree"
+  ],
+  "vectorIndexProposal": "DEFERRED; HNSW/IVFFlat only after same-model filtered plan and benchmark; do not create now",
+  "deletionPolicy": "revocation/versioning retains provenance; no silent hard-delete",
+  "fallback": "LEXICAL_ONLY if extension, model approval, privacy, quality, cost or index readiness unverified",
+  "nextApprovals": [
+    "manual live source PK/FK/schema check",
+    "pgvector and extension schema check",
+    "DBA and RLS review",
+    "tenant isolation E2E",
+    "model/dim cost gate",
+    "approved SQL migration separate step"
+  ],
+  "mode": "design_not_sql",
+  "sqlExecuted": false,
+  "modelCalls": false,
+  "writesDatabase": false,
+  "createsMigrationFile": false
+}

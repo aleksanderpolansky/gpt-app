@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arctor.app/contracts/ari/m0102-controlled-ancestor-expansion-v1",
+  "title": "ARCTor M0102 controlled structural ancestor expansion (design only)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "mode",
+    "query",
+    "verifiedSeeds",
+    "verifiedParentEdges",
+    "expansionPolicy",
+    "selectionState"
+  ],
+  "properties": {
+    "mode": {
+      "const": "suggest_by_text"
+    },
+    "query": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "locale"
+      ],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "locale": {
+          "enum": [
+            "en",
+            "pl",
+            "es",
+            "de",
+            "cs",
+            "uk",
+            "ru",
+            "und"
+          ]
+        }
+      }
+    },
+    "verifiedSeeds": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "valueObjectId",
+          "authorizationVerified",
+          "activeVerified",
+          "localeVerified",
+          "sourceVerified"
+        ],
+        "properties": {
+          "valueObjectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorizationVerified": {
+            "const": true
+          },
+          "activeVerified": {
+            "const": true
+          },
+          "localeVerified": {
+            "const": true
+          },
+          "sourceVerified": {
+            "const": true
+          }
+        }
+      }
+    },
+    "verifiedParentEdges": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "childId",
+          "parentId",
+          "relationType",
+          "structuralEdgeVerified",
+          "parentAuthorized",
+          "parentActiveVerified",
+          "parentLocaleVerified",
+          "parentSourceVerified",
+          "snapshotVerified"
+        ],
+        "properties": {
+          "childId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "relationType": {
+            "const": "STRUCTURAL_PARENT"
+          },
+          "structuralEdgeVerified": {
+            "const": true
+          },
+          "parentAuthorized": {
+            "const": true
+          },
+          "parentActiveVerified": {
+            "const": true
+          },
+          "parentLocaleVerified": {
+            "const": true
+          },
+          "parentSourceVerified": {
+            "const": true
+          },
+          "snapshotVerified": {
+            "const": true
+          }
+        }
+      }
+    },
+    "expansionPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maxDepth",
+        "maxEdges",
+        "maxCandidates",
+        "maxPathsPerAncestor",
+        "relationship",
+        "evidenceClass"
+      ],
+      "properties": {
+        "maxDepth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
+        },
+        "maxEdges": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "maxCandidates": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "maxPathsPerAncestor": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4
+        },
+        "relationship": {
+          "const": "STRUCTURAL_PARENT"
+        },
+        "evidenceClass": {
+          "const": "ancestor_expansion"
+        }
+      }
+    },
+    "selectionState": {
+      "const": "UNCONFIRMED"
+    }
+  },
+  "x-contract": "ARCTOR_ARI_M0102_ANCESTOR_EXPANSION_DESIGN_V1",
+  "x-invariants": {
+    "ancestor_is_never_direct_title_match": true,
+    "seed_and_each_ancestor_authorization_required": true,
+    "edge_must_be_verified_structural_parent": true,
+    "cross_tenant_and_private_leakage_prohibited": true,
+    "no_inferred_parent_or_translation": true,
+    "multi_parent_allowed": true,
+    "cycle_safe": true,
+    "bounded_depth_edges_candidates_and_paths": true,
+    "deduplicate_by_ancestor_uuid": true,
+    "full_phrase_direct_match_priority_unchanged": true,
+    "no_auto_selection_or_merge": true,
+    "no_unsafe_reason_disclosure": true,
+    "exact_uuid_lookup_unchanged": true,
+    "catalog_snapshot_and_translation_fingerprint_pinned": true
+  },
+  "x-future_work": [
+    "M0103 unresolved tokens and rationale",
+    "API implementation",
+    "real RLS/E2E isolation",
+    "quality benchmarks",
+    "repair broken alias target references"
+  ]
+}

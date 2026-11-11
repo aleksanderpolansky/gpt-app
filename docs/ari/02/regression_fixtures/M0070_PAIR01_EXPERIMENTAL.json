@@ -1,0 +1,32 @@
+{
+  "contract": "ARCTOR_ARI_M0070_FROZEN_EXPERIMENTAL_V1",
+  "sourceFile": "ARCTOR_ARI02_SEARCH_TRACE_1793301726490.json",
+  "sourceSha256": "6312D088F407D3CD94920732AFB3F80982797D4C3F6179752F3D68DCBB91C4C3",
+  "coProducedWithinOneHttpResponse": true,
+  "query": "ночной сон",
+  "locale": "ru",
+  "diagnosticVersion": "ARCTOR_ARI_02_1_READ_ONLY_SEARCH_TRACE_V1",
+  "catalogTotal": 740,
+  "catalogScanned": 740,
+  "sameInMemorySnapshotWithinThisRequest": true,
+  "contentFingerprintAvailable": false,
+  "guarantee": "Same source response contains both modes; application source computes both on one loaded rows array. No cross-request catalog content checksum.",
+  "rows": [
+    {
+      "rank": 1,
+      "id": "a876134c-367b-5b3f-8f04-4752031b63d4",
+      "title": "Сон",
+      "path": "Действия и процессы › Физиологические процессы › Сон",
+      "role": "intermediate",
+      "score": 120
+    },
+    {
+      "rank": 2,
+      "id": "bf6b8ca1-97b4-56c3-a115-f76e2e7fec5a",
+      "title": "Ночной сон",
+      "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон",
+      "role": "intermediate",
+      "score": 43
+    }
+  ]
+}

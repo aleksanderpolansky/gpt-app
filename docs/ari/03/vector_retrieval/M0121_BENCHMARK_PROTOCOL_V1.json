@@ -1,0 +1,18 @@
+{
+  "contract": "ARCTOR_M0121_BENCHMARK_PREPARATION_V1",
+  "step": "M-0121",
+  "roadmap_id": "ARI-03.05.04",
+  "task": "Протестировать два мультиязычных кандидата модели на одинаковом held-out наборе.",
+  "mode": "DESIGN",
+  "state": "PREPARED_NOT_EVALUATED",
+  "models": [
+    {"id": "text-embedding-3-small", "provider": "OpenAI", "defaultDimensions": 1536, "usdPerMillionInputTokens": 0.02},
+    {"id": "text-embedding-3-large", "provider": "OpenAI", "defaultDimensions": 3072, "usdPerMillionInputTokens": 0.13}
+  ],
+  "candidatePolicy": "No online calls; real model outputs require owner-approved expense and privacy review",
+  "goldEvidence": "M0049_GOLD_FULL_27.json provisional AI-assisted owner internal review: 27 scenarios / 7 annotated / 69 judgments (not independently adjudicated)",
+  "minimumComparability": ["sameFrozenQueryIds", "sameFrozenCandidateOnIds", "sameVersionedSource", "sameApprovedRelevanceLabels", "twoDistinctModelIds", "scoredOnSameHeldout"],
+  "metrics": ["recall@1", "recall@5", "mrr@5", "ndcg@5", "perLocale"],
+  "security": {"noDbWrites": true, "noEmbeddingCalls": true, "noSecretExport": true, "ledgerUnchanged": true, "lexicalOnlyUntilApproved": true},
+  "acceptance": "NOT_ACCEPTED_UNTIL_REAL_MODEL_COMPARISON"
+}

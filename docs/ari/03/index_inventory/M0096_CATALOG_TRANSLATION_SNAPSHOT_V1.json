@@ -1,0 +1,72 @@
+{
+  "contract": "ARCTOR_ARI_M0096_CATALOG_TRANSLATION_SNAPSHOT_V1",
+  "step": "M-0096",
+  "roadmapId": "ARI-03.01.07",
+  "acceptedSnapshotAtUtc": "2026-11-02T10:57:38.900Z",
+  "dbCapturedAtUtc": "2026-11-02T10:46:57.221044",
+  "evidenceLevel": "SQL_EDITOR_READONLY_SINGLE_STATEMENT_AGGREGATED_FULL_ROW_FINGERPRINTS",
+  "catalog_snapshot_hash": "sha256:v1:e68d4c397e6d7286cc883c219470869d586933c98a66362be92886f88f16299f",
+  "translation_version": "derived-sha256-v1:b2b7110d065d5e215aeef7069cff8312a8553ba9d6f4b50febd3ae35bdb111c2",
+  "translationVersionType": "DERIVED_CONTENT_FINGERPRINT_NOT_AUTHORITATIVE_MONOTONIC_VERSION",
+  "hashAlgorithm": "SHA256_DETERMINISTIC_SNAPSHOT_NOT_DIGITAL_SIGNATURE",
+  "definition": "catalog covers VO + definition versions + aliases; translation covers localized content + source registry; per-table full-row JSONB MD5 aggregations in fixed PK order",
+  "snapshotSourceTables": [
+    "value_objects",
+    "value_object_definition_versions",
+    "concept_aliases",
+    "platform_localized_content_v1",
+    "platform_localization_sources_v1"
+  ],
+  "components": {
+    "value_objects": {
+      "rows": 803,
+      "sha256": "41b76b86a38a656097d512cd116c3f5bfe8641bd15acd7a29ac54d91f7cbc8fd",
+      "active_rows": 791
+    },
+    "concept_aliases": {
+      "rows": 89,
+      "sha256": "cf04d132f4acd339d5e3b0ad4e091a04e7dc60c3f26b5d231eaee02b2ae75868"
+    },
+    "platform_localized_content_v1": {
+      "rows": 738,
+      "sha256": "357e0ad464c14953b13d9e89f4f422a61b69b4e28045bf11b060aa79a1baeb2a",
+      "human_locked_rows": 0
+    },
+    "platform_localization_sources_v1": {
+      "rows": 125,
+      "sha256": "b73147bdbb13ab9827580ed0ff586ceb65189e8461fe49f06942f4abe9d0c622"
+    },
+    "value_object_definition_versions": {
+      "rows": 822,
+      "sha256": "d0b16b4c9eaf8e25f7b6f1935a0685b195313fa72f75d9996e9fadda8700cebd",
+      "distinct_value_objects": 798
+    }
+  },
+  "driftFromM0094": {
+    "catalogObjectRowsChangedFromM0094": false,
+    "activeObjectsChangedFromM0094": false,
+    "definitionRowsChangedFromM0094": false,
+    "localizedRowsChangedFromM0094": false,
+    "sourceRowsChangedFromM0094": false,
+    "aliasRowsChangedFromM0094": false
+  },
+  "driftAny": false,
+  "indexableApproved": 0,
+  "translationIdentityJoinVerified": false,
+  "approvedTranslationsNew": 0,
+  "note": "Computed hashes provide a reproducible baseline but do not verify that localized rows join to the intended Value Objects or that RLS E2E is safe.",
+  "policyM0095Sha256": "41682A6E13BA73A515F9842F13D0B11FEDA0B3DB00B22DEC18F1CF021F4E63EA",
+  "previousAcceptedLedgerSha256": "3D8A7E878F432607D1FB8AF307661FD227D42E0CDEBA802DEC3702A53CB56D73",
+  "sqlSha256": "2651BD0251C11E7FA6B3F603F19A21951427E8A5A26B59C33D79DD8BC22684D5",
+  "rawExportSha256": "9DE9083506742E8FCA220D1BAE374F5E74754C5211A03F41DCAB32D4BD05A09F",
+  "commercialRootCanonicalKeyException": "2 PGC2D system roots may omit key",
+  "commercialRootDuplicateGroupsOpen": 2,
+  "aliasTargetsUnlinkedOpen": 89,
+  "privacyIsolationE2ETested": false,
+  "searchQuality": "INCONCLUSIVE",
+  "sourceChanged": false,
+  "sqlExecutedInSupabase": true,
+  "sqlWrite": false,
+  "commitPushDeploy": false,
+  "indexedSearchActivated": false
+}

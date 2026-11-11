@@ -1,0 +1,46 @@
+{
+  "contract": "ARCTOR_ARI_M0104_REAL_REPOSITORY_REGRESSION_V1",
+  "step": "M-0104",
+  "roadmapId": "ARI-03.03.01",
+  "codeMode": "TESTS_IN_WORKTREE_NOT_PRODUCTION_IMPLEMENTATION",
+  "expectedTestCount": 13,
+  "sourceModules": [
+    "src/lib/ontology-research/contextSearchV2.ts",
+    "src/lib/ontology-research/ari02EnhancedSearch.ts"
+  ],
+  "installedTests": "scripts/tests/ari03-m0104-lexical-baseline.test.cjs",
+  "coverage": [
+    "full_title_exact_above_partial",
+    "full_title_exact_above_path_only",
+    "partial_title_above_path_only",
+    "title_vs_path_provenance",
+    "substring_false_positive_guard",
+    "root_leaf_distinct_identifiers_and_roles",
+    "deterministic_ties_by_uuid",
+    "no_auto_selection_for_same_title",
+    "explicit_top_k_truncation",
+    "no_parent_inference_from_textual_path",
+    "legacy_normalization_is_not_the_new_strict_contract",
+    "empty_query"
+  ],
+  "deferredToM0105AndLater": [
+    "new_weighted_lexical_retrieval_implementation",
+    "new_explicit_exact_uuid_lookup_runtime",
+    "verified_alias_target_repair",
+    "M0100_strict_ye_diacritic_engine_upgrade",
+    "production_search_routing",
+    "real_cross_user_privacy_e2e",
+    "production_deployment"
+  ],
+  "gates": {
+    "requireActualRepoExecution": true,
+    "noAutoSelection": true,
+    "noProductionModification": true,
+    "noSqlWrite": true,
+    "noCommitPushDeploy": true,
+    "noFeatureActivation": true,
+    "failedTestsBlockAcceptance": true
+  },
+  "testInfrastructurePolicy": "REUSE_EXISTING_SCRIPTS_TESTS_NO_NEW_PARALLEL_TEST_DIRECTORY",
+  "acceptanceHonesty": "Tests use current real source modules; UUID exact runtime and production search remain untested."
+}

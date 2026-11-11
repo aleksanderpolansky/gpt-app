@@ -1,0 +1,510 @@
+{
+  "contract": "ARCTOR_ARI_M0090_INDEX_SCHEMA_INVENTORY_V1",
+  "step": "M-0090",
+  "roadmap": "ARI-03.01.01",
+  "sourceType": "USER_EXPORTED_LIVE_PG_CATALOG_SQL_EDITOR_OUTPUT_UNINDEPENDENTLY_ATTESTED",
+  "sqlSha256": "4E97C63FE0C0CB16AE72B22065003B5241E41828A8DE4F2665084D4F0E70EFC2",
+  "rawExportSha256": "B336EABA701D31EDBD95DFE33E3A8CF1F12122B42E855BCF7DE8B4FB21CD93AD",
+  "capturedAtUtc": "2026-11-02T08:08:54.406447",
+  "executedOnDatabaseClaimed": true,
+  "databaseTargetIndependentVerification": false,
+  "serverVersion": "17.6",
+  "sourceScope": "public_and_arctor_prefix",
+  "candidateTables": 64,
+  "columns": 992,
+  "indexes": 262,
+  "routines": 62,
+  "fieldCandidates": 23,
+  "approvedIndexableFields": 0,
+  "excludedPendingSourceLocaleVersionScope": 23,
+  "fields": [
+    {
+      "source": "public.action_type_translations.description",
+      "field": "description",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [
+        "locale"
+      ],
+      "versionColumns": [],
+      "scopeColumns": [],
+      "sourceColumns": [],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.calculation_model_series_v1.title",
+      "field": "title",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [],
+      "versionColumns": [],
+      "scopeColumns": [
+        "scope_code",
+        "owner_actor_id",
+        "owner_user_id",
+        "visibility_code"
+      ],
+      "sourceColumns": [],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.calculation_model_series_v1.description",
+      "field": "description",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [],
+      "versionColumns": [],
+      "scopeColumns": [
+        "scope_code",
+        "owner_actor_id",
+        "owner_user_id",
+        "visibility_code"
+      ],
+      "sourceColumns": [],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.context_translations.description",
+      "field": "description",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [
+        "locale"
+      ],
+      "versionColumns": [],
+      "scopeColumns": [],
+      "sourceColumns": [],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.contextual_category_translations.description",
+      "field": "description",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [
+        "locale"
+      ],
+      "versionColumns": [],
+      "scopeColumns": [],
+      "sourceColumns": [],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.object_type_translations.description",
+      "field": "description",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [
+        "locale"
+      ],
+      "versionColumns": [],
+      "scopeColumns": [],
+      "sourceColumns": [],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.platform_localization_entity_types_v1.description",
+      "field": "description",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [],
+      "versionColumns": [],
+      "scopeColumns": [],
+      "sourceColumns": [],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.platform_localized_content_v1.localized_text",
+      "field": "localized_text",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [
+        "locale_code",
+        "source_locale_code"
+      ],
+      "versionColumns": [
+        "source_revision"
+      ],
+      "scopeColumns": [],
+      "sourceColumns": [
+        "source_revision",
+        "source_locale_code",
+        "provider_code"
+      ],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.project_contexts.title",
+      "field": "title",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [],
+      "versionColumns": [],
+      "scopeColumns": [
+        "scope_code",
+        "owner_actor_id",
+        "owner_user_id"
+      ],
+      "sourceColumns": [],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.project_contexts.description",
+      "field": "description",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [],
+      "versionColumns": [],
+      "scopeColumns": [
+        "scope_code",
+        "owner_actor_id",
+        "owner_user_id"
+      ],
+      "sourceColumns": [],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.value_object_definition_versions.title",
+      "field": "title",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [],
+      "versionColumns": [
+        "version"
+      ],
+      "scopeColumns": [
+        "scope_code",
+        "origin_type_code",
+        "owner_actor_id",
+        "visibility_code"
+      ],
+      "sourceColumns": [],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.value_object_definition_versions.description",
+      "field": "description",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [],
+      "versionColumns": [
+        "version"
+      ],
+      "scopeColumns": [
+        "scope_code",
+        "origin_type_code",
+        "owner_actor_id",
+        "visibility_code"
+      ],
+      "sourceColumns": [],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.value_object_definition_versions.canonical_key",
+      "field": "canonical_key",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [],
+      "versionColumns": [
+        "version"
+      ],
+      "scopeColumns": [
+        "scope_code",
+        "origin_type_code",
+        "owner_actor_id",
+        "visibility_code"
+      ],
+      "sourceColumns": [],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.value_object_outcome_criteria.title",
+      "field": "title",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [],
+      "versionColumns": [],
+      "scopeColumns": [
+        "owner_actor_id",
+        "owner_user_id"
+      ],
+      "sourceColumns": [],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.value_object_outcome_criteria.description",
+      "field": "description",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [],
+      "versionColumns": [],
+      "scopeColumns": [
+        "owner_actor_id",
+        "owner_user_id"
+      ],
+      "sourceColumns": [],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.value_object_parameter_definitions.title",
+      "field": "title",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [],
+      "versionColumns": [
+        "version"
+      ],
+      "scopeColumns": [
+        "scope_code",
+        "owner_actor_id",
+        "owner_user_id"
+      ],
+      "sourceColumns": [],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.value_object_parameter_definitions.description",
+      "field": "description",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [],
+      "versionColumns": [
+        "version"
+      ],
+      "scopeColumns": [
+        "scope_code",
+        "owner_actor_id",
+        "owner_user_id"
+      ],
+      "sourceColumns": [],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.value_object_target_standard_versions.description",
+      "field": "description",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [],
+      "versionColumns": [
+        "version"
+      ],
+      "scopeColumns": [
+        "owner_actor_id",
+        "owner_user_id"
+      ],
+      "sourceColumns": [
+        "source_type_code"
+      ],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.value_object_target_standard_versions_read_v2.description",
+      "field": "description",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [],
+      "versionColumns": [
+        "version"
+      ],
+      "scopeColumns": [
+        "owner_actor_id",
+        "owner_user_id"
+      ],
+      "sourceColumns": [
+        "source_type_code"
+      ],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.value_object_target_standards.description",
+      "field": "description",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [],
+      "versionColumns": [],
+      "scopeColumns": [
+        "owner_actor_id",
+        "user_id"
+      ],
+      "sourceColumns": [],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.value_objects.title",
+      "field": "title",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [],
+      "versionColumns": [],
+      "scopeColumns": [
+        "scope_code",
+        "origin_type_code",
+        "owner_actor_id",
+        "owner_user_id",
+        "actor_id",
+        "visibility_code",
+        "visibility"
+      ],
+      "sourceColumns": [],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.value_objects.description",
+      "field": "description",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [],
+      "versionColumns": [],
+      "scopeColumns": [
+        "scope_code",
+        "origin_type_code",
+        "owner_actor_id",
+        "owner_user_id",
+        "actor_id",
+        "visibility_code",
+        "visibility"
+      ],
+      "sourceColumns": [],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    },
+    {
+      "source": "public.value_objects.canonical_key",
+      "field": "canonical_key",
+      "dataType": "text",
+      "schemaFieldVerified": true,
+      "localeColumns": [],
+      "versionColumns": [],
+      "scopeColumns": [
+        "scope_code",
+        "origin_type_code",
+        "owner_actor_id",
+        "owner_user_id",
+        "actor_id",
+        "visibility_code",
+        "visibility"
+      ],
+      "sourceColumns": [],
+      "localeValueVerified": false,
+      "versionValueVerified": false,
+      "scopeValueVerified": false,
+      "rowContentVerified": false,
+      "indexable": false,
+      "status": "EXCLUDE_PENDING_ROW_PROVENANCE_AND_SCOPE"
+    }
+  ],
+  "indexActivationAuthorized": false,
+  "searchQuality": "INCONCLUSIVE",
+  "fullRowScopeVerified": false,
+  "qualityClaim": "STRUCTURE_ONLY_NOT_CONTENT_OR_INDEX_READY",
+  "priorSourceSnapshotCommit": "689e14039211edb2daec219b82c8e31c5d22f5ee"
+}

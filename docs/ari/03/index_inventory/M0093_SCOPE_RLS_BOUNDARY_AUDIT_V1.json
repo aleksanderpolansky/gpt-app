@@ -1,0 +1,80 @@
+{
+  "contract": "ARCTOR_ARI_M0093_SCOPE_RLS_BOUNDARY_AUDIT_V1",
+  "step": "M-0093",
+  "roadmap": "ARI-03.01.04",
+  "evidenceLevel": "USER_EXPORTED_SQL_EDITOR_METADATA_ONLY_NO_AUTHENTICATED_E2E",
+  "capturedAtUtc": "2026-11-02T09:49:25.078009Z",
+  "sqlSha256": "8DCC1C12A82E635105CE768BB6CBA6CDC3314874BCCB6025CDF7B3275C9EFC15",
+  "rawExportSha256": "152C5C624F39B602A74E53704503CE02EA8D552D3E11AAE43F0F6FDF1780A390",
+  "priorReceiptSha256": "513AAAF9B57A550CF012DC08D02B72DB421E1B8E83401553B6BF6B9BFC04AE0A",
+  "priorAuditSha256": "6CB62243B513329ED241C157B258D50DC22B2522B5078E150ADD661D2E37B394",
+  "totalObjects": 803,
+  "activeObjects": 791,
+  "boundaryCounts": {
+    "GLOBAL_MISSING_PRIVACY_OR_IDENTITY_EXCLUDE": 1,
+    "GLOBAL_PUBLIC_CANDIDATE_NOT_APPROVED": 739,
+    "INACTIVE_EXCLUDED": 12,
+    "OWNER_PRIVATE_EXCLUDE_SHARED": 49,
+    "OWNER_SCOPE_AMBIGUOUS_EXCLUDE": 2
+  },
+  "globalPublicCandidatesNotApproved": 739,
+  "privateOwnerExcludedFromShared": 49,
+  "rootCount": 4,
+  "rootMissingKey": 2,
+  "possibleDuplicateRootGroups": 2,
+  "rlsTables": [
+    {
+      "rls_forced": false,
+      "table_name": "concept_aliases",
+      "rls_enabled": true,
+      "schema_name": "public",
+      "anon_select_privilege": true,
+      "service_select_privilege": true,
+      "authenticated_select_privilege": true
+    },
+    {
+      "rls_forced": false,
+      "table_name": "value_object_definition_versions",
+      "rls_enabled": true,
+      "schema_name": "public",
+      "anon_select_privilege": false,
+      "service_select_privilege": true,
+      "authenticated_select_privilege": false
+    },
+    {
+      "rls_forced": false,
+      "table_name": "value_objects",
+      "rls_enabled": true,
+      "schema_name": "public",
+      "anon_select_privilege": true,
+      "service_select_privilege": true,
+      "authenticated_select_privilege": true
+    }
+  ],
+  "policyCounts": {
+    "concept_aliases": 1,
+    "value_objects": 1
+  },
+  "policyMetadataCount": 2,
+  "rlsDisabled": [],
+  "warningCodes": [
+    "OWNER_SCOPE_AMBIGUOUS",
+    "GLOBAL_METADATA_CONFLICT",
+    "SAME_OWNER_COMMERCIAL_ROOT_POSSIBLE_DUPLICATE"
+  ],
+  "commercialRootMissingCanonicalAcceptedException": true,
+  "privateIsolationE2ECertified": false,
+  "indexableApproved": 0,
+  "searchQuality": "INCONCLUSIVE",
+  "indexedSearchOff": true,
+  "aliasTargetsMissingOpenFromM0092": 89,
+  "twoCommercialRootsClassification": "ACCEPTED_DESIGN_EXCEPTION_FOR_MISSING_CANONICAL_KEY_ONLY",
+  "twoCommercialRootsProvenance": "User supplied follow-up read-only SQL rows showing two same-owner root objects; fresh query separately checks root metadata and namespace groups",
+  "ownerPrivateScopeRule": "Exclude all owner-scoped objects from shared/global index; future per-user search requires separate verified access filter",
+  "grantAndRlsLimit": "RLS enabled and policies present are metadata only; cannot prove actual end-user isolation or service_role path. Bypass and API routing NOT tested.",
+  "sourceCodeChanged": false,
+  "sqlWrite": false,
+  "rpcExecuted": false,
+  "commitPushDeploy": false,
+  "indexedSearchStillOff": true
+}

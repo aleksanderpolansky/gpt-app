@@ -1,0 +1,65 @@
+'use strict';
+/** M-0120 design-only schema assertions: NO db connections, no SQL, no model calls. */
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
+const ROOT=path.resolve(__dirname,'../..');
+const docs=path.join(ROOT,'docs/ari/03/vector_retrieval');
+const spec=JSON.parse(fs.readFileSync(path.join(docs,'M0120_EMBEDDING_STORAGE_DESIGN_V1.json'),'utf8'));
+const md=fs.readFileSync(path.join(docs,'M0120_STORAGE_SCHEMA_DRAFT_RU.md'),'utf8');
+const p=(name)=>spec.fields.find(f=>f.name===name);
+const EXPECT_LOCALES=['en','pl','es','de','cs','uk','ru'];
+const mandatory=['id','on_id','locale','ontology_version','dictionary_version','scope_kind','model_id','model_version',
+ 'embedding_dimensions','embedding','content_sha256','source_ids','review_status','state','created_at','updated_at'];
+const types={id:'uuid',on_id:'uuid',locale:'text',ontology_version:'text',dictionary_version:'text',scope_kind:'text',
+ owner_actor_id:'uuid',model_id:'text',model_version:'text',embedding_dimensions:'integer',embedding:'vector',
+ content_sha256:'text',source_ids:'jsonb',review_status:'text',state:'text',created_at:'timestamptz',updated_at:'timestamptz'};
+for(const f of mandatory) test('required field '+f,()=>{assert.ok(p(f));assert.equal(p(f).nullable,false);});
+for(const [name,type] of Object.entries(types)) test('correct SQL-type proposal '+name,()=>assert.equal(p(name)?.pgType,type));
+for(const loc of EXPECT_LOCALES) test('locale explicitly supported '+loc,()=>assert.ok(spec.locales.includes(loc)));
+for(const f of ['on_id','locale','ontology_version','dictionary_version','scope_kind','owner_actor_id','model_id','model_version','content_sha256'])
+ test('uniqueness component '+f,()=>assert.ok(spec.uniquenessComponents.includes(f)));
+test('correct identity',()=>assert.equal(spec.contract,'ARCTOR_M0120_EMBEDDING_STORAGE_DRAFT_V1'));
+test('correct roadmap id',()=>assert.equal(spec.roadmapId,'ARI-03.05.03'));
+test('design-only contract',()=>assert.equal(spec.status,'DESIGN_ONLY_NOT_MIGRATION'));
+test('previous unit contract',()=>assert.equal(spec.previousUnitContract,'ARCTOR_EMBEDDING_UNIT_DRAFT_V1'));
+test('list fixed and unique locales',()=>assert.deepEqual(spec.locales,EXPECT_LOCALES));
+test('all proposed field names unique',()=>assert.equal(new Set(spec.fields.map(f=>f.name)).size,spec.fields.length));
+test('each field is documented',()=>spec.fields.forEach(f=>assert.ok(f.purpose.length>6)));
+test('owner actor nullable only for global',()=>assert.equal(p('owner_actor_id').nullable,true));
+test('owner condition mutually exclusive',()=>assert.match(spec.scopePolicy,/IS NULL.*IS NOT NULL/));
+test('no vector extension was installed at inventory',()=>assert.equal(spec.pgvectorInstalledAtInventory,false));
+test('vector extension was available at inventory',()=>assert.equal(spec.pgvectorAvailableAtInventory,true));
+test('proposed source table not declared verified',()=>assert.equal(spec.sourceFkRequiresVerification,true));
+test('no executed SQL',()=>assert.equal(spec.sqlExecuted,false));
+test('no database writes',()=>assert.equal(spec.writesDatabase,false));
+test('no migration file',()=>assert.equal(spec.createsMigrationFile,false));
+test('no embedding calls',()=>assert.equal(spec.modelCalls,false));
+test('requires permission before SQL',()=>assert.equal(spec.requiresApprovalBeforeSQL,true));
+test('deny anon',()=>assert.equal(spec.dataPolicies.anon,'DENY'));
+test('deny direct authenticated',()=>assert.equal(spec.dataPolicies.authenticatedDirect,'DENY'));
+test('tenant isolation fail closed',()=>assert.match(spec.dataPolicies.tenantIsolation,/DENY_BY_DEFAULT/));
+test('server role not given to browser',()=>assert.match(spec.dataPolicies.serviceRole,/serverOnlyAfterCallerAuthorization/));
+test('private scope requires authorized actor',()=>assert.match(spec.dataPolicies.privateScope,/authorized caller/));
+test('model compatibility dimension',()=>assert.match(spec.dimensionsPolicy,/vector_dims\(embedding\) = embedding_dimensions/));
+test('model versions match',()=>assert.match(spec.dimensionsPolicy,/model_id,model_version,dimensions/));
+test('vector index not created until after benchmarks',()=>assert.match(spec.vectorIndexProposal,/DEFERRED/));
+test('fallback lexical only',()=>assert.match(spec.fallback,/LEXICAL_ONLY/));
+test('retention policy',()=>assert.match(spec.deletionPolicy,/no silent hard-delete/));
+test('approval includes real PK',()=>assert.ok(spec.nextApprovals.some(x=>x.includes('PK/FK'))));
+test('approval includes RLS',()=>assert.ok(spec.nextApprovals.some(x=>x.includes('RLS'))));
+test('approval includes privacy E2E',()=>assert.ok(spec.nextApprovals.some(x=>x.includes('tenant isolation E2E'))));
+test('approval includes cost gate',()=>assert.ok(spec.nextApprovals.some(x=>x.includes('cost gate'))));
+test('no sql migration in docs',()=>assert.match(md,/НЕ исполнять/));
+test('sample SQL is commented',()=>assert.match(md,/-- CREATE TABLE public\.on_embedding_store_v1/));
+test('example has private cross-scope rule',()=>assert.match(md,/owner_actor_id IS NOT NULL/));
+test('example has vector check',()=>assert.match(md,/vector_dims\(embedding\)/));
+test('postgres 17 inventory context',()=>assert.match(md,/17\.0\.6/));
+test('pgvector uninstalled warning',()=>assert.match(md,/НЕ установлен/));
+test('cost and gold not asserted',()=>assert.match(md,/M-0121/));
+test('no SQL file in applied migrations required',()=>assert.match(md,/НЕ SQL-миграция/));
+test('draft warns that RLS not tested',()=>assert.match(md,/RLS.*не проверены/));
+test('no arbitrary vector fixed dimensionality',()=>assert.ok(!/vector\((?:768|1024|1536|3072)\)/i.test(md)));
+test('schema names scope owner and model separately',()=>assert.equal(p('scope_kind').pgType,'text'));
+test('scope not used as sole uniqueness',()=>assert.ok(spec.uniquenessComponents.includes('owner_actor_id')));
+test('verified code remains immutable',()=>{const code=fs.readFileSync(path.join(ROOT,'src/lib/ontology-research/vectorRetrievalV1.ts'));assert.equal(crypto.createHash('sha256').update(code).digest('hex').toUpperCase(),'771B6F8A5C2B8C303C477861A7803C4E0C0B0D13CB8007E4A8B4A21A8148C8F4')});

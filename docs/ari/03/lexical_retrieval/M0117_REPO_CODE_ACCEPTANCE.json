@@ -1,0 +1,41 @@
+{
+  "contract": "ARCTOR_ARI_M0117_ALIAS_REVOCATION_REVIEW_V1",
+  "step": "M-0117",
+  "roadmapId": "ARI-03.04.07",
+  "acceptedAtUtc": "2026-11-02T18:26:59.281Z",
+  "previousModuleSha256": "B0A3FEF89B17EA3A65CDF7659950FEAE8D55F8984C81A05F2253A6C9EAB60E92",
+  "newModuleSha256": "09C77DDF8E2E5939848F9F8A32B45AAF6B41685AA0F28D9278D7A4DFDBFC397A",
+  "lexicalSha256": "B12161EDAD77221607928B44F14045F975F304D9437C0208B29FC1AD44B514AD",
+  "newTestSha256": "1B7577A9658DE7C69AA9C43EA08FC3F404884897E8D2BF338F76CFA1FB24E64C",
+  "coveredLocales": [
+    "en",
+    "pl",
+    "es",
+    "de",
+    "cs",
+    "uk",
+    "ru"
+  ],
+  "schemaValidation": true,
+  "explicitRevocationPreview": true,
+  "omissionsRequireReview": true,
+  "translationCollisionPreserved": true,
+  "provenanceRequired": true,
+  "autoUuidSelection": false,
+  "autoMerge": false,
+  "autoRevoke": false,
+  "tests": {
+    "new": 72,
+    "regression": 588,
+    "total": 660,
+    "failed": 0,
+    "skipped": 0
+  },
+  "sql": false,
+  "paidAI": false,
+  "apiModified": false,
+  "liveDb": false,
+  "commitPushDeploy": false,
+  "searchEnabled": false,
+  "nextStep": "M-0118"
+}

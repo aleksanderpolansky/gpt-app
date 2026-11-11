@@ -1,0 +1,39 @@
+{
+  "contract": "ARCTOR_ARI_M0112_LOCALE_NORMALIZER_REVIEW_V1",
+  "step": "M-0112",
+  "roadmapId": "ARI-03.04.02",
+  "acceptedAtUtc": "2026-11-02T16:45:59.866Z",
+  "previousModuleSha256": "823C4A11D5926863507ABCABEABEB75D0FAA25EF4A1731F340151D351F7CD725",
+  "newModuleSha256": "1003DF6243DFE3326E5A84D6B10D455C1F026E7E8CD96013A83F5149E34CA956",
+  "newTestSha256": "47F433B82A3DAFE46512EE0CB44E1450244B10702C3B0E7603E64FF597C28BCE",
+  "lexicalSha256": "B12161EDAD77221607928B44F14045F975F304D9437C0208B29FC1AD44B514AD",
+  "locales": [
+    "en",
+    "pl",
+    "es",
+    "de",
+    "cs",
+    "uk",
+    "ru"
+  ],
+  "policy": "CONSERVATIVE_LOCALE_CASE_NFKC_NFC_WHITESPACE_WITH_UK_APOSTROPHE",
+  "polishCzechDiacriticsPreserved": true,
+  "russianYoNotFolded": true,
+  "unreviewedAliasNotPromoted": true,
+  "autoUuidSelection": false,
+  "sourceBindingsChanged": false,
+  "tests": {
+    "new": 59,
+    "regression": 230,
+    "total": 289,
+    "failed": 0,
+    "skipped": 0
+  },
+  "liveDb": false,
+  "apiModified": false,
+  "sql": false,
+  "paidAI": false,
+  "commitPushDeploy": false,
+  "searchEnabled": false,
+  "nextStep": "M-0113"
+}

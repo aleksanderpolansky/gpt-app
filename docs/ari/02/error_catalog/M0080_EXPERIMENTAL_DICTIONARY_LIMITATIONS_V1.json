@@ -1,0 +1,86 @@
+{
+  "contract": "ARCTOR_ARI_M0080_EXPERIMENTAL_DICTIONARY_LIMITATIONS_V1",
+  "step": "M-0080",
+  "roadmap_id": "ARI-02.07.06",
+  "source": {
+    "repo_path": "src/lib/ontology-research/ari02EnhancedSearch.ts",
+    "sha256": "4AF6F480FF0FFCFA5BF0C9B96BD478DDAE02653C5666DAF26AEE39CFCEFFC701",
+    "git_sha": "675521c8151a18cb6f53ae6339e9663d831712ef",
+    "role": "experimental research-only rules"
+  },
+  "scope": "KNOWN_LIMITATIONS_ONLY_NOT_A_DATABASE_DEFECT_REPORT",
+  "limitations": [
+    {
+      "id": "ARI02-LIM-DICT-001",
+      "category": "BOUNDED_HARDCODED_ALIASES",
+      "evidence": "Ari02Concept lists 7 concepts (stroll, walking, child, person, accompany, care, calm), implemented in ALIAS; not a comprehensive synonym/translation dictionary.",
+      "verificationAnchor": "const ALIAS: Record<Ari02Concept, string[]>",
+      "effect": "Unknown terms can be unresolved even if the catalog contains a relevant ON.",
+      "dbRootCauseProven": false
+    },
+    {
+      "id": "ARI02-LIM-DICT-002",
+      "category": "TOKEN_AND_PREFIX_HEURISTICS",
+      "evidence": "tokenise removes stopwords, keeps tokens with length >=2, caps components at 12; wordMatch accepts exact terms or a bounded prefix match for terms >=6.",
+      "verificationAnchor": "return term.length >= 6 && target.startsWith(term) && target.length - term.length <= 3;",
+      "effect": "Inflections, morphology, compound phrases and unsupported languages are not systematically handled.",
+      "dbRootCauseProven": false
+    },
+    {
+      "id": "ARI02-LIM-DICT-003",
+      "category": "FACET_FROM_DISPLAY_PATH",
+      "evidence": "facetFromPath selects a facet from the first display-path segment and only recognises the explicitly enumerated Russian/English roots.",
+      "verificationAnchor": "function facetFromPath(path: string): Ari02Facet",
+      "effect": "Unknown/nonmatching path labels may produce unknown facet; display-path parsing is not a validated graph edge.",
+      "dbRootCauseProven": false
+    },
+    {
+      "id": "ARI02-LIM-DICT-004",
+      "category": "UNVERIFIED_RELATION_HINTS",
+      "evidence": "relationHint has two hard-coded hypotheses (stroll->walking, child->person); results carry verifiedRelation:false and related_hypothesis.",
+      "verificationAnchor": "verifiedRelation:false",
+      "effect": "These hints cannot establish ontology relations, inheritance, causation, or authorize creation.",
+      "dbRootCauseProven": false
+    },
+    {
+      "id": "ARI02-LIM-DICT-005",
+      "category": "COMPONENT_SCORE_WITHOUT_PHRASE_PRIORITY",
+      "evidence": "scoreCandidate evaluates query components separately and keeps the best score across components, so a generic concept can outrank an exact multiword phrase.",
+      "verificationAnchor": "for (const component of components) for (const variant of candidate.titleVariants)",
+      "effect": "Observed frozen query ночной сон: generic Сон rank 1, exact Ночной сон rank 2 (M0075). Mechanism is a plausible explanation, not a proven exclusive root cause.",
+      "dbRootCauseProven": false
+    },
+    {
+      "id": "ARI02-LIM-DICT-006",
+      "category": "NOT_EXHAUSTIVE_CATALOG_OR_STATISTICAL_VALIDATION",
+      "evidence": "evaluateAri02Enhanced ranks the provided candidate array, slices output at <=100, does not query Supabase itself and explicitly disclaims ML, morphology and established relations.",
+      "verificationAnchor": "rows:scored.slice(0,Math.min(Math.max(limit,1),100))",
+      "effect": "Empty results or absence from page cannot establish ON absence; ranking is not certified by independent Gold and cannot establish Recall@20 for real catalog.",
+      "dbRootCauseProven": false
+    }
+  ],
+  "relatedFrozenDefect": {
+    "defect_id": "ARI02-RANK-EXACT-NIGHT-SLEEP-001",
+    "gold_case_id": "sleep-ari026-night",
+    "source_http_sha256": "6312D088F407D3CD94920732AFB3F80982797D4C3F6179752F3D68DCBB91C4C3",
+    "source_mode": "ARI-02.2_EXPERIMENTAL",
+    "status": "OPEN_UNFIXED",
+    "reproduction": "FROZEN_HTTP_ONLY_NOT_NEW_PRODUCTION",
+    "hypothesis": "Partial query-component scoring may contribute, not established as sole root cause."
+  },
+  "otherDefects": {
+    "baseline_false_positives": 2,
+    "source_mode": "ARI-02.2_BASELINE_LEXICAL",
+    "do_not_attribute_to_experimental": true,
+    "historical_incident": "UNKNOWN_OLDER_ONTO_AI",
+    "historical_reproduction": false
+  },
+  "dbDefectProven": false,
+  "indexedSearchARI03Tested": false,
+  "independentGold": false,
+  "catalogScopeComplete": false,
+  "realRecall20": "N/A",
+  "noSourceCodeChange": true,
+  "noSqlOrProductionChange": true,
+  "nextStep": "M-0081"
+}

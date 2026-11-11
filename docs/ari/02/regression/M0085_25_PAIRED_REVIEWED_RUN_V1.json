@@ -1,0 +1,621 @@
+{
+  "contract": "ARCTOR_ARI_M0085_25_PAIRED_HUMAN_RUN_V1",
+  "step": "M-0085",
+  "reviewStatus": "OWNER_JUDGMENTS_CONTEXT_DEPENDENT_NOT_UNIVERSAL_GOLD",
+  "gradeScale": "0=not relevant,1=loosely linked,2=substantially relevant,3=strong match,?=unknown",
+  "reviewerIdentity": "WITHHELD_REPORT_CONTAINS_ONLY_PRIVATE_SOURCE_HASH",
+  "reviewSha256": "D091F66F8FFB4B33154197C45A45ABF65F725333FE509A707CA3AB4ABE0EE60C",
+  "pairedTop10Sha256": "281A353CDBDC7A71B9690BE32E623CFCBD94B833F806912EE069ACF728EC1116",
+  "observedOnly": true,
+  "globalOntologyRelationsInferred": false,
+  "personalOntologyRelationsInferred": false,
+  "liveAlgorithmComparisonNotPerformed": true,
+  "scope": "GLOBAL_SYSTEM_ON_PARTIAL_740_SCANNED_NO_CATALOG_FINGERPRINT",
+  "overallGate": "INCONCLUSIVE_INSUFFICIENT_PAIRED_FULL_TOP10_AND_NO_VERSIONED_COMPARISON",
+  "performanceGate": "NOT_MEASURED_THIS_STEP",
+  "realRecall20": "N/A",
+  "regressionCodeChange": "NONE",
+  "totals": {
+    "reviewedCases": 25,
+    "gradedCaseUUIDs": 166,
+    "emptyConfirmed": 4,
+    "baselineFullTop10": 10,
+    "experimentalFullTop10": 5,
+    "bothFullTop10": 5,
+    "languageCount": 7,
+    "languageCounts": {
+      "cs": 2,
+      "de": 3,
+      "en": 4,
+      "es": 3,
+      "pl": 3,
+      "ru": 8,
+      "uk": 2
+    },
+    "fullyEligibleQualityAcceptance": 0
+  },
+  "methods": {
+    "pooledNdcg10": "IDCG from graded union of returned UUIDs in the two observed modes, NOT catalog-wide ideal ranking",
+    "observedPrecision": "fraction of known grade >=2 among returned rows, NOT P@10 if fewer than ten",
+    "oneJudgmentPerQueryUUID": true,
+    "globalSearchRegression": "INCONCLUSIVE, no pre-change vs post-change versioned snapshots",
+    "personalRelationships": "OUT_OF_SCOPE, user-specific dashboard model in later stages"
+  },
+  "cases": [
+    {
+      "caseId": "pilot-01",
+      "locale": "ru",
+      "perspective": "mixed",
+      "query": "прогулка с ребёнком",
+      "rawSourceSha256": "A34E18023B66E2232D75D70560254E9AF4ADA4B498DE2C26AD0195683F4ADA98",
+      "baseline": {
+        "returned": 0,
+        "precisionAmongReturned": null,
+        "pooledNdcg10": 0
+      },
+      "experimental": {
+        "returned": 1,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 1
+      },
+      "unionJudged": 1,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": false,
+      "deltaPooledNdcg10": 1,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "pilot-04",
+      "locale": "ru",
+      "perspective": "systems_structures",
+      "query": "человек",
+      "rawSourceSha256": "82CEAFB12F660B0D8DB50D38F32DEE4C47608F0CCAD4FDDB49B9B52B82EA2405",
+      "baseline": {
+        "returned": 10,
+        "precisionAmongReturned": 0,
+        "pooledNdcg10": 0.6943559465628251
+      },
+      "experimental": {
+        "returned": 1,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 0.45846608015576257
+      },
+      "unionJudged": 11,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": false,
+      "deltaPooledNdcg10": -0.23588987,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "pilot-12",
+      "locale": "ru",
+      "perspective": "actions_processes",
+      "query": "ходьба",
+      "rawSourceSha256": "C80B943A5AD3D64BFBBC60A2E3D2AA2691D36DA60918219C0151C016E7922F25",
+      "baseline": {
+        "returned": 3,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 1
+      },
+      "experimental": {
+        "returned": 2,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 0.7653606369886218
+      },
+      "unionJudged": 3,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": false,
+      "deltaPooledNdcg10": -0.23463936,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "pilot-23",
+      "locale": "ru",
+      "perspective": "states_needs",
+      "query": "сон",
+      "rawSourceSha256": "BF2CCCCB0367A39EFF6E77937E95D8BCD36377BC8404AD3DCBA307C68873E9B7",
+      "baseline": {
+        "returned": 7,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 1
+      },
+      "experimental": {
+        "returned": 2,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 0.44830398990253034
+      },
+      "unionJudged": 7,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": false,
+      "deltaPooledNdcg10": -0.55169601,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "sleep-ari026-duration",
+      "locale": "ru",
+      "perspective": "actions_processes",
+      "query": "продолжительность сна",
+      "rawSourceSha256": "2A5E881A015939F4672461C695543C9170591D9C2BCF0D71188AD558B094737E",
+      "baseline": {
+        "returned": 10,
+        "precisionAmongReturned": 0.7,
+        "pooledNdcg10": 0.9708286581587583
+      },
+      "experimental": {
+        "returned": 5,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 0.8292383098471131
+      },
+      "unionJudged": 10,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": false,
+      "deltaPooledNdcg10": -0.14159035,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "sleep-ari026-night",
+      "locale": "ru",
+      "perspective": "actions_processes",
+      "query": "ночной сон",
+      "rawSourceSha256": "DAD94E05BF4C93D36D17E269ACBDE53C2F716C6E8CABBB09F27A080DFA861BD4",
+      "baseline": {
+        "returned": 7,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 1
+      },
+      "experimental": {
+        "returned": 2,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 0.44830398990253034
+      },
+      "unionJudged": 7,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": false,
+      "deltaPooledNdcg10": -0.55169601,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "m0048-research-store",
+      "locale": "ru",
+      "perspective": "systems_structures",
+      "query": "магазин",
+      "rawSourceSha256": "3A4701710C7872B81D4B4F6C2F510A9081C46EB799BAB277C186C71AD0300F6C",
+      "baseline": {
+        "returned": 10,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 1
+      },
+      "experimental": {
+        "returned": 0,
+        "precisionAmongReturned": null,
+        "pooledNdcg10": 0
+      },
+      "unionJudged": 10,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": false,
+      "deltaPooledNdcg10": -1,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "m0052-ru-states-needs-03",
+      "locale": "ru",
+      "perspective": "states_needs",
+      "query": "Состояние боли в спине",
+      "rawSourceSha256": "02253F6656A72575D397928CDFB87532E7774F3A8889A82E26A1AF25D8B934F2",
+      "baseline": {
+        "returned": 10,
+        "precisionAmongReturned": 0.4,
+        "pooledNdcg10": 0.8518084651823981
+      },
+      "experimental": {
+        "returned": 10,
+        "precisionAmongReturned": 0.4,
+        "pooledNdcg10": 0.8742628328870048
+      },
+      "unionJudged": 13,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": true,
+      "deltaPooledNdcg10": 0.02245437,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "pilot-05",
+      "locale": "en",
+      "perspective": "systems_structures",
+      "query": "child",
+      "rawSourceSha256": "333E17DFD5F9A31EA85A0601CF3C95F5ECF03CC4894291CC518CB87F0FA65DE3",
+      "baseline": {
+        "returned": 5,
+        "precisionAmongReturned": 0,
+        "pooledNdcg10": 0.43067655807339306
+      },
+      "experimental": {
+        "returned": 0,
+        "precisionAmongReturned": null,
+        "pooledNdcg10": 0
+      },
+      "unionJudged": 5,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": false,
+      "deltaPooledNdcg10": -0.43067656,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "pilot-06",
+      "locale": "en",
+      "perspective": "systems_structures",
+      "query": "person",
+      "rawSourceSha256": "92EFD00DFC115A3C831F401BC9FDDFDF4F749ED36F57C0345199C958CBCC855D",
+      "baseline": {
+        "returned": 10,
+        "precisionAmongReturned": 0,
+        "pooledNdcg10": 0
+      },
+      "experimental": {
+        "returned": 3,
+        "precisionAmongReturned": 0.3333333333333333,
+        "pooledNdcg10": 1
+      },
+      "unionJudged": 13,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": false,
+      "deltaPooledNdcg10": 1,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "pilot-14",
+      "locale": "en",
+      "perspective": "actions_processes",
+      "query": "walking",
+      "rawSourceSha256": "28AB78B92BA6F394F2771BDD9C77AE91E5DD86823290C50B17389EC0D4C03199",
+      "baseline": {
+        "returned": 4,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 1
+      },
+      "experimental": {
+        "returned": 2,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 0.7043515158965542
+      },
+      "unionJudged": 4,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": false,
+      "deltaPooledNdcg10": -0.29564848,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "m0052-en-states-needs-02",
+      "locale": "en",
+      "perspective": "states_needs",
+      "query": "Back pain state",
+      "rawSourceSha256": "9033735E09464FA4F48EB1F879DE21A2B584D7808BFFA60AB2E16E5D46282A60",
+      "baseline": {
+        "returned": 10,
+        "precisionAmongReturned": 0.3,
+        "pooledNdcg10": 0.7981983818115543
+      },
+      "experimental": {
+        "returned": 10,
+        "precisionAmongReturned": 0.4,
+        "pooledNdcg10": 0.6642243507868923
+      },
+      "unionJudged": 15,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": true,
+      "deltaPooledNdcg10": -0.13397403,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "pilot-07",
+      "locale": "pl",
+      "perspective": "systems_structures",
+      "query": "dziecko",
+      "rawSourceSha256": "5F908C79B19FB3FDC9F121F809BB777BF38F8C623486F0721A98F3FD2398626A",
+      "baseline": {
+        "returned": 0,
+        "precisionAmongReturned": null,
+        "pooledNdcg10": null
+      },
+      "experimental": {
+        "returned": 0,
+        "precisionAmongReturned": null,
+        "pooledNdcg10": null
+      },
+      "unionJudged": 0,
+      "gradeUnknown": false,
+      "emptyResultsBoth": true,
+      "fullyTenInBoth": false,
+      "deltaPooledNdcg10": null,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "m0052-pl-actions-processes-01",
+      "locale": "pl",
+      "perspective": "actions_processes",
+      "query": "Chodzenie",
+      "rawSourceSha256": "25C91D78EB9F3CD5EE0E7D216ABFC120456D56330E371DF53F1F0EDB19EC7153",
+      "baseline": {
+        "returned": 4,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 1
+      },
+      "experimental": {
+        "returned": 2,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 0.6366824387328317
+      },
+      "unionJudged": 4,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": false,
+      "deltaPooledNdcg10": -0.36331756,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "m0052-pl-states-needs-04",
+      "locale": "pl",
+      "perspective": "states_needs",
+      "query": "Stan bólu pleców",
+      "rawSourceSha256": "008B6D5C976A27630A606651FE4479BEA5D1673FE77503483BE8FE0E1CF4CFB6",
+      "baseline": {
+        "returned": 10,
+        "precisionAmongReturned": 0.3,
+        "pooledNdcg10": 0.875032772294813
+      },
+      "experimental": {
+        "returned": 10,
+        "precisionAmongReturned": 0.3,
+        "pooledNdcg10": 0.9257033261400447
+      },
+      "unionJudged": 15,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": true,
+      "deltaPooledNdcg10": 0.05067055,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "pilot-08",
+      "locale": "es",
+      "perspective": "systems_structures",
+      "query": "niño",
+      "rawSourceSha256": "C4491EE30E46552C840BDE464995DCFD3B4A9FBCC56B2B105A4B3028C21C7CF7",
+      "baseline": {
+        "returned": 0,
+        "precisionAmongReturned": null,
+        "pooledNdcg10": null
+      },
+      "experimental": {
+        "returned": 0,
+        "precisionAmongReturned": null,
+        "pooledNdcg10": null
+      },
+      "unionJudged": 0,
+      "gradeUnknown": false,
+      "emptyResultsBoth": true,
+      "fullyTenInBoth": false,
+      "deltaPooledNdcg10": null,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "m0052-es-actions-processes-03",
+      "locale": "es",
+      "perspective": "actions_processes",
+      "query": "Caminar",
+      "rawSourceSha256": "F75E52DCABDC62E408BC97A2111AF012C5798A6124942601D186F49F0DCDFA1F",
+      "baseline": {
+        "returned": 4,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 1
+      },
+      "experimental": {
+        "returned": 2,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 0.6366824387328317
+      },
+      "unionJudged": 4,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": false,
+      "deltaPooledNdcg10": -0.36331756,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "m0052-es-states-needs-06",
+      "locale": "es",
+      "perspective": "states_needs",
+      "query": "Estado de seguridad",
+      "rawSourceSha256": "C686AB37C9EEE832FE990BEA177455AE131D60AE6745C772D3042A97A70DF886",
+      "baseline": {
+        "returned": 10,
+        "precisionAmongReturned": 0.2,
+        "pooledNdcg10": 0.7202938510579203
+      },
+      "experimental": {
+        "returned": 10,
+        "precisionAmongReturned": 0.2,
+        "pooledNdcg10": 0.6059103250458521
+      },
+      "unionJudged": 14,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": true,
+      "deltaPooledNdcg10": -0.11438353,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "pilot-09",
+      "locale": "de",
+      "perspective": "systems_structures",
+      "query": "Kind",
+      "rawSourceSha256": "503002BE83399F4D7134C3A30E0AC36057C4C32CB07D58668AD97F87F7763581",
+      "baseline": {
+        "returned": 1,
+        "precisionAmongReturned": 0,
+        "pooledNdcg10": null
+      },
+      "experimental": {
+        "returned": 0,
+        "precisionAmongReturned": null,
+        "pooledNdcg10": null
+      },
+      "unionJudged": 1,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": false,
+      "deltaPooledNdcg10": null,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "m0052-de-actions-processes-05",
+      "locale": "de",
+      "perspective": "actions_processes",
+      "query": "Gehen",
+      "rawSourceSha256": "74A70468EB9C9A79F815678057EB72FA4F08D039E0379CF17C5335EFE886D866",
+      "baseline": {
+        "returned": 4,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 1
+      },
+      "experimental": {
+        "returned": 2,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 0.6366824387328317
+      },
+      "unionJudged": 4,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": false,
+      "deltaPooledNdcg10": -0.36331756,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "m0052-de-states-needs-08",
+      "locale": "de",
+      "perspective": "states_needs",
+      "query": "Schlafzustand",
+      "rawSourceSha256": "A51363CC79D97A258594DC40B2B4E3E09352623452DFCB5F04AFF79E72199C5A",
+      "baseline": {
+        "returned": 1,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 1
+      },
+      "experimental": {
+        "returned": 1,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 1
+      },
+      "unionJudged": 1,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": false,
+      "deltaPooledNdcg10": 0,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "pilot-11",
+      "locale": "cs",
+      "perspective": "systems_structures",
+      "query": "dítě",
+      "rawSourceSha256": "E40BCEB9DDEEC1DBE8033FFF60E8A3F5750FE17870D799755E2D075C05BB428B",
+      "baseline": {
+        "returned": 0,
+        "precisionAmongReturned": null,
+        "pooledNdcg10": null
+      },
+      "experimental": {
+        "returned": 0,
+        "precisionAmongReturned": null,
+        "pooledNdcg10": null
+      },
+      "unionJudged": 0,
+      "gradeUnknown": false,
+      "emptyResultsBoth": true,
+      "fullyTenInBoth": false,
+      "deltaPooledNdcg10": null,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "m0052-cs-actions-processes-04",
+      "locale": "cs",
+      "perspective": "actions_processes",
+      "query": "Jak se liší chůze od běhu a chůze po schodech?",
+      "rawSourceSha256": "E36A76E8A6CA2143C3F37AC4E2B89166841BEFF45A326611FCBB42F34B225A1B",
+      "baseline": {
+        "returned": 10,
+        "precisionAmongReturned": 0.8,
+        "pooledNdcg10": 0.7829424489843847
+      },
+      "experimental": {
+        "returned": 5,
+        "precisionAmongReturned": 1,
+        "pooledNdcg10": 0.5732534825943701
+      },
+      "unionJudged": 10,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": false,
+      "deltaPooledNdcg10": -0.20968897,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "pilot-10",
+      "locale": "uk",
+      "perspective": "systems_structures",
+      "query": "дитина",
+      "rawSourceSha256": "17D8500BB7202EDB56928E15B081B678C69537034975DF39D7F2567B619B5B6B",
+      "baseline": {
+        "returned": 0,
+        "precisionAmongReturned": null,
+        "pooledNdcg10": null
+      },
+      "experimental": {
+        "returned": 0,
+        "precisionAmongReturned": null,
+        "pooledNdcg10": null
+      },
+      "unionJudged": 0,
+      "gradeUnknown": false,
+      "emptyResultsBoth": true,
+      "fullyTenInBoth": false,
+      "deltaPooledNdcg10": null,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    },
+    {
+      "caseId": "m0052-uk-states-needs-04",
+      "locale": "uk",
+      "perspective": "states_needs",
+      "query": "Стан болю в спині",
+      "rawSourceSha256": "315BE0C0D0D756D164C5FBE472E58CF0F6E21D0BBF046F69A83422E031E4961D",
+      "baseline": {
+        "returned": 10,
+        "precisionAmongReturned": 0.3,
+        "pooledNdcg10": 0.8384218868747425
+      },
+      "experimental": {
+        "returned": 10,
+        "precisionAmongReturned": 0.3,
+        "pooledNdcg10": 0.7696755107993971
+      },
+      "unionJudged": 14,
+      "gradeUnknown": false,
+      "emptyResultsBoth": false,
+      "fullyTenInBoth": true,
+      "deltaPooledNdcg10": -0.06874638,
+      "comparisonGate": "INCONCLUSIVE_NOT_VERSIONED_REGRESSION"
+    }
+  ]
+}

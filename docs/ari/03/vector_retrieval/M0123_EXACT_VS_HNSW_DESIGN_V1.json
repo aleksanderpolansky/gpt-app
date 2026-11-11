@@ -1,0 +1,34 @@
+{
+  "contract": "ARCTOR_M0123_EXACT_VS_HNSW_DESIGN_V1",
+  "step": "M-0123",
+  "roadmapId": "ARI-03.05.06",
+  "mode": "DESIGN",
+  "objective": "Compare cosine exact top-5 vs deterministic offline JS HNSW and index parameters over owner-approved previously generated real embedding vectors, without paying again or changing Supabase",
+  "models": ["text-embedding-3-small", "text-embedding-3-large"],
+  "modelDimensions": {"text-embedding-3-small": 1536, "text-embedding-3-large": 3072},
+  "gold": {"queries": 36, "candidates": 18, "independentGold": false, "ruQueries": 30, "otherLocaleQueries": 6},
+  "distance": "cosine",
+  "metrics": ["ANN/exact top1 agreement", "ANN/exact top5 overlap", "exact Gold Recall@1", "ANN Gold Recall@1", "exact Gold Recall@5", "ANN Gold Recall@5", "query distance evaluations", "local JS build and query timing"],
+  "configs": [
+    {"M": 4, "efConstruction": 16, "efSearch": 5, "seed": 20261103},
+    {"M": 4, "efConstruction": 16, "efSearch": 10, "seed": 20261103},
+    {"M": 4, "efConstruction": 16, "efSearch": 18, "seed": 20261103},
+    {"M": 8, "efConstruction": 32, "efSearch": 5, "seed": 20261103},
+    {"M": 8, "efConstruction": 32, "efSearch": 10, "seed": 20261103},
+    {"M": 8, "efConstruction": 32, "efSearch": 18, "seed": 20261103}
+  ],
+  "gates": {
+    "pgvectorInstalled": false,
+    "postgresHnswIndexCreated": false,
+    "postgresHnswMeasured": false,
+    "rawVectorsInUploadArchive": false,
+    "paidApiCalls": 0,
+    "sqlExecuted": false,
+    "supabaseWrites": false,
+    "productionEnabled": false,
+    "productionPerformanceClaims": false,
+    "lexicalFallbackPreserved": true,
+    "ownerApprovalRequiredForLimitedDesignAcceptance": true,
+    "releaseDecision": "NOT_AUTHORIZED"
+  }
+}

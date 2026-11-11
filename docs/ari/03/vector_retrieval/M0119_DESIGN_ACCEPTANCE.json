@@ -1,0 +1,56 @@
+{
+  "contract": "ARCTOR_M0119_EMBEDDING_UNIT_DESIGN_REVIEW_V1",
+  "step": "M-0119",
+  "roadmapId": "ARI-03.05.02",
+  "atUtc": "2026-11-02T19:01:34.042Z",
+  "mode": "DESIGN",
+  "source": "src/lib/ontology-research/vectorRetrievalV1.ts",
+  "sourceSha256": "771B6F8A5C2B8C303C477861A7803C4E0C0B0D13CB8007E4A8B4A21A8148C8F4",
+  "aliasesSha256": "09C77DDF8E2E5939848F9F8A32B45AAF6B41685AA0F28D9278D7A4DFDBFC397A",
+  "lexicalSha256": "B12161EDAD77221607928B44F14045F975F304D9437C0208B29FC1AD44B514AD",
+  "locales": [
+    "en",
+    "pl",
+    "es",
+    "de",
+    "cs",
+    "uk",
+    "ru"
+  ],
+  "unitIdentity": [
+    "onId",
+    "locale",
+    "ontologyVersion",
+    "dictionaryVersion",
+    "scope"
+  ],
+  "required": [
+    "approved title",
+    "approved definition",
+    "approved aliases only",
+    "sourceIds"
+  ],
+  "failClosedMissingDefinition": true,
+  "aliasRequiresApprovedStatus": true,
+  "privateScopeRequiresCallerAuthorization": true,
+  "contentVersioned": true,
+  "deterministic": true,
+  "sql": false,
+  "pgvectorInstalled": false,
+  "embeddingsGenerated": false,
+  "paidAiCalls": false,
+  "liveDbWrites": false,
+  "apiIntegration": false,
+  "liveE2E": false,
+  "searchEnabled": false,
+  "commitPushDeploy": false,
+  "tests": {
+    "new": 67,
+    "previousM0118": 30,
+    "previousM0104toM0117": 660,
+    "total": 757,
+    "failed": 0,
+    "skipped": 0
+  },
+  "nextStep": "M-0120"
+}

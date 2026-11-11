@@ -1,0 +1,40 @@
+{
+  "contract": "ARCTOR_ARI_M0089_ARI03_TRANSITION_GATE_V1",
+  "step": "M-0089",
+  "outcome": "DOCUMENTATION_ACCEPTED_SEARCH_QUALITY_INCONCLUSIVE",
+  "qualityGate": "INCONCLUSIVE",
+  "realRecall20": "N/A",
+  "e2ePass": false,
+  "risksOpen": [
+    "R01",
+    "R02",
+    "R09",
+    "R14"
+  ],
+  "ari03ReadOnlyNextStep": "M-0090",
+  "ari03ReadOnlyInventoryAllowed": true,
+  "ari03IndexedSearchEnabled": false,
+  "indexActivationAuthorized": false,
+  "sourceCommitAllowed": false,
+  "sqlAllowed": false,
+  "deploymentAllowed": false,
+  "obligations": [
+    "indexable title/description/canonical_key must have verified source, locale, version and scope",
+    "unknown or missing indexable field means EXCLUDE until verified",
+    "full-scope evidence not asserted",
+    "do not convert one-person relevance assessments to global structural ontology relations",
+    "require separate explicit permissions for later migrations/push/deploy/flag activation"
+  ],
+  "metrics": {
+    "goldScenarios": 156,
+    "legacyJudgedResults": 69,
+    "newOwnerReviewedQueries": 25,
+    "newOwnerReviewedQueryUUID": 166,
+    "pairedFullTop10": 5,
+    "realRecall20": "N/A",
+    "deterministicRuns": 9
+  },
+  "acceptedAtUtc": "2026-11-02T07:50:52.821Z",
+  "sourcePinsSha256": "178E30755FFE213F38C244383B40D6F558105226874702AC4580D6F9E391A056",
+  "ledgerAfter": "F25A966DD5C535BBD318C38FAB399ED59ED1FCAB8B29F4FFF185247AA489081B"
+}

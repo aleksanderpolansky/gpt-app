@@ -1,0 +1,46 @@
+{
+  "contract": "ARCTOR_M0122_VERSIONED_EMBEDDING_CACHE_DRAFT_V1",
+  "roadmapId": "ARI-03.05.05",
+  "mode": "DESIGN_ONLY_NOT_DEPLOYED",
+  "sourceUnitContract": "ARCTOR_EMBEDDING_UNIT_DRAFT_V1",
+  "preprocessingVersion": "ARCTOR_EMBEDDING_UNIT_JSON_NFC_V1",
+  "targetModule": "src/lib/ontology-research/embeddingCacheV1.ts",
+  "referencesUnchangedModule": "src/lib/ontology-research/vectorRetrievalV1.ts",
+  "proposedTable": "public.on_embedding_store_v1",
+  "migrationStatus": "DRAFT_COMMENTED_SQL_ONLY",
+  "cacheLayers": {
+    "versionedLogicalKey": ["on_id", "locale", "scope_kind", "owner_actor_id", "ontology_version", "dictionary_version", "model_id", "model_version", "dimensions", "preprocessing_version", "content_sha256"],
+    "reusableVectorKey": ["on_id", "locale", "scope_kind", "owner_actor_id", "model_id", "model_version", "dimensions", "preprocessing_version", "content_sha256"]
+  },
+  "invalidation": {
+    "titleChanged": "RECALCULATE_AFTER_APPROVAL",
+    "definitionChanged": "RECALCULATE_AFTER_APPROVAL",
+    "approvedAliasChanged": "RECALCULATE_AFTER_APPROVAL",
+    "versionLabelOnlyChanged": "REUSE_AFTER_AUTHORIZED_VERSION_ALIAS_RECORD",
+    "differentModel": "RECALCULATE_AFTER_APPROVAL",
+    "differentOwner": "DENY_BY_DEFAULT",
+    "revokedSource": "DO_NOT_SERVE",
+    "providerUnavailable": "LEXICAL_ONLY",
+    "missingCostApproval": "NO_AI_CALLS"
+  },
+  "privacy": {
+    "ownerPrivate": "strict owner_actor_id equality; prior caller authorization mandatory",
+    "globalSystem": "scope_code global + origin system_model + no owner; RLS/E2E not yet verified",
+    "neverCrossTenantReuse": true,
+    "neverEmbedUserPrivateContentWithoutConsent": true
+  },
+  "evidence": {
+    "m0121RealModelsCompared": true,
+    "m0121GoldIndependent": false,
+    "m0121ProductionModelSelected": false,
+    "pgvectorInstalled": false,
+    "rlsE2EProven": false,
+    "liveMigrationApplied": false
+  },
+  "executedSQL": false,
+  "paidModelCalls": false,
+  "databaseWrites": false,
+  "deployment": false,
+  "lexicalFallback": "LEXICAL_ONLY",
+  "nextGate": "M-0123 requires separate review before any backfill or online vector retrieval"
+}

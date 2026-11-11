@@ -1,0 +1,39 @@
+{
+  "contract": "ARCTOR_ARI_M0113_ALIAS_RELATION_REVIEW_V1",
+  "step": "M-0113",
+  "roadmapId": "ARI-03.04.03",
+  "acceptedAtUtc": "2026-11-02T16:56:48.539Z",
+  "previousModuleSha256": "1003DF6243DFE3326E5A84D6B10D455C1F026E7E8CD96013A83F5149E34CA956",
+  "newModuleSha256": "7DFBD77794837F746EFF456CE7731361F778F8CDF58EB7BCFCD10CC2E1FA3A9A",
+  "newTestSha256": "EEFC2DEEA4159869556298442D2B9CF9E17A0251624E574DFD3C64927709FCFC",
+  "lexicalSha256": "B12161EDAD77221607928B44F14045F975F304D9437C0208B29FC1AD44B514AD",
+  "locales": [
+    "en",
+    "pl",
+    "es",
+    "de",
+    "cs",
+    "uk",
+    "ru"
+  ],
+  "policy": "VERIFIED_ALIAS_VS_REVIEWED_BROADER_NARROWER_SEPARATION",
+  "relationshipEvidenceOnly": true,
+  "sevenLocalesPreserved": true,
+  "nonEquivalentUuidNotMerged": true,
+  "autoUuidSelection": false,
+  "sourceBindingsChanged": false,
+  "tests": {
+    "new": 63,
+    "regression": 289,
+    "total": 352,
+    "failed": 0,
+    "skipped": 0
+  },
+  "liveDb": false,
+  "apiModified": false,
+  "sql": false,
+  "paidAI": false,
+  "commitPushDeploy": false,
+  "searchEnabled": false,
+  "nextStep": "M-0114"
+}

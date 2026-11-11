@@ -1,0 +1,93 @@
+'use strict';
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs'),path=require('node:path');
+const E=require('../benchmarks/ari03-m0124-embedding-economics.cjs');
+const root=path.resolve(__dirname,'../../');
+const pilot=JSON.parse(fs.readFileSync(path.join(__dirname,'../../docs/ari/03/vector_retrieval/M0124_M0121_PILOT_INPUT_V1.json'),'utf8'));
+const receipt=JSON.parse(fs.readFileSync(path.join(__dirname,'../../docs/ari/03/vector_retrieval/M0124_M0123_RECEIPT_INPUT_V1.json'),'utf8'));
+const report=()=>E.createReport(pilot,receipt);
+const quote=(over={})=>E.quote({modelId:'text-embedding-3-small',channel:'standard',inputs:100,tokensPerInput:50,...over});
+test('contract version and two audited candidates',()=>{
+ assert.equal(E.CONTRACT,'ARCTOR_ARI_M0124_EMBEDDING_COST_REPORT_V1');
+ assert.deepEqual(Object.keys(E.MODELS),['text-embedding-3-small','text-embedding-3-large']);
+});
+test('both published model price snapshots',()=>{assert.equal(E.MODELS['text-embedding-3-small'].standardUSDperMillion,0.02);assert.equal(E.MODELS['text-embedding-3-large'].standardUSDperMillion,0.13)});
+test('batch factor applies only to true batch_api',()=>{assert.equal(E.PRICE_SNAPSHOT.batchApiDiscountFactor,0.5);assert.equal(quote({channel:'batch_api'}).estimateUSD,quote().estimateUSD/2)});
+test('standard request with an array is never discounted',()=>{assert.equal(quote({inputs:2048}).unitRateUSDperMillion,0.02)});
+test('standard small vs large price ratio',()=>{assert.ok(Math.abs(quote({modelId:'text-embedding-3-large'}).estimateUSD/quote().estimateUSD-6.5)<1e-10)});
+test('zero input has no chargeable costs',()=>{assert.equal(quote({inputs:0}).estimateUSD,0)});
+test('full reuse makes cost zero',()=>{assert.equal(quote({cacheHitPercent:100}).estimateUSD,0)});
+test('no caching bills all inputs',()=>{assert.equal(quote({cacheHitPercent:0}).chargeableInputs,100)});
+test('cache reuse rounds chargeable input upward',()=>{assert.equal(quote({inputs:3,cacheHitPercent:50}).chargeableInputs,2)});
+test('charged token volume matches derived integer inputs',()=>{assert.equal(quote({inputs:17,tokensPerInput:67,cacheHitPercent:30}).chargeableTokens,12*67)});
+test('quote contains no provider / approval permission',()=>{const q=quote();assert.equal(q.isProviderBilling,false);assert.equal(q.approvalGranted,false)});
+test('conservative 8k token request is accepted',()=>{assert.equal(quote({inputs:1,tokensPerInput:8192}).chargeableTokens,8192)});
+test('empty quote model denied',()=>assert.throws(()=>quote({modelId:''}),/M0124_INVALID_MODEL/));
+test('unknown model denied',()=>assert.throws(()=>quote({modelId:'text-embedding-3-nano'}),/M0124_INVALID_MODEL/));
+test('negative input count denied',()=>assert.throws(()=>quote({inputs:-1}),/M0124_INVALID_INPUTS/));
+test('fractional input count denied',()=>assert.throws(()=>quote({inputs:1.5}),/M0124_INVALID_INPUTS/));
+test('NaN input count denied',()=>assert.throws(()=>quote({inputs:NaN}),/M0124_INVALID_INPUTS/));
+test('huge unsafe input count denied',()=>assert.throws(()=>quote({inputs:Number.MAX_SAFE_INTEGER}),/M0124_INVALID_INPUTS/));
+test('null token length denied',()=>assert.throws(()=>quote({tokensPerInput:0}),/M0124_INVALID_TOKENS_PER_INPUT/));
+test('token length beyond per-embedding max denied',()=>assert.throws(()=>quote({tokensPerInput:8193}),/M0124_INVALID_TOKENS_PER_INPUT/));
+test('fractional token length denied',()=>assert.throws(()=>quote({tokensPerInput:12.3}),/M0124_INVALID_TOKENS_PER_INPUT/));
+test('negative cache percent denied',()=>assert.throws(()=>quote({cacheHitPercent:-1}),/M0124_INVALID_CACHE_HIT/));
+test('over 100 cache percent denied',()=>assert.throws(()=>quote({cacheHitPercent:101}),/M0124_INVALID_CACHE_HIT/));
+test('non-integer cache percent denied',()=>assert.throws(()=>quote({cacheHitPercent:33.3}),/M0124_INVALID_CACHE_HIT/));
+test('invented channel rejected',()=>assert.throws(()=>quote({channel:'discount_sync'}),/M0124_INVALID_CHANNEL/));
+test('unbounded billable tokens denied',()=>assert.throws(()=>quote({inputs:1e9,tokensPerInput:8192}),/M0124_INVALID_TOKENS_TOTAL/));
+test('historical provider token usage captured',()=>{const obs=E.observed(pilot);assert.deepEqual(obs.map(x=>x.promptTokensMeasured),[896,896])});
+test('historical small cost reconciles',()=>{assert.equal(E.observed(pilot)[0].standardCostUSD,0.00001792)});
+test('historical large cost reconciles',()=>{assert.equal(E.observed(pilot)[1].standardCostUSD,0.00011648)});
+test('no per-query / per-document metering is claimed',()=>{assert.ok(E.observed(pilot).every(x=>!x.onVsQueryTokenSplitKnown))});
+test('incorrect pilot contract denied',()=>{assert.throws(()=>E.observed({...pilot,contract:'bad'}),/PILOT_CONTRACT/)});
+test('altered provider usage denied',()=>{const p=structuredClone(pilot);p.usage[0].promptTokens=25;assert.throws(()=>E.observed(p),/PILOT_USAGE/)});
+test('altered dimensions denied',()=>{const p=structuredClone(pilot);p.usage[0].dimension=7;assert.throws(()=>E.observed(p),/PILOT_USAGE/)});
+test('altered billing estimate denied',()=>{const p=structuredClone(pilot);p.usage[0].estimatedAtPublishedRatesUSD=17;assert.throws(()=>E.observed(p),/PILOT_RATE_MISMATCH/)});
+test('extra usage record denied',()=>{const p=structuredClone(pilot);p.usage.push(p.usage[0]);assert.throws(()=>E.observed(p),/PILOT_USAGE/)});
+test('bad prior receipt denied',()=>assert.throws(()=>E.createReport(pilot,{...receipt,completedCount:15}),/PREVIOUS_RECEIPT/));
+test('correct M0123 lineage recorded',()=>{const r=report();assert.equal(r.sourceEvidence.priorStep,'M-0123');assert.equal(r.sourceEvidence.priorLedger,receipt.ledgerAfter)});
+test('all three scale scenarios included',()=>assert.equal(report().scenarios.length,3));
+test('sensitivity scenarios span three token lengths',()=>assert.deepEqual([...new Set(report().variants.map(x=>x.assumedTokensPerInput))],[17,64,256]));
+test('scenario matrix is 3 x 3 x 2',()=>assert.equal(report().variants.length,18));
+test('all scenario cost rows non-negative finite',()=>assert.ok(report().variants.every(x=>Object.keys(x).filter(k=>k.endsWith('USD')).every(k=>x[k]>=0&&Number.isFinite(x[k])))));
+test('all scenario rows explicitly not billed',()=>assert.ok(report().variants.every(x=>x.billingTriggered===false)));
+test('price evidence URLs immutable and official',()=>assert.ok(Object.values(E.PRICE_SNAPSHOT).filter(x=>typeof x==='string'&&x.startsWith('https:')).every(x=>x.startsWith('https://developers.openai.com/'))));
+test('batch economics cheaper or equal for same ON',()=>assert.ok(report().variants.every(x=>x.initialCorpusTrueBatchApiUSD<=x.initialCorpusStandardUSD)));
+test('query cost not given batch discount',()=>{const row=report().variants.find(x=>x.modelId==='text-embedding-3-small'&&x.scenario==='PILOT_SCALE'&&x.assumedTokensPerInput===17);assert.equal(row.monthlyQueriesStandardUSD,E.quote({modelId:row.modelId,channel:'standard',inputs:36,tokensPerInput:17}).estimateUSD)});
+test('monthly changed ON limited by total count',()=>assert.ok(report().variants.every(x=>x.changedON<=x.onCount)));
+test('all 3 scenarios include both models',()=>assert.ok(report().scenarios.every(s=>['text-embedding-3-small','text-embedding-3-large'].every(id=>report().variants.some(x=>x.scenario===s.name&&x.modelId===id)))));
+test('historical sample date is kept',()=>assert.equal(report().sourceEvidence.pilotDateUtc,pilot.runDateUtc));
+test('scenario labels not claimed to be observed',()=>assert.ok(report().conditions.some(x=>x.includes('ASSUMPTIONS')||x.includes('assumptions'))));
+test('all paid flows require manual approval',()=>{const g=report().gate;assert.equal(g.default,'DENY');assert.equal(g.manualApprovalRequired,true)});
+test('lexical fallback explicitly preserved',()=>assert.equal(report().gate.onCacheMiss,'LEXICAL_ONLY'));
+test('report confirms no live provider execution',()=>assert.equal(report().gate.onlineProviderCallsExecuted,0));
+test('report confirms no DB changes',()=>assert.equal(report().gate.sqlExecuted,false));
+test('report is DESIGN only, not integrated',()=>{const r=report();assert.equal(r.mode,'DESIGN');assert.equal(r.gate.liveProviderIntegration,false)});
+test('guard rejects auto paid request',()=>assert.equal(E.guardAutoBillable({kind:'auto',modelId:'text-embedding-3-small'}).decision,'BLOCKED_AUTO_BILLABLE'));
+test('guard rejects manual request without persisted approval',()=>assert.equal(E.guardAutoBillable({kind:'manual_review',modelId:'text-embedding-3-small'}).decision,'BLOCKED_REQUIRES_PERSISTED_OWNER_APPROVAL'));
+test('guard rejects fake approval flag',()=>{const x=E.guardAutoBillable({kind:'auto',modelId:'text-embedding-3-small',approved:true,apiKey:'secret'});assert.equal(x.canCallProvider,false)});
+test('guard rejects unknown model',()=>assert.equal(E.guardAutoBillable({kind:'auto',modelId:'model-unknown'}).decision,'BLOCKED_INVALID_INTENT'));
+test('guard rejects undefined intent',()=>assert.equal(E.guardAutoBillable().decision,'BLOCKED_INVALID_INTENT'));
+test('guard never creates batch job',()=>assert.equal(E.guardAutoBillable({kind:'manual_review',modelId:'text-embedding-3-large'}).canCreateBatchJob,false));
+test('guard always returns zero provider calls',()=>assert.ok([undefined,{kind:'auto',modelId:'text-embedding-3-large'},{kind:'manual_review',modelId:'text-embedding-3-small'}].every(x=>E.guardAutoBillable(x).providerCalls===0)));
+for(const modelId of Object.keys(E.MODELS)){
+ for(const channel of ['standard','batch_api']){
+  test('monotonic cost by token length '+modelId+' '+channel,()=>{
+    const a=quote({modelId,channel,tokensPerInput:20}).estimateUSD;
+    const b=quote({modelId,channel,tokensPerInput:100}).estimateUSD; assert.ok(b>a);
+  });
+  test('monotonic cost by input count '+modelId+' '+channel,()=>{
+    const a=quote({modelId,channel,inputs:10}).estimateUSD;
+    const b=quote({modelId,channel,inputs:100}).estimateUSD;assert.ok(b>a);
+  });
+  test('non-increasing cost by cache hit '+modelId+' '+channel,()=>{
+    const a=quote({modelId,channel,cacheHitPercent:0}).estimateUSD;
+    const b=quote({modelId,channel,cacheHitPercent:50}).estimateUSD;assert.ok(b<=a);
+  });
+ }
+}
+test('no network import in calculation module',()=>{const src=fs.readFileSync(path.join(root,'scripts/benchmarks/ari03-m0124-embedding-economics.cjs'),'utf8');assert.doesNotMatch(src,/require\(['"](?:https?|node:https?|openai|@supabase)\b/)});
+test('TypeScript spend policy declares fail-closed decisions',()=>{const s=fs.readFileSync(path.join(root,'src/lib/ontology-research/embeddingSpendPolicyV1.ts'),'utf8');assert.match(s,/BLOCKED_AUTO_BILLABLE/);assert.match(s,/automaticBillingAllowed:false/);assert.match(s,/batchJobCreationAllowed:false/)});
+test('TypeScript spend policy does not embed API key / external calls',()=>{const s=fs.readFileSync(path.join(root,'src/lib/ontology-research/embeddingSpendPolicyV1.ts'),'utf8');assert.doesNotMatch(s,/(?:fetch\(|axios|\.create\(|OPENAI_API_KEY|process\.env|createClient\()/)});

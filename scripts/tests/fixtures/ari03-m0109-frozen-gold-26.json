@@ -1,0 +1,734 @@
+{
+  "contract": "ARCTOR_ARI_02_3_GOLD_ANNOTATION_V1",
+  "exportedAt": "2026-10-29T20:00:00.000Z",
+  "annotationMethod": "human_review_not_db_proof",
+  "cases": [
+    {
+      "id": "pilot-01",
+      "query": "прогулка с ребёнком",
+      "locale": "ru",
+      "perspective": "mixed",
+      "purpose": "Составная ситуация: не подменять понятие действием ходьбы",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": [
+          {
+            "id": "97e3009b-7c77-5540-8cec-09339fbcdd72",
+            "title": "Ходьба",
+            "path": "Действия и процессы › Деятельность человека › Физическая активность › Локомоторная активность › Ходьба",
+            "role": "intermediate",
+            "rank": 1,
+            "score": 44
+          }
+        ]
+      },
+      "judgments": {
+        "97e3009b-7c77-5540-8cec-09339fbcdd72": {
+          "grade": 1,
+          "errorKind": "other",
+          "note": ""
+        }
+      }
+    },
+    {
+      "id": "pilot-02",
+      "query": "ребёнок",
+      "locale": "ru",
+      "perspective": "systems_structures",
+      "purpose": "Возрастная категория, не человеческий организм",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-03",
+      "query": "дети",
+      "locale": "ru",
+      "perspective": "systems_structures",
+      "purpose": "Множественное число",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-04",
+      "query": "человек",
+      "locale": "ru",
+      "perspective": "systems_structures",
+      "purpose": "Человек и человеческий организм — разные смыслы",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-05",
+      "query": "child",
+      "locale": "en",
+      "perspective": "systems_structures",
+      "purpose": "Перевод и возрастная категория",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-06",
+      "query": "person",
+      "locale": "en",
+      "perspective": "systems_structures",
+      "purpose": "Person и organism не тождественны",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-07",
+      "query": "dziecko",
+      "locale": "pl",
+      "perspective": "systems_structures",
+      "purpose": "Польский поиск",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-08",
+      "query": "niño",
+      "locale": "es",
+      "perspective": "systems_structures",
+      "purpose": "Испанский поиск",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-09",
+      "query": "Kind",
+      "locale": "de",
+      "perspective": "systems_structures",
+      "purpose": "Немецкий поиск и омонимия",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-10",
+      "query": "дитина",
+      "locale": "uk",
+      "perspective": "systems_structures",
+      "purpose": "Украинская локализация",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-11",
+      "query": "dítě",
+      "locale": "cs",
+      "perspective": "systems_structures",
+      "purpose": "Чешский поиск",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-12",
+      "query": "ходьба",
+      "locale": "ru",
+      "perspective": "actions_processes",
+      "purpose": "Точное совпадение названия",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-13",
+      "query": "ходить пешком",
+      "locale": "ru",
+      "perspective": "actions_processes",
+      "purpose": "Морфология / перефразирование",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-14",
+      "query": "walking",
+      "locale": "en",
+      "perspective": "actions_processes",
+      "purpose": "Английское название",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-15",
+      "query": "прогулка",
+      "locale": "ru",
+      "perspective": "actions_processes",
+      "purpose": "Прогулка не равна ходьбе",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-16",
+      "query": "stroll",
+      "locale": "en",
+      "perspective": "actions_processes",
+      "purpose": "Синоним и отличие от walking",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-17",
+      "query": "сопровождение",
+      "locale": "ru",
+      "perspective": "actions_processes",
+      "purpose": "Процесс и отношение участия",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-18",
+      "query": "присмотр за ребёнком",
+      "locale": "ru",
+      "perspective": "actions_processes",
+      "purpose": "Социальный процесс или тип связи",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-19",
+      "query": "игра",
+      "locale": "ru",
+      "perspective": "actions_processes",
+      "purpose": "Омонимия / широкий процесс",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-20",
+      "query": "совместное пребывание",
+      "locale": "ru",
+      "perspective": "actions_processes",
+      "purpose": "Совместность как отношение или процесс",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-21",
+      "query": "состояние спокойствия",
+      "locale": "ru",
+      "perspective": "states_needs",
+      "purpose": "Полное название листового ОН",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-22",
+      "query": "усталость",
+      "locale": "ru",
+      "perspective": "states_needs",
+      "purpose": "Состояние без обязательной связи с ребёнком",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-23",
+      "query": "сон",
+      "locale": "ru",
+      "perspective": "states_needs",
+      "purpose": "Сон как процесс и состояние",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [
+          {
+            "id": "a876134c-367b-5b3f-8f04-4752031b63d4",
+            "title": "Сон",
+            "path": "Действия и процессы › Физиологические процессы › Сон",
+            "role": "intermediate",
+            "rank": 1,
+            "score": 120
+          },
+          {
+            "id": "bf6b8ca1-97b4-56c3-a115-f76e2e7fec5a",
+            "title": "Ночной сон",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон",
+            "role": "intermediate",
+            "rank": 2,
+            "score": 75
+          },
+          {
+            "id": "45d472b0-88fe-5642-b7d0-cbe2502c4ca9",
+            "title": "Продолжительность глубокого сна",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Продолжительность глубокого сна",
+            "role": "leaf",
+            "rank": 3,
+            "score": 20
+          },
+          {
+            "id": "5bd7f40c-4ed9-57b8-b904-f067d309666f",
+            "title": "Количество пробуждений",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Количество пробуждений",
+            "role": "leaf",
+            "rank": 4,
+            "score": 20
+          },
+          {
+            "id": "607c0db7-d29d-5b5f-89a4-8317bb37fc62",
+            "title": "Продолжительность лёгкого сна",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Продолжительность лёгкого сна",
+            "role": "leaf",
+            "rank": 5,
+            "score": 20
+          },
+          {
+            "id": "84d2f41f-4068-518a-b9d9-047b0d0e0762",
+            "title": "Продолжительность ночного сна",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Продолжительность ночного сна",
+            "role": "leaf",
+            "rank": 6,
+            "score": 20
+          },
+          {
+            "id": "a620cf08-9cdb-5c7a-b428-721f356e2d8e",
+            "title": "Продолжительность REM-сна",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Продолжительность REM-сна",
+            "role": "leaf",
+            "rank": 7,
+            "score": 20
+          }
+        ],
+        "experimental": [
+          {
+            "id": "a876134c-367b-5b3f-8f04-4752031b63d4",
+            "title": "Сон",
+            "path": "Действия и процессы › Физиологические процессы › Сон",
+            "role": "intermediate",
+            "rank": 1,
+            "score": 120
+          },
+          {
+            "id": "bf6b8ca1-97b4-56c3-a115-f76e2e7fec5a",
+            "title": "Ночной сон",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон",
+            "role": "intermediate",
+            "rank": 2,
+            "score": 43
+          }
+        ]
+      },
+      "judgments": {}
+    },
+    {
+      "id": "pilot-24",
+      "query": "безопасность",
+      "locale": "ru",
+      "perspective": "states_needs",
+      "purpose": "Потребность, состояние и абстрактное свойство",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [],
+        "experimental": []
+      },
+      "judgments": {}
+    },
+    {
+      "id": "sleep-ari026-duration",
+      "query": "продолжительность сна",
+      "locale": "ru",
+      "perspective": "actions_processes",
+      "purpose": "Поиск характеристики сна с различением общей длительности и длительности фаз",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [
+          {
+            "id": "45d472b0-88fe-5642-b7d0-cbe2502c4ca9",
+            "title": "Продолжительность глубокого сна",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Продолжительность глубокого сна",
+            "role": "leaf",
+            "rank": 1,
+            "score": 48
+          },
+          {
+            "id": "607c0db7-d29d-5b5f-89a4-8317bb37fc62",
+            "title": "Продолжительность лёгкого сна",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Продолжительность лёгкого сна",
+            "role": "leaf",
+            "rank": 2,
+            "score": 48
+          },
+          {
+            "id": "84d2f41f-4068-518a-b9d9-047b0d0e0762",
+            "title": "Продолжительность ночного сна",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Продолжительность ночного сна",
+            "role": "leaf",
+            "rank": 3,
+            "score": 48
+          },
+          {
+            "id": "a620cf08-9cdb-5c7a-b428-721f356e2d8e",
+            "title": "Продолжительность REM-сна",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Продолжительность REM-сна",
+            "role": "leaf",
+            "rank": 4,
+            "score": 48
+          },
+          {
+            "id": "33f459f9-295e-5295-9eaa-fb1bb9fcffac",
+            "title": "Состояние сна",
+            "path": "Состояния и потребности › Состояния › Функциональные состояния › Состояние сна",
+            "role": "intermediate",
+            "rank": 5,
+            "score": 18
+          },
+          {
+            "id": "40d541fc-9d68-5951-a918-fc34f0aff0af",
+            "title": "Подъём по лестнице",
+            "path": "Действия и процессы › Деятельность человека › Физическая активность › Локомоторная активность › Движение по лестнице › Подъём по лестнице",
+            "role": "leaf",
+            "rank": 6,
+            "score": 3
+          },
+          {
+            "id": "5bd7f40c-4ed9-57b8-b904-f067d309666f",
+            "title": "Количество пробуждений",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Количество пробуждений",
+            "role": "leaf",
+            "rank": 7,
+            "score": 3
+          },
+          {
+            "id": "6a0529b6-fe94-55da-bcd1-c38cf3665ada",
+            "title": "Длительность ходьбы",
+            "path": "Действия и процессы › Деятельность человека › Физическая активность › Локомоторная активность › Ходьба › Длительность ходьбы",
+            "role": "leaf",
+            "rank": 8,
+            "score": 3
+          },
+          {
+            "id": "a876134c-367b-5b3f-8f04-4752031b63d4",
+            "title": "Сон",
+            "path": "Действия и процессы › Физиологические процессы › Сон",
+            "role": "intermediate",
+            "rank": 9,
+            "score": 3
+          },
+          {
+            "id": "bf6b8ca1-97b4-56c3-a115-f76e2e7fec5a",
+            "title": "Ночной сон",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон",
+            "role": "intermediate",
+            "rank": 10,
+            "score": 3
+          }
+        ],
+        "experimental": [
+          {
+            "id": "45d472b0-88fe-5642-b7d0-cbe2502c4ca9",
+            "title": "Продолжительность глубокого сна",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Продолжительность глубокого сна",
+            "role": "leaf",
+            "rank": 1,
+            "score": 43
+          },
+          {
+            "id": "607c0db7-d29d-5b5f-89a4-8317bb37fc62",
+            "title": "Продолжительность лёгкого сна",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Продолжительность лёгкого сна",
+            "role": "leaf",
+            "rank": 2,
+            "score": 43
+          },
+          {
+            "id": "84d2f41f-4068-518a-b9d9-047b0d0e0762",
+            "title": "Продолжительность ночного сна",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Продолжительность ночного сна",
+            "role": "leaf",
+            "rank": 3,
+            "score": 43
+          },
+          {
+            "id": "a620cf08-9cdb-5c7a-b428-721f356e2d8e",
+            "title": "Продолжительность REM-сна",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Продолжительность REM-сна",
+            "role": "leaf",
+            "rank": 4,
+            "score": 43
+          },
+          {
+            "id": "33f459f9-295e-5295-9eaa-fb1bb9fcffac",
+            "title": "Состояние сна",
+            "path": "Состояния и потребности › Состояния › Функциональные состояния › Состояние сна",
+            "role": "intermediate",
+            "rank": 5,
+            "score": 43
+          }
+        ]
+      },
+      "judgments": {}
+    },
+    {
+      "id": "sleep-ari026-night",
+      "query": "ночной сон",
+      "locale": "ru",
+      "perspective": "actions_processes",
+      "purpose": "Точное совпадение названия ОН и различение с родительским ОН «Сон»",
+      "notes": "",
+      "catalogCheck": "not_checked",
+      "knownRelevantIds": [],
+      "knownRelevantEvidence": "",
+      "unresolvedConcepts": [],
+      "runs": {
+        "baseline": [
+          {
+            "id": "bf6b8ca1-97b4-56c3-a115-f76e2e7fec5a",
+            "title": "Ночной сон",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон",
+            "role": "intermediate",
+            "rank": 1,
+            "score": 120
+          },
+          {
+            "id": "a876134c-367b-5b3f-8f04-4752031b63d4",
+            "title": "Сон",
+            "path": "Действия и процессы › Физиологические процессы › Сон",
+            "role": "intermediate",
+            "rank": 2,
+            "score": 18
+          },
+          {
+            "id": "45d472b0-88fe-5642-b7d0-cbe2502c4ca9",
+            "title": "Продолжительность глубокого сна",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Продолжительность глубокого сна",
+            "role": "leaf",
+            "rank": 3,
+            "score": 10
+          },
+          {
+            "id": "5bd7f40c-4ed9-57b8-b904-f067d309666f",
+            "title": "Количество пробуждений",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Количество пробуждений",
+            "role": "leaf",
+            "rank": 4,
+            "score": 10
+          },
+          {
+            "id": "607c0db7-d29d-5b5f-89a4-8317bb37fc62",
+            "title": "Продолжительность лёгкого сна",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Продолжительность лёгкого сна",
+            "role": "leaf",
+            "rank": 5,
+            "score": 10
+          },
+          {
+            "id": "84d2f41f-4068-518a-b9d9-047b0d0e0762",
+            "title": "Продолжительность ночного сна",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Продолжительность ночного сна",
+            "role": "leaf",
+            "rank": 6,
+            "score": 10
+          },
+          {
+            "id": "a620cf08-9cdb-5c7a-b428-721f356e2d8e",
+            "title": "Продолжительность REM-сна",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон › Продолжительность REM-сна",
+            "role": "leaf",
+            "rank": 7,
+            "score": 10
+          }
+        ],
+        "experimental": [
+          {
+            "id": "a876134c-367b-5b3f-8f04-4752031b63d4",
+            "title": "Сон",
+            "path": "Действия и процессы › Физиологические процессы › Сон",
+            "role": "intermediate",
+            "rank": 1,
+            "score": 120
+          },
+          {
+            "id": "bf6b8ca1-97b4-56c3-a115-f76e2e7fec5a",
+            "title": "Ночной сон",
+            "path": "Действия и процессы › Физиологические процессы › Сон › Ночной сон",
+            "role": "intermediate",
+            "rank": 2,
+            "score": 43
+          }
+        ]
+      },
+      "judgments": {}
+    }
+  ]
+}

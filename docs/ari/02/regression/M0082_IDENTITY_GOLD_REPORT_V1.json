@@ -1,0 +1,46 @@
+{
+  "contract": "ARCTOR_ARI_M0082_IDENTICAL_GOLD_GUARD_V1",
+  "step": "M-0082",
+  "roadmapId": "ARI-02.08.01",
+  "sourceGoldSha256": "E5073D25DEA44D91FC67A01B727C9427740FC7E5C13528281DA965DFD5A17916",
+  "sameSourceUsedBothSides": true,
+  "minEligibleCases": 10,
+  "observations": [
+    {
+      "engine": "baseline",
+      "comparatorExit": 2,
+      "gate": "INCONCLUSIVE",
+      "caseCount": 156,
+      "eligibleP10": 3,
+      "eligibleScopedRecall20": 0,
+      "blockingIssues": 0,
+      "warnings": 0,
+      "reportFile": "M0082_BASELINE_IDENTICAL_REPORT.json",
+      "reportSha256": "E276220B9A41964650331ED670C258F1629B67EA25CBBC426F74B0FC571AD667",
+      "falseRegressionDetected": false,
+      "qualityCertification": false
+    },
+    {
+      "engine": "experimental",
+      "comparatorExit": 2,
+      "gate": "INCONCLUSIVE",
+      "caseCount": 156,
+      "eligibleP10": 0,
+      "eligibleScopedRecall20": 0,
+      "blockingIssues": 0,
+      "warnings": 0,
+      "reportFile": "M0082_EXPERIMENTAL_IDENTICAL_REPORT.json",
+      "reportSha256": "ADF107A5F8D5D8B3E49FA25C991B4739259A982EA3F61481D007AAB0026E5B43",
+      "falseRegressionDetected": false,
+      "qualityCertification": false
+    }
+  ],
+  "identityHarnessCheck": "PASS_NO_FALSE_REGRESSION",
+  "searchQualityGate": "INCONCLUSIVE_INSUFFICIENT_FULLY_JUDGED_CASES",
+  "independentGold": false,
+  "realRecall20": "N/A",
+  "liveE2E": false,
+  "fixesVerified": 0,
+  "aiApiCalls": 0,
+  "dbWrites": 0
+}

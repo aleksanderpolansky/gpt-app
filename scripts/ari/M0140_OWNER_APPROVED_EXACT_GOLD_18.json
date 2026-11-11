@@ -1,0 +1,300 @@
+{
+  "contract": "ARCTOR_M0121_OWNER_APPROVED_EXACT_TITLE_GOLD_SLICE_V1",
+  "approval_provenance": "OWNER_EXPLICIT_TERMINAL_CONFIRMATION_NOT_INDEPENDENT_LABELING",
+  "owner_confirmation_phrase": "ПОДТВЕРЖДАЮ 18",
+  "evidence_sha256": "B5AA01B0480B9E5DE40ACC8D2BD59BD9289AD1EC9DC97208380B6CCAD7227830",
+  "scope": "18_EXACT_TITLE_SANITY_ONLY",
+  "models_compared": 0,
+  "candidates": [
+    {
+      "uuid": "97e3009b-7c77-5540-8cec-09339fbcdd72",
+      "title": "Walking",
+      "definition": "Human locomotion on foot by sequential steps. Explicitly recognized running and stair movement are treated as separate actions.",
+      "sourceVersion": "2026-09-24T07:27:51.794279+00:00"
+    },
+    {
+      "uuid": "6a0529b6-fe94-55da-bcd1-c38cf3665ada",
+      "title": "Walking Duration",
+      "definition": "Duration of a walking episode under the defined time contract. If it is unknown whether stops are included, that uncertainty is preserved.",
+      "sourceVersion": "2026-09-24T07:27:53.071731+00:00"
+    },
+    {
+      "uuid": "ab9a2a69-3dfa-5841-9c37-dc4c3e788b7c",
+      "title": "Step Count",
+      "definition": "Number of steps taken within one walking episode.",
+      "sourceVersion": "2026-09-24T07:27:53.836919+00:00"
+    },
+    {
+      "uuid": "40d541fc-9d68-5951-a918-fc34f0aff0af",
+      "title": "Stair ascent",
+      "definition": "A person ascending stairs as a single physical activity episode. This object is used for parameters describing the whole ascent episode, including its duration.",
+      "sourceVersion": "2026-09-16T17:08:37.340315+00:00"
+    },
+    {
+      "uuid": "a876134c-367b-5b3f-8f04-4752031b63d4",
+      "title": "Sleep",
+      "definition": "A recurring physiological state characterized by reduced responsiveness to the environment and organized sleep architecture, supporting recovery and regulation of organism functions.",
+      "sourceVersion": "2026-09-24T16:19:07.963874+00:00"
+    },
+    {
+      "uuid": "bf6b8ca1-97b4-56c3-a115-f76e2e7fec5a",
+      "title": "Night sleep",
+      "definition": "A sleep episode that constitutes the person's principal sleep period associated with the night. It is not identified from duration alone; explicit user or device labeling, timing and context may be used.",
+      "sourceVersion": "2026-09-24T16:19:08.204355+00:00"
+    },
+    {
+      "uuid": "84d2f41f-4068-518a-b9d9-047b0d0e0762",
+      "title": "Night sleep duration",
+      "definition": "Total duration of a night-sleep episode under the selected measurement contract. If the source reports time asleep rather than time in bed, that source meaning is preserved.",
+      "sourceVersion": "2026-09-25T13:43:10.696+00:00"
+    },
+    {
+      "uuid": "a620cf08-9cdb-5c7a-b428-721f356e2d8e",
+      "title": "REM sleep duration",
+      "definition": "Duration within a night-sleep episode classified by the reporting source or measurement method as REM sleep. The source method and its uncertainty are preserved.",
+      "sourceVersion": "2026-09-24T16:19:08.501274+00:00"
+    },
+    {
+      "uuid": "45d472b0-88fe-5642-b7d0-cbe2502c4ca9",
+      "title": "Deep sleep duration",
+      "definition": "Duration within a night-sleep episode classified by the reporting source or measurement method as deep sleep. The source method and its uncertainty are preserved rather than assuming equivalence between devices.",
+      "sourceVersion": "2026-09-24T16:19:08.404027+00:00"
+    },
+    {
+      "uuid": "607c0db7-d29d-5b5f-89a4-8317bb37fc62",
+      "title": "Light sleep duration",
+      "definition": "Duration within a night-sleep episode classified by the reporting source or measurement method as light sleep. The source method and its uncertainty are preserved rather than assuming equivalence between devices.",
+      "sourceVersion": "2026-09-24T17:04:58.963535+00:00"
+    },
+    {
+      "uuid": "5bd7f40c-4ed9-57b8-b904-f067d309666f",
+      "title": "Awakening count",
+      "definition": "Number of awakening episodes reported or detected within a night-sleep episode under the source's detection rules. Differences in source methods and detection thresholds are preserved.",
+      "sourceVersion": "2026-09-24T16:19:08.589972+00:00"
+    },
+    {
+      "uuid": "943c8927-ffb0-5542-9f6b-1be8ba33e3ff",
+      "title": "Coffee consumption",
+      "definition": "An event or process in which a person consumes coffee as a beverage. The number of cups or servings consumed may be stored as a separate fact using the Count parameter. Caffeine dose is not inferred without an explicit value or verified source.",
+      "sourceVersion": "2026-09-26T18:46:35.170257+00:00"
+    },
+    {
+      "uuid": "9a2f93bb-ba2b-5711-8906-972571654023",
+      "title": "Dietary supplement intake",
+      "definition": "Human actions involving the intake of dietary supplements.",
+      "sourceVersion": "2026-09-21T15:31:01.807598+00:00"
+    },
+    {
+      "uuid": "632a7893-0c9e-58ef-8bdf-9bba6a6a92c6",
+      "title": "Physical activity",
+      "definition": "Human activity involving bodily movement, musculoskeletal work, and energy expenditure.",
+      "sourceVersion": "2026-09-07T13:40:47.529879+00:00"
+    },
+    {
+      "uuid": "33f459f9-295e-5295-9eaa-fb1bb9fcffac",
+      "title": "Sleep state",
+      "definition": "A functional state describing whether and how a person or organism is sleeping during a defined interval. Specific measured aspects are represented by facts linked to more specific observation objects.",
+      "sourceVersion": "2026-09-24T16:19:08.852485+00:00"
+    },
+    {
+      "uuid": "2216b487-4a8c-50bd-a875-ae5f59036bc2",
+      "title": "Human activity",
+      "definition": "Actions and activities performed by a human as an acting agent.",
+      "sourceVersion": "2026-09-07T10:23:02.972991+00:00"
+    },
+    {
+      "uuid": "fe24b4c3-5f46-5386-9c0a-0ee749d55fa3",
+      "title": "Human organism",
+      "definition": "The human biological system as a whole, including organs, organ systems, tissues, and other structural parts.",
+      "sourceVersion": "2026-09-07T15:20:41.546728+00:00"
+    },
+    {
+      "uuid": "b48dd558-5169-5cb1-bad7-f4c108e1fa43",
+      "title": "Pull-up on a horizontal bar",
+      "definition": "A strength exercise performed while hanging from a horizontal bar, in which a person raises the body using upper-body musculature and then lowers it under control.",
+      "sourceVersion": "2026-09-07T14:30:40.415393+00:00"
+    }
+  ],
+  "queries": [
+    {
+      "id": "realon-exact-01",
+      "locale": "ru",
+      "query": "Ходьба",
+      "relevantOnIds": [
+        "97e3009b-7c77-5540-8cec-09339fbcdd72"
+      ],
+      "evidence": "EXACT_RU_DRAFT_NAME",
+      "definition_sha256": "758A013790319ABE8AE933C7D0BF981A4520F568C6E69026750A0BC1242C8E1A"
+    },
+    {
+      "id": "realon-exact-02",
+      "locale": "ru",
+      "query": "Длительность ходьбы",
+      "relevantOnIds": [
+        "6a0529b6-fe94-55da-bcd1-c38cf3665ada"
+      ],
+      "evidence": "EXACT_RU_DRAFT_NAME",
+      "definition_sha256": "EE794C50ACAB620594B4AEE3723729FD7DBBD43469181FEAED9C5274E2B490F1"
+    },
+    {
+      "id": "realon-exact-03",
+      "locale": "ru",
+      "query": "Количество шагов",
+      "relevantOnIds": [
+        "ab9a2a69-3dfa-5841-9c37-dc4c3e788b7c"
+      ],
+      "evidence": "EXACT_RU_DRAFT_NAME",
+      "definition_sha256": "FF4208D5883082542C9A5DA17FB0F4BAD47C23B570B44314C1D5C42D6CAD7CCC"
+    },
+    {
+      "id": "realon-exact-04",
+      "locale": "ru",
+      "query": "Подъём по лестнице",
+      "relevantOnIds": [
+        "40d541fc-9d68-5951-a918-fc34f0aff0af"
+      ],
+      "evidence": "EXACT_RU_DRAFT_NAME",
+      "definition_sha256": "12A72514847B759679D260A44B2379B2538ECE495A6FFFD752B930B1AC06777E"
+    },
+    {
+      "id": "realon-exact-05",
+      "locale": "ru",
+      "query": "Сон",
+      "relevantOnIds": [
+        "a876134c-367b-5b3f-8f04-4752031b63d4"
+      ],
+      "evidence": "EXACT_RU_DRAFT_NAME",
+      "definition_sha256": "5571322F92501821D6133C478F120FC8433E657D22C9F1375E42987E4E14CF44"
+    },
+    {
+      "id": "realon-exact-06",
+      "locale": "ru",
+      "query": "Ночной сон",
+      "relevantOnIds": [
+        "bf6b8ca1-97b4-56c3-a115-f76e2e7fec5a"
+      ],
+      "evidence": "EXACT_RU_DRAFT_NAME",
+      "definition_sha256": "E9C50AE4FF40462403FC3ADC4728101E17558111BC2A1AAFB53FDD1CEEB1A11D"
+    },
+    {
+      "id": "realon-exact-07",
+      "locale": "ru",
+      "query": "Продолжительность ночного сна",
+      "relevantOnIds": [
+        "84d2f41f-4068-518a-b9d9-047b0d0e0762"
+      ],
+      "evidence": "EXACT_RU_DRAFT_NAME",
+      "definition_sha256": "18B539CE17DC8607AC79A85B89558CD9BB66585BD9923EA9037BE8E64A934296"
+    },
+    {
+      "id": "realon-exact-08",
+      "locale": "ru",
+      "query": "Продолжительность REM-сна",
+      "relevantOnIds": [
+        "a620cf08-9cdb-5c7a-b428-721f356e2d8e"
+      ],
+      "evidence": "EXACT_RU_DRAFT_NAME",
+      "definition_sha256": "7438C6FA17F72D6D8CC0CDFDF16D2815DEC02601B9EC91AB19137D67CAEC1581"
+    },
+    {
+      "id": "realon-exact-09",
+      "locale": "ru",
+      "query": "Продолжительность глубокого сна",
+      "relevantOnIds": [
+        "45d472b0-88fe-5642-b7d0-cbe2502c4ca9"
+      ],
+      "evidence": "EXACT_RU_DRAFT_NAME",
+      "definition_sha256": "BF47D5B8B803070758044CD71491CA4F3F075F05C1DC8FCF41209108C8F596B2"
+    },
+    {
+      "id": "realon-exact-10",
+      "locale": "ru",
+      "query": "Продолжительность лёгкого сна",
+      "relevantOnIds": [
+        "607c0db7-d29d-5b5f-89a4-8317bb37fc62"
+      ],
+      "evidence": "EXACT_RU_DRAFT_NAME",
+      "definition_sha256": "870A581B03E0123DB1764AD59C166026860A5700D4CEA30A6DDE8067E9B912F6"
+    },
+    {
+      "id": "realon-exact-11",
+      "locale": "ru",
+      "query": "Количество пробуждений",
+      "relevantOnIds": [
+        "5bd7f40c-4ed9-57b8-b904-f067d309666f"
+      ],
+      "evidence": "EXACT_RU_DRAFT_NAME",
+      "definition_sha256": "D39C346A6BBCD9D76CCE139D18F0A35DEB9F8168AB95AD192DE7FAB1CE96287D"
+    },
+    {
+      "id": "realon-exact-12",
+      "locale": "ru",
+      "query": "Употребление кофе",
+      "relevantOnIds": [
+        "943c8927-ffb0-5542-9f6b-1be8ba33e3ff"
+      ],
+      "evidence": "EXACT_RU_DRAFT_NAME",
+      "definition_sha256": "C47C65E6E0665D7506F5CD1E3987795CDDF3E89C5636A37F6BEE632B39D2422F"
+    },
+    {
+      "id": "realon-exact-13",
+      "locale": "ru",
+      "query": "Приём пищевых добавок",
+      "relevantOnIds": [
+        "9a2f93bb-ba2b-5711-8906-972571654023"
+      ],
+      "evidence": "EXACT_RU_DRAFT_NAME",
+      "definition_sha256": "D0CE9CB0E8FCF2C0223275C78BF536AF76EE48B55494D2A74FC9ADDA497E5B36"
+    },
+    {
+      "id": "realon-exact-14",
+      "locale": "ru",
+      "query": "Физическая активность",
+      "relevantOnIds": [
+        "632a7893-0c9e-58ef-8bdf-9bba6a6a92c6"
+      ],
+      "evidence": "EXACT_RU_DRAFT_NAME",
+      "definition_sha256": "65656CD271C1A8DA23FEF545BC4075F74928F2F541E9B88E1203011C84E9A418"
+    },
+    {
+      "id": "realon-exact-15",
+      "locale": "ru",
+      "query": "Состояние сна",
+      "relevantOnIds": [
+        "33f459f9-295e-5295-9eaa-fb1bb9fcffac"
+      ],
+      "evidence": "EXACT_RU_DRAFT_NAME",
+      "definition_sha256": "EFFCC83EDBDC8C5662A53CCC686C90D8BFE2F1EEF51002773E29B8585E46B299"
+    },
+    {
+      "id": "realon-exact-17",
+      "locale": "ru",
+      "query": "Человеческий организм",
+      "relevantOnIds": [
+        "fe24b4c3-5f46-5386-9c0a-0ee749d55fa3"
+      ],
+      "evidence": "EXACT_RU_DRAFT_NAME",
+      "definition_sha256": "D96A6FE3E036201908755FEE2DE655CDB3199FA10616D488975D50BCA28F7631"
+    },
+    {
+      "id": "realon-exact-18",
+      "locale": "ru",
+      "query": "Подтягивание на перекладине",
+      "relevantOnIds": [
+        "b48dd558-5169-5cb1-bad7-f4c108e1fa43"
+      ],
+      "evidence": "EXACT_RU_DRAFT_NAME",
+      "definition_sha256": "437681C1214EB2721E1427BF68593BB215767671F3CBFD23C9F4A4DD4DAD1929"
+    },
+    {
+      "id": "realon-variation-13",
+      "locale": "en",
+      "query": "walking",
+      "relevantOnIds": [
+        "97e3009b-7c77-5540-8cec-09339fbcdd72"
+      ],
+      "evidence": "EXACT_EN_CANONICAL_NAME",
+      "definition_sha256": "758A013790319ABE8AE933C7D0BF981A4520F568C6E69026750A0BC1242C8E1A"
+    }
+  ]
+}

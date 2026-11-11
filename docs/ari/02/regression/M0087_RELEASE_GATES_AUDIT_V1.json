@@ -1,0 +1,35 @@
+{
+  "contract": "ARCTOR_ARI_M0087_RELEASE_GATES_AUDIT_V1",
+  "step": "M-0087",
+  "roadmapId": "ARI-02.08.06",
+  "gitHead": "675521c8151a18cb6f53ae6339e9663d831712ef",
+  "nodeVersion": "v24.15.0",
+  "measurementHost": "win32-x64",
+  "checkedAt": "2026-11-02T07:19:54.547Z",
+  "gitDiffCheck": true,
+  "gitStagedDiffCheck": true,
+  "typescript": true,
+  "productionBuild": true,
+  "totalWallMs": 131628.41,
+  "inventoryBefore": {
+    "trackedChanged": 0,
+    "staged": 0,
+    "untracked": 36,
+    "ari02": 29,
+    "other": 7
+  },
+  "inventoryAfter": {
+    "trackedChanged": 0,
+    "staged": 0,
+    "untracked": 36,
+    "ari02": 29,
+    "other": 7
+  },
+  "localUntrackedNotPublished": true,
+  "buildIsNotLiveE2E": true,
+  "qualityGate": "INCONCLUSIVE_INSUFFICIENT_GOLD",
+  "realRecall20": "N/A",
+  "indexedLookupEnabled": false,
+  "gitCommitPushDeploy": false,
+  "sqlChanged": false
+}

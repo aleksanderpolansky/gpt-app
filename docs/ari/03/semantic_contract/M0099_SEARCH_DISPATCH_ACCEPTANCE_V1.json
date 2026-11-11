@@ -1,0 +1,63 @@
+{
+  "contract": "ARCTOR_ARI_M0099_SEARCH_DISPATCH_DESIGN_V1",
+  "step": "M-0099",
+  "roadmapId": "ARI-03.02.03",
+  "acceptedAtUtc": "2026-11-02T11:49:04.069Z",
+  "evidenceLevel": "DESIGN_ONLY_PINNED_M0097_M0098_M0096",
+  "requestModes": [
+    "exact_uuid_lookup",
+    "suggest_by_text"
+  ],
+  "exactRequestFields": [
+    "mode",
+    "objectId",
+    "locale",
+    "actorScope"
+  ],
+  "textRequestFields": [
+    "mode",
+    "query"
+  ],
+  "exactOutcomes": [
+    "found",
+    "not_available"
+  ],
+  "suggestOutcomes": [
+    "single_candidate",
+    "ambiguous",
+    "no_match",
+    "blocked"
+  ],
+  "exactUuidNoTextFallback": true,
+  "uuidShapedTextRemainsText": true,
+  "nonexistentAndUnauthorizedIndistinguishable": true,
+  "autoSelectProhibited": true,
+  "requiresServerAuthAndIdentityJoin": true,
+  "modeSelectedOnlyByExplicitDiscriminator": true,
+  "privateOwnerClientOverrideRejected": true,
+  "priorM0098ReceiptSha256": "16656B2669989C9336DE9E53241F23B85B900FD870F4F938FC2729787B8B047B",
+  "priorM0098AcceptanceSha256": "6581CB7FE3829529ACE02550601B3D669FE961269FA6259CDEA09171E4CD3223",
+  "priorM0098ResultSchemaSha256": "DD496B597F19B9BF2D683716D66624E8749C7D6A4723B95B93F3EB4DB525D797",
+  "priorM0097QuerySchemaSha256": "625A72B77E84D3EE90B1B9FDA14E304A9B87FFBC9F42A84F700BAA84A283B776",
+  "priorM0096SnapshotSha256": "B27AA2B9A5311466ECA36ED154BEDA5B979F440D7584650C046B32C4FA3EBEE6",
+  "schemaSha256": "066A417BC68FDB7A6D9DD2A4BEDDFE56B5530AFFAD23192279428FA89AD68A78",
+  "designTsSha256": "19047D4ECA6F66BF42537C79B4A0EC239BC99DB0EA8B6E9F850287C7F744A3E4",
+  "validatorSha256": "C0F2D629B061B074B5D2813FB83410A0ECF0F4A0CE1EC7E8132BA33EBF7D2465",
+  "negativeTestCount": 32,
+  "positiveScenarioCount": 9,
+  "catalog_snapshot_hash": "sha256:v1:e68d4c397e6d7286cc883c219470869d586933c98a66362be92886f88f16299f",
+  "translation_version": "derived-sha256-v1:b2b7110d065d5e215aeef7069cff8312a8553ba9d6f4b50febd3ae35bdb111c2",
+  "normalizationDeferredTo": "M-0100",
+  "brokenAliasTargetsOpen": 89,
+  "commercialRootDuplicateGroupsOpen": 2,
+  "privacyIsolationE2ETested": false,
+  "translationIdentityJoinVerified": false,
+  "indexableApproved": 0,
+  "indexedSearchActivated": false,
+  "searchQuality": "INCONCLUSIVE",
+  "implementationInProduction": false,
+  "sourceChanged": false,
+  "sqlExecuted": false,
+  "sqlWrite": false,
+  "commitPushDeploy": false
+}

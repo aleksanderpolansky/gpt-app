@@ -1,0 +1,133 @@
+{
+  "contract": "ARCTOR_ARI_M0094_SEMANTIC_FIELDS_AUDIT_V1",
+  "step": "M-0094",
+  "roadmap": "ARI-03.01.05",
+  "evidenceLevel": "USER_EXPORTED_SQL_EDITOR_AGGREGATE_METADATA_ONLY_NO_TEXT_OR_UUID",
+  "capturedAtUtc": "2026-11-02T10:08:20.498482",
+  "sqlSha256": "B73714DEEE4D5829605922D4D8DBC8EAABB4F5DEBB24EA0E1F5A33DCDBB0AC66",
+  "rawExportSha256": "9546BA3AEBABAE89E4DDE98435AAC540A9BEC9784DCB4E7F77AFCFFDAFDFF7FE",
+  "priorReceiptSha256": "9F8FA91EF52E1F3B016D078BD0F9BC2D05D1CEF16211205280F4DBE5911379BC",
+  "priorAuditSha256": "0CD0F6485EA7E2C79E993203059469A9A8C33C70B95243AE4C930BBC5D19AB52",
+  "totalObjects": 803,
+  "activeObjects": 791,
+  "baseFieldCounts": {
+    "active_total": 791,
+    "object_total": 803,
+    "active_title_present": 791,
+    "active_root_ref_present": 791,
+    "active_parent_ref_present": 781,
+    "active_description_present": 791,
+    "active_negative_context_top_level_key_present": 0
+  },
+  "definitionCounts": {
+    "version_rows": 822,
+    "versioned_objects": 798,
+    "version_title_rows": 822,
+    "version_with_number": 822,
+    "version_description_rows": 819,
+    "version_definition_key_rows": 0,
+    "version_source_context_present": 822
+  },
+  "expectedLocales": [
+    "cs",
+    "de",
+    "en",
+    "es",
+    "pl",
+    "ru",
+    "uk"
+  ],
+  "allLocalizedRows": 738,
+  "allSourceRows": 125,
+  "valueObjectAliasRows": 89,
+  "namedValueObjectLocalizedRowsUnlinked": 738,
+  "namedValueObjectNonemptyLocalizedTextsUnlinked": 738,
+  "voNamedRowsUnknownOrNonTargetLocale": 0,
+  "voNamedRowsNotInRecognizedApprovedStatuses": 738,
+  "localePresence": [
+    {
+      "locale_code": "cs",
+      "vo_alias_rows": 0,
+      "all_entity_localized_texts": 123,
+      "vo_named_entity_texts_unlinked": 123,
+      "source_registry_rows_all_entities": 0
+    },
+    {
+      "locale_code": "de",
+      "vo_alias_rows": 0,
+      "all_entity_localized_texts": 123,
+      "vo_named_entity_texts_unlinked": 123,
+      "source_registry_rows_all_entities": 0
+    },
+    {
+      "locale_code": "en",
+      "vo_alias_rows": 44,
+      "all_entity_localized_texts": 30,
+      "vo_named_entity_texts_unlinked": 30,
+      "source_registry_rows_all_entities": 95
+    },
+    {
+      "locale_code": "es",
+      "vo_alias_rows": 0,
+      "all_entity_localized_texts": 123,
+      "vo_named_entity_texts_unlinked": 123,
+      "source_registry_rows_all_entities": 0
+    },
+    {
+      "locale_code": "pl",
+      "vo_alias_rows": 0,
+      "all_entity_localized_texts": 123,
+      "vo_named_entity_texts_unlinked": 123,
+      "source_registry_rows_all_entities": 0
+    },
+    {
+      "locale_code": "ru",
+      "vo_alias_rows": 45,
+      "all_entity_localized_texts": 95,
+      "vo_named_entity_texts_unlinked": 95,
+      "source_registry_rows_all_entities": 28
+    },
+    {
+      "locale_code": "uk",
+      "vo_alias_rows": 0,
+      "all_entity_localized_texts": 121,
+      "vo_named_entity_texts_unlinked": 121,
+      "source_registry_rows_all_entities": 2
+    }
+  ],
+  "localizationGroupCount": 14,
+  "sourceGroupCount": 6,
+  "note": "Counts for entity_type value_object/value_objects are not verified join coverage or authorized indexing. All counts are metadata only.",
+  "indexableApproved": 0,
+  "missingTranslationsCertified": false,
+  "sourceLocaleLegacyAssumed": false,
+  "searchQuality": "INCONCLUSIVE",
+  "localeNotBoundToSpecificValueObject": "UNVERIFIED",
+  "targetFields": [
+    "title",
+    "description",
+    "definition",
+    "path",
+    "negative_context"
+  ],
+  "coveredTables": [
+    "value_objects",
+    "value_object_definition_versions",
+    "platform_localized_content_v1",
+    "platform_localization_sources_v1",
+    "concept_aliases"
+  ],
+  "pathText": "DERIVED_HIERARCHY_NOT_DIRECT_TRANSLATED_COLUMN",
+  "negativeContext": "TOP_LEVEL_JSON_KEY_INVENTORY_ONLY",
+  "titleDescriptionBase": "LEGACY_TEXT_WITH_NO_EXPLICIT_LOCALE_COLUMN",
+  "definitionText": "VERSIONED_TITLE_DESCRIPTION_AND_JSON_DEFINITION_KEY_INVENTORY",
+  "missingTranslations": "M0095_TO_CLASSIFY_AS_NULL_NOT_AUTO_APPROVED",
+  "commercialRootMissingCanonicalKey": "ACCEPTED_DESIGN_EXCEPTION_FOR_TWO_PGC2D_ROOTS_ONLY",
+  "rootDuplicates": "2 POSSIBLE SAME_NAMESPACE GROUPS OPEN",
+  "aliasTargetsMissing": 89,
+  "privacyIsolationE2ECertified": false,
+  "indexedSearchActivated": false,
+  "sqlWrite": false,
+  "sourceChanges": false,
+  "commitPushDeploy": false
+}

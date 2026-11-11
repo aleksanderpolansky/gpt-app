@@ -1,0 +1,48 @@
+{
+  "contract": "ARCTOR_ARI_M0092_UUID_CANONICAL_AUDIT_V1",
+  "step": "M-0092",
+  "roadmap": "ARI-03.01.03",
+  "evidenceLevel": "USER_EXPORTED_LIVE_SQL_READONLY_INDEPENDENT_DB_ATTESTATION_ABSENT",
+  "capturedAtUtc": "2026-11-02T09:03:44.346687",
+  "sqlSha256": "C79EF6D232A8B0B22656A7FE9EA7C00F620774BDF6AD8F15096012BE5FE5FC27",
+  "rawExportSha256": "793EBA75D51D6A56BA4525844FEF56757812CE5DAC4244FA12B3E8B958EC006C",
+  "priorReceiptSha256": "650E7B3149E13D5A37EC689AC6E7A5FD531CEBD86C3DCE4D948958C8430CF360",
+  "priorInventorySha256": "AC19C7A8FA03520B1AD4B6A7DF763421E715E8D925707408EBF6685E6BE14FA9",
+  "totalObjects": 803,
+  "activeObjects": 791,
+  "unknownStatusObjects": 0,
+  "activeMissingCanonicalKey": 2,
+  "activeCollisionGroups": 0,
+  "activeCollisionRows": 0,
+  "statusCounts": {
+    "active": 791,
+    "draft": 12
+  },
+  "statusClassCounts": {
+    "ACTIVE_EXPLICIT": 791,
+    "INACTIVE_EXPLICIT": 12
+  },
+  "scopeClassCounts": {
+    "GLOBAL_EXPLICIT": 740,
+    "OWNER_SCOPED": 63
+  },
+  "nativeUUIDContractConfirmed": true,
+  "aliasTargetCheck": {
+    "alias_count": 89,
+    "vo_alias_count": 89,
+    "missing_target_count": 89,
+    "missing_distinct_target_count": 23
+  },
+  "missingTargetsChangeVsM0091": 0,
+  "crossScopeDuplicatesNotAnErrorWithoutOwnerVerification": true,
+  "indexableApproved": 0,
+  "privacyE2EVerified": false,
+  "activeStatusBasis": "explicit active/published/approved only; unclassified status retained separately",
+  "reportContainsRawNamesOrIDs": false,
+  "sourceCodeChanged": false,
+  "sqlWrite": false,
+  "rpcExecuted": false,
+  "indexedSearchStillOff": true,
+  "searchQuality": "INCONCLUSIVE",
+  "limitations": "Native uuid and PK validate storage identity format, not semantic target correctness. Scope/locale/version and RLS not yet verified; no indexable field approved."
+}

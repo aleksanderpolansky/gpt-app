@@ -1,0 +1,43 @@
+{
+  "contract": "ARCTOR_ARI_M0111_SEVEN_LOCALE_ALIAS_INDEX_REVIEW_V1",
+  "step": "M-0111",
+  "roadmapId": "ARI-03.04.01",
+  "acceptedAtUtc": "2026-11-02T16:29:40.278Z",
+  "level": "LOCAL_PURE_CODE_AND_SOURCE_LITERAL_EVIDENCE",
+  "newModuleSha256": "823C4A11D5926863507ABCABEABEB75D0FAA25EF4A1731F340151D351F7CD725",
+  "sourceDictionarySha256": "4AF6F480FF0FFCFA5BF0C9B96BD478DDAE02653C5666DAF26AEE39CFCEFFC701",
+  "inventorySha256": "02729110A881B4E834B960FE7F2AED590EDDFF8CCF475018E39417C496E2C6CC",
+  "newTestSha256": "72D62586820CE52B5F127B2AF183C1AF82E9395FE2F61218CE7CAA84C4031783",
+  "lexicalSha256": "B12161EDAD77221607928B44F14045F975F304D9437C0208B29FC1AD44B514AD",
+  "sourceLocales": [
+    "en",
+    "pl",
+    "es",
+    "de",
+    "cs",
+    "uk",
+    "ru"
+  ],
+  "sourceLiteralInventoryCount": 14,
+  "realOntologyUuidBindingsVerified": 0,
+  "curatorReviewedAliasRowsInProduction": 0,
+  "fixtureUuidBindings": "SYNTHETIC_TEST_ONLY",
+  "tests": {
+    "new": 42,
+    "previous": 188,
+    "total": 230,
+    "failed": 0,
+    "skipped": 0
+  },
+  "liveDB": false,
+  "frontendIntegration": false,
+  "apiModified": false,
+  "sourceDbModified": false,
+  "unauthorizedAutoMerge": false,
+  "privacyE2E": false,
+  "sql": false,
+  "paidAi": false,
+  "commitPushDeploy": false,
+  "productionSearchEnabled": false,
+  "nextStep": "M-0112"
+}
