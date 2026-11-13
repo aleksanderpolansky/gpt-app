@@ -10,6 +10,7 @@ import {
   type GraphRelationTypeV1,
   type GraphNeighborNodeV1,
 } from '@/lib/ontology/graphQueryV1';
+import { graphClockVectorX04, runGraphVersionFenceX04 } from '@/lib/ontology/graphVersionFenceX04';
 
 export const dynamic = 'force-dynamic';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -19,7 +20,23 @@ type RouteContext = { params: Promise<{id: string}> };
 
 type ActorId = { appUserId: string; actorId: string };
 
-/** Disabled by default while SEC-06 remains OPEN_BLOCKER. No automatic activation. */
+// Server-side scope only. The caller cannot supply another actor's clock keys.
+async function readGraphClockVectorX04(actor: ActorId): Promise<string | null> {
+  const table = 'arctor_model_versions_x04_v1';
+  const [system, scoped] = await Promise.all([
+    supabase.from(table).select('version_key,revision')
+      .in('version_key', ['system:catalog', 'system:relation_review']),
+    supabase.from(table).select('domain_code,revision,owner_user_id,owner_actor_id')
+      .eq('scope_code', 'actor')
+      .eq('owner_user_id', actor.appUserId)
+      .eq('owner_actor_id', actor.actorId)
+      .in('domain_code', ['catalog', 'relation_review']),
+  ]);
+  if (system.error || scoped.error || !system.data || !scoped.data) return null;
+  return graphClockVectorX04(system.data, scoped.data, actor);
+}
+
+/** Feature flag must be checked per deployment: Production had this enabled on 2026-11-13. */
 export async function GET(request: Request, context: RouteContext) {
   if (process.env.ARCTOR_GRAPH_NEIGHBOR_V1_ENABLED !== '1')
     return respond({ ok: false, error: 'GRAPH_NEIGHBOR_API_DISABLED' }, 404);
@@ -42,6 +59,27 @@ export async function GET(request: Request, context: RouteContext) {
     return respond({ ok: false, error: 'ACTOR_CONTEXT_FAILED' }, 500);
   }
 
+  try {
+    const fenced = await runGraphVersionFenceX04({
+      readVersion: () => readGraphClockVectorX04(actor),
+      readValue: () => readGraphNeighborRows(rawId, query, actor),
+    });
+    if (fenced.state === 'stable') return fenced.value;
+    return respond({ ok: false, error: fenced.state === 'changed'
+      ? 'GRAPH_VERSION_CHANGED_RETRY_EXHAUSTED'
+      : 'GRAPH_VERSION_UNAVAILABLE' }, 503);
+  } catch {
+    return respond({ ok: false, error: 'GRAPH_READER_UNEXPECTED_ERROR' }, 500);
+  }
+}
+
+// Every observation response is returned only after matching clock epochs.
+// Requires all material writes (including relation-type registry changes) to bump these clocks atomically.
+async function readGraphNeighborRows(
+  rawId: string,
+  query: ReturnType<typeof parseGraphNeighborQueryV1>,
+  actor: ActorId,
+) {
   // Resolve anchor scope server-side. A request cannot choose another actor.
   const globalAnchor = await supabase.from('value_objects').select('id')
     .eq('id', rawId).eq('scope_code', 'global').eq('origin_type_code', 'system_model')
