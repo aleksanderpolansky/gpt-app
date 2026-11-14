@@ -35,6 +35,7 @@ export type GraphNeighborItemV1 = Readonly<{
   sourceValueObjectId: string;
   targetValueObjectId: string;
   relationTypeCode: string;
+  status: string;
   perspective: GraphDirectedPerspective;
   updatedAt: string;
 }>;
@@ -121,6 +122,7 @@ export function buildGraphNeighborViewV1(args: {
       sourceValueObjectId: row.source_value_object_id,
       targetValueObjectId: row.target_value_object_id,
       relationTypeCode: row.relation_type_code,
+      status: row.status,
       perspective,
       updatedAt: row.updated_at,
     });
