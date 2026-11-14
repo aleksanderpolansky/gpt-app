@@ -4,6 +4,7 @@ import { ActorContextError, resolveActiveActorContext } from '../../../../../../
 import { supabase } from '../../../../../../lib/supabase';
 import {
   buildGraphNeighborViewV1,
+  canonicalizeGraphReadQueryX04,
   parseGraphNeighborQueryV1,
   selectGraphNeighborTypeCodesV1,
   type GraphRelationRowV1,
@@ -94,16 +95,17 @@ async function readGraphNeighborRows(
     if (!ownedAnchor.data) return respond({ ok: false, error: 'NOT_FOUND_OR_ACCESS_DENIED' }, 404);
   }
   const registry = await supabase.from('value_object_relation_types')
-    .select('relation_type_code,directionality_code,status').eq('status', 'active');
+    .select('relation_type_code,directionality_code,status,canonical_relation_type_code,canonical_orientation_code,canonical_write_policy_code').eq('status', 'active');
   if (registry.error) return respond({ ok: false, error: 'RELATION_REGISTRY_READ_FAILED' }, 500);
   const types = (registry.data ?? []) as GraphRelationTypeV1[];
-  const codes = selectGraphNeighborTypeCodesV1(types, query);
-  if (codes.length === 0) return respond({ ok: true, valueObjectId: rawId, scope: isSystem ? 'system' : 'actor', ...buildGraphNeighborViewV1({anchorValueObjectId: rawId, query, types, rows: [], visibleNeighbors: []}) });
+  const canonicalQuery = canonicalizeGraphReadQueryX04(types, query);
+  const codes = canonicalQuery ? selectGraphNeighborTypeCodesV1(types, canonicalQuery) : [];
+  if (codes.length === 0) return respond({ ok: true, valueObjectId: rawId, scope: isSystem ? 'system' : 'actor', ...buildGraphNeighborViewV1({anchorValueObjectId: rawId, query: canonicalQuery ?? query, types, rows: [], visibleNeighbors: []}) });
 
   const table = isSystem ? 'system_value_object_relations' : 'value_object_relations';
   const fields = 'id,source_value_object_id,target_value_object_id,relation_type_code,status,updated_at';
-  const wantsOutgoing = query.direction !== 'incoming';
-  const wantsIncoming = query.direction !== 'outgoing';
+  const wantsOutgoing = canonicalQuery!.direction !== 'incoming';
+  const wantsIncoming = canonicalQuery!.direction !== 'outgoing';
   const fetchSide = (key: 'source_value_object_id' | 'target_value_object_id') => {
     let b = supabase.from(table).select(fields)
       .eq(key, rawId).eq('status', 'active').in('relation_type_code', codes);
@@ -127,7 +129,7 @@ async function readGraphNeighborRows(
     if (result.error) return respond({ok: false, error: 'GRAPH_NEIGHBOR_VISIBILITY_FAILED'}, 500);
     nodes = (result.data ?? []) as GraphNeighborNodeV1[];
   }
-  const view = buildGraphNeighborViewV1({anchorValueObjectId: rawId, query, types, rows, visibleNeighbors: nodes});
+  const view = buildGraphNeighborViewV1({anchorValueObjectId: rawId, query: canonicalQuery!, types, rows, visibleNeighbors: nodes});
   // A query side that reached the capped fetch size may contain further authorized rows.
   const moreMayExist = sides.some((part) => (part?.data?.length ?? 0) > query.limit);
   return respond({ ok: true, valueObjectId: rawId, scope: isSystem ? 'system' : 'actor',

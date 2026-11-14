@@ -15,6 +15,9 @@ export type GraphRelationTypeV1 = Readonly<{
   relation_type_code: string;
   directionality_code: string;
   status: string;
+  canonical_relation_type_code?: string | null;
+  canonical_orientation_code?: 'same' | 'reverse' | 'symmetric' | null;
+  canonical_write_policy_code?: string | null;
 }>;
 export type GraphRelationRowV1 = Readonly<{
   id: string;
@@ -23,6 +26,9 @@ export type GraphRelationRowV1 = Readonly<{
   relation_type_code: string;
   status: string;
   updated_at: string;
+  // Optional future time bounds: current SQL reads do NOT yet supply these fields.
+  valid_from?: string | null;
+  valid_to?: string | null;
 }>;
 export type GraphNeighborNodeV1 = Readonly<{
   id: string;
@@ -38,6 +44,8 @@ export type GraphNeighborItemV1 = Readonly<{
   status: string;
   perspective: GraphDirectedPerspective;
   updatedAt: string;
+  validFrom?: string | null;
+  validTo?: string | null;
 }>;
 export type GraphNeighborResultV1 = Readonly<{
   items: GraphNeighborItemV1[];
@@ -46,6 +54,57 @@ export type GraphNeighborResultV1 = Readonly<{
 
 const VALID_DIRECTIONS = ['all', 'outgoing', 'incoming', 'symmetric'] as const;
 const RELATION_TYPE_CODE = /^[a-z][a-z0-9_]{1,79}$/;
+
+/** Physical reads preserve historical canonical relation codes, even if their current
+ * write policy is disabled. Only reverse alias rows must be excluded from storage. */
+export function isCanonicalStoredGraphTypeX04(t: GraphRelationTypeV1): boolean {
+  if (t.status !== 'active' || !['directed', 'symmetric'].includes(t.directionality_code)) return false;
+  if (t.canonical_relation_type_code != null && t.canonical_relation_type_code !== t.relation_type_code) return false;
+  if (t.canonical_orientation_code === 'reverse' || t.canonical_write_policy_code === 'reverse_alias') return false;
+  if (t.canonical_orientation_code === 'symmetric' && t.directionality_code !== 'symmetric') return false;
+  if (t.canonical_orientation_code === 'same' && t.directionality_code !== 'directed') return false;
+  return true;
+}
+
+/** Resolve an explicitly requested reverse alias against the accepted P3 type registry.
+ * Items still expose the real stored canonical code and physical direction. */
+export function canonicalizeGraphReadQueryX04(types: readonly GraphRelationTypeV1[], q: GraphNeighborQuery): GraphNeighborQuery | null {
+  if (q.relationTypeCode === null) return q;
+  const requested = types.find(t => t.relation_type_code === q.relationTypeCode);
+  if (!requested || requested.status !== 'active') return null;
+  const code = requested.canonical_relation_type_code ?? requested.relation_type_code;
+  const canonical = types.find(t => t.relation_type_code === code);
+  if (!canonical || !isCanonicalStoredGraphTypeX04(canonical)) return null;
+  const reverse = requested.canonical_orientation_code === 'reverse';
+  if (reverse && requested.canonical_write_policy_code !== 'reverse_alias') return null;
+  if (!reverse && code !== requested.relation_type_code) return null;
+  const direction = reverse
+    ? q.direction === 'outgoing' ? 'incoming' : q.direction === 'incoming' ? 'outgoing' : q.direction
+    : q.direction;
+  return { ...q, direction, relationTypeCode: code };
+}
+
+/** Same orientation principle as the existing DB candidate validator. Read-only helper. */
+export function canonicalizeGraphCandidateX04(
+  types: readonly GraphRelationTypeV1[], typeCode: string, sourceId: string, targetId: string,
+): Readonly<{relationTypeCode: string; sourceId: string; targetId: string}> | null {
+  const requested = types.find(t => t.relation_type_code === typeCode);
+  const q = canonicalizeGraphReadQueryX04(types, {direction:'all',relationTypeCode:typeCode,limit:1});
+  if (!requested || !q?.relationTypeCode) return null;
+  let source=sourceId, target=targetId;
+  if (requested.canonical_orientation_code === 'reverse') [source,target]=[target,source];
+  else if (requested.canonical_orientation_code === 'symmetric' && source > target) [source,target]=[target,source];
+  return {relationTypeCode:q.relationTypeCode,sourceId:source,targetId:target};
+}
+
+/** Time-aware identity for future interval-bearing rows. Does not infer missing dates or evidence. */
+function graphTemporalBoundsValidX04(row: GraphRelationRowV1): boolean {
+  const from=row.valid_from ?? null, to=row.valid_to ?? null;
+  const valid=(t: string | null) => t === null ||
+    (/^\d{4}-\d{2}-\d{2}T/.test(t) && /(?:Z|[+-]\d{2}:\d{2})$/.test(t) && Number.isFinite(Date.parse(t)));
+  if (!valid(from) || !valid(to)) return false;
+  return from === null || to === null || Date.parse(from) < Date.parse(to);
+}
 
 export function parseGraphNeighborQueryV1(input: URLSearchParams): GraphNeighborQuery {
   const keys = ['direction', 'type', 'limit'];
@@ -71,8 +130,7 @@ export function selectGraphNeighborTypeCodesV1(
   query: GraphNeighborQuery,
 ): string[] {
   const candidates = registry.filter((row) =>
-    row.status === 'active' &&
-    (row.directionality_code === 'directed' || row.directionality_code === 'symmetric') &&
+    isCanonicalStoredGraphTypeX04(row) &&
     (!query.relationTypeCode || row.relation_type_code === query.relationTypeCode) &&
     (query.direction === 'all' ||
       (query.direction === 'symmetric' ? row.directionality_code === 'symmetric' : row.directionality_code === 'directed')),
@@ -90,14 +148,14 @@ export function buildGraphNeighborViewV1(args: {
 }): GraphNeighborResultV1 {
   const { anchorValueObjectId: anchor, query, types, rows, visibleNeighbors } = args;
   const activeTypes = new Map(types
-    .filter((t) => t.status === 'active' && (t.directionality_code === 'directed' || t.directionality_code === 'symmetric'))
+    .filter(isCanonicalStoredGraphTypeX04)
     .map((t) => [t.relation_type_code, t.directionality_code] as const));
   const nodes = new Map(visibleNeighbors.map((n) => [n.id, n.title] as const));
   const seenIds = new Set<string>();
   const seenCanonical = new Set<string>();
   const result: GraphNeighborItemV1[] = [];
   for (const row of [...rows].sort((a, b) => b.updated_at.localeCompare(a.updated_at) || a.id.localeCompare(b.id))) {
-    if (row.status !== 'active' || seenIds.has(row.id)) continue;
+    if (row.status !== 'active' || seenIds.has(row.id) || !graphTemporalBoundsValidX04(row)) continue;
     seenIds.add(row.id);
     const dir = activeTypes.get(row.relation_type_code);
     if (!dir || (query.relationTypeCode && query.relationTypeCode !== row.relation_type_code)) continue;
@@ -112,7 +170,7 @@ export function buildGraphNeighborViewV1(args: {
     const canonical = dir === 'symmetric'
       ? [row.source_value_object_id, row.target_value_object_id].sort().join('|')
       : `${row.source_value_object_id}|${row.target_value_object_id}`;
-    const fingerprint = `${row.relation_type_code}|${canonical}`;
+    const fingerprint = `${row.relation_type_code}|${canonical}|${JSON.stringify([row.valid_from ?? null, row.valid_to ?? null])}`;
     if (seenCanonical.has(fingerprint)) continue;
     seenCanonical.add(fingerprint);
     result.push({
@@ -125,6 +183,8 @@ export function buildGraphNeighborViewV1(args: {
       status: row.status,
       perspective,
       updatedAt: row.updated_at,
+      ...(row.valid_from !== undefined ? { validFrom: row.valid_from } : {}),
+      ...(row.valid_to !== undefined ? { validTo: row.valid_to } : {}),
     });
   }
   return { items: result.slice(0, query.limit), truncated: result.length > query.limit };
