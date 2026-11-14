@@ -18,6 +18,10 @@ export type GraphRelationTypeV1 = Readonly<{
   canonical_relation_type_code?: string | null;
   canonical_orientation_code?: 'same' | 'reverse' | 'symmetric' | null;
   canonical_write_policy_code?: string | null;
+  title_key?: string | null;
+  description_key?: string | null;
+  reverse_title_key?: string | null;
+  reverse_description_key?: string | null;
 }>;
 export type GraphRelationRowV1 = Readonly<{
   id: string;
@@ -26,6 +30,7 @@ export type GraphRelationRowV1 = Readonly<{
   relation_type_code: string;
   status: string;
   updated_at: string;
+  provenance_code?: string | null;
   // Optional future time bounds: current SQL reads do NOT yet supply these fields.
   valid_from?: string | null;
   valid_to?: string | null;
@@ -43,6 +48,11 @@ export type GraphNeighborItemV1 = Readonly<{
   relationTypeCode: string;
   status: string;
   perspective: GraphDirectedPerspective;
+  // Semantic reading from the OPENED object; physical endpoints above never change.
+  semanticRelationTypeCode: string | null;
+  semanticTitleKey: string | null;
+  semanticDescriptionKey: string | null;
+  provenanceCode?: string | null;
   updatedAt: string;
   validFrom?: string | null;
   validTo?: string | null;
@@ -71,7 +81,12 @@ export function isCanonicalStoredGraphTypeX04(t: GraphRelationTypeV1): boolean {
 export function canonicalizeGraphReadQueryX04(types: readonly GraphRelationTypeV1[], q: GraphNeighborQuery): GraphNeighborQuery | null {
   if (q.relationTypeCode === null) return q;
   const requested = types.find(t => t.relation_type_code === q.relationTypeCode);
-  if (!requested || requested.status !== 'active') return null;
+  // Inactive reverse_alias is a read-only vocabulary entry, not a writable edge type.
+  // All other inactive types remain unusable as explicit filters.
+  const readOnlyReverse = requested?.status === 'inactive' &&
+    requested.canonical_write_policy_code === 'reverse_alias' &&
+    requested.canonical_orientation_code === 'reverse';
+  if (!requested || (requested.status !== 'active' && !readOnlyReverse)) return null;
   const code = requested.canonical_relation_type_code ?? requested.relation_type_code;
   const canonical = types.find(t => t.relation_type_code === code);
   if (!canonical || !isCanonicalStoredGraphTypeX04(canonical)) return null;
@@ -151,6 +166,24 @@ export function buildGraphNeighborViewV1(args: {
     .filter(isCanonicalStoredGraphTypeX04)
     .map((t) => [t.relation_type_code, t.directionality_code] as const));
   const nodes = new Map(visibleNeighbors.map((n) => [n.id, n.title] as const));
+  const canonicalTypes = new Map(types.filter(isCanonicalStoredGraphTypeX04)
+    .map((t) => [t.relation_type_code, t] as const));
+  // The reverse vocabulary row may be INACTIVE for writes, but still defines a
+  // legitimate read-only name. Never infer aliases from arbitrary string patterns.
+  const reverseAliasByType = new Map<string, string | null>();
+  for (const t of types) {
+    if (!['active', 'inactive'].includes(t.status) ||
+        t.canonical_orientation_code !== 'reverse' ||
+        t.canonical_write_policy_code !== 'reverse_alias' ||
+        !t.canonical_relation_type_code ||
+        t.canonical_relation_type_code === t.relation_type_code) continue;
+    const canonicalType = canonicalTypes.get(t.canonical_relation_type_code);
+    if (!canonicalType || !canonicalType.reverse_title_key ||
+        t.title_key !== canonicalType.reverse_title_key) continue;
+    const prior = reverseAliasByType.get(t.canonical_relation_type_code);
+    reverseAliasByType.set(t.canonical_relation_type_code,
+      prior === undefined ? t.relation_type_code : null); // ambiguity fails closed
+  }
   const seenIds = new Set<string>();
   const seenCanonical = new Set<string>();
   const result: GraphNeighborItemV1[] = [];
@@ -158,6 +191,7 @@ export function buildGraphNeighborViewV1(args: {
     if (row.status !== 'active' || seenIds.has(row.id) || !graphTemporalBoundsValidX04(row)) continue;
     seenIds.add(row.id);
     const dir = activeTypes.get(row.relation_type_code);
+    const canonicalType = canonicalTypes.get(row.relation_type_code);
     if (!dir || (query.relationTypeCode && query.relationTypeCode !== row.relation_type_code)) continue;
     if (row.source_value_object_id !== anchor && row.target_value_object_id !== anchor) continue;
     let perspective: GraphDirectedPerspective;
@@ -182,6 +216,16 @@ export function buildGraphNeighborViewV1(args: {
       relationTypeCode: row.relation_type_code,
       status: row.status,
       perspective,
+      semanticRelationTypeCode: perspective === 'incoming'
+        ? (reverseAliasByType.get(row.relation_type_code) ?? null)
+        : row.relation_type_code,
+      semanticTitleKey: perspective === 'incoming'
+        ? (canonicalType?.reverse_title_key ?? null)
+        : (canonicalType?.title_key ?? null),
+      semanticDescriptionKey: perspective === 'incoming'
+        ? (canonicalType?.reverse_description_key ?? null)
+        : (canonicalType?.description_key ?? null),
+      ...(row.provenance_code !== undefined ? {provenanceCode: row.provenance_code} : {}),
       updatedAt: row.updated_at,
       ...(row.valid_from !== undefined ? { validFrom: row.valid_from } : {}),
       ...(row.valid_to !== undefined ? { validTo: row.valid_to } : {}),

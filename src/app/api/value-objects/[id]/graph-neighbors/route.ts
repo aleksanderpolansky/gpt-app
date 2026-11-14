@@ -95,7 +95,7 @@ async function readGraphNeighborRows(
     if (!ownedAnchor.data) return respond({ ok: false, error: 'NOT_FOUND_OR_ACCESS_DENIED' }, 404);
   }
   const registry = await supabase.from('value_object_relation_types')
-    .select('relation_type_code,directionality_code,status,canonical_relation_type_code,canonical_orientation_code,canonical_write_policy_code').eq('status', 'active');
+    .select('relation_type_code,directionality_code,status,canonical_relation_type_code,canonical_orientation_code,canonical_write_policy_code,title_key,description_key,reverse_title_key,reverse_description_key');
   if (registry.error) return respond({ ok: false, error: 'RELATION_REGISTRY_READ_FAILED' }, 500);
   const types = (registry.data ?? []) as GraphRelationTypeV1[];
   const canonicalQuery = canonicalizeGraphReadQueryX04(types, query);
@@ -103,7 +103,7 @@ async function readGraphNeighborRows(
   if (codes.length === 0) return respond({ ok: true, valueObjectId: rawId, scope: isSystem ? 'system' : 'actor', ...buildGraphNeighborViewV1({anchorValueObjectId: rawId, query: canonicalQuery ?? query, types, rows: [], visibleNeighbors: []}) });
 
   const table = isSystem ? 'system_value_object_relations' : 'value_object_relations';
-  const fields = 'id,source_value_object_id,target_value_object_id,relation_type_code,status,updated_at';
+  const fields = 'id,source_value_object_id,target_value_object_id,relation_type_code,status,updated_at,provenance_code';
   const wantsOutgoing = canonicalQuery!.direction !== 'incoming';
   const wantsIncoming = canonicalQuery!.direction !== 'outgoing';
   const fetchSide = (key: 'source_value_object_id' | 'target_value_object_id') => {

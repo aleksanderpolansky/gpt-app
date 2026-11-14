@@ -210,6 +210,21 @@ const DESCRIPTIONS_BY_KEY: Record<string, LocalizedText> = {
   },
 };
 
+// Public bounded lookup for the graph panel: only known approved translation keys.
+export function resolveSemanticRelationTitleKey(
+  key: string | null,
+  locale: ValueObjectSemanticRelationLocale,
+): string | null {
+  return key ? TITLES_BY_KEY[key]?.[locale] ?? null : null;
+}
+
+export function resolveSemanticRelationDescriptionKey(
+  key: string | null,
+  locale: ValueObjectSemanticRelationLocale,
+): string | null {
+  return key ? DESCRIPTIONS_BY_KEY[key]?.[locale] ?? null : null;
+}
+
 export function humanizeSemanticRelationCode(value: string) {
   return value
     .split("_")

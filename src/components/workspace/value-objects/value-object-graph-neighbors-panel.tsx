@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import {
+  resolveSemanticRelationTitleKey,
+  resolveSemanticRelationDescriptionKey,
+} from "@/data/value-object-semantic-relation-localization";
 
 type Locale = "en" | "pl" | "ru" | "uk" | "de" | "es" | "cs";
 
@@ -11,6 +15,9 @@ type GraphItem = {
   neighborTitle: string;
   relationTypeCode: string;
   perspective: "incoming" | "outgoing" | "symmetric";
+  semanticRelationTypeCode?: string | null;
+  semanticTitleKey?: string | null;
+  semanticDescriptionKey?: string | null;
 };
 
 type GraphResponse = {
@@ -116,13 +123,18 @@ const COPY: Record<Locale, {
 export function ValueObjectGraphNeighborsPanel({ valueObjectId, locale, revision }: Props) {
   const copy = COPY[locale] ?? COPY.en;
   const [refreshIndex, setRefreshIndex] = useState(0);
-  const [phase, setPhase] = useState<"loading" | "ready" | "unavailable" | "error">("loading");
-  const [result, setResult] = useState<GraphResponse | null>(null);
+  // A new object, revision or refresh cannot display a stale previous response.
+  const requestKey = JSON.stringify([valueObjectId, revision, refreshIndex]);
+  const [loadState, setLoadState] = useState<{
+    key: string;
+    phase: "ready" | "unavailable" | "error";
+    result: GraphResponse | null;
+  } | null>(null);
+  const phase = loadState?.key === requestKey ? loadState.phase : "loading";
+  const result = loadState?.key === requestKey ? loadState.result : null;
 
   useEffect(() => {
     const controller = new AbortController();
-    setPhase("loading");
-    setResult(null);
 
     void (async () => {
       try {
@@ -139,22 +151,23 @@ export function ValueObjectGraphNeighborsPanel({ valueObjectId, locale, revision
         const body = (await response.json()) as GraphResponse;
         if (controller.signal.aborted) return;
         if (response.status === 404 || response.status === 401 || response.status === 403) {
-          setPhase("unavailable");
+          setLoadState({ key: requestKey, phase: "unavailable", result: null });
           return;
         }
         if (!response.ok || body.ok !== true || !Array.isArray(body.items)) {
-          setPhase("error");
+          setLoadState({ key: requestKey, phase: "error", result: null });
           return;
         }
-        setResult(body);
-        setPhase("ready");
+        setLoadState({ key: requestKey, phase: "ready", result: body });
       } catch {
-        if (!controller.signal.aborted) setPhase("error");
+        if (!controller.signal.aborted) {
+          setLoadState({ key: requestKey, phase: "error", result: null });
+        }
       }
     })();
 
     return () => controller.abort();
-  }, [valueObjectId, revision, refreshIndex]);
+  }, [valueObjectId, requestKey]);
 
   return (
     <div className="mt-4 rounded-2xl border border-[#dfe4f2] bg-[#f8faff] p-4">
@@ -190,8 +203,15 @@ export function ValueObjectGraphNeighborsPanel({ valueObjectId, locale, revision
               >
                 <div className="text-[13px] font-bold text-[#111827]">{item.neighborTitle}</div>
                 <div className="mt-1 text-[11px] text-[#6b7280]">
-                  {item.relationTypeCode} · {copy.direction[item.perspective] ?? item.perspective}
+                  {resolveSemanticRelationTitleKey(item.semanticTitleKey ?? null, locale) ?? item.relationTypeCode}
+                  {' · '}{copy.direction[item.perspective] ?? item.perspective}
+                  {' · '}{item.semanticRelationTypeCode ?? item.relationTypeCode}
                 </div>
+                {resolveSemanticRelationDescriptionKey(item.semanticDescriptionKey ?? null, locale) ? (
+                  <div className="mt-1 text-[11px] text-[#6b7280]">
+                    {resolveSemanticRelationDescriptionKey(item.semanticDescriptionKey ?? null, locale)}
+                  </div>
+                ) : null}
               </Link>
             ))}
           </div>
